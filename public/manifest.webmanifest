@@ -1,0 +1,22 @@
+{
+    "name": "Kawhe Loyalty",
+    "short_name": "Kawhe",
+    "start_url": "/scanner",
+    "display": "standalone",
+    "background_color": "#ffffff",
+    "theme_color": "#000000",
+    "orientation": "portrait-primary",
+    "icons": [
+        {
+            "src": "https://via.placeholder.com/192.png?text=Kawhe+Loyalty",
+            "sizes": "192x192",
+            "type": "image/png"
+        },
+        {
+            "src": "https://via.placeholder.com/512.png?text=Kawhe+Loyalty",
+            "sizes": "512x512",
+            "type": "image/png"
+        }
+    ]
+}
+
