@@ -30,7 +30,6 @@
                                 </select>
                             </div>
 
-                            <!-- Camera Area -->
                             <div id="reader" class="w-full mb-6 bg-black rounded-lg overflow-hidden" style="min-height: 300px;"></div>
 
                             <!-- Manual Input -->
@@ -38,7 +37,35 @@
                                 <label for="manual_token" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Or enter token manually</label>
                                 <div class="flex gap-2">
                                     <input type="text" id="manual_token" x-model="manualToken" placeholder="e.g. LA:..." class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500">
-                                    <button @click="stamp(manualToken)" type="button" class="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800">Stamp</button>
+                                    <button @click="handleScan(manualToken)" type="button" class="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800">Scan</button>
+                                </div>
+                            </div>
+
+                            <!-- Modal for Stamp Count -->
+                            <div x-show="showModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50" style="display: none;">
+                                <div class="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-sm">
+                                    <h3 class="text-lg font-bold mb-4 text-gray-900 dark:text-white">Action Required</h3>
+                                    
+                                    <div x-show="isRedeem" class="mb-4">
+                                        <div class="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4" role="alert">
+                                            <p class="font-bold">Redeem Reward?</p>
+                                            <p>This will deduct stamps and mark the reward as claimed.</p>
+                                        </div>
+                                    </div>
+
+                                    <div x-show="!isRedeem">
+                                        <h4 class="text-md font-semibold mb-2 text-gray-700 dark:text-gray-300">How many stamps?</h4>
+                                        <div class="flex items-center justify-center space-x-4 mb-6">
+                                            <button @click="stampCount = Math.max(1, stampCount - 1)" class="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-xl font-bold text-gray-700 dark:text-gray-300">-</button>
+                                            <span class="text-2xl font-bold text-gray-900 dark:text-white" x-text="stampCount"></span>
+                                            <button @click="stampCount++" class="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-xl font-bold text-gray-700 dark:text-gray-300">+</button>
+                                        </div>
+                                    </div>
+
+                                    <div class="flex justify-end space-x-2">
+                                        <button @click="showModal = false" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600">Cancel</button>
+                                        <button @click="confirmAction()" class="px-4 py-2 text-sm font-medium text-white bg-blue-700 rounded-lg hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800" x-text="isRedeem ? 'Redeem' : 'Add Stamps'"></button>
+                                    </div>
                                 </div>
                             </div>
 
@@ -72,6 +99,10 @@
                 resultData: null,
                 isScanning: true,
                 html5QrcodeScanner: null,
+                showModal: false,
+                stampCount: 1,
+                pendingToken: null,
+                isRedeem: false,
 
                 init() {
                     this.$nextTick(() => {
@@ -81,20 +112,14 @@
 
                 startScanner() {
                     const onScanSuccess = (decodedText, decodedResult) => {
-                        // Handle the scanned code
                         console.log(`Code matched = ${decodedText}`, decodedResult);
-                        this.stamp(decodedText);
+                        this.handleScan(decodedText);
                         
-                        // Optional: Pause scanning briefly
                         this.html5QrcodeScanner.pause();
-                        setTimeout(() => {
-                            this.html5QrcodeScanner.resume();
-                        }, 2000);
                     };
 
                     const onScanFailure = (error) => {
-                        // handle scan failure, usually better to ignore and keep scanning.
-                        // console.warn(`Code scan error = ${error}`);
+                        // handle scan failure
                     };
 
                     this.html5QrcodeScanner = new Html5QrcodeScanner(
@@ -105,7 +130,86 @@
                     this.html5QrcodeScanner.render(onScanSuccess, onScanFailure);
                 },
 
-                async stamp(token) {
+                handleScan(token) {
+                    if (!token) return;
+                    
+                    if (token.startsWith('REDEEM:')) {
+                        this.isRedeem = true;
+                        this.pendingToken = token;
+                        this.showModal = true;
+                    } else {
+                        this.isRedeem = false;
+                        this.showStampModal(token);
+                    }
+                },
+
+                showStampModal(token) {
+                    if (!token) return;
+                    this.pendingToken = token;
+                    this.stampCount = 1;
+                    this.showModal = true;
+                },
+
+                confirmAction() {
+                    this.showModal = false;
+                    if (this.isRedeem) {
+                        this.redeem(this.pendingToken);
+                    } else {
+                        this.stamp(this.pendingToken, this.stampCount);
+                    }
+                    
+                    // Resume scanning after a delay if using scanner
+                    if (this.html5QrcodeScanner) {
+                        setTimeout(() => {
+                            this.html5QrcodeScanner.resume();
+                        }, 2000);
+                    }
+                },
+
+                async redeem(token) {
+                    this.message = '';
+                    this.success = false;
+                    this.resultData = null;
+
+                    try {
+                        const response = await fetch('{{ route("redeem.store") }}', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/json',
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                            },
+                            body: JSON.stringify({
+                                token: token,
+                                store_id: this.storeId
+                            })
+                        });
+
+                        const text = await response.text();
+                        let data;
+                        try {
+                            data = JSON.parse(text);
+                        } catch (e) {
+                            console.error('Failed to parse JSON response:', text);
+                            throw new Error('Server returned invalid response');
+                        }
+
+                        if (response.ok) {
+                            this.success = true;
+                            this.message = data.message;
+                            this.resultData = { customerLabel: data.customerLabel };
+                        } else {
+                            this.success = false;
+                            this.message = data.message || data.errors?.token?.[0] || 'Something went wrong.';
+                        }
+                    } catch (error) {
+                        console.error('Error:', error);
+                        this.success = false;
+                        this.message = error.message || 'Network error or server issue.';
+                    }
+                },
+
+                async stamp(token, count = 1) {
                     this.message = '';
                     this.success = false;
                     this.resultData = null;
@@ -117,19 +221,28 @@
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json',
+                                'Accept': 'application/json',
                                 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
                             },
                             body: JSON.stringify({
                                 token: token,
-                                store_id: this.storeId
+                                store_id: this.storeId,
+                                count: count
                             })
                         });
 
-                        const data = await response.json();
+                        const text = await response.text();
+                        let data;
+                        try {
+                            data = JSON.parse(text);
+                        } catch (e) {
+                            console.error('Failed to parse JSON response:', text);
+                            throw new Error('Server returned invalid response');
+                        }
 
                         if (response.ok) {
                             this.success = true;
-                            this.message = 'Stamp added successfully!';
+                            this.message = `${count} stamp(s) added successfully!`;
                             this.resultData = data;
                             this.manualToken = ''; // Clear manual input
                         } else {
@@ -139,7 +252,7 @@
                     } catch (error) {
                         console.error('Error:', error);
                         this.success = false;
-                        this.message = 'Network error or server issue.';
+                        this.message = error.message || 'Network error or server issue.';
                     }
                 }
             }));

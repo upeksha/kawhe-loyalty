@@ -42,6 +42,36 @@ test('merchant can stamp a loyalty account', function () {
         'loyalty_account_id' => $account->id,
         'store_id' => $store->id,
         'user_id' => $user->id,
+        'count' => 1,
+    ]);
+});
+
+test('merchant can stamp multiple times at once', function () {
+    $user = User::factory()->create();
+    $store = Store::factory()->create(['user_id' => $user->id]);
+    $customer = Customer::factory()->create();
+    $account = LoyaltyAccount::create([
+        'store_id' => $store->id,
+        'customer_id' => $customer->id,
+    ]);
+
+    $response = $this->actingAs($user)->postJson('/stamp', [
+        'store_id' => $store->id,
+        'token' => $account->public_token,
+        'count' => 3,
+    ]);
+
+    $response->assertOk();
+    $response->assertJson(['success' => true]);
+
+    $account->refresh();
+    $this->assertEquals(3, $account->stamp_count);
+
+    $this->assertDatabaseHas('stamp_events', [
+        'loyalty_account_id' => $account->id,
+        'store_id' => $store->id,
+        'user_id' => $user->id,
+        'count' => 3,
     ]);
 });
 

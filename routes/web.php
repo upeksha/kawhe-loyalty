@@ -15,6 +15,7 @@ Route::get('/join/{slug}', [JoinController::class, 'show'])->name('join.show');
 Route::post('/join/{slug}', [JoinController::class, 'store'])->name('join.store');
 
 Route::get('/c/{public_token}', [CardController::class, 'show'])->name('card.show');
+Route::get('/api/card/{public_token}', [CardController::class, 'api'])->name('card.api');
 
 Route::get('/dashboard', function () {
     return view('dashboard');
@@ -23,6 +24,7 @@ Route::get('/dashboard', function () {
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/scanner', [ScannerController::class, 'index'])->name('scanner');
     Route::post('/stamp', [ScannerController::class, 'store'])->name('stamp.store');
+    Route::post('/redeem', [ScannerController::class, 'redeem'])->name('redeem.store');
 
     Route::resource('stores', StoreController::class);
     Route::get('/stores/{store}/qr', [StoreController::class, 'qr'])->name('stores.qr');

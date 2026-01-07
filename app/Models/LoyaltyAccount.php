@@ -13,11 +13,16 @@ class LoyaltyAccount extends Model
         'customer_id',
         'stamp_count',
         'public_token',
+        'redeem_token',
         'last_stamped_at',
+        'reward_available_at',
+        'reward_redeemed_at',
     ];
 
     protected $casts = [
         'last_stamped_at' => 'datetime',
+        'reward_available_at' => 'datetime',
+        'reward_redeemed_at' => 'datetime',
     ];
 
     protected static function boot()
