@@ -13,7 +13,7 @@
                     @if($stores->isEmpty())
                         <div class="text-center p-6">
                             <p class="mb-4 text-gray-600">You need to create a store before you can scan cards.</p>
-                            <a href="{{ route('stores.create') }}" class="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 dark:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none dark:focus:ring-blue-800">
+                            <a href="{{ route('merchant.stores.create') }}" class="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 dark:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none dark:focus:ring-blue-800">
                                 Create Store
                             </a>
                         </div>
@@ -23,7 +23,8 @@
                             <!-- Store Selector -->
                             <div class="mb-6">
                                 <label for="store_id" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Select Active Store</label>
-                                <select id="store_id" x-model="storeId" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500">
+                                <select id="store_id" x-model="activeStoreId" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500">
+                                    <option value="">-- Choose a Store --</option>
                                     @foreach($stores as $store)
                                         <option value="{{ $store->id }}">{{ $store->name }}</option>
                                     @endforeach
@@ -92,7 +93,7 @@
     <script>
         document.addEventListener('alpine:init', () => {
             Alpine.data('scannerApp', () => ({
-                storeId: '{{ $stores->first()->id ?? "" }}',
+                activeStoreId: '{{ $stores->first()->id ?? "" }}',
                 manualToken: '',
                 message: '',
                 success: false,
@@ -133,6 +134,12 @@
                 handleScan(token) {
                     if (!token) return;
                     
+                    if (!this.activeStoreId) {
+                        this.success = false;
+                        this.message = 'Please select a store first.';
+                        return;
+                    }
+
                     if (token.startsWith('REDEEM:')) {
                         this.isRedeem = true;
                         this.pendingToken = token;
@@ -181,7 +188,7 @@
                             },
                             body: JSON.stringify({
                                 token: token,
-                                store_id: this.storeId
+                                store_id: Number(this.activeStoreId)
                             })
                         });
 
@@ -196,11 +203,12 @@
 
                         if (response.ok) {
                             this.success = true;
-                            this.message = data.message;
+                            this.message = data.message || 'Reward redeemed successfully!';
                             this.resultData = { customerLabel: data.customerLabel };
                         } else {
                             this.success = false;
-                            this.message = data.message || data.errors?.token?.[0] || 'Something went wrong.';
+                            // Use improved error messages from server
+                            this.message = data.message || data.errors?.token?.[0] || 'Redemption failed. Please try again.';
                         }
                     } catch (error) {
                         console.error('Error:', error);
@@ -226,7 +234,7 @@
                             },
                             body: JSON.stringify({
                                 token: token,
-                                store_id: this.storeId,
+                                store_id: Number(this.activeStoreId),
                                 count: count
                             })
                         });
@@ -242,12 +250,20 @@
 
                         if (response.ok) {
                             this.success = true;
-                            this.message = `${count} stamp(s) added successfully!`;
+                            this.message = data.message || `${count} stamp(s) added successfully!`;
                             this.resultData = data;
                             this.manualToken = ''; // Clear manual input
+                            
+                            // Show additional info if available
+                            if (data.stampsRemaining !== undefined && data.stampsRemaining > 0) {
+                                this.message += ` (${data.stampsRemaining} more needed for reward)`;
+                            } else if (data.rewardAvailable) {
+                                this.message += ' 🎉 Reward unlocked!';
+                            }
                         } else {
                             this.success = false;
-                            this.message = data.message || data.errors?.token?.[0] || 'Something went wrong.';
+                            // Use improved error messages from server
+                            this.message = data.message || data.errors?.token?.[0] || 'Something went wrong. Please try again.';
                         }
                     } catch (error) {
                         console.error('Error:', error);

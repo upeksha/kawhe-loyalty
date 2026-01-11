@@ -24,7 +24,7 @@
                         </div>
                     </div>
 
-                    <a href="{{ route('stores.index') }}" class="font-medium text-blue-600 dark:text-blue-500 hover:underline">Back to Stores</a>
+                    <a href="{{ route('merchant.stores.index') }}" class="font-medium text-blue-600 dark:text-blue-500 hover:underline">Back to Stores</a>
                 </div>
             </div>
         </div>

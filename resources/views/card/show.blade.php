@@ -13,340 +13,360 @@
 
         <!-- Scripts -->
         @vite(['resources/css/app.css', 'resources/js/app.js'])
+        
+        <style>
+            @keyframes glow {
+                0%, 100% { opacity: 0.3; }
+                50% { opacity: 0.6; }
+            }
+            .qr-pattern {
+                background-image: 
+                    repeating-linear-gradient(0deg, rgba(255,255,255,0.05) 0px, rgba(255,255,255,0.05) 1px, transparent 1px, transparent 20px),
+                    repeating-linear-gradient(90deg, rgba(255,255,255,0.05) 0px, rgba(255,255,255,0.05) 1px, transparent 1px, transparent 20px);
+                position: relative;
+            }
+            .qr-glow {
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                width: 200px;
+                height: 200px;
+                background: radial-gradient(circle, rgba(255,255,255,0.2) 0%, transparent 70%);
+                animation: glow 3s ease-in-out infinite;
+            }
+        </style>
     </head>
-    <body class="font-sans text-gray-900 antialiased bg-gray-100 dark:bg-gray-900">
-        <div class="min-h-screen flex flex-col items-center pt-6 sm:pt-0" x-data="cardApp()" x-init="init()">
-            <div class="w-full max-w-md p-6">
-                <!-- Store Branding -->
-                <div class="text-center mb-8">
-                    <h1 id="store-name" class="text-3xl font-bold text-gray-800 dark:text-gray-100">{{ $account->store->name }}</h1>
-                    <p id="reward-title" class="text-gray-600 dark:text-gray-400">{{ $account->store->reward_title }}</p>
-                </div>
-
-                <!-- Reward Available Card (dynamically shown/hidden) -->
-                <div id="reward-available-card" class="bg-gradient-to-r from-yellow-400 to-yellow-600 rounded-xl shadow-lg overflow-hidden mb-8 transform scale-105 border-4 border-yellow-200" 
-                     style="display: {{ $account->reward_available_at && !$account->reward_redeemed_at ? 'block' : 'none' }};">
-                    <div class="p-6 text-white text-center">
-                        <h2 class="text-2xl font-extrabold mb-2">🎉 Reward Unlocked!</h2>
-                        <p class="mb-4">You've earned a <span id="reward-title-available">{{ $account->store->reward_title }}</span></p>
-                        
-                        <div class="flex justify-center mb-4 p-4 bg-white rounded-lg inline-block mx-auto">
-                            <div id="redeem-qr-container">
-                                @if($account->redeem_token)
-                                    {!! SimpleSoftwareIO\QrCode\Facades\QrCode::size(200)->generate('REDEEM:' . $account->redeem_token) !!}
-                                @endif
-                            </div>
-                        </div>
-                        <p class="text-sm font-bold">Show this to merchant to redeem</p>
-                    </div>
-                </div>
-
-                <!-- Recently Redeemed (dynamically shown/hidden) -->
-                <div id="reward-redeemed-card" class="bg-green-100 dark:bg-green-900 rounded-xl shadow-lg overflow-hidden mb-8 p-6 text-center border border-green-300 dark:border-green-700"
-                     style="display: {{ $account->reward_redeemed_at ? 'block' : 'none' }};">
-                    <svg class="w-16 h-16 mx-auto text-green-500 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                    </svg>
-                    <h2 class="text-xl font-bold text-green-800 dark:text-green-200 mb-2">Reward Redeemed!</h2>
-                    <p class="text-green-700 dark:text-green-300">Enjoy your <span id="reward-title-redeemed">{{ $account->store->reward_title }}</span></p>
-                    <p id="redeemed-date" class="text-xs text-green-600 dark:text-green-400 mt-2">
-                        @if($account->reward_redeemed_at)
-                            Redeemed on {{ $account->reward_redeemed_at->format('M d, Y H:i') }}
-                        @endif
-                    </p>
-                </div>
-
-                <!-- Digital Card (Standard) -->
-                <div id="digital-card" class="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden mb-8 {{ $account->reward_available_at && !$account->reward_redeemed_at ? 'opacity-75 grayscale' : '' }}">
-                    <div class="p-6 bg-gradient-to-r from-blue-600 to-blue-800 text-white text-center">
-                        <div class="flex justify-center mb-4 p-4 bg-white rounded-lg inline-block mx-auto">
-                            <div id="stamp-qr-container">
-                                {!! SimpleSoftwareIO\QrCode\Facades\QrCode::size(200)->generate('LA:' . $account->public_token) !!}
-                            </div>
-                        </div>
-                        <p id="customer-name" class="text-sm opacity-90 font-mono">{{ $account->customer->name ?? 'Valued Customer' }}</p>
-                        <p class="text-xs opacity-75 mt-1">Show this QR code to get stamped</p>
-                    </div>
-
-                    <!-- Progress -->
-                    <div class="p-6">
-                        <div class="flex justify-between items-center mb-2">
-                            <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Progress</span>
-                            <span id="stamp-count" class="text-sm font-bold text-blue-600 dark:text-blue-400">{{ $account->stamp_count }} / {{ $account->store->reward_target }}</span>
-                        </div>
-                        <div class="w-full bg-gray-200 rounded-full h-4 dark:bg-gray-700 mb-6">
-                            @php
-                                $percentage = min(100, ($account->stamp_count / $account->store->reward_target) * 100);
-                            @endphp
-                            <div id="progress-bar" class="bg-blue-600 h-4 rounded-full transition-all duration-500" style="width: {{ $percentage }}%"></div>
-                        </div>
-
-                        <div id="stamp-grid" class="grid grid-cols-5 gap-2">
-                            @for ($i = 1; $i <= $account->store->reward_target; $i++)
-                                <div class="stamp-item aspect-square rounded-full flex items-center justify-center text-sm font-bold
-                                    {{ $i <= $account->stamp_count
-                                        ? 'bg-blue-100 text-blue-800 border-2 border-blue-500'
-                                        : 'bg-gray-100 text-gray-400 border-2 border-gray-200 dark:bg-gray-700 dark:border-gray-600' }}">
-                                    {{ $i }}
+    <body class="font-sans antialiased" style="background-color: {{ $account->store->background_color ?? '#1F2937' }}; min-height: 100vh;">
+        <div class="min-h-screen pb-8" x-data="cardApp()" x-init="init()">
+            <div class="w-full max-w-md mx-auto px-4 pt-6">
+                <!-- Reward Unlocked Card (Top) -->
+                @if($account->reward_available_at && !$account->reward_redeemed_at)
+                    <div class="bg-gradient-to-r from-yellow-400 via-yellow-500 to-yellow-600 rounded-2xl shadow-xl overflow-hidden mb-4">
+                        <div class="p-6 text-white">
+                            <div class="flex items-start gap-3 mb-4">
+                                <div class="text-4xl">🎉</div>
+                                <div class="flex-1">
+                                    <h2 class="text-2xl font-bold mb-1">Reward Unlocked!</h2>
+                                    <p class="text-sm opacity-90">You've earned a <span id="reward-title-available" class="font-semibold">{{ $account->store->reward_title }}</span></p>
                                 </div>
-                            @endfor
+                            </div>
+                            
+                            @if(!$account->customer->email_verified_at)
+                                <div class="bg-white/20 backdrop-blur-sm rounded-xl p-4 mt-4">
+                                    <div class="flex gap-2">
+                                        <button @click="sendVerification()" :disabled="verifying" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-4 py-2.5 rounded-lg disabled:opacity-50 transition">
+                                            <span x-text="verifying ? 'Sending...' : 'Verify Email'"></span>
+                                        </button>
+                                        <button @click="bannerDismissed = true" class="flex-1 bg-white/30 hover:bg-white/40 text-white text-sm font-semibold px-4 py-2.5 rounded-lg transition">
+                                            Maybe Later
+                                        </button>
+                                    </div>
+                                    <template x-if="verifyMessage">
+                                        <p class="mt-2 text-xs font-semibold text-green-200" x-text="verifyMessage"></p>
+                                    </template>
+                                    @if($errors->has('email'))
+                                        <p class="mt-2 text-xs font-semibold text-red-200">{{ $errors->first('email') }}</p>
+                                    @endif
+                                </div>
+                            @endif
+                        </div>
+                    </div>
+                @endif
+
+                <!-- Main Loyalty Card -->
+                <div class="bg-gray-800 rounded-2xl shadow-2xl overflow-hidden mb-4 qr-pattern" style="position: relative;">
+                    <!-- QR Glow Effect -->
+                    <div class="qr-glow"></div>
+                    
+                    <div class="p-6 relative z-10">
+                        <!-- Always Visible QR Code for Stamping -->
+                        <div class="flex justify-center mb-6">
+                            <div class="bg-white rounded-xl p-3 shadow-lg">
+                                <div id="stamp-qr-container">
+                                    {!! SimpleSoftwareIO\QrCode\Facades\QrCode::size(200)->generate('LA:' . $account->public_token) !!}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Locked State Message (when reward available but not verified) -->
+                        @if($account->reward_available_at && !$account->reward_redeemed_at && !$account->customer->email_verified_at)
+                            <div class="flex flex-col items-center justify-center mb-4">
+                                <svg class="w-12 h-12 text-gray-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                                </svg>
+                                <p class="text-gray-300 text-xs font-medium">Verify Email to Redeem Reward</p>
+                            </div>
+                        @endif
+
+                        <!-- Customer Name -->
+                        <p id="customer-name" class="text-white text-lg font-semibold text-center mb-2">{{ $account->customer->name ?? 'Valued Customer' }}</p>
+                        
+                        <!-- Reward Title (hidden when reward unlocked) -->
+                        @if(!$account->reward_available_at || $account->reward_redeemed_at)
+                            <p id="reward-title" class="text-gray-400 text-xs text-center mb-4">{{ $account->store->reward_title }} at {{ $account->store->reward_target }} stamps</p>
+                        @endif
+
+                        <!-- Progress Section -->
+                        <div class="mb-6">
+                            <div class="flex justify-between items-center mb-3">
+                                <span class="text-gray-300 text-sm font-medium">Progress</span>
+                                <span id="stamp-count" class="text-white text-sm font-bold">{{ $account->stamp_count }} / {{ $account->store->reward_target }}</span>
+                            </div>
+                            <!-- Circular Checkmarks Row -->
+                            <div class="flex gap-2 justify-center flex-wrap">
+                                @for ($i = 1; $i <= $account->store->reward_target; $i++)
+                                    <div class="stamp-circle w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold
+                                        {{ $i <= $account->stamp_count
+                                            ? 'bg-green-500 text-white'
+                                            : 'bg-gray-700 text-gray-400 border-2 border-gray-600' }}">
+                                        @if($i <= $account->stamp_count)
+                                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path>
+                                            </svg>
+                                        @else
+                                            {{ $i }}
+                                        @endif
+                                    </div>
+                                @endfor
+                            </div>
+                        </div>
+
+                        <!-- Recent Activity Section -->
+                        <div class="border-t border-gray-700 pt-4">
+                            <h3 class="text-gray-300 text-sm font-semibold mb-3">Recent Activity</h3>
+                            <div id="transaction-history" class="space-y-2">
+                                <p class="text-sm text-gray-500 text-center py-2">Loading transaction history...</p>
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Connection Status -->
-                <div id="connection-status" class="bg-gray-50 dark:bg-gray-800 rounded-lg p-2 text-center mb-4">
-                    <p class="text-xs text-gray-600 dark:text-gray-400">
-                        <span id="status-indicator" class="inline-block w-2 h-2 rounded-full bg-gray-400 mr-2"></span>
-                        <span id="status-text">Connecting...</span>
-                    </p>
+                <!-- Add to Home Screen Card -->
+                <div class="bg-gray-800 rounded-2xl shadow-xl overflow-hidden mb-4">
+                    <div class="p-6">
+                        <div class="flex items-center gap-4 mb-3">
+                            <div class="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center">
+                                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                                </svg>
+                            </div>
+                            <p class="text-white font-semibold">Add to Home Screen</p>
+                        </div>
+                        <p class="text-gray-400 text-xs">
+                            <span class="font-semibold text-gray-300">Tip:</span> Add this page to your Home Screen to access your card easily!
+                        </p>
+                    </div>
                 </div>
 
-                <!-- Add to Home Screen Hint -->
-                <div class="bg-blue-50 dark:bg-blue-900/30 rounded-lg p-4 text-center">
-                    <p class="text-sm text-blue-800 dark:text-blue-200">
-                        <svg class="w-5 h-5 inline-block mr-1 -mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
-                        </svg>
-                        <strong>Tip:</strong> Add this page to your Home Screen to access your card easily!
+                <!-- Forget Card Link -->
+                <div class="text-center">
+                    <button @click="forgetCard()" x-show="!cardForgotten" class="text-gray-400 hover:text-gray-300 text-sm underline transition">
+                        Forget This Card
+                    </button>
+                    <p x-show="cardForgotten" class="text-green-400 text-sm font-medium">
+                        ✓ Card removed from this device
                     </p>
                 </div>
             </div>
         </div>
 
         <script>
-            // Register cardApp before Alpine initializes
             document.addEventListener('alpine:init', () => {
                 Alpine.data('cardApp', () => ({
                     publicToken: '{{ $account->public_token }}',
                     accountData: null,
+                    bannerDismissed: false,
+                    verifying: false,
+                    verifyMessage: '',
+                    cardForgotten: false,
 
                     init() {
+                        this.persistCard();
                         this.initialize();
                     },
 
+                    persistCard() {
+                        localStorage.setItem('kawhe_last_card_{{ $account->store_id }}', this.publicToken);
+                        @if($account->customer->email)
+                            localStorage.setItem('kawhe_last_email_{{ $account->store_id }}', '{{ $account->customer->email }}');
+                        @endif
+                    },
+
+                    forgetCard() {
+                        try {
+                            localStorage.removeItem('kawhe_last_card_{{ $account->store_id }}');
+                            localStorage.removeItem('kawhe_last_email_{{ $account->store_id }}');
+                            this.cardForgotten = true;
+                        } catch (e) {
+                            console.error('Error removing card from localStorage:', e);
+                        }
+                    },
+
+                    async sendVerification() {
+                        if (this.verifying) return;
+                        this.verifying = true;
+                        this.verifyMessage = '';
+
+                        try {
+                            const response = await fetch('{{ route("customer.email.verification.send", ["public_token" => $account->public_token]) }}', {
+                                method: 'POST',
+                                headers: {
+                                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                                    'Accept': 'application/json'
+                                }
+                            });
+
+                            const data = await response.json().catch(() => ({}));
+                            
+                            if (response.ok) {
+                                this.verifyMessage = data.message || 'Verification email sent! Please check your inbox.';
+                                // Reload page after 2 seconds to show QR
+                                setTimeout(() => {
+                                    window.location.reload();
+                                }, 2000);
+                            } else {
+                                this.verifyMessage = data.message || data.errors?.email?.[0] || 'Error sending verification email.';
+                            }
+                        } catch (e) {
+                            this.verifyMessage = 'Network error. Please try again.';
+                        } finally {
+                            this.verifying = false;
+                        }
+                    },
+
                     async initialize() {
-                        // Wait for QRCode library to load (for future updates)
-                        await this.waitForQRCode();
+                        this.loadTransactionHistory();
                         
-                        // Update connection status
-                        this.updateConnectionStatus('connecting', 'Connecting...');
-                        
-                        // Set up WebSocket listener
                         if (window.Echo) {
                             const channelName = 'loyalty-card.' + this.publicToken;
-                            console.log('Connecting to channel:', channelName);
-                            console.log('Echo config:', {
-                                host: window.Echo.connector?.options?.wsHost,
-                                port: window.Echo.connector?.options?.wsPort || window.Echo.connector?.options?.wssPort,
-                                scheme: window.Echo.connector?.options?.forceTLS ? 'wss' : 'ws'
-                            });
                             
                             try {
-                                // Monitor connection state
-                                const checkConnection = () => {
-                                    const socket = window.Echo.connector?.socket;
-                                    if (socket) {
-                                        const state = socket.readyState;
-                                        if (state === 1) { // OPEN
-                                            this.updateConnectionStatus('connected', 'Live updates active');
-                                        } else if (state === 0) { // CONNECTING
-                                            this.updateConnectionStatus('connecting', 'Connecting...');
-                                        } else { // CLOSED or CLOSING
-                                            this.updateConnectionStatus('disconnected', 'Disconnected - refresh page');
-                                        }
-                                    } else {
-                                        this.updateConnectionStatus('disconnected', 'WebSocket not available');
-                                    }
-                                };
-                                
-                                // Check connection immediately and periodically
-                                checkConnection();
-                                setInterval(checkConnection, 2000);
-                                
                                 const channel = window.Echo.channel(channelName);
                                 
                                 channel
                                     .listen('.StampUpdated', (e) => {
                                         console.log('Stamp Updated event received:', e);
-                                        // Use event data directly for immediate update
                                         if (e && e.stamp_count !== undefined) {
-                                            // Show a brief visual feedback
                                             this.showUpdateNotification();
                                             this.updateUI(e);
-                                            this.updateConnectionStatus('connected', 'Live updates active');
+                                            this.loadTransactionHistory();
                                         } else {
-                                            // Fallback to API call if event data is incomplete
-                                            console.warn('Event data incomplete, falling back to API call');
-                                            this.refreshCard();
+                                            this.refreshCardWithRetry();
                                         }
                                     })
                                     .error((error) => {
                                         console.error('Echo channel error:', error);
-                                        this.updateConnectionStatus('error', 'Connection error');
                                     });
-                                
-                                console.log('Echo channel subscribed to:', channelName);
-                                
-                                // Test connection after a short delay
-                                setTimeout(() => {
-                                    checkConnection();
-                                    console.log('Echo connection check:', {
-                                        connected: window.Echo.connector?.socket?.readyState === 1,
-                                        state: window.Echo.connector?.socket?.readyState,
-                                        url: window.Echo.connector?.socket?.url
-                                    });
-                                }, 1000);
                             } catch (error) {
                                 console.error('Error setting up Echo channel:', error);
-                                this.updateConnectionStatus('error', 'Setup error: ' + error.message);
-                            }
-                        } else {
-                            console.warn('Laravel Echo is not loaded. Real-time updates will not work.');
-                            this.updateConnectionStatus('error', 'Echo not loaded');
-                        }
-                    },
-
-                    updateConnectionStatus(status, text) {
-                        const indicator = document.getElementById('status-indicator');
-                        const statusText = document.getElementById('status-text');
-                        
-                        if (indicator && statusText) {
-                            statusText.textContent = text;
-                            
-                            // Update indicator color
-                            indicator.className = 'inline-block w-2 h-2 rounded-full mr-2';
-                            if (status === 'connected') {
-                                indicator.classList.add('bg-green-500');
-                            } else if (status === 'connecting') {
-                                indicator.classList.add('bg-yellow-500');
-                            } else {
-                                indicator.classList.add('bg-red-500');
                             }
                         }
                     },
 
-                    async waitForQRCode() {
-                        return new Promise((resolve) => {
-                            if (typeof QRCode !== 'undefined') {
-                                resolve();
-                                return;
-                            }
-                            
-                            const checkInterval = setInterval(() => {
-                                if (typeof QRCode !== 'undefined') {
-                                    clearInterval(checkInterval);
-                                    resolve();
-                                }
-                            }, 100);
-                            
-                            // Timeout after 5 seconds
-                            setTimeout(() => {
-                                clearInterval(checkInterval);
-                                resolve();
-                            }, 5000);
-                        });
-                    },
-
-                    async refreshCard() {
+                    async loadTransactionHistory() {
                         try {
-                            const response = await fetch(`/api/card/${this.publicToken}`);
-                            if (!response.ok) throw new Error('Failed to fetch card data');
+                            const response = await fetch(`/api/card/${this.publicToken}/transactions`);
+                            if (!response.ok) throw new Error('Failed to fetch transactions');
                             
                             const data = await response.json();
-                            this.accountData = data;
-                            this.updateUI(data);
+                            this.renderTransactionHistory(data.transactions);
                         } catch (error) {
-                            console.error('Error refreshing card:', error);
+                            console.error('Error loading transaction history:', error);
+                            const container = document.getElementById('transaction-history');
+                            if (container) {
+                                container.innerHTML = '<p class="text-sm text-gray-500 text-center">Unable to load transaction history</p>';
+                            }
                         }
+                    },
+
+                    renderTransactionHistory(transactions) {
+                        const container = document.getElementById('transaction-history');
+                        if (!container) return;
+                        
+                        if (!transactions || transactions.length === 0) {
+                            container.innerHTML = '<p class="text-sm text-gray-500 text-center">No recent activity</p>';
+                            return;
+                        }
+                        
+                        container.innerHTML = transactions.map(tx => `
+                            <div class="flex items-center justify-between p-3 bg-gray-700/50 rounded-lg">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-8 h-8 rounded-full flex items-center justify-center bg-green-500/20 text-green-400">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <p class="text-white text-sm font-medium">${tx.description}</p>
+                                        <p class="text-gray-400 text-xs">${tx.formatted_date}</p>
+                                    </div>
+                                </div>
+                                <span class="text-green-400 text-sm font-bold">
+                                    +${tx.points}
+                                </span>
+                            </div>
+                        `).join('');
                     },
 
                     async updateUI(data) {
                         // Update stamp count
-                        document.getElementById('stamp-count').textContent = `${data.stamp_count} / ${data.reward_target}`;
+                        const stampCountEl = document.getElementById('stamp-count');
+                        if (stampCountEl) {
+                            stampCountEl.textContent = `${data.stamp_count} / ${data.reward_target}`;
+                        }
 
-                        // Update progress bar
-                        const percentage = Math.min(100, (data.stamp_count / data.reward_target) * 100);
-                        document.getElementById('progress-bar').style.width = percentage + '%';
-
-                        // Update stamp grid
-                        const stampGrid = document.getElementById('stamp-grid');
-                        const stampItems = stampGrid.querySelectorAll('.stamp-item');
-                        stampItems.forEach((item, index) => {
+                        // Update progress circles
+                        const circles = document.querySelectorAll('.stamp-circle');
+                        circles.forEach((circle, index) => {
                             const stampNumber = index + 1;
                             if (stampNumber <= data.stamp_count) {
-                                item.className = 'stamp-item aspect-square rounded-full flex items-center justify-center text-sm font-bold bg-blue-100 text-blue-800 border-2 border-blue-500';
+                                circle.className = 'stamp-circle w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold bg-green-500 text-white';
+                                circle.innerHTML = '<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>';
                             } else {
-                                item.className = 'stamp-item aspect-square rounded-full flex items-center justify-center text-sm font-bold bg-gray-100 text-gray-400 border-2 border-gray-200 dark:bg-gray-700 dark:border-gray-600';
+                                circle.className = 'stamp-circle w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold bg-gray-700 text-gray-400 border-2 border-gray-600';
+                                circle.textContent = stampNumber;
                             }
                         });
 
-                        // Update reward states
-                        const rewardAvailable = data.reward_available_at && !data.reward_redeemed_at;
-                        const rewardRedeemed = data.reward_redeemed_at;
-
-                        // Show/hide reward available card
-                        const rewardAvailableCard = document.getElementById('reward-available-card');
-                        const rewardRedeemedCard = document.getElementById('reward-redeemed-card');
-                        const digitalCard = document.getElementById('digital-card');
-
-                        if (rewardAvailable) {
-                            rewardAvailableCard.style.display = 'block';
-                            rewardRedeemedCard.style.display = 'none';
-                            digitalCard.classList.add('opacity-75', 'grayscale');
-                            
-                            // Redeem QR code is server-generated, no need to regenerate client-side
-                        } else {
-                            rewardAvailableCard.style.display = 'none';
+                        // Reload page if reward becomes available to show unlock card
+                        if (data.reward_available_at && !data.reward_redeemed_at) {
+                            window.location.reload();
                         }
+                    },
 
-                        if (rewardRedeemed) {
-                            rewardRedeemedCard.style.display = 'block';
-                            digitalCard.classList.remove('opacity-75', 'grayscale');
-                            
-                            // Update redeemed date
-                            if (data.reward_redeemed_at) {
-                                const date = new Date(data.reward_redeemed_at);
-                                document.getElementById('redeemed-date').textContent = 
-                                    'Redeemed on ' + date.toLocaleDateString('en-US', { 
-                                        month: 'short', 
-                                        day: 'numeric', 
-                                        year: 'numeric',
-                                        hour: '2-digit',
-                                        minute: '2-digit'
-                                    });
+                    async refreshCardWithRetry(maxRetries = 3) {
+                        for (let attempt = 1; attempt <= maxRetries; attempt++) {
+                            try {
+                                const response = await fetch(`/api/card/${this.publicToken}`);
+                                if (!response.ok) throw new Error('Failed to fetch card data');
+                                
+                                const data = await response.json();
+                                this.accountData = data;
+                                this.updateUI(data);
+                                this.loadTransactionHistory();
+                                return;
+                            } catch (error) {
+                                if (attempt === maxRetries) {
+                                    console.error('Failed to refresh card after', maxRetries, 'attempts');
+                                } else {
+                                    await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+                                }
                             }
-                        } else {
-                            rewardRedeemedCard.style.display = 'none';
                         }
-
-                        // QR codes are server-generated and don't need client-side regeneration
-                        // The server-side QR codes in the initial page load are sufficient
                     },
 
                     showUpdateNotification() {
-                        // Create a temporary notification
                         const notification = document.createElement('div');
-                        notification.className = 'fixed top-4 right-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg z-50';
+                        notification.className = 'fixed top-4 right-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg z-50 text-sm';
                         notification.textContent = '✓ Card Updated!';
                         document.body.appendChild(notification);
                         
-                        // Remove after 2 seconds
                         setTimeout(() => {
                             notification.style.opacity = '0';
                             notification.style.transition = 'opacity 0.3s';
                             setTimeout(() => notification.remove(), 300);
                         }, 2000);
-                    },
-
-                    async generateQRCode(containerId, text) {
-                        // For now, we'll just refresh the page content via API
-                        // QR codes are generated server-side, so we don't need client-side generation
-                        // This function is kept for future use but currently just logs
-                        console.log('QR code update requested for:', containerId, text);
-                        
-                        // If we need to update QR codes dynamically in the future,
-                        // we can fetch the updated QR code from the server or use the API
                     }
                 }));
             });

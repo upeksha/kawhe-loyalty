@@ -12,6 +12,19 @@ class Store extends Model
     /** @use HasFactory<\Database\Factories\StoreFactory> */
     use HasFactory;
 
+    /**
+     * Get a query builder for stores accessible by the given user.
+     * Super admins can access all stores, regular users only their own.
+     */
+    public static function queryForUser($user)
+    {
+        if ($user && $user->isSuperAdmin()) {
+            return static::query();
+        }
+
+        return $user ? $user->stores() : static::whereRaw('0 = 1');
+    }
+
     protected $fillable = [
         'name',
         'slug',
@@ -19,6 +32,9 @@ class Store extends Model
         'reward_target',
         'reward_title',
         'join_token',
+        'brand_color',
+        'logo_path',
+        'background_color',
     ];
 
     protected static function boot()

@@ -6,6 +6,7 @@ use App\Models\Store;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 
 class StoreController extends Controller
@@ -17,7 +18,7 @@ class StoreController extends Controller
      */
     public function index()
     {
-        $stores = Auth::user()->stores()->latest()->get();
+        $stores = Store::queryForUser(Auth::user())->latest()->get();
         return view('stores.index', compact('stores'));
     }
 
@@ -39,11 +40,23 @@ class StoreController extends Controller
             'address' => ['nullable', 'string', 'max:255'],
             'reward_target' => ['required', 'integer', 'min:1'],
             'reward_title' => ['required', 'string', 'max:255'],
+            'brand_color' => ['nullable', 'string', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            'background_color' => ['nullable', 'string', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            'logo' => ['nullable', 'image', 'mimes:png,jpg,jpeg,webp', 'max:2048'],
         ]);
+
+        // Handle logo upload
+        if ($request->hasFile('logo')) {
+            $logoPath = $request->file('logo')->store('logos', 'public');
+            $validated['logo_path'] = $logoPath;
+        }
+
+        // Remove logo file from validated array
+        unset($validated['logo']);
 
         Auth::user()->stores()->create($validated);
 
-        return redirect()->route('stores.index')->with('success', 'Store created successfully.');
+        return redirect()->route('merchant.stores.index')->with('success', 'Store created successfully.');
     }
 
     /**
@@ -51,7 +64,7 @@ class StoreController extends Controller
      */
     public function edit(Store $store)
     {
-        $this->authorize('update', $store);
+        $store = Store::queryForUser(Auth::user())->whereKey($store->id)->firstOrFail();
         return view('stores.edit', compact('store'));
     }
 
@@ -60,18 +73,41 @@ class StoreController extends Controller
      */
     public function update(Request $request, Store $store)
     {
-        $this->authorize('update', $store);
+        $store = Store::queryForUser(Auth::user())->whereKey($store->id)->firstOrFail();
 
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'address' => ['nullable', 'string', 'max:255'],
             'reward_target' => ['required', 'integer', 'min:1'],
             'reward_title' => ['required', 'string', 'max:255'],
+            'brand_color' => ['nullable', 'string', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            'background_color' => ['nullable', 'string', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            'logo' => ['nullable', 'image', 'mimes:png,jpg,jpeg,webp', 'max:2048'],
         ]);
+
+        // Handle logo upload
+        if ($request->hasFile('logo')) {
+            // Delete old logo if exists
+            if ($store->logo_path && Storage::disk('public')->exists($store->logo_path)) {
+                Storage::disk('public')->delete($store->logo_path);
+            }
+
+            // Store new logo
+            $logoPath = $request->file('logo')->store('logos', 'public');
+            $validated['logo_path'] = $logoPath;
+        }
+
+        // Remove logo from validated if not uploaded (to avoid overwriting with null)
+        if (!isset($validated['logo_path'])) {
+            unset($validated['logo_path']);
+        }
+
+        // Remove logo file from validated array (we only need the path)
+        unset($validated['logo']);
 
         $store->update($validated);
 
-        return redirect()->route('stores.index')->with('success', 'Store updated successfully.');
+        return redirect()->route('merchant.stores.index')->with('success', 'Store updated successfully.');
     }
 
     /**
@@ -81,7 +117,7 @@ class StoreController extends Controller
     {
         // Not used currently, redirect to edit or QR
         $this->authorize('view', $store);
-        return redirect()->route('stores.edit', $store);
+        return redirect()->route('merchant.stores.edit', $store);
     }
 
     /**
@@ -91,7 +127,7 @@ class StoreController extends Controller
     {
         $this->authorize('delete', $store);
         $store->delete();
-        return redirect()->route('stores.index')->with('success', 'Store deleted successfully.');
+        return redirect()->route('merchant.stores.index')->with('success', 'Store deleted successfully.');
     }
 
     /**
@@ -99,8 +135,8 @@ class StoreController extends Controller
      */
     public function qr(Store $store)
     {
-        $this->authorize('qr', $store);
-        $joinUrl = route('join.show', ['slug' => $store->slug, 't' => $store->join_token]);
+        $store = Store::queryForUser(Auth::user())->whereKey($store->id)->firstOrFail();
+        $joinUrl = route('join.index', ['slug' => $store->slug, 't' => $store->join_token]);
         return view('stores.qr', compact('store', 'joinUrl'));
     }
 }

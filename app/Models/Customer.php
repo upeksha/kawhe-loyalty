@@ -14,6 +14,16 @@ class Customer extends Model
         'name',
         'email',
         'phone',
+        'email_verified_at',
+        'email_verification_token_hash',
+        'email_verification_expires_at',
+        'email_verification_sent_at',
+    ];
+
+    protected $casts = [
+        'email_verified_at' => 'datetime',
+        'email_verification_expires_at' => 'datetime',
+        'email_verification_sent_at' => 'datetime',
     ];
 
     public function loyaltyAccounts(): HasMany

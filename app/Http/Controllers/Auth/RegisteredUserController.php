@@ -45,6 +45,15 @@ class RegisteredUserController extends Controller
 
         Auth::login($user);
 
-        return redirect(route('dashboard', absolute: false));
+        // Redirect based on user type and store count
+        if ($user->isSuperAdmin()) {
+            return redirect()->route('admin.dashboard');
+        }
+
+        if ($user->stores()->count() === 0) {
+            return redirect()->route('merchant.onboarding.store');
+        }
+
+        return redirect()->route('merchant.dashboard');
     }
 }

@@ -6,14 +6,14 @@ use App\Models\User;
 test('authenticated user can create a store', function () {
     $user = User::factory()->create();
 
-    $response = $this->actingAs($user)->post('/stores', [
+    $response = $this->actingAs($user)->post('/merchant/stores', [
         'name' => 'My Awesome Coffee Shop',
         'address' => '123 Main St',
         'reward_target' => 9,
         'reward_title' => 'Free Coffee',
     ]);
 
-    $response->assertRedirect('/stores');
+    $response->assertRedirect('/merchant/stores');
     $this->assertDatabaseHas('stores', [
         'name' => 'My Awesome Coffee Shop',
         'user_id' => $user->id,
@@ -27,13 +27,13 @@ test('authenticated user can create a store', function () {
 test('slug is unique', function () {
     $user = User::factory()->create();
 
-    $this->actingAs($user)->post('/stores', [
+    $this->actingAs($user)->post('/merchant/stores', [
         'name' => 'Coffee Shop',
         'reward_target' => 9,
         'reward_title' => 'Free Coffee',
     ]);
 
-    $this->actingAs($user)->post('/stores', [
+    $this->actingAs($user)->post('/merchant/stores', [
         'name' => 'Coffee Shop',
         'reward_target' => 9,
         'reward_title' => 'Free Coffee',
@@ -50,7 +50,7 @@ test('user cannot view another users store qr', function () {
 
     $otherUser = User::factory()->create();
 
-    $response = $this->actingAs($otherUser)->get(route('stores.qr', $store));
+    $response = $this->actingAs($otherUser)->get(route('merchant.stores.qr', $store));
 
     $response->assertForbidden();
 });
@@ -59,7 +59,7 @@ test('owner can view their store qr', function () {
     $owner = User::factory()->create();
     $store = Store::factory()->create(['user_id' => $owner->id]);
 
-    $response = $this->actingAs($owner)->get(route('stores.qr', $store));
+    $response = $this->actingAs($owner)->get(route('merchant.stores.qr', $store));
 
     $response->assertOk();
     $response->assertViewHas('joinUrl');

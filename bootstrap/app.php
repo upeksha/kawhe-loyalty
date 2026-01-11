@@ -12,7 +12,12 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        //
+        $middleware->trustProxies(at: '*');
+        $middleware->alias([
+            'rate.limit.stamps' => \App\Http\Middleware\RateLimitStamps::class,
+            'superadmin' => \App\Http\Middleware\SuperAdmin::class,
+            'merchant.has.store' => \App\Http\Middleware\EnsureMerchantHasStore::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

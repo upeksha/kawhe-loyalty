@@ -4,7 +4,7 @@
             <h2 class="font-semibold text-xl text-gray-800 leading-tight">
                 {{ __('My Stores') }}
             </h2>
-            <a href="{{ route('stores.create') }}" class="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 dark:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none dark:focus:ring-blue-800">
+            <a href="{{ route('merchant.stores.create') }}" class="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 dark:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none dark:focus:ring-blue-800">
                 Add Store
             </a>
         </div>
@@ -40,8 +40,8 @@
                                                 {{ $store->reward_target }} stamps for {{ $store->reward_title }}
                                             </td>
                                             <td class="px-6 py-4 flex space-x-2">
-                                                <a href="{{ route('stores.edit', $store) }}" class="font-medium text-blue-600 dark:text-blue-500 hover:underline">Edit</a>
-                                                <a href="{{ route('stores.qr', $store) }}" class="font-medium text-green-600 dark:text-green-500 hover:underline">QR Code</a>
+                                                <a href="{{ route('merchant.stores.edit', $store) }}" class="font-medium text-blue-600 dark:text-blue-500 hover:underline">Edit</a>
+                                                <a href="{{ route('merchant.stores.qr', $store) }}" class="font-medium text-green-600 dark:text-green-500 hover:underline">QR Code</a>
                                             </td>
                                         </tr>
                                     @endforeach

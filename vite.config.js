@@ -8,4 +8,11 @@ export default defineConfig({
             refresh: true,
         }),
     ],
+    server: {
+        host: '0.0.0.0',
+        hmr: {
+            host: process.env.VITE_HMR_HOST || 'localhost',
+        },
+        allowedHosts: ['.ngrok-free.app']
+    }
 });

@@ -28,7 +28,18 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerate();
 
-        return redirect()->intended(route('dashboard', absolute: false));
+        $user = Auth::user();
+
+        // Determine redirect based on user type
+        if ($user->isSuperAdmin()) {
+            return redirect()->intended(route('admin.dashboard'));
+        }
+
+        if ($user->stores()->count() === 0) {
+            return redirect()->intended(route('merchant.onboarding.store'));
+        }
+
+        return redirect()->intended(route('merchant.dashboard'));
     }
 
     /**

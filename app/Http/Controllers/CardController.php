@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\LoyaltyAccount;
+use App\Models\PointsTransaction;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 
@@ -62,6 +63,35 @@ class CardController extends Controller
             'store_name' => $account->store->name,
             'reward_title' => $account->store->reward_title,
             'customer_name' => $account->customer->name ?? 'Valued Customer',
+        ]);
+    }
+
+    public function transactions(string $public_token)
+    {
+        $account = LoyaltyAccount::where('public_token', $public_token)
+            ->firstOrFail();
+
+        // Get recent transactions (last 30 days, limit 50)
+        $transactions = PointsTransaction::where('loyalty_account_id', $account->id)
+            ->orderBy('created_at', 'desc')
+            ->limit(50)
+            ->get()
+            ->map(function ($transaction) {
+                return [
+                    'id' => $transaction->id,
+                    'type' => $transaction->type,
+                    'points' => $transaction->points,
+                    'description' => $transaction->type === 'earn' 
+                        ? "Earned {$transaction->points} stamp(s)" 
+                        : "Redeemed " . abs($transaction->points) . " stamp(s)",
+                    'timestamp' => $transaction->created_at->toIso8601String(),
+                    'formatted_date' => $transaction->created_at->format('M d, Y g:i A'),
+                ];
+            });
+
+        return response()->json([
+            'transactions' => $transactions,
+            'total_count' => $transactions->count(),
         ]);
     }
 }

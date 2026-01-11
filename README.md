@@ -54,6 +54,23 @@ In order to ensure that the Laravel community is welcoming to all, please review
 
 If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
 
+## Email (SendGrid SMTP)
+
+This application uses SendGrid for sending emails. Configure the following environment variables:
+
+```
+MAIL_MAILER=smtp
+MAIL_HOST=smtp.sendgrid.net
+MAIL_PORT=587
+MAIL_USERNAME=apikey
+MAIL_PASSWORD=your_sendgrid_api_key_here
+MAIL_ENCRYPTION=tls
+MAIL_FROM_NAME="Kawhe Loyalty"
+MAIL_FROM_ADDRESS=noreply@yourdomain.com
+```
+
+Replace `your_sendgrid_api_key_here` with your actual SendGrid API key and `noreply@yourdomain.com` with your verified sender email address.
+
 ## License
 
 The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).

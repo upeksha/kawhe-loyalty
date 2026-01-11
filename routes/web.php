@@ -1,33 +1,81 @@
 <?php
 
+use App\Http\Controllers\AdminDashboardController;
 use App\Http\Controllers\CardController;
 use App\Http\Controllers\JoinController;
+use App\Http\Controllers\MerchantCustomersController;
+use App\Http\Controllers\OnboardingController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\PublicStartController;
 use App\Http\Controllers\ScannerController;
 use App\Http\Controllers\StoreController;
 use Illuminate\Support\Facades\Route;
+
+// Public start page for merchant onboarding
+Route::get('/start', [PublicStartController::class, 'index'])->name('start');
 
 Route::get('/', function () {
     return view('welcome');
 });
 
-Route::get('/join/{slug}', [JoinController::class, 'show'])->name('join.show');
-Route::post('/join/{slug}', [JoinController::class, 'store'])->name('join.store');
+Route::get('/join/{slug}', [JoinController::class, 'index'])->name('join.index');
+Route::get('/join/{slug}/new', [JoinController::class, 'show'])->name('join.show');
+Route::post('/join/{slug}/new', [JoinController::class, 'store'])->name('join.store');
+Route::get('/join/{slug}/existing', [JoinController::class, 'existing'])->name('join.existing');
+Route::post('/join/{slug}/existing', [JoinController::class, 'lookup'])->name('join.lookup')->middleware('throttle:10,1');
 
 Route::get('/c/{public_token}', [CardController::class, 'show'])->name('card.show');
 Route::get('/api/card/{public_token}', [CardController::class, 'api'])->name('card.api');
+Route::get('/api/card/{public_token}/transactions', [CardController::class, 'transactions'])->name('card.transactions');
 
-Route::get('/dashboard', function () {
-    return view('dashboard');
-})->middleware(['auth', 'verified'])->name('dashboard');
+Route::post('/c/{public_token}/verify/send', [App\Http\Controllers\VerificationController::class, 'send'])->name('card.verification.send');
+Route::get('/c/{public_token}/verify/{id}/{hash}', [App\Http\Controllers\VerificationController::class, 'verify'])->name('card.verification.verify')->middleware('signed');
 
-Route::middleware(['auth', 'verified'])->group(function () {
-    Route::get('/scanner', [ScannerController::class, 'index'])->name('scanner');
-    Route::post('/stamp', [ScannerController::class, 'store'])->name('stamp.store');
-    Route::post('/redeem', [ScannerController::class, 'redeem'])->name('redeem.store');
+Route::post('/c/{public_token}/verify-email/send', [App\Http\Controllers\CustomerEmailVerificationController::class, 'send'])->name('customer.email.verification.send')->middleware('throttle:3,10');
+Route::get('/verify-email/{token}', [App\Http\Controllers\CustomerEmailVerificationController::class, 'verify'])->name('customer.email.verification.verify');
 
-    Route::resource('stores', StoreController::class);
+// Merchant onboarding routes (no EnsureMerchantHasStore middleware)
+Route::middleware(['auth'])->prefix('merchant/onboarding')->name('merchant.onboarding.')->group(function () {
+    Route::get('/store', [OnboardingController::class, 'createStore'])->name('store');
+    Route::post('/store', [OnboardingController::class, 'storeStore'])->name('store.store');
+});
+
+// Merchant area routes (requires store)
+Route::middleware(['auth', App\Http\Middleware\EnsureMerchantHasStore::class])->prefix('merchant')->name('merchant.')->group(function () {
+    Route::get('/dashboard', function () {
+        return view('dashboard');
+    })->name('dashboard');
+    
+    Route::get('/stores', [StoreController::class, 'index'])->name('stores.index');
+    Route::get('/stores/create', [StoreController::class, 'create'])->name('stores.create');
+    Route::post('/stores', [StoreController::class, 'store'])->name('stores.store');
+    Route::get('/stores/{store}/edit', [StoreController::class, 'edit'])->name('stores.edit');
+    Route::put('/stores/{store}', [StoreController::class, 'update'])->name('stores.update');
+    Route::delete('/stores/{store}', [StoreController::class, 'destroy'])->name('stores.destroy');
     Route::get('/stores/{store}/qr', [StoreController::class, 'qr'])->name('stores.qr');
+    
+    Route::get('/scanner', [ScannerController::class, 'index'])->name('scanner');
+    
+    Route::get('/customers', [MerchantCustomersController::class, 'index'])->name('customers.index');
+    Route::get('/customers/{loyaltyAccount}', [MerchantCustomersController::class, 'show'])->name('customers.show');
+});
+
+// Scanner actions (keep outside merchant group to avoid double middleware)
+Route::middleware(['auth', 'verified'])->group(function () {
+    Route::post('/stamp', [ScannerController::class, 'store'])->middleware('rate.limit.stamps')->name('stamp.store');
+    Route::post('/redeem', [ScannerController::class, 'redeem'])->middleware('rate.limit.stamps')->name('redeem.store');
+});
+
+// Admin area routes (super admin only)
+Route::middleware(['auth', App\Http\Middleware\SuperAdmin::class])->prefix('admin')->name('admin.')->group(function () {
+    Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
+});
+
+// Redirects from old routes to new merchant routes
+Route::middleware(['auth'])->group(function () {
+    Route::get('/dashboard', fn() => redirect()->route('merchant.dashboard'));
+    Route::get('/stores', fn() => redirect()->route('merchant.stores.index'));
+    Route::get('/scanner', fn() => redirect()->route('merchant.scanner'));
 });
 
 Route::middleware('auth')->group(function () {

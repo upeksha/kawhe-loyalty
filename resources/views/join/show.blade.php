@@ -29,7 +29,7 @@
                     Collect stamps and earn {{ $store->reward_title }}!
                 </p>
 
-                <form method="POST" action="{{ route('join.store', ['slug' => $store->slug, 't' => $store->join_token]) }}">
+                <form method="POST" action="{{ route('join.store', ['slug' => $store->slug, 't' => $token]) }}">
                     @csrf
 
                     <!-- Name -->

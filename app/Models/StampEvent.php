@@ -13,6 +13,9 @@ class StampEvent extends Model
         'user_id',
         'type',
         'count',
+        'idempotency_key',
+        'user_agent',
+        'ip_address',
     ];
 
     public function loyaltyAccount(): BelongsTo

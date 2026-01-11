@@ -30,7 +30,10 @@ test('reward becomes available when target reached', function () {
 test('merchant can redeem a reward', function () {
     $user = User::factory()->create();
     $store = Store::factory()->create(['user_id' => $user->id, 'reward_target' => 5]);
-    $customer = Customer::factory()->create();
+    $customer = Customer::factory()->create([
+        'email' => 'test@example.com',
+        'email_verified_at' => now(),
+    ]);
     $account = LoyaltyAccount::create([
         'store_id' => $store->id,
         'customer_id' => $customer->id,
@@ -81,7 +84,10 @@ test('cannot redeem twice', function () {
 test('card page shows redeem qr when available', function () {
     $user = User::factory()->create();
     $store = Store::factory()->create(['user_id' => $user->id]);
-    $customer = Customer::factory()->create();
+    $customer = Customer::factory()->create([
+        'email' => 'test@example.com',
+        'email_verified_at' => now(),
+    ]);
     $account = LoyaltyAccount::create([
         'store_id' => $store->id,
         'customer_id' => $customer->id,
