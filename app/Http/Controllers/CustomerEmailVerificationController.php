@@ -55,8 +55,41 @@ class CustomerEmailVerificationController extends Controller
             'email_verification_sent_at' => now(),
         ]);
 
-        // Send queued email
-        Mail::to($customer->email)->queue(new VerifyCustomerEmail($rawToken, $public_token));
+        // Send email (synchronously in development, queued in production)
+        $mailable = new VerifyCustomerEmail($rawToken, $public_token);
+        
+        try {
+            if (config('app.env') === 'local' || config('queue.default') === 'sync') {
+                // Send immediately in development
+                Mail::to($customer->email)->send($mailable);
+                \Log::info('Verification email sent synchronously', ['email' => $customer->email]);
+            } else {
+                // Queue in production
+                Mail::to($customer->email)->queue($mailable);
+                \Log::info('Verification email queued', ['email' => $customer->email]);
+            }
+        } catch (\Exception $e) {
+            \Log::error('Failed to send verification email', [
+                'email' => $customer->email,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            // Check for specific SendGrid errors
+            $errorMessage = $e->getMessage();
+            if (str_contains($errorMessage, 'Maximum credits exceeded') || str_contains($errorMessage, 'Authentication failed')) {
+                $errorMessage = 'Email service temporarily unavailable. Please check your SendGrid account or try again later.';
+            } elseif (str_contains($errorMessage, 'Failed to authenticate')) {
+                $errorMessage = 'Email service configuration error. Please contact support.';
+            } else {
+                $errorMessage = 'Failed to send verification email. Please try again later.';
+            }
+            
+            if ($request->expectsJson() || $request->wantsJson()) {
+                return response()->json(['message' => $errorMessage], 500);
+            }
+            return back()->withErrors(['email' => $errorMessage]);
+        }
 
         $successMessage = 'Verification email sent! Please check your inbox.';
         if ($request->expectsJson() || $request->wantsJson()) {

@@ -1,58 +1,75 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Kawhe Loyalty
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+A Progressive Web App (PWA) loyalty card system built with Laravel 11. Enable merchants to create digital loyalty programs where customers earn stamps and redeem rewards with real-time updates.
 
-## About Laravel
+## Features
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+- 🏪 **Multi-Store Management**: Merchants can create and manage multiple stores
+- 🎨 **Custom Branding**: Upload logos, set brand colors, and customize card backgrounds
+- 📱 **PWA Support**: Works offline with service worker caching
+- ⚡ **Real-time Updates**: Live synchronization via Laravel Reverb (WebSockets)
+- 🔒 **Secure Redemption**: Email verification required for reward redemption
+- 📊 **Transaction Ledger**: Immutable audit trail of all point transactions
+- 🛡️ **Data Integrity**: Idempotency, optimistic locking, and rate limiting
+- 📧 **Email Integration**: SendGrid SMTP for verification emails
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## Quick Start
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+See [RUN_PROJECT.md](RUN_PROJECT.md) for detailed setup instructions.
 
-## Learning Laravel
+```bash
+# Install dependencies
+composer install
+npm install
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+# Setup environment
+cp .env.example .env
+php artisan key:generate
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+# Run migrations
+php artisan migrate
 
-## Laravel Sponsors
+# Build assets
+npm run build
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+# Start servers (in separate terminals)
+php artisan serve
+php artisan reverb:start
+```
 
-### Premium Partners
+## Documentation
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+- **[TECHNICAL_DOCUMENTATION.md](TECHNICAL_DOCUMENTATION.md)** - Complete technical documentation covering architecture, features, API endpoints, and more
+- **[RUN_PROJECT.md](RUN_PROJECT.md)** - Setup and running instructions
+- **[SENDGRID_SETUP.md](SENDGRID_SETUP.md)** - Email configuration guide
 
-## Contributing
+## Tech Stack
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+- **Backend**: Laravel 11, PHP 8.2+
+- **Frontend**: Tailwind CSS, Alpine.js, Vite
+- **Real-time**: Laravel Reverb (WebSockets)
+- **Database**: SQLite (dev) / PostgreSQL/MySQL (production)
+- **Email**: SendGrid SMTP
+- **Testing**: Pest PHP
 
-## Code of Conduct
+## Key User Flows
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+1. **Merchant Onboarding**: Register → Create Store → Get Join Link
+2. **Customer Enrollment**: Receive Join Link → Enter Details → Get Loyalty Card
+3. **Stamping**: Merchant Scans QR → Stamps Added → Real-time Update
+4. **Redemption**: Reach Target → Verify Email → Scan Redeem QR → Reward Redeemed
 
-## Security Vulnerabilities
+## Security
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+- Rate limiting on all critical endpoints
+- Idempotency keys prevent duplicate transactions
+- Optimistic locking prevents race conditions
+- Email verification required for redemption
+- Immutable transaction ledger for audit trail
+
+## License
+
+MIT License
 
 ## Email (SendGrid SMTP)
 

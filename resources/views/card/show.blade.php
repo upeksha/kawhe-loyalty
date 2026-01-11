@@ -226,7 +226,17 @@
                                     window.location.reload();
                                 }, 2000);
                             } else {
-                                this.verifyMessage = data.message || data.errors?.email?.[0] || 'Error sending verification email.';
+                                // Handle rate limit (429) with better message
+                                if (response.status === 429) {
+                                    const waitTime = data.message?.match(/(\d+)\s+more\s+second/i);
+                                    if (waitTime) {
+                                        this.verifyMessage = data.message || 'Please wait before requesting another verification email.';
+                                    } else {
+                                        this.verifyMessage = 'Too many requests. Please wait a few minutes before trying again.';
+                                    }
+                                } else {
+                                    this.verifyMessage = data.message || data.errors?.email?.[0] || 'Error sending verification email.';
+                                }
                             }
                         } catch (e) {
                             this.verifyMessage = 'Network error. Please try again.';
