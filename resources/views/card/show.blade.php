@@ -15,6 +15,7 @@
         @vite(['resources/css/app.css', 'resources/js/app.js'])
         
         <style>
+            [x-cloak] { display: none !important; }
             @keyframes glow {
                 0%, 100% { opacity: 0.3; }
                 50% { opacity: 0.6; }
@@ -99,6 +100,22 @@
                             </div>
                         @endif
 
+                        <!-- Redeem Reward Button (when reward available, email verified, and not redeemed) -->
+                        @if($account->reward_available_at && !$account->reward_redeemed_at && $account->customer->email_verified_at && $account->redeem_token)
+                            <div class="flex flex-col items-center justify-center mb-6">
+                                <!-- Redeem Button -->
+                                <button 
+                                    @click="showRedeemModal = true"
+                                    class="w-full bg-gradient-to-r from-yellow-400 via-yellow-500 to-yellow-600 hover:from-yellow-500 hover:via-yellow-600 hover:to-yellow-700 text-white font-bold py-4 px-6 rounded-xl shadow-lg transition-all duration-200 transform hover:scale-105 flex items-center justify-center gap-2"
+                                >
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                    </svg>
+                                    <span>Redeem My Reward</span>
+                                </button>
+                            </div>
+                        @endif
+
                         <!-- Customer Name -->
                         <p id="customer-name" class="text-white text-lg font-semibold text-center mb-2">{{ $account->customer->name ?? 'Valued Customer' }}</p>
                         
@@ -169,6 +186,71 @@
                     </p>
                 </div>
             </div>
+
+            <!-- Redeem QR Code Modal (Full Screen Popup) -->
+            @if($account->reward_available_at && !$account->reward_redeemed_at && $account->customer->email_verified_at && $account->redeem_token)
+                <div 
+                    x-show="showRedeemModal" 
+                    x-cloak
+                    @click.away="showRedeemModal = false"
+                    @keydown.escape.window="showRedeemModal = false"
+                    class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75 backdrop-blur-sm"
+                    x-transition:enter="transition ease-out duration-300"
+                    x-transition:enter-start="opacity-0"
+                    x-transition:enter-end="opacity-100"
+                    x-transition:leave="transition ease-in duration-200"
+                    x-transition:leave-start="opacity-100"
+                    x-transition:leave-end="opacity-0"
+                >
+                    <div 
+                        @click.stop
+                        class="bg-gray-800 rounded-3xl shadow-2xl p-8 max-w-sm w-full mx-4 relative"
+                        x-transition:enter="transition ease-out duration-300"
+                        x-transition:enter-start="opacity-0 transform scale-95"
+                        x-transition:enter-end="opacity-100 transform scale-100"
+                        x-transition:leave="transition ease-in duration-200"
+                        x-transition:leave-start="opacity-100 transform scale-100"
+                        x-transition:leave-end="opacity-0 transform scale-95"
+                    >
+                        <!-- Close Button -->
+                        <button 
+                            @click="showRedeemModal = false"
+                            class="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors"
+                        >
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                            </svg>
+                        </button>
+
+                        <!-- Modal Content -->
+                        <div class="text-center">
+                            <div class="mb-4">
+                                <div class="text-4xl mb-2">🎉</div>
+                                <h2 class="text-2xl font-bold text-white mb-2">Redeem Your Reward!</h2>
+                                <p class="text-gray-300 text-sm">Show this QR code to the merchant</p>
+                            </div>
+
+                            <!-- QR Code -->
+                            <div class="bg-white rounded-xl p-6 shadow-lg border-4 border-yellow-400 mb-4 flex justify-center">
+                                <div id="redeem-qr-container">
+                                    {!! SimpleSoftwareIO\QrCode\Facades\QrCode::size(250)->generate('REDEEM:' . $account->redeem_token) !!}
+                                </div>
+                            </div>
+
+                            <p class="text-gray-300 text-sm mb-4">
+                                Present this QR code to claim your <span class="font-semibold text-yellow-400">{{ $account->store->reward_title }}</span>
+                            </p>
+
+                            <button 
+                                @click="showRedeemModal = false"
+                                class="w-full bg-gray-700 hover:bg-gray-600 text-white font-semibold py-3 px-6 rounded-xl transition-colors"
+                            >
+                                Close
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            @endif
         </div>
 
         <script>
@@ -177,6 +259,7 @@
                     publicToken: '{{ $account->public_token }}',
                     accountData: null,
                     bannerDismissed: false,
+                    showRedeemModal: false,
                     verifying: false,
                     verifyMessage: '',
                     cardForgotten: false,
