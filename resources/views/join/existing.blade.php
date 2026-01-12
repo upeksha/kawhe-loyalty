@@ -18,7 +18,8 @@
                             Email Address
                         </label>
                         <div class="mt-1">
-                            <input id="email" name="email" type="email" autocomplete="email" required value="{{ old('email') }}"
+                            <input id="email" name="email" type="email" autocomplete="email" required 
+                                value="{{ old('email') }}"
                                 class="appearance-none block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white">
                         </div>
                         @error('email')
@@ -60,4 +61,22 @@
             </div>
         </div>
     </div>
+
+    @push('scripts')
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Get saved email from localStorage for this store
+            const savedEmail = localStorage.getItem('kawhe_last_email_{{ $store->id }}');
+            const oldEmail = '{{ old('email') }}';
+            
+            // Pre-fill email field if saved email exists and no old input (from validation errors)
+            if (savedEmail && !oldEmail) {
+                const emailInput = document.getElementById('email');
+                if (emailInput) {
+                    emailInput.value = savedEmail;
+                }
+            }
+        });
+    </script>
+    @endpush
 </x-guest-layout>

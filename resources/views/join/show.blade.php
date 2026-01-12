@@ -42,7 +42,9 @@
                     <!-- Email -->
                     <div class="mb-4">
                         <label for="email" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Email Address</label>
-                        <input type="email" id="email" name="email" value="{{ old('email') }}" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500">
+                        <input type="email" id="email" name="email" 
+                            value="{{ old('email') }}" 
+                            class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500">
                         <x-input-error :messages="$errors->get('email')" class="mt-2" />
                     </div>
 
@@ -62,5 +64,21 @@
                 </form>
             </div>
         </div>
+
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                // Get saved email from localStorage for this store
+                const savedEmail = localStorage.getItem('kawhe_last_email_{{ $store->id }}');
+                const oldEmail = '{{ old('email') }}';
+                
+                // Pre-fill email field if saved email exists and no old input (from validation errors)
+                if (savedEmail && !oldEmail) {
+                    const emailInput = document.getElementById('email');
+                    if (emailInput) {
+                        emailInput.value = savedEmail;
+                    }
+                }
+            });
+        </script>
     </body>
 </html>

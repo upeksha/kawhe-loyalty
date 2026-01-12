@@ -50,7 +50,7 @@
                                 <div class="flex-1">
                                     <h2 class="text-2xl font-bold mb-1">Reward{{ ($account->reward_balance ?? 0) > 1 ? 's' : '' }} Unlocked!</h2>
                                     <p class="text-sm opacity-90">
-                                        <span id="reward-balance-display" class="font-semibold text-lg">{{ $account->reward_balance ?? 0 }}</span> 
+                                        <span id="reward-balance-banner" class="font-semibold text-lg">{{ $account->reward_balance ?? 0 }}</span> 
                                         <span id="reward-title-available" class="font-semibold">{{ $account->store->reward_title }}</span>
                                         @if(($account->reward_balance ?? 0) > 1)
                                             <span> available</span>
@@ -423,7 +423,17 @@
                         this.rewardBalance = rewardBalance;
                         this.hasRedeemToken = !!data.redeem_token;
                         
-                        // Update reward balance display
+                        // Update reward balance display in banner
+                        const rewardBalanceBanner = document.getElementById('reward-balance-banner');
+                        if (rewardBalanceBanner) {
+                            if (rewardBalance > 0) {
+                                rewardBalanceBanner.textContent = rewardBalance;
+                            } else {
+                                rewardBalanceBanner.textContent = '0';
+                            }
+                        }
+                        
+                        // Update reward balance display in progress section
                         const rewardBalanceEl = document.getElementById('reward-balance-display');
                         if (rewardBalanceEl) {
                             if (rewardBalance > 0) {
