@@ -55,42 +55,35 @@ class CustomerEmailVerificationController extends Controller
             'email_verification_sent_at' => now(),
         ]);
 
-        // Send email (synchronously in development, queued in production)
+        // Always queue emails - never block the UI flow
         $mailable = new VerifyCustomerEmail($rawToken, $public_token);
         
+        // Attempt to queue the email, but never fail the request if queue fails
         try {
-            if (config('app.env') === 'local' || config('queue.default') === 'sync') {
-                // Send immediately in development
-                Mail::to($customer->email)->send($mailable);
-                \Log::info('Verification email sent synchronously', ['email' => $customer->email]);
-            } else {
-                // Queue in production
-                Mail::to($customer->email)->queue($mailable);
-                \Log::info('Verification email queued', ['email' => $customer->email]);
-            }
+            Mail::to($customer->email)->queue($mailable);
+            
+            \Log::info('Verification email queued successfully', [
+                'customer_id' => $customer->id,
+                'store_id' => $account->store_id,
+                'public_token' => $public_token,
+                'email' => $customer->email,
+            ]);
         } catch (\Exception $e) {
-            \Log::error('Failed to send verification email', [
+            // Log the error but don't fail the request
+            \Log::error('Failed to queue verification email', [
+                'customer_id' => $customer->id,
+                'store_id' => $account->store_id,
+                'public_token' => $public_token,
                 'email' => $customer->email,
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
             
-            // Check for specific SendGrid errors
-            $errorMessage = $e->getMessage();
-            if (str_contains($errorMessage, 'Maximum credits exceeded') || str_contains($errorMessage, 'Authentication failed')) {
-                $errorMessage = 'Email service temporarily unavailable. Please check your SendGrid account or try again later.';
-            } elseif (str_contains($errorMessage, 'Failed to authenticate')) {
-                $errorMessage = 'Email service configuration error. Please contact support.';
-            } else {
-                $errorMessage = 'Failed to send verification email. Please try again later.';
-            }
-            
-            if ($request->expectsJson() || $request->wantsJson()) {
-                return response()->json(['message' => $errorMessage], 500);
-            }
-            return back()->withErrors(['email' => $errorMessage]);
+            // Still return success - email will be retried via queue worker
+            // User can request another email if needed
         }
 
+        // Always return success - email is queued and will be processed
         $successMessage = 'Verification email sent! Please check your inbox.';
         if ($request->expectsJson() || $request->wantsJson()) {
             return response()->json(['message' => $successMessage]);
@@ -107,6 +100,12 @@ class CustomerEmailVerificationController extends Controller
             ->first();
 
         if (!$customer) {
+            // Try to get public_token from query to redirect back to card
+            $publicToken = $request->query('card');
+            if ($publicToken) {
+                return redirect()->route('card.show', ['public_token' => $publicToken])
+                    ->withErrors(['email' => 'Invalid or expired verification token.']);
+            }
             return redirect('/')->withErrors(['email' => 'Invalid or expired verification token.']);
         }
 

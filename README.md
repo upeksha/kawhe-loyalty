@@ -42,6 +42,7 @@ php artisan reverb:start
 - **[TECHNICAL_DOCUMENTATION.md](TECHNICAL_DOCUMENTATION.md)** - Complete technical documentation covering architecture, features, API endpoints, and more
 - **[RUN_PROJECT.md](RUN_PROJECT.md)** - Setup and running instructions
 - **[SENDGRID_SETUP.md](SENDGRID_SETUP.md)** - Email configuration guide
+- **[PRODUCTION_EMAIL_SETUP.md](PRODUCTION_EMAIL_SETUP.md)** - Production email setup with SendGrid and queue workers
 
 ## Tech Stack
 
@@ -71,22 +72,37 @@ php artisan reverb:start
 
 MIT License
 
-## Email (SendGrid SMTP)
+## Production Deployment
 
-This application uses SendGrid for sending emails. Configure the following environment variables:
+### After Deploying from Git
 
+Run these commands on your server:
+
+```bash
+# 1. Install dependencies
+composer install --no-dev --optimize-autoloader
+
+# 2. Run migrations (creates jobs table if needed)
+php artisan migrate --force
+
+# 3. Clear and cache config
+php artisan config:clear
+php artisan config:cache
+
+# 4. Restart queue worker (if using supervisor/systemd)
+sudo supervisorctl restart kawhe-queue-worker:*
+# OR
+sudo systemctl restart kawhe-queue-worker
+
+# 5. Test email configuration
+php artisan kawhe:mail-test your-email@example.com
 ```
-MAIL_MAILER=smtp
-MAIL_HOST=smtp.sendgrid.net
-MAIL_PORT=587
-MAIL_USERNAME=apikey
-MAIL_PASSWORD=your_sendgrid_api_key_here
-MAIL_ENCRYPTION=tls
-MAIL_FROM_NAME="Kawhe Loyalty"
-MAIL_FROM_ADDRESS=noreply@yourdomain.com
-```
 
-Replace `your_sendgrid_api_key_here` with your actual SendGrid API key and `noreply@yourdomain.com` with your verified sender email address.
+See **[PRODUCTION_EMAIL_SETUP.md](PRODUCTION_EMAIL_SETUP.md)** for complete production email setup instructions including:
+- SendGrid SMTP configuration
+- Queue worker setup (Supervisor/systemd)
+- Monitoring and troubleshooting
+- Email testing commands
 
 ## License
 

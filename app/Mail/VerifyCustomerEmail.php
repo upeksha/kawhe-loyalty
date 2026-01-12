@@ -9,9 +9,23 @@ use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
 
-class VerifyCustomerEmail extends Mailable
+class VerifyCustomerEmail extends Mailable implements ShouldQueue
 {
     use Queueable, SerializesModels;
+
+    /**
+     * The number of times the job may be attempted.
+     *
+     * @var int
+     */
+    public $tries = 3;
+
+    /**
+     * The number of seconds to wait before retrying the job.
+     *
+     * @var int
+     */
+    public $backoff = [60, 300, 900]; // 1 min, 5 min, 15 min
 
     /**
      * Create a new message instance.
@@ -38,7 +52,9 @@ class VerifyCustomerEmail extends Mailable
      */
     public function content(): Content
     {
-        $verificationUrl = url('/verify-email/' . $this->token . '?card=' . $this->publicToken);
+        // Use APP_URL to ensure correct domain in production
+        $baseUrl = config('app.url');
+        $verificationUrl = $baseUrl . '/verify-email/' . $this->token . '?card=' . $this->publicToken;
 
         return new Content(
             view: 'emails.verify-customer-email',
@@ -56,5 +72,32 @@ class VerifyCustomerEmail extends Mailable
     public function attachments(): array
     {
         return [];
+    }
+
+    /**
+     * Handle a job failure.
+     *
+     * @param  \Throwable  $exception
+     * @return void
+     */
+    public function failed(\Throwable $exception): void
+    {
+        // Log the failure with context
+        \Log::error('Verification email job failed', [
+            'token' => substr($this->token, 0, 10) . '...',
+            'public_token' => $this->publicToken,
+            'error' => $exception->getMessage(),
+            'attempts' => $this->attempts ?? 0,
+        ]);
+
+        // Check for SendGrid-specific errors
+        $errorMessage = $exception->getMessage();
+        if (str_contains($errorMessage, 'Maximum credits exceeded') || 
+            str_contains($errorMessage, 'Authentication failed') ||
+            str_contains($errorMessage, 'Failed to authenticate')) {
+            \Log::warning('SendGrid service issue detected - consider checking account status', [
+                'error' => $errorMessage,
+            ]);
+        }
     }
 }
