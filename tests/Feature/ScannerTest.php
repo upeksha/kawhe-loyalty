@@ -114,17 +114,18 @@ test('cooldown prevents double stamping', function () {
         'token' => $account->public_token,
     ])->assertOk();
 
-    // Immediate second stamp
+    // Immediate second stamp (within 5 seconds - should be blocked by idempotency window)
     $response = $this->actingAs($user)->postJson('/stamp', [
         'store_id' => $store->id,
         'token' => $account->public_token,
     ]);
 
-    $response->assertStatus(422);
-    $response->assertJsonValidationErrors(['token']);
+    // Should be blocked by server-side idempotency window (5 seconds)
+    $response->assertOk();
+    $response->assertJson(['status' => 'duplicate']);
     
     $account->refresh();
-    $this->assertEquals(1, $account->stamp_count);
+    $this->assertEquals(1, $account->stamp_count); // Should still be 1
 });
 
 test('can stamp again after cooldown', function () {
@@ -146,6 +147,202 @@ test('can stamp again after cooldown', function () {
     $response->assertOk();
     $account->refresh();
     $this->assertEquals(2, $account->stamp_count);
+});
+
+test('cooldown returns structured response allowing override', function () {
+    $user = User::factory()->create();
+    $store = Store::factory()->create(['user_id' => $user->id]);
+    $customer = Customer::factory()->create();
+    $account = LoyaltyAccount::create([
+        'store_id' => $store->id,
+        'customer_id' => $customer->id,
+        'last_stamped_at' => Carbon::now()->subSeconds(12), // 12 seconds ago
+        'stamp_count' => 1,
+    ]);
+
+    $response = $this->actingAs($user)->postJson('/stamp', [
+        'store_id' => $store->id,
+        'token' => $account->public_token,
+    ]);
+
+    $response->assertStatus(409); // HTTP 409 Conflict
+    $response->assertJson([
+        'status' => 'cooldown',
+        'success' => false,
+        'allow_override' => true,
+        'next_action' => 'confirm_override',
+    ]);
+    $response->assertJsonStructure([
+        'seconds_since_last',
+        'cooldown_seconds',
+        'stampCount',
+        'rewardBalance',
+    ]);
+    
+    // Should NOT have incremented stamp count
+    $account->refresh();
+    $this->assertEquals(1, $account->stamp_count);
+    
+    // Should NOT have created new events/transactions
+    $eventCount = \App\Models\StampEvent::where('loyalty_account_id', $account->id)->count();
+    $this->assertEquals(0, $eventCount); // No events created yet
+});
+
+test('override cooldown allows stamping within cooldown period', function () {
+    $user = User::factory()->create();
+    $store = Store::factory()->create(['user_id' => $user->id]);
+    $customer = Customer::factory()->create();
+    $account = LoyaltyAccount::create([
+        'store_id' => $store->id,
+        'customer_id' => $customer->id,
+        'last_stamped_at' => Carbon::now()->subSeconds(12), // 12 seconds ago
+        'stamp_count' => 1,
+    ]);
+
+    $response = $this->actingAs($user)->postJson('/stamp', [
+        'store_id' => $store->id,
+        'token' => $account->public_token,
+        'override_cooldown' => true,
+    ]);
+
+    $response->assertOk();
+    $response->assertJson(['success' => true]);
+    $response->assertJsonStructure(['status']); // Should have status field
+    
+    $account->refresh();
+    $this->assertEquals(2, $account->stamp_count);
+    
+    // Should have created event/transaction
+    $this->assertDatabaseHas('stamp_events', [
+        'loyalty_account_id' => $account->id,
+        'store_id' => $store->id,
+        'type' => 'stamp',
+    ]);
+});
+
+test('server-side idempotency window prevents duplicate stamps within 5 seconds', function () {
+    $user = User::factory()->create();
+    $store = Store::factory()->create(['user_id' => $user->id]);
+    $customer = Customer::factory()->create();
+    $account = LoyaltyAccount::create([
+        'store_id' => $store->id,
+        'customer_id' => $customer->id,
+        'stamp_count' => 0,
+    ]);
+
+    // First stamp
+    $response1 = $this->actingAs($user)->postJson('/stamp', [
+        'store_id' => $store->id,
+        'token' => $account->public_token,
+        'idempotency_key' => 'key-1', // Different key
+    ]);
+
+    $response1->assertOk();
+    $account->refresh();
+    $stampCountAfterFirst = $account->stamp_count;
+    $this->assertEquals(1, $stampCountAfterFirst);
+    
+    // Wait a moment but still within 5 seconds
+    usleep(100000); // 0.1 seconds
+    
+    // Second stamp with different idempotency key (simulating page reload)
+    $response2 = $this->actingAs($user)->postJson('/stamp', [
+        'store_id' => $store->id,
+        'token' => $account->public_token,
+        'idempotency_key' => 'key-2', // Different key - should still be blocked
+    ]);
+
+    $response2->assertOk();
+    $response2->assertJson([
+        'status' => 'duplicate',
+        'success' => false,
+        'message' => 'Duplicate scan ignored',
+    ]);
+    
+    $account->refresh();
+    $this->assertEquals($stampCountAfterFirst, $account->stamp_count); // Should not have incremented
+    
+    // Should only have ONE stamp event
+    $eventCount = \App\Models\StampEvent::where('loyalty_account_id', $account->id)->count();
+    $this->assertEquals(1, $eventCount);
+});
+
+test('override request within 5 seconds still treated as duplicate', function () {
+    $user = User::factory()->create();
+    $store = Store::factory()->create(['user_id' => $user->id]);
+    $customer = Customer::factory()->create();
+    $account = LoyaltyAccount::create([
+        'store_id' => $store->id,
+        'customer_id' => $customer->id,
+        'stamp_count' => 0,
+    ]);
+
+    // First stamp
+    $response1 = $this->actingAs($user)->postJson('/stamp', [
+        'store_id' => $store->id,
+        'token' => $account->public_token,
+    ]);
+
+    $response1->assertOk();
+    $account->refresh();
+    $stampCountAfterFirst = $account->stamp_count;
+    
+    // Wait a moment but still within 5 seconds
+    usleep(100000); // 0.1 seconds
+    
+    // Override request within 5 seconds should still be blocked by idempotency window
+    $response2 = $this->actingAs($user)->postJson('/stamp', [
+        'store_id' => $store->id,
+        'token' => $account->public_token,
+        'override_cooldown' => true, // Override cooldown, but idempotency window should block
+    ]);
+
+    $response2->assertOk();
+    $response2->assertJson([
+        'status' => 'duplicate',
+        'success' => false,
+    ]);
+    
+    $account->refresh();
+    $this->assertEquals($stampCountAfterFirst, $account->stamp_count); // Should not have incremented
+});
+
+test('normal stamp increments stamps and logs events', function () {
+    $user = User::factory()->create();
+    $store = Store::factory()->create(['user_id' => $user->id]);
+    $customer = Customer::factory()->create();
+    $account = LoyaltyAccount::create([
+        'store_id' => $store->id,
+        'customer_id' => $customer->id,
+        'stamp_count' => 0,
+    ]);
+
+    $response = $this->actingAs($user)->postJson('/stamp', [
+        'store_id' => $store->id,
+        'token' => $account->public_token,
+    ]);
+
+    $response->assertOk();
+    $response->assertJson(['status' => 'success', 'success' => true]);
+    
+    $account->refresh();
+    $this->assertEquals(1, $account->stamp_count);
+    
+    // Should have created event
+    $this->assertDatabaseHas('stamp_events', [
+        'loyalty_account_id' => $account->id,
+        'store_id' => $store->id,
+        'type' => 'stamp',
+        'count' => 1,
+    ]);
+    
+    // Should have created transaction
+    $this->assertDatabaseHas('points_transactions', [
+        'loyalty_account_id' => $account->id,
+        'store_id' => $store->id,
+        'type' => 'earn',
+        'points' => 1,
+    ]);
 });
 
 test('auto-detects store from token when wrong store selected', function () {
@@ -272,14 +469,17 @@ test('cooldown still works with auto-detected store', function () {
         'token' => $account->public_token,
     ])->assertOk();
 
-    // Immediate second stamp should be blocked by cooldown
+    // Wait for idempotency window to pass but still within cooldown
+    sleep(6); // Wait 6 seconds (past 5s idempotency, but within 30s cooldown)
+    
+    // Second stamp should return cooldown response
     $response = $this->actingAs($merchant)->postJson('/stamp', [
         'store_id' => $storeA->id,
         'token' => $account->public_token,
     ]);
 
-    $response->assertStatus(422);
-    $response->assertJsonValidationErrors(['token']);
+    $response->assertStatus(409); // HTTP 409 Conflict
+    $response->assertJson(['status' => 'cooldown']);
     
     $account->refresh();
     $this->assertEquals(1, $account->stamp_count); // Should still be 1

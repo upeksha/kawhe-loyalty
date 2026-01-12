@@ -70,6 +70,21 @@
                                 </div>
                             </div>
 
+                            <!-- Cooldown Override Modal -->
+                            <div x-show="showCooldownModal" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50" style="display: none;">
+                                <div class="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-sm">
+                                    <h3 class="text-lg font-bold mb-4 text-gray-900 dark:text-white">Cooldown Active</h3>
+                                    <div class="mb-4">
+                                        <p class="text-gray-700 dark:text-gray-300 mb-2" x-text="`Stamped ${cooldownData.seconds_since_last}s ago — add another stamp anyway?`"></p>
+                                        <p class="text-sm text-gray-500 dark:text-gray-400">Cooldown: <span x-text="cooldownData.cooldown_seconds"></span> seconds</p>
+                                    </div>
+                                    <div class="flex justify-end space-x-2">
+                                        <button @click="showCooldownModal = false; cooldownData = null" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600">Cancel</button>
+                                        <button @click="confirmCooldownOverride()" class="px-4 py-2 text-sm font-medium text-white bg-blue-700 rounded-lg hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800">Add Anyway</button>
+                                    </div>
+                                </div>
+                            </div>
+
                             <!-- Store Switched Banner -->
                             <div x-show="storeSwitched" x-transition class="p-4 mb-4 text-sm rounded-lg text-blue-800 bg-blue-50 dark:bg-blue-900 dark:text-blue-200" role="alert">
                                 <span class="font-medium">ℹ️ Store Switched</span>
@@ -96,6 +111,9 @@
     </div>
 
     @push('scripts')
+    <style>
+        [x-cloak] { display: none !important; }
+    </style>
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
     <script>
         document.addEventListener('alpine:init', () => {
@@ -113,6 +131,10 @@
                 isRedeem: false,
                 storeSwitched: false,
                 switchedStoreName: '',
+                showCooldownModal: false,
+                cooldownData: null,
+                pendingCooldownToken: null,
+                pendingCooldownCount: 1,
 
                 init() {
                     this.$nextTick(() => {
@@ -227,7 +249,7 @@
                     }
                 },
 
-                async stamp(token, count = 1) {
+                async stamp(token, count = 1, overrideCooldown = false) {
                     this.message = '';
                     this.success = false;
                     this.resultData = null;
@@ -237,7 +259,8 @@
                     try {
                         const requestBody = {
                             token: token,
-                            count: count
+                            count: count,
+                            override_cooldown: overrideCooldown
                         };
                         
                         // Include store_id if available (for backwards compatibility)
@@ -265,11 +288,30 @@
                             throw new Error('Server returned invalid response');
                         }
 
-                        if (response.ok) {
+                        // Handle different response statuses
+                        if (data.status === 'cooldown') {
+                            // Show cooldown override modal
+                            this.cooldownData = data;
+                            this.pendingCooldownToken = token;
+                            this.pendingCooldownCount = count;
+                            this.showCooldownModal = true;
+                            return;
+                        }
+
+                        if (data.status === 'duplicate') {
+                            // Show subtle duplicate message
+                            this.success = false;
+                            this.message = 'Duplicate scan ignored';
+                            this.storeSwitched = false;
+                            return;
+                        }
+
+                        if (response.ok && (data.status === 'success' || data.success)) {
                             this.success = true;
                             this.message = data.message || `${count} stamp(s) added successfully!`;
                             this.resultData = data;
                             this.manualToken = ''; // Clear manual input
+                            this.showCooldownModal = false; // Close cooldown modal if open
                             
                             // Handle store switching
                             if (data.store_switched && data.store_id_used) {
@@ -301,6 +343,15 @@
                         console.error('Error:', error);
                         this.success = false;
                         this.message = error.message || 'Network error or server issue.';
+                    }
+                },
+
+                confirmCooldownOverride() {
+                    this.showCooldownModal = false;
+                    if (this.pendingCooldownToken) {
+                        this.stamp(this.pendingCooldownToken, this.pendingCooldownCount, true);
+                        this.pendingCooldownToken = null;
+                        this.pendingCooldownCount = 1;
                     }
                 }
             }));

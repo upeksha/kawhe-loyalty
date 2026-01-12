@@ -27,6 +27,7 @@ class ScannerController extends Controller
             'store_id' => 'nullable|exists:stores,id', // Made optional for backwards compatibility
             'count' => 'nullable|integer|min:1|max:100',
             'idempotency_key' => 'nullable|string|max:255', // Optional idempotency key from client
+            'override_cooldown' => 'nullable|boolean', // Allow override of cooldown
         ]);
 
         $token = $request->token;
@@ -41,13 +42,14 @@ class ScannerController extends Controller
         $requestedStoreId = $request->store_id; // Store from dropdown (may be wrong)
         $count = $request->input('count', 1);
         $idempotencyKey = $request->input('idempotency_key', Str::uuid()->toString());
+        $overrideCooldown = $request->boolean('override_cooldown', false);
 
         // Capture logging information
         $userAgent = $request->userAgent();
         $ipAddress = $request->ip();
 
         // Use database transaction for atomicity
-        return DB::transaction(function () use ($token, $requestedStoreId, $count, $idempotencyKey, $userAgent, $ipAddress) {
+        return DB::transaction(function () use ($token, $requestedStoreId, $count, $idempotencyKey, $overrideCooldown, $userAgent, $ipAddress) {
             // Check if this idempotency key was already processed
             $existingEvent = StampEvent::where('idempotency_key', $idempotencyKey)->first();
             if ($existingEvent) {
@@ -57,6 +59,7 @@ class ScannerController extends Controller
                 $store = $account->store;
                 
                 return response()->json([
+                    'status' => 'duplicate',
                     'success' => true,
                     'storeName' => $store->name,
                     'store_id_used' => $store->id,
@@ -72,10 +75,12 @@ class ScannerController extends Controller
             }
 
             // STEP 1: Lookup loyalty account by public_token ONLY (no store filter)
-            $account = LoyaltyAccount::where('public_token', $token)
-                ->lockForUpdate()
-                ->with(['customer', 'store'])
-                ->first();
+            // Use conditional locking based on database driver
+            $accountQuery = LoyaltyAccount::where('public_token', $token);
+            if (DB::getDriverName() !== 'sqlite') {
+                $accountQuery->lockForUpdate();
+            }
+            $account = $accountQuery->with(['customer', 'store'])->first();
 
             if (!$account) {
                 throw ValidationException::withMessages([
@@ -106,12 +111,59 @@ class ScannerController extends Controller
             $store = $actualStore;
             $storeId = $actualStoreId;
 
-            // Cooldown check (30 seconds)
-            if ($account->last_stamped_at && $account->last_stamped_at->diffInSeconds(now()) < 30) {
-                $secondsRemaining = 30 - $account->last_stamped_at->diffInSeconds(now());
-                throw ValidationException::withMessages([
-                    'token' => "Please wait {$secondsRemaining} more second(s) before stamping again. This prevents accidental double-stamping."
-                ]);
+            // SERVER-SIDE IDEMPOTENCY WINDOW CHECK (5 seconds)
+            // Check if a stamp event was created for this account within the last 5 seconds
+            $recentEvent = StampEvent::where('loyalty_account_id', $account->id)
+                ->where('store_id', $storeId)
+                ->where('type', 'stamp')
+                ->where('created_at', '>=', now()->subSeconds(5))
+                ->orderBy('created_at', 'desc')
+                ->first();
+
+            // Also check last_stamped_at as a fallback
+            $secondsSinceLastStamp = $account->last_stamped_at 
+                ? $account->last_stamped_at->diffInSeconds(now()) 
+                : null;
+
+            if ($recentEvent || ($secondsSinceLastStamp !== null && $secondsSinceLastStamp < 5)) {
+                // Duplicate detected - return without creating events/transactions
+                $account->refresh();
+                $account->load(['store', 'customer']);
+                
+                return response()->json([
+                    'status' => 'duplicate',
+                    'success' => false,
+                    'message' => 'Duplicate scan ignored',
+                    'stampCount' => $account->stamp_count,
+                    'rewardBalance' => $account->reward_balance ?? 0,
+                    'rewardTarget' => $store->reward_target,
+                    'seconds_since_last' => $secondsSinceLastStamp ?? 0,
+                ], 200);
+            }
+
+            // COOLDOWN CHECK (30 seconds) - with override support
+            $secondsSinceLastStamp = $account->last_stamped_at 
+                ? $account->last_stamped_at->diffInSeconds(now()) 
+                : null;
+
+            if ($secondsSinceLastStamp !== null && $secondsSinceLastStamp < 30) {
+                // Within cooldown period
+                if (!$overrideCooldown) {
+                    // Return structured cooldown response
+                    $secondsRemaining = 30 - $secondsSinceLastStamp;
+                    return response()->json([
+                        'status' => 'cooldown',
+                        'success' => false,
+                        'message' => "Stamped {$secondsSinceLastStamp}s ago",
+                        'seconds_since_last' => $secondsSinceLastStamp,
+                        'cooldown_seconds' => 30,
+                        'allow_override' => true,
+                        'next_action' => 'confirm_override',
+                        'stampCount' => $account->stamp_count,
+                        'rewardBalance' => $account->reward_balance ?? 0,
+                    ], 409); // HTTP 409 Conflict
+                }
+                // override_cooldown is true - proceed to stamp (but still subject to idempotency window above)
             }
 
             // Store original version for optimistic locking check
@@ -201,6 +253,7 @@ class ScannerController extends Controller
             $transaction = PointsTransaction::where('idempotency_key', $idempotencyKey)->first();
             
             return response()->json([
+                'status' => 'success',
                 'success' => true,
                 'message' => $count > 1 
                     ? "Successfully added {$count} stamps!" 
@@ -211,11 +264,11 @@ class ScannerController extends Controller
                 'store_switched' => $storeSwitched,
                 'loyalty_account_id' => $account->id,
                 'customerLabel' => $account->customer->name ?? 'Customer',
-                    'stampCount' => $account->stamp_count,
-                    'rewardBalance' => $account->reward_balance ?? 0,
-                    'rewardTarget' => $store->reward_target,
-                    'rewardAvailable' => ($account->reward_balance ?? 0) > 0,
-                    'stampsRemaining' => max(0, $store->reward_target - $account->stamp_count),
+                'stampCount' => $account->stamp_count,
+                'rewardBalance' => $account->reward_balance ?? 0,
+                'rewardTarget' => $store->reward_target,
+                'rewardAvailable' => ($account->reward_balance ?? 0) > 0,
+                'stampsRemaining' => max(0, $store->reward_target - $account->stamp_count),
                 'receipt' => [
                     'transaction_id' => $transaction->id ?? null,
                     'timestamp' => now()->toIso8601String(),
