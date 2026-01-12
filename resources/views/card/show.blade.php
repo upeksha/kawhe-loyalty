@@ -96,18 +96,8 @@
                             </div>
                         </div>
                         
-                        <!-- Locked State Message (when reward available but not verified) -->
-                        @if(($account->reward_balance ?? 0) > 0 && !$account->customer->email_verified_at)
-                            <div class="flex flex-col items-center justify-center mb-4">
-                                <svg class="w-12 h-12 text-gray-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
-                                </svg>
-                                <p class="text-gray-300 text-xs font-medium">Verify Email to Redeem Reward{{ ($account->reward_balance ?? 0) > 1 ? 's' : '' }}</p>
-                            </div>
-                        @endif
-
-                        <!-- Redeem Reward Button (when reward available, email verified, and not redeemed) -->
-                        <div x-show="rewardBalance > 0 && emailVerified && hasRedeemToken" class="flex flex-col items-center justify-center mb-6">
+                        <!-- Redeem Reward Button (when reward available and not redeemed) -->
+                        <div x-show="rewardBalance > 0 && hasRedeemToken" class="flex flex-col items-center justify-center mb-6">
                             <!-- Redeem Button -->
                             <button 
                                 @click="showRedeemModal = true"
@@ -198,7 +188,7 @@
             </div>
 
             <!-- Redeem QR Code Modal (Full Screen Popup) -->
-            @if(($account->reward_balance ?? 0) > 0 && $account->customer->email_verified_at && $account->redeem_token)
+            @if(($account->reward_balance ?? 0) > 0 && $account->redeem_token)
                 <div 
                     x-show="showRedeemModal && rewardBalance > 0 && hasRedeemToken && !rewardRedeemed" 
                     x-cloak

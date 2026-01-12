@@ -337,14 +337,6 @@ class ScannerController extends Controller
                 ]);
             }
 
-            // Check if customer email is verified
-            $account->load('customer');
-            if (!$account->customer->email_verified_at) {
-                throw ValidationException::withMessages([
-                    'token' => 'You must verify your email address before you can redeem rewards. Please check your loyalty card page for verification options.'
-                ]);
-            }
-
             // Check if rewards are available
             $rewardBalance = $account->reward_balance ?? 0;
             if ($rewardBalance <= 0) {
