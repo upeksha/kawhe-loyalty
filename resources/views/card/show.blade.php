@@ -43,7 +43,7 @@
             <div class="w-full max-w-md mx-auto px-4 pt-6">
                 <!-- Reward Unlocked Card (Top) -->
                 @if($account->reward_available_at && !$account->reward_redeemed_at)
-                    <div class="bg-gradient-to-r from-yellow-400 via-yellow-500 to-yellow-600 rounded-2xl shadow-xl overflow-hidden mb-4">
+                    <div x-show="!rewardRedeemed" class="bg-gradient-to-r from-yellow-400 via-yellow-500 to-yellow-600 rounded-2xl shadow-xl overflow-hidden mb-4">
                         <div class="p-6 text-white">
                             <div class="flex items-start gap-3 mb-4">
                                 <div class="text-4xl">🎉</div>
@@ -190,7 +190,7 @@
             <!-- Redeem QR Code Modal (Full Screen Popup) -->
             @if($account->reward_available_at && !$account->reward_redeemed_at && $account->customer->email_verified_at && $account->redeem_token)
                 <div 
-                    x-show="showRedeemModal" 
+                    x-show="showRedeemModal && !rewardRedeemed" 
                     x-cloak
                     @click.away="showRedeemModal = false"
                     @keydown.escape.window="showRedeemModal = false"
@@ -260,6 +260,7 @@
                     accountData: null,
                     bannerDismissed: false,
                     showRedeemModal: false,
+                    rewardRedeemed: {{ $account->reward_redeemed_at ? 'true' : 'false' }},
                     verifying: false,
                     verifyMessage: '',
                     cardForgotten: false,
@@ -421,6 +422,12 @@
                                 circle.textContent = stampNumber;
                             }
                         });
+
+                        // Check if reward was redeemed
+                        if (data.reward_redeemed_at) {
+                            this.rewardRedeemed = true;
+                            this.showRedeemModal = false; // Close modal if open
+                        }
 
                         // Reload page if reward becomes available to show unlock card
                         if (data.reward_available_at && !data.reward_redeemed_at) {
