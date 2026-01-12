@@ -64,8 +64,9 @@ class ScannerController extends Controller
                     'store_switched' => false,
                     'customerLabel' => $account->customer->name ?? 'Customer',
                     'stampCount' => $account->stamp_count,
+                    'rewardBalance' => $account->reward_balance ?? 0,
                     'rewardTarget' => $store->reward_target,
-                    'rewardAvailable' => !is_null($account->reward_available_at),
+                    'rewardAvailable' => ($account->reward_balance ?? 0) > 0,
                     'message' => 'Already processed',
                 ]);
             }
@@ -115,23 +116,37 @@ class ScannerController extends Controller
 
             // Store original version for optimistic locking check
             $originalVersion = $account->version;
+            $stampCountBefore = $account->stamp_count;
+            $rewardBalanceBefore = $account->reward_balance ?? 0;
             
             // Increment stamp count
             $account->increment('stamp_count', $count);
             $account->last_stamped_at = now();
             $account->increment('version'); // Increment version for optimistic locking
 
-            // Reset the "Redeemed" state if we are starting a new cycle
-            if (!is_null($account->reward_redeemed_at) && $account->stamp_count > 0 && $account->stamp_count < $store->reward_target) {
-                 $account->reward_redeemed_at = null;
-            }
-
-            // Check for reward availability
-            if ($account->stamp_count >= $store->reward_target && is_null($account->reward_available_at)) {
-                $account->reward_available_at = now();
-                $account->redeem_token = Str::random(40);
-                // Also ensure previous redeemed status is cleared if we hit target immediately
-                $account->reward_redeemed_at = null; 
+            // Calculate newly earned rewards and update reward_balance
+            $newStampCount = $account->stamp_count;
+            $newlyEarned = intval(floor($newStampCount / $store->reward_target));
+            $remainder = $newStampCount % $store->reward_target;
+            
+            // Update reward_balance and stamp_count
+            $account->reward_balance = ($account->reward_balance ?? 0) + $newlyEarned;
+            $account->stamp_count = $remainder;
+            
+            // Update reward_available_at and redeem_token based on reward_balance
+            if ($account->reward_balance > 0) {
+                // Ensure reward_available_at is set when rewards become available
+                if (is_null($account->reward_available_at)) {
+                    $account->reward_available_at = now();
+                }
+                // Ensure redeem_token exists
+                if (is_null($account->redeem_token)) {
+                    $account->redeem_token = Str::random(40);
+                }
+            } else {
+                // No rewards available
+                $account->reward_available_at = null;
+                $account->redeem_token = null;
             }
 
             $account->save();
@@ -145,8 +160,11 @@ class ScannerController extends Controller
                 'points' => $count,
                 'idempotency_key' => $idempotencyKey,
                 'metadata' => [
-                    'stamp_count_before' => $account->stamp_count - $count,
+                    'stamp_count_before' => $stampCountBefore,
                     'stamp_count_after' => $account->stamp_count,
+                    'reward_balance_before' => $rewardBalanceBefore,
+                    'reward_balance_after' => $account->reward_balance,
+                    'newly_earned_rewards' => $newlyEarned,
                     'version_before' => $originalVersion,
                     'version_after' => $account->version,
                 ],
@@ -193,10 +211,11 @@ class ScannerController extends Controller
                 'store_switched' => $storeSwitched,
                 'loyalty_account_id' => $account->id,
                 'customerLabel' => $account->customer->name ?? 'Customer',
-                'stampCount' => $account->stamp_count,
-                'rewardTarget' => $store->reward_target,
-                'rewardAvailable' => !is_null($account->reward_available_at),
-                'stampsRemaining' => max(0, $store->reward_target - $account->stamp_count),
+                    'stampCount' => $account->stamp_count,
+                    'rewardBalance' => $account->reward_balance ?? 0,
+                    'rewardTarget' => $store->reward_target,
+                    'rewardAvailable' => ($account->reward_balance ?? 0) > 0,
+                    'stampsRemaining' => max(0, $store->reward_target - $account->stamp_count),
                 'receipt' => [
                     'transaction_id' => $transaction->id ?? null,
                     'timestamp' => now()->toIso8601String(),
@@ -273,38 +292,50 @@ class ScannerController extends Controller
                 ]);
             }
 
-            if (!is_null($account->reward_redeemed_at)) {
-                $redeemedDate = $account->reward_redeemed_at->format('M d, Y \a\t g:i A');
+            // Check if rewards are available
+            $rewardBalance = $account->reward_balance ?? 0;
+            if ($rewardBalance <= 0) {
                 throw ValidationException::withMessages([
-                    'token' => "This reward was already redeemed on {$redeemedDate}. Please earn a new reward to redeem again."
+                    'token' => 'No rewards available to redeem. Please earn more stamps to unlock rewards.'
                 ]);
             }
 
             // Store original values for ledger
             $originalVersion = $account->version;
-            $stampCountBefore = $account->stamp_count;
-            $pointsToDeduct = $store->reward_target;
+            $rewardBalanceBefore = $rewardBalance;
 
-            // Process redemption
-            $account->reward_redeemed_at = now();
-            $account->redeem_token = null; // Invalidate token immediately
-            $account->stamp_count = max(0, $account->stamp_count - $pointsToDeduct); // Deduct stamps
-            $account->reward_available_at = null; // Reset availability
+            // Process redemption: consume exactly ONE reward
+            $account->reward_balance = $rewardBalance - 1;
+            $account->reward_redeemed_at = now(); // Last redeemed timestamp
             $account->increment('version'); // Increment version for optimistic locking
+            
+            // Update reward_available_at and redeem_token based on remaining balance
+            if ($account->reward_balance > 0) {
+                // Still have rewards, keep token and availability
+                // redeem_token stays the same (one token can represent "redeem 1 reward")
+            } else {
+                // No rewards left
+                $account->reward_available_at = null;
+                $account->redeem_token = null;
+            }
+            
+            // Do NOT deduct stamp_count - it represents progress toward next reward
             $account->save();
             
             // Create ledger entry for redemption
+            // Using Option A: points = -reward_target (for historical consistency)
             PointsTransaction::create([
                 'loyalty_account_id' => $account->id,
                 'store_id' => $store->id,
                 'user_id' => Auth::id(),
                 'type' => 'redeem',
-                'points' => -$pointsToDeduct, // Negative for redemption
+                'points' => -$store->reward_target, // Negative for redemption (one reward = target stamps)
                 'idempotency_key' => $idempotencyKey,
                 'metadata' => [
-                    'stamp_count_before' => $stampCountBefore,
-                    'stamp_count_after' => $account->stamp_count,
-                    'points_deducted' => $pointsToDeduct,
+                    'reward_balance_before' => $rewardBalanceBefore,
+                    'reward_balance_after' => $account->reward_balance,
+                    'rewards_redeemed' => 1,
+                    'stamp_count' => $account->stamp_count, // Unchanged
                     'version_before' => $originalVersion,
                     'version_after' => $account->version,
                 ],
@@ -347,7 +378,8 @@ class ScannerController extends Controller
                     'transaction_id' => $transaction->id ?? null,
                     'timestamp' => now()->toIso8601String(),
                     'reward_title' => $store->reward_title,
-                    'points_deducted' => $pointsToDeduct,
+                    'rewards_redeemed' => 1,
+                    'remaining_rewards' => $account->reward_balance ?? 0,
                     'remaining_stamps' => $account->stamp_count,
                 ],
             ]);

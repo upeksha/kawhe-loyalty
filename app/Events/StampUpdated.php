@@ -48,7 +48,9 @@ class StampUpdated implements ShouldBroadcastNow
         
         return [
             'stamp_count' => $this->loyaltyAccount->stamp_count,
+            'reward_balance' => $this->loyaltyAccount->reward_balance ?? 0,
             'reward_target' => $this->loyaltyAccount->store->reward_target,
+            'reward_available' => ($this->loyaltyAccount->reward_balance ?? 0) > 0,
             'reward_available_at' => $this->loyaltyAccount->reward_available_at?->toIso8601String(),
             'reward_redeemed_at' => $this->loyaltyAccount->reward_redeemed_at?->toIso8601String(),
             'redeem_token' => $this->loyaltyAccount->redeem_token,

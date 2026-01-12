@@ -42,14 +42,20 @@
         <div class="min-h-screen pb-8" x-data="cardApp()" x-init="init()">
             <div class="w-full max-w-md mx-auto px-4 pt-6">
                 <!-- Reward Unlocked Card (Top) -->
-                @if($account->reward_available_at && !$account->reward_redeemed_at)
+                @if(($account->reward_balance ?? 0) > 0)
                     <div x-show="!rewardRedeemed" class="bg-gradient-to-r from-yellow-400 via-yellow-500 to-yellow-600 rounded-2xl shadow-xl overflow-hidden mb-4">
                         <div class="p-6 text-white">
                             <div class="flex items-start gap-3 mb-4">
                                 <div class="text-4xl">🎉</div>
                                 <div class="flex-1">
-                                    <h2 class="text-2xl font-bold mb-1">Reward Unlocked!</h2>
-                                    <p class="text-sm opacity-90">You've earned a <span id="reward-title-available" class="font-semibold">{{ $account->store->reward_title }}</span></p>
+                                    <h2 class="text-2xl font-bold mb-1">Reward{{ ($account->reward_balance ?? 0) > 1 ? 's' : '' }} Unlocked!</h2>
+                                    <p class="text-sm opacity-90">
+                                        <span id="reward-balance-display" class="font-semibold text-lg">{{ $account->reward_balance ?? 0 }}</span> 
+                                        <span id="reward-title-available" class="font-semibold">{{ $account->store->reward_title }}</span>
+                                        @if(($account->reward_balance ?? 0) > 1)
+                                            <span> available</span>
+                                        @endif
+                                    </p>
                                 </div>
                             </div>
                             
@@ -91,17 +97,17 @@
                         </div>
                         
                         <!-- Locked State Message (when reward available but not verified) -->
-                        @if($account->reward_available_at && !$account->reward_redeemed_at && !$account->customer->email_verified_at)
+                        @if(($account->reward_balance ?? 0) > 0 && !$account->customer->email_verified_at)
                             <div class="flex flex-col items-center justify-center mb-4">
                                 <svg class="w-12 h-12 text-gray-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
                                 </svg>
-                                <p class="text-gray-300 text-xs font-medium">Verify Email to Redeem Reward</p>
+                                <p class="text-gray-300 text-xs font-medium">Verify Email to Redeem Reward{{ ($account->reward_balance ?? 0) > 1 ? 's' : '' }}</p>
                             </div>
                         @endif
 
                         <!-- Redeem Reward Button (when reward available, email verified, and not redeemed) -->
-                        @if($account->reward_available_at && !$account->reward_redeemed_at && $account->customer->email_verified_at && $account->redeem_token)
+                        @if(($account->reward_balance ?? 0) > 0 && $account->customer->email_verified_at && $account->redeem_token)
                             <div class="flex flex-col items-center justify-center mb-6">
                                 <!-- Redeem Button -->
                                 <button 
@@ -112,6 +118,9 @@
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                                     </svg>
                                     <span>Redeem My Reward</span>
+                                    @if(($account->reward_balance ?? 0) > 1)
+                                        <span class="text-sm opacity-90">({{ $account->reward_balance }} available)</span>
+                                    @endif
                                 </button>
                             </div>
                         @endif
@@ -120,7 +129,7 @@
                         <p id="customer-name" class="text-white text-lg font-semibold text-center mb-2">{{ $account->customer->name ?? 'Valued Customer' }}</p>
                         
                         <!-- Reward Title (hidden when reward unlocked) -->
-                        @if(!$account->reward_available_at || $account->reward_redeemed_at)
+                        @if(($account->reward_balance ?? 0) == 0)
                             <p id="reward-title" class="text-gray-400 text-xs text-center mb-4">{{ $account->store->reward_title }} at {{ $account->store->reward_target }} stamps</p>
                         @endif
 
@@ -130,6 +139,11 @@
                                 <span class="text-gray-300 text-sm font-medium">Progress</span>
                                 <span id="stamp-count" class="text-white text-sm font-bold">{{ $account->stamp_count }} / {{ $account->store->reward_target }}</span>
                             </div>
+                            @if(($account->reward_balance ?? 0) > 0)
+                                <p id="reward-balance-display" class="text-yellow-400 text-center text-sm font-semibold mb-2">
+                                    Rewards Available: {{ $account->reward_balance }}
+                                </p>
+                            @endif
                             <!-- Circular Checkmarks Row -->
                             <div class="flex gap-2 justify-center flex-wrap">
                                 @for ($i = 1; $i <= $account->store->reward_target; $i++)
@@ -188,7 +202,7 @@
             </div>
 
             <!-- Redeem QR Code Modal (Full Screen Popup) -->
-            @if($account->reward_available_at && !$account->reward_redeemed_at && $account->customer->email_verified_at && $account->redeem_token)
+            @if(($account->reward_balance ?? 0) > 0 && $account->customer->email_verified_at && $account->redeem_token)
                 <div 
                     x-show="showRedeemModal && !rewardRedeemed" 
                     x-cloak
@@ -240,6 +254,11 @@
                             <p class="text-gray-300 text-sm mb-4">
                                 Present this QR code to claim your <span class="font-semibold text-yellow-400">{{ $account->store->reward_title }}</span>
                             </p>
+                            @if(($account->reward_balance ?? 0) > 1)
+                                <p class="text-yellow-400 text-xs text-center mb-2">
+                                    Redeems 1 reward. Remaining after redeem: {{ ($account->reward_balance ?? 0) - 1 }}
+                                </p>
+                            @endif
 
                             <button 
                                 @click="showRedeemModal = false"
@@ -410,6 +429,18 @@
                             stampCountEl.textContent = `${data.stamp_count} / ${data.reward_target}`;
                         }
 
+                        // Update reward balance display
+                        const rewardBalanceEl = document.getElementById('reward-balance-display');
+                        const rewardBalance = data.reward_balance ?? 0;
+                        if (rewardBalanceEl) {
+                            if (rewardBalance > 0) {
+                                rewardBalanceEl.textContent = `Rewards Available: ${rewardBalance}`;
+                                rewardBalanceEl.style.display = 'block';
+                            } else {
+                                rewardBalanceEl.style.display = 'none';
+                            }
+                        }
+
                         // Update progress circles
                         const circles = document.querySelectorAll('.stamp-circle');
                         circles.forEach((circle, index) => {
@@ -425,12 +456,12 @@
 
                         // Check if reward was redeemed
                         if (data.reward_redeemed_at) {
-                            this.rewardRedeemed = true;
+                            this.rewardRedeemed = rewardBalance <= 0;
                             this.showRedeemModal = false; // Close modal if open
                         }
 
                         // Reload page if reward becomes available to show unlock card
-                        if (data.reward_available_at && !data.reward_redeemed_at) {
+                        if (data.reward_available && !this.rewardRedeemed) {
                             window.location.reload();
                         }
                     },

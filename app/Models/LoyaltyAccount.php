@@ -25,6 +25,7 @@ class LoyaltyAccount extends Model
         'store_id',
         'customer_id',
         'stamp_count',
+        'reward_balance',
         'public_token',
         'redeem_token',
         'last_stamped_at',
@@ -39,6 +40,11 @@ class LoyaltyAccount extends Model
         'reward_available_at' => 'datetime',
         'reward_redeemed_at' => 'datetime',
         'version' => 'integer',
+        'reward_balance' => 'integer',
+    ];
+
+    protected $attributes = [
+        'reward_balance' => 0,
     ];
 
     protected static function boot()
