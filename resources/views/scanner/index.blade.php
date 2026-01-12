@@ -70,12 +70,19 @@
                                 </div>
                             </div>
 
+                            <!-- Store Switched Banner -->
+                            <div x-show="storeSwitched" x-transition class="p-4 mb-4 text-sm rounded-lg text-blue-800 bg-blue-50 dark:bg-blue-900 dark:text-blue-200" role="alert">
+                                <span class="font-medium">ℹ️ Store Switched</span>
+                                <p x-text="'Switched to ' + switchedStoreName + ' for this scan'"></p>
+                            </div>
+
                             <!-- Feedback -->
                             <div x-show="message" x-transition class="p-4 mb-4 text-sm rounded-lg" :class="success ? 'text-green-800 bg-green-50 dark:bg-gray-800 dark:text-green-400' : 'text-red-800 bg-red-50 dark:bg-gray-800 dark:text-red-400'" role="alert">
                                 <span class="font-medium" x-text="success ? 'Success!' : 'Error!'"></span> <span x-text="message"></span>
                                 <template x-if="success && resultData">
                                     <div class="mt-2">
                                         <p><strong>Customer:</strong> <span x-text="resultData.customerLabel"></span></p>
+                                        <p><strong>Store:</strong> <span x-text="resultData.store_name_used || resultData.storeName"></span></p>
                                         <p><strong>Stamps:</strong> <span x-text="resultData.stampCount"></span> / <span x-text="resultData.rewardTarget"></span></p>
                                     </div>
                                 </template>
@@ -104,6 +111,8 @@
                 stampCount: 1,
                 pendingToken: null,
                 isRedeem: false,
+                storeSwitched: false,
+                switchedStoreName: '',
 
                 init() {
                     this.$nextTick(() => {
@@ -134,13 +143,14 @@
                 handleScan(token) {
                     if (!token) return;
                     
-                    if (!this.activeStoreId) {
-                        this.success = false;
-                        this.message = 'Please select a store first.';
-                        return;
-                    }
-
+                    // Note: store_id is now optional - backend will auto-detect from token
+                    // But we still require it for redeem operations
                     if (token.startsWith('REDEEM:')) {
+                        if (!this.activeStoreId) {
+                            this.success = false;
+                            this.message = 'Please select a store first for redemption.';
+                            return;
+                        }
                         this.isRedeem = true;
                         this.pendingToken = token;
                         this.showModal = true;
@@ -225,6 +235,17 @@
                     if (!token) return;
 
                     try {
+                        const requestBody = {
+                            token: token,
+                            count: count
+                        };
+                        
+                        // Include store_id if available (for backwards compatibility)
+                        // Backend will auto-detect if not provided
+                        if (this.activeStoreId) {
+                            requestBody.store_id = Number(this.activeStoreId);
+                        }
+
                         const response = await fetch('{{ route("stamp.store") }}', {
                             method: 'POST',
                             headers: {
@@ -232,11 +253,7 @@
                                 'Accept': 'application/json',
                                 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
                             },
-                            body: JSON.stringify({
-                                token: token,
-                                store_id: Number(this.activeStoreId),
-                                count: count
-                            })
+                            body: JSON.stringify(requestBody)
                         });
 
                         const text = await response.text();
@@ -254,6 +271,20 @@
                             this.resultData = data;
                             this.manualToken = ''; // Clear manual input
                             
+                            // Handle store switching
+                            if (data.store_switched && data.store_id_used) {
+                                this.storeSwitched = true;
+                                this.switchedStoreName = data.store_name_used || data.storeName;
+                                this.activeStoreId = data.store_id_used.toString();
+                                
+                                // Auto-hide banner after 5 seconds
+                                setTimeout(() => {
+                                    this.storeSwitched = false;
+                                }, 5000);
+                            } else {
+                                this.storeSwitched = false;
+                            }
+                            
                             // Show additional info if available
                             if (data.stampsRemaining !== undefined && data.stampsRemaining > 0) {
                                 this.message += ` (${data.stampsRemaining} more needed for reward)`;
@@ -262,6 +293,7 @@
                             }
                         } else {
                             this.success = false;
+                            this.storeSwitched = false;
                             // Use improved error messages from server
                             this.message = data.message || data.errors?.token?.[0] || 'Something went wrong. Please try again.';
                         }

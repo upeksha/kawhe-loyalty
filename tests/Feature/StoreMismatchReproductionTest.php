@@ -57,18 +57,21 @@ test('stamping works for the correct store and is blocked for mismatching store'
     $response->assertJsonPath('success', true);
     expect($accountB->fresh()->stamp_count)->toBe(1);
 
-    // C) Store mismatch is blocked
+    // C) Store mismatch now auto-detects and switches (merchant owns both stores)
     $responseMismatch = $this->postJson(route('stamp.store'), [
         'token' => $accountA->public_token,
         'store_id' => $storeB->id,
         'count' => 1
     ]);
 
-    $responseMismatch->assertStatus(422);
-    $responseMismatch->assertJsonValidationErrors(['token']);
-    $responseMismatch->assertJsonFragment([
-        'message' => "This loyalty card belongs to 'Store A' and is not valid for 'Store B'. Please ensure you have selected the correct store in the scanner."
+    // With auto-detection, wrong store selected should auto-switch to correct store
+    $responseMismatch->assertOk();
+    $responseMismatch->assertJson([
+        'success' => true,
+        'store_switched' => true,
+        'store_id_used' => $storeA->id,
     ]);
+    expect($accountA->fresh()->stamp_count)->toBe(1);
 });
 
 test('token parsing handles prefix and whitespace', function () {

@@ -24,7 +24,7 @@ class ScannerController extends Controller
     {
         $request->validate([
             'token' => 'required|string',
-            'store_id' => 'required|exists:stores,id',
+            'store_id' => 'nullable|exists:stores,id', // Made optional for backwards compatibility
             'count' => 'nullable|integer|min:1|max:100',
             'idempotency_key' => 'nullable|string|max:255', // Optional idempotency key from client
         ]);
@@ -38,32 +38,30 @@ class ScannerController extends Controller
         // Trim token to prevent whitespace issues
         $token = trim($token);
 
-        $storeId = $request->store_id;
+        $requestedStoreId = $request->store_id; // Store from dropdown (may be wrong)
         $count = $request->input('count', 1);
         $idempotencyKey = $request->input('idempotency_key', Str::uuid()->toString());
-
-        // Verify user owns the store
-        $store = Auth::user()->stores()->where('id', $storeId)->first();
-        if (!$store) {
-            abort(403, 'You do not own this store.');
-        }
 
         // Capture logging information
         $userAgent = $request->userAgent();
         $ipAddress = $request->ip();
 
         // Use database transaction for atomicity
-        return DB::transaction(function () use ($token, $storeId, $count, $idempotencyKey, $store, $userAgent, $ipAddress) {
+        return DB::transaction(function () use ($token, $requestedStoreId, $count, $idempotencyKey, $userAgent, $ipAddress) {
             // Check if this idempotency key was already processed
             $existingEvent = StampEvent::where('idempotency_key', $idempotencyKey)->first();
             if ($existingEvent) {
                 // Return the existing result (idempotent)
                 $account = $existingEvent->loyaltyAccount;
                 $account->load(['store', 'customer']);
+                $store = $account->store;
                 
                 return response()->json([
                     'success' => true,
                     'storeName' => $store->name,
+                    'store_id_used' => $store->id,
+                    'store_name_used' => $store->name,
+                    'store_switched' => false,
                     'customerLabel' => $account->customer->name ?? 'Customer',
                     'stampCount' => $account->stamp_count,
                     'rewardTarget' => $store->reward_target,
@@ -72,21 +70,40 @@ class ScannerController extends Controller
                 ]);
             }
 
-            // Find loyalty account with lock for update (pessimistic locking)
+            // STEP 1: Lookup loyalty account by public_token ONLY (no store filter)
             $account = LoyaltyAccount::where('public_token', $token)
-                ->where('store_id', $storeId)
                 ->lockForUpdate()
                 ->with(['customer', 'store'])
                 ->first();
 
             if (!$account) {
-                $potentialAccount = LoyaltyAccount::where('public_token', $token)->with('store')->first();
-                $actualStoreName = $potentialAccount->store->name ?? 'Unknown Store';
-
                 throw ValidationException::withMessages([
-                    'token' => "This loyalty card belongs to '{$actualStoreName}' and is not valid for '{$store->name}'. Please ensure you have selected the correct store in the scanner."
+                    'token' => 'This loyalty card is invalid or not found. Please check the QR code and try again.'
                 ]);
             }
+
+            // STEP 2: Determine the store from the account
+            $actualStore = $account->store;
+            $actualStoreId = $actualStore->id;
+
+            // STEP 3: Authorization - Check if merchant has access to this store
+            $merchant = Auth::user();
+            $merchantOwnsStore = $merchant->stores()->where('id', $actualStoreId)->exists();
+            
+            // Super admins can access any store
+            if (!$merchantOwnsStore && !$merchant->isSuperAdmin()) {
+                // Security: Don't expose store name if merchant doesn't have access
+                throw ValidationException::withMessages([
+                    'token' => 'This loyalty card belongs to a store you do not have access to. Please contact support if you believe this is an error.'
+                ]);
+            }
+
+            // STEP 4: Determine if store was switched
+            $storeSwitched = $requestedStoreId && $requestedStoreId != $actualStoreId;
+
+            // STEP 5: Use the account's store for the transaction (ignore dropdown if different)
+            $store = $actualStore;
+            $storeId = $actualStoreId;
 
             // Cooldown check (30 seconds)
             if ($account->last_stamped_at && $account->last_stamped_at->diffInSeconds(now()) < 30) {
@@ -170,7 +187,11 @@ class ScannerController extends Controller
                 'message' => $count > 1 
                     ? "Successfully added {$count} stamps!" 
                     : "Successfully added 1 stamp!",
-                'storeName' => $store->name,
+                'storeName' => $store->name, // Keep for backwards compatibility
+                'store_id_used' => $store->id,
+                'store_name_used' => $store->name,
+                'store_switched' => $storeSwitched,
+                'loyalty_account_id' => $account->id,
                 'customerLabel' => $account->customer->name ?? 'Customer',
                 'stampCount' => $account->stamp_count,
                 'rewardTarget' => $store->reward_target,
