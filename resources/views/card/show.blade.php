@@ -43,7 +43,7 @@
             <div class="w-full max-w-md mx-auto px-4 pt-6">
                 <!-- Reward Unlocked Card (Top) -->
                 @if(($account->reward_balance ?? 0) > 0)
-                    <div x-show="!rewardRedeemed" class="bg-gradient-to-r from-yellow-400 via-yellow-500 to-yellow-600 rounded-2xl shadow-xl overflow-hidden mb-4">
+                    <div x-show="rewardBalance > 0 && !rewardRedeemed" class="bg-gradient-to-r from-yellow-400 via-yellow-500 to-yellow-600 rounded-2xl shadow-xl overflow-hidden mb-4">
                         <div class="p-6 text-white">
                             <div class="flex items-start gap-3 mb-4">
                                 <div class="text-4xl">🎉</div>
@@ -107,23 +107,19 @@
                         @endif
 
                         <!-- Redeem Reward Button (when reward available, email verified, and not redeemed) -->
-                        @if(($account->reward_balance ?? 0) > 0 && $account->customer->email_verified_at && $account->redeem_token)
-                            <div class="flex flex-col items-center justify-center mb-6">
-                                <!-- Redeem Button -->
-                                <button 
-                                    @click="showRedeemModal = true"
-                                    class="w-full bg-gradient-to-r from-yellow-400 via-yellow-500 to-yellow-600 hover:from-yellow-500 hover:via-yellow-600 hover:to-yellow-700 text-white font-bold py-4 px-6 rounded-xl shadow-lg transition-all duration-200 transform hover:scale-105 flex items-center justify-center gap-2"
-                                >
-                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                    </svg>
-                                    <span>Redeem My Reward</span>
-                                    @if(($account->reward_balance ?? 0) > 1)
-                                        <span class="text-sm opacity-90">({{ $account->reward_balance }} available)</span>
-                                    @endif
-                                </button>
-                            </div>
-                        @endif
+                        <div x-show="rewardBalance > 0 && emailVerified && hasRedeemToken" class="flex flex-col items-center justify-center mb-6">
+                            <!-- Redeem Button -->
+                            <button 
+                                @click="showRedeemModal = true"
+                                class="w-full bg-gradient-to-r from-yellow-400 via-yellow-500 to-yellow-600 hover:from-yellow-500 hover:via-yellow-600 hover:to-yellow-700 text-white font-bold py-4 px-6 rounded-xl shadow-lg transition-all duration-200 transform hover:scale-105 flex items-center justify-center gap-2"
+                            >
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                                <span>Redeem My Reward</span>
+                                <span x-show="rewardBalance > 1" class="text-sm opacity-90" x-text="`(${rewardBalance} available)`"></span>
+                            </button>
+                        </div>
 
                         <!-- Customer Name -->
                         <p id="customer-name" class="text-white text-lg font-semibold text-center mb-2">{{ $account->customer->name ?? 'Valued Customer' }}</p>
@@ -204,7 +200,7 @@
             <!-- Redeem QR Code Modal (Full Screen Popup) -->
             @if(($account->reward_balance ?? 0) > 0 && $account->customer->email_verified_at && $account->redeem_token)
                 <div 
-                    x-show="showRedeemModal && !rewardRedeemed" 
+                    x-show="showRedeemModal && rewardBalance > 0 && hasRedeemToken && !rewardRedeemed" 
                     x-cloak
                     @click.away="showRedeemModal = false"
                     @keydown.escape.window="showRedeemModal = false"
@@ -280,6 +276,9 @@
                     bannerDismissed: false,
                     showRedeemModal: false,
                     rewardRedeemed: {{ $account->reward_redeemed_at ? 'true' : 'false' }},
+                    rewardBalance: {{ $account->reward_balance ?? 0 }},
+                    hasRedeemToken: {{ $account->redeem_token ? 'true' : 'false' }},
+                    emailVerified: {{ $account->customer->email_verified_at ? 'true' : 'false' }},
                     verifying: false,
                     verifyMessage: '',
                     cardForgotten: false,
@@ -429,9 +428,13 @@
                             stampCountEl.textContent = `${data.stamp_count} / ${data.reward_target}`;
                         }
 
+                        // Update reward balance (Alpine.js reactive state)
+                        const rewardBalance = data.reward_balance ?? 0;
+                        this.rewardBalance = rewardBalance;
+                        this.hasRedeemToken = !!data.redeem_token;
+                        
                         // Update reward balance display
                         const rewardBalanceEl = document.getElementById('reward-balance-display');
-                        const rewardBalance = data.reward_balance ?? 0;
                         if (rewardBalanceEl) {
                             if (rewardBalance > 0) {
                                 rewardBalanceEl.textContent = `Rewards Available: ${rewardBalance}`;
@@ -456,6 +459,7 @@
 
                         // Check if reward was redeemed
                         if (data.reward_redeemed_at) {
+                            // Hide button and banner if no rewards left
                             this.rewardRedeemed = rewardBalance <= 0;
                             this.showRedeemModal = false; // Close modal if open
                         }
