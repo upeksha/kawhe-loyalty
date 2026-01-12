@@ -71,12 +71,12 @@
                             </div>
 
                             <!-- Cooldown Override Modal -->
-                            <div x-show="showCooldownModal" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50" style="display: none;">
+                            <div x-show="showCooldownModal" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
                                 <div class="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-sm">
                                     <h3 class="text-lg font-bold mb-4 text-gray-900 dark:text-white">Cooldown Active</h3>
                                     <div class="mb-4">
-                                        <p class="text-gray-700 dark:text-gray-300 mb-2" x-text="`Stamped ${cooldownData.seconds_since_last}s ago — add another stamp anyway?`"></p>
-                                        <p class="text-sm text-gray-500 dark:text-gray-400">Cooldown: <span x-text="cooldownData.cooldown_seconds"></span> seconds</p>
+                                        <p class="text-gray-700 dark:text-gray-300 mb-2" x-text="`Stamped ${cooldownData?.seconds_since_last || 0}s ago — add another stamp anyway?`"></p>
+                                        <p class="text-sm text-gray-500 dark:text-gray-400">Cooldown: <span x-text="cooldownData?.cooldown_seconds || 30"></span> seconds</p>
                                     </div>
                                     <div class="flex justify-end space-x-2">
                                         <button @click="showCooldownModal = false; cooldownData = null" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600">Cancel</button>
@@ -295,6 +295,9 @@
                             this.pendingCooldownToken = token;
                             this.pendingCooldownCount = count;
                             this.showCooldownModal = true;
+                            // Clear any error message since we're showing the modal
+                            this.message = '';
+                            this.success = false;
                             return;
                         }
 
