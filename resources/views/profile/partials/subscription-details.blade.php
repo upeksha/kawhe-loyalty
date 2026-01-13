@@ -71,23 +71,35 @@
                         </h3>
                         <p class="text-xs text-gray-600 mt-1">
                             Cards issued: <strong>{{ $usageStats['cards_count'] }} / {{ $usageStats['limit'] }}</strong>
+                            @if($usageStats['grandfathered_count'] > 0)
+                                <span class="text-xs text-gray-500">({{ $usageStats['grandfathered_count'] }} grandfathered)</span>
+                            @endif
                         </p>
-                        @if($usageStats['cards_count'] >= $usageStats['limit'])
+                        @if($usageStats['non_grandfathered_count'] >= $usageStats['limit'])
                             <p class="text-xs text-red-600 mt-1 font-semibold">
                                 ⚠ Limit reached
                             </p>
                         @else
                             <p class="text-xs text-gray-600 mt-1">
-                                {{ $usageStats['limit'] - $usageStats['cards_count'] }} cards remaining
+                                {{ $usageStats['limit'] - $usageStats['non_grandfathered_count'] }} cards remaining
+                            </p>
+                        @endif
+                        @if($usageStats['has_cancelled_subscription'] && $usageStats['grandfathered_count'] > 0)
+                            <p class="text-xs text-blue-600 mt-1">
+                                ℹ️ {{ $usageStats['grandfathered_count'] }} card(s) remain active from your previous Pro subscription
                             </p>
                         @endif
                     </div>
                 </div>
 
-                @if($usageStats['cards_count'] >= $usageStats['limit'])
+                @if($usageStats['non_grandfathered_count'] >= $usageStats['limit'])
                     <div class="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded">
                         <p class="text-xs text-yellow-800 mb-2">
-                            You've reached the free plan limit. Upgrade to Pro for unlimited cards.
+                            You've reached the free plan limit. 
+                            @if($usageStats['grandfathered_count'] > 0)
+                                Your {{ $usageStats['grandfathered_count'] }} grandfathered card(s) remain active, but you cannot create new cards. 
+                            @endif
+                            Upgrade to Pro for unlimited cards.
                         </p>
                         <a href="{{ route('billing.index') }}" 
                            class="inline-flex items-center px-3 py-2 bg-blue-700 text-white rounded-md hover:bg-blue-600 text-xs font-medium">

@@ -20,11 +20,13 @@ class UsageService
 
     /**
      * Count total loyalty cards across all stores owned by a merchant.
+     * If subscription is cancelled, only counts cards created AFTER cancellation (non-grandfathered).
      *
      * @param User $user
+     * @param bool $includeGrandfathered If true, counts all cards. If false, excludes grandfathered cards.
      * @return int
      */
-    public function cardsCountForUser(User $user): int
+    public function cardsCountForUser(User $user, bool $includeGrandfathered = true): int
     {
         // Get all store IDs owned by this user
         $storeIds = $user->stores()->pluck('id');
@@ -33,8 +35,46 @@ class UsageService
             return 0;
         }
 
-        // Count loyalty accounts for all stores owned by this user
-        return LoyaltyAccount::whereIn('store_id', $storeIds)->count();
+        $query = LoyaltyAccount::whereIn('store_id', $storeIds);
+
+        // If not including grandfathered, exclude cards created before subscription cancellation
+        if (!$includeGrandfathered) {
+            $subscription = $user->subscription('default');
+            
+            // If subscription exists and has an ends_at date (cancelled), exclude cards created before that
+            if ($subscription && $subscription->ends_at) {
+                $query->where('created_at', '>=', $subscription->ends_at);
+            }
+            // If no subscription or no ends_at, all cards count (no grandfathering)
+        }
+
+        return $query->count();
+    }
+
+    /**
+     * Count grandfathered cards (cards created before subscription cancellation).
+     *
+     * @param User $user
+     * @return int
+     */
+    public function grandfatheredCardsCount(User $user): int
+    {
+        $subscription = $user->subscription('default');
+        
+        // Only grandfathered if subscription exists and was cancelled (has ends_at)
+        if (!$subscription || !$subscription->ends_at) {
+            return 0;
+        }
+
+        $storeIds = $user->stores()->pluck('id');
+        if ($storeIds->isEmpty()) {
+            return 0;
+        }
+
+        // Count cards created BEFORE subscription cancellation
+        return LoyaltyAccount::whereIn('store_id', $storeIds)
+            ->where('created_at', '<', $subscription->ends_at)
+            ->count();
     }
 
     /**
@@ -66,6 +106,7 @@ class UsageService
 
     /**
      * Check if user can create a new loyalty card.
+     * Implements grandfathering: cards created before subscription cancellation remain active.
      *
      * @param User $user
      * @return bool
@@ -77,8 +118,11 @@ class UsageService
             return true;
         }
 
-        // Free users limited to 50 cards
-        return $this->cardsCountForUser($user) < $this->freeLimit();
+        // For non-subscribed users, count only non-grandfathered cards
+        // (cards created after subscription cancellation)
+        $nonGrandfatheredCount = $this->cardsCountForUser($user, includeGrandfathered: false);
+        
+        return $nonGrandfatheredCount < $this->freeLimit();
     }
 
     /**
@@ -89,16 +133,23 @@ class UsageService
      */
     public function getUsageStats(User $user): array
     {
-        $cardsCount = $this->cardsCountForUser($user);
+        $totalCardsCount = $this->cardsCountForUser($user, includeGrandfathered: true);
+        $nonGrandfatheredCount = $this->cardsCountForUser($user, includeGrandfathered: false);
+        $grandfatheredCount = $this->grandfatheredCardsCount($user);
         $limit = $this->freeLimit();
         $isSubscribed = $this->isSubscribed($user);
+        $subscription = $user->subscription('default');
+        $hasCancelledSubscription = $subscription && $subscription->ends_at && !$isSubscribed;
 
         return [
-            'cards_count' => $cardsCount,
+            'cards_count' => $totalCardsCount,
+            'non_grandfathered_count' => $nonGrandfatheredCount,
+            'grandfathered_count' => $grandfatheredCount,
             'limit' => $limit,
             'is_subscribed' => $isSubscribed,
+            'has_cancelled_subscription' => $hasCancelledSubscription,
             'can_create_card' => $this->canCreateCard($user),
-            'usage_percentage' => $isSubscribed ? 0 : min(100, ($cardsCount / $limit) * 100),
+            'usage_percentage' => $isSubscribed ? 0 : min(100, ($nonGrandfatheredCount / $limit) * 100),
         ];
     }
 }

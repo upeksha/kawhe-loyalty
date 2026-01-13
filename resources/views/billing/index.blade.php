@@ -57,9 +57,12 @@
                                         <p class="text-gray-800 font-semibold">Free Plan</p>
                                         <p class="text-sm text-gray-600 mt-1">
                                             {{ $stats['cards_count'] }} / {{ $stats['limit'] }} cards used
+                                            @if($stats['grandfathered_count'] > 0)
+                                                <span class="text-xs text-gray-500">({{ $stats['grandfathered_count'] }} grandfathered)</span>
+                                            @endif
                                         </p>
                                     </div>
-                                    @if($stats['cards_count'] >= $stats['limit'])
+                                    @if($stats['non_grandfathered_count'] >= $stats['limit'])
                                         <div class="text-right">
                                             <p class="text-sm text-red-600 font-semibold mb-2">Limit Reached</p>
                                             <form method="POST" action="{{ route('billing.checkout') }}">
@@ -91,12 +94,17 @@
                                     <span class="text-gray-600">Loyalty Cards Issued</span>
                                     <span class="font-semibold">{{ $stats['cards_count'] }} / {{ $stats['limit'] }}</span>
                                 </div>
+                                @if($stats['grandfathered_count'] > 0)
+                                    <p class="text-xs text-blue-600">
+                                        ℹ️ {{ $stats['grandfathered_count'] }} card(s) grandfathered from previous Pro subscription
+                                    </p>
+                                @endif
                                 <div class="w-full bg-gray-200 rounded-full h-3">
-                                    <div class="bg-blue-600 h-3 rounded-full transition-all duration-300" 
+                                    <div class="bg-blue-600 h-3 rounded-full transition-all duration-300"
                                          style="width: {{ $stats['usage_percentage'] }}%"></div>
                                 </div>
                                 <p class="text-xs text-gray-500 mt-1">
-                                    {{ $stats['limit'] - $stats['cards_count'] }} cards remaining on free plan
+                                    {{ $stats['limit'] - $stats['non_grandfathered_count'] }} cards remaining on free plan
                                 </p>
                             </div>
                         </div>

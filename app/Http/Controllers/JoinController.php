@@ -130,12 +130,15 @@ class JoinController extends Controller
 
         if (!$usageService->canCreateCard($merchant)) {
             // Log the blocked attempt
+            $stats = $usageService->getUsageStats($merchant);
             \Log::warning('Customer join blocked due to free plan limit', [
                 'store_id' => $store->id,
                 'store_name' => $store->name,
                 'merchant_id' => $merchant->id,
                 'merchant_email' => $merchant->email,
-                'cards_count' => $usageService->cardsCountForUser($merchant),
+                'total_cards_count' => $stats['cards_count'],
+                'non_grandfathered_count' => $stats['non_grandfathered_count'],
+                'grandfathered_count' => $stats['grandfathered_count'],
                 'limit' => $usageService->freeLimit(),
             ]);
 

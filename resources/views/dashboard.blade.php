@@ -22,6 +22,9 @@
                                 </h3>
                                 <p class="text-sm text-gray-600 mt-1">
                                     Cards issued: <strong>{{ $usageStats['cards_count'] }} / {{ $usageStats['is_subscribed'] ? '∞' : $usageStats['limit'] }}</strong>
+                                    @if($usageStats['grandfathered_count'] > 0)
+                                        <span class="text-xs text-gray-500">({{ $usageStats['grandfathered_count'] }} grandfathered)</span>
+                                    @endif
                                 </p>
                             </div>
                             @if(!$usageStats['is_subscribed'])
@@ -38,11 +41,23 @@
                                      style="width: {{ $usageStats['usage_percentage'] }}%"></div>
                             </div>
                             
-                            @if($usageStats['cards_count'] >= $usageStats['limit'])
+                            @if($usageStats['non_grandfathered_count'] >= $usageStats['limit'])
                                 <div class="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
                                     <p class="text-sm text-yellow-800">
                                         <strong>Limit Reached:</strong> You've reached the free plan limit of {{ $usageStats['limit'] }} cards. 
-                                        Existing customers can still use their cards, but new customers cannot join until you upgrade.
+                                        @if($usageStats['grandfathered_count'] > 0)
+                                            <br><br>You have {{ $usageStats['grandfathered_count'] }} grandfathered card(s) that remain active from your previous Pro subscription. 
+                                            All existing cards continue to work, but new customers cannot join until you upgrade.
+                                        @else
+                                            Existing customers can still use their cards, but new customers cannot join until you upgrade.
+                                        @endif
+                                    </p>
+                                </div>
+                            @elseif($usageStats['has_cancelled_subscription'] && $usageStats['grandfathered_count'] > 0)
+                                <div class="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                                    <p class="text-sm text-blue-800">
+                                        <strong>Grandfathered Cards:</strong> You have {{ $usageStats['grandfathered_count'] }} card(s) that remain active from your previous Pro subscription. 
+                                        You can create {{ $usageStats['limit'] - $usageStats['non_grandfathered_count'] }} more card(s) on the free plan.
                                     </p>
                                 </div>
                             @elseif($usageStats['cards_count'] >= ($usageStats['limit'] * 0.8))
