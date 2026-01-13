@@ -91,6 +91,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/billing/checkout', [App\Http\Controllers\BillingController::class, 'checkout'])->name('billing.checkout');
     Route::post('/billing/portal', [App\Http\Controllers\BillingController::class, 'portal'])->name('billing.portal');
     Route::get('/billing/success', [App\Http\Controllers\BillingController::class, 'success'])->name('billing.success');
+    Route::post('/billing/sync', [App\Http\Controllers\BillingController::class, 'sync'])->name('billing.sync');
     Route::get('/billing/cancel', [App\Http\Controllers\BillingController::class, 'cancel'])->name('billing.cancel');
 });
 
