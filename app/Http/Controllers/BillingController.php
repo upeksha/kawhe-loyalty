@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Stripe\Stripe;
 use Stripe\Checkout\Session as StripeCheckoutSession;
+use Stripe\Subscription as StripeSubscription;
 
 class BillingController extends Controller
 {
@@ -238,24 +239,95 @@ class BillingController extends Controller
                 try {
                     // Ensure user has Stripe customer ID
                     if (!$user->hasStripeId()) {
-                        $user->stripe_id = $session->customer;
+                        $user->stripe_id = is_string($session->customer) ? $session->customer : $session->customer->id;
                         $user->save();
+                        Log::info('Set Stripe customer ID for user', [
+                            'user_id' => $user->id,
+                            'stripe_id' => $user->stripe_id,
+                        ]);
                     }
                     
-                    // Sync subscriptions
-                    $user->syncStripeSubscriptions();
+                    // Get subscription ID (handle both string and object)
+                    $subscriptionId = is_string($session->subscription) ? $session->subscription : $session->subscription->id;
                     
-                    Log::info('Subscription synced after checkout', [
-                        'user_id' => $user->id,
-                        'subscription_id' => $session->subscription,
-                    ]);
+                    // Try Cashier's sync method first
+                    try {
+                        $user->syncStripeSubscriptions();
+                        Log::info('Cashier syncStripeSubscriptions called', [
+                            'user_id' => $user->id,
+                            'subscription_id' => $subscriptionId,
+                        ]);
+                    } catch (\Exception $syncError) {
+                        Log::warning('syncStripeSubscriptions failed, trying direct retrieval', [
+                            'user_id' => $user->id,
+                            'error' => $syncError->getMessage(),
+                        ]);
+                    }
+                    
+                    // Fallback: Directly retrieve and create/update subscription
+                    try {
+                        $stripeSubscription = \Stripe\Subscription::retrieve($subscriptionId);
+                        
+                        // Create or update subscription record manually
+                        $subscription = \Laravel\Cashier\Subscription::updateOrCreate(
+                            [
+                                'stripe_id' => $stripeSubscription->id,
+                            ],
+                            [
+                                'user_id' => $user->id,
+                                'type' => 'default',
+                                'stripe_status' => $stripeSubscription->status,
+                                'stripe_price' => $stripeSubscription->items->data[0]->price->id ?? null,
+                                'quantity' => $stripeSubscription->items->data[0]->quantity ?? null,
+                                'trial_ends_at' => $stripeSubscription->trial_end ? \Carbon\Carbon::createFromTimestamp($stripeSubscription->trial_end) : null,
+                                'ends_at' => $stripeSubscription->cancel_at ? \Carbon\Carbon::createFromTimestamp($stripeSubscription->cancel_at) : ($stripeSubscription->cancel_at_period_end && $stripeSubscription->current_period_end ? \Carbon\Carbon::createFromTimestamp($stripeSubscription->current_period_end) : null),
+                            ]
+                        );
+                        
+                        // Sync subscription items
+                        foreach ($stripeSubscription->items->data as $item) {
+                            $subscription->items()->updateOrCreate(
+                                [
+                                    'stripe_id' => $item->id,
+                                ],
+                                [
+                                    'stripe_product' => $item->price->product,
+                                    'stripe_price' => $item->price->id,
+                                    'quantity' => $item->quantity ?? null,
+                                ]
+                            );
+                        }
+                        
+                        Log::info('Subscription manually synced after checkout', [
+                            'user_id' => $user->id,
+                            'subscription_id' => $subscriptionId,
+                            'status' => $stripeSubscription->status,
+                            'db_subscription_id' => $subscription->id,
+                        ]);
+                    } catch (\Exception $directError) {
+                        Log::error('Direct subscription retrieval also failed', [
+                            'user_id' => $user->id,
+                            'subscription_id' => $subscriptionId,
+                            'error' => $directError->getMessage(),
+                        ]);
+                        throw $directError;
+                    }
                     
                     // Verify subscription is now active
                     $subscription = $user->subscription('default');
                     if ($subscription && in_array($subscription->stripe_status, ['active', 'trialing'])) {
+                        Log::info('Subscription verified as active, redirecting to dashboard', [
+                            'user_id' => $user->id,
+                            'subscription_status' => $subscription->stripe_status,
+                        ]);
                         return redirect()->route('merchant.dashboard')
                             ->with('success', 'Your Pro plan subscription has been activated! You can now create unlimited loyalty cards.');
                     }
+                    
+                    Log::warning('Subscription synced but status not active/trialing', [
+                        'user_id' => $user->id,
+                        'subscription_status' => $subscription ? $subscription->stripe_status : 'null',
+                    ]);
                     
                     return view('billing.success', [
                         'message' => 'Subscription is being activated. This may take a few moments. Please refresh the billing page to check your status.',
@@ -268,11 +340,13 @@ class BillingController extends Controller
                     Log::error('Failed to sync subscription after checkout', [
                         'user_id' => $user->id,
                         'session_id' => $sessionId,
+                        'subscription_id' => is_string($session->subscription) ? $session->subscription : ($session->subscription->id ?? 'unknown'),
                         'error' => $e->getMessage(),
+                        'trace' => $e->getTraceAsString(),
                     ]);
                     
                     return view('billing.success', [
-                        'error' => 'Payment was successful, but we encountered an issue syncing your subscription. Please use the "Sync Subscription" button on the billing page.',
+                        'error' => 'Payment was successful, but we encountered an issue syncing your subscription. Please use the "Sync Subscription" button on the billing page or contact support.',
                         'hasSession' => true,
                         'canRetry' => true,
                         'sessionId' => $sessionId,
@@ -323,12 +397,13 @@ class BillingController extends Controller
     
     /**
      * Manual sync endpoint for subscription status.
+     * Can sync by session_id OR by user's Stripe customer ID.
      * Idempotent - safe to call multiple times.
      */
     public function sync(Request $request)
     {
         $request->validate([
-            'session_id' => 'required|string',
+            'session_id' => 'nullable|string',
         ]);
         
         $sessionId = $request->input('session_id');
@@ -337,34 +412,146 @@ class BillingController extends Controller
         try {
             Stripe::setApiKey(config('cashier.secret'));
             
-            $session = StripeCheckoutSession::retrieve([
-                'id' => $sessionId,
-                'expand' => ['subscription', 'customer'],
-            ]);
+            $subscriptionId = null;
             
-            // Verify this session belongs to the authenticated user
-            $sessionUserId = $session->client_reference_id;
-            if ($sessionUserId && (string) $user->id !== $sessionUserId) {
-                return back()->withErrors(['error' => 'This session does not belong to your account.']);
-            }
-            
-            if ($session->subscription) {
-                if (!$user->hasStripeId()) {
-                    $user->stripe_id = $session->customer;
+            // If session_id provided, retrieve from session
+            if ($sessionId) {
+                $session = StripeCheckoutSession::retrieve([
+                    'id' => $sessionId,
+                    'expand' => ['subscription', 'customer'],
+                ]);
+                
+                // Verify this session belongs to the authenticated user
+                $sessionUserId = $session->client_reference_id;
+                if ($sessionUserId && (string) $user->id !== $sessionUserId) {
+                    return back()->withErrors(['error' => 'This session does not belong to your account.']);
+                }
+                
+                // Ensure user has Stripe customer ID
+                if (!$user->hasStripeId() && $session->customer) {
+                    $user->stripe_id = is_string($session->customer) ? $session->customer : $session->customer->id;
                     $user->save();
                 }
                 
-                $user->syncStripeSubscriptions();
+                if ($session->subscription) {
+                    $subscriptionId = is_string($session->subscription) ? $session->subscription : $session->subscription->id;
+                }
+            }
+            
+            // If no subscription from session, try to find from user's Stripe customer
+            if (!$subscriptionId && $user->hasStripeId()) {
+                try {
+                    $stripeCustomer = \Stripe\Customer::retrieve($user->stripe_id);
+                    $subscriptions = \Stripe\Subscription::all([
+                        'customer' => $user->stripe_id,
+                        'status' => 'all',
+                        'limit' => 10,
+                    ]);
+                    
+                    if ($subscriptions->data && count($subscriptions->data) > 0) {
+                        // Get the most recent active subscription
+                        $activeSub = collect($subscriptions->data)->firstWhere('status', 'active');
+                        $trialingSub = collect($subscriptions->data)->firstWhere('status', 'trialing');
+                        $subscriptionId = $activeSub ? $activeSub->id : ($trialingSub ? $trialingSub->id : $subscriptions->data[0]->id);
+                        
+                        Log::info('Found subscription from Stripe customer', [
+                            'user_id' => $user->id,
+                            'subscription_id' => $subscriptionId,
+                        ]);
+                    }
+                } catch (\Exception $e) {
+                    Log::warning('Failed to retrieve subscriptions from Stripe customer', [
+                        'user_id' => $user->id,
+                        'stripe_id' => $user->stripe_id,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            }
+            
+            if ($subscriptionId) {
+                // Get subscription ID (handle both string and object)
+                $subscriptionId = is_string($session->subscription) ? $session->subscription : $session->subscription->id;
                 
-                Log::info('Manual subscription sync completed', [
-                    'user_id' => $user->id,
-                    'session_id' => $sessionId,
-                ]);
+                // Ensure user has Stripe customer ID
+                if (!$user->hasStripeId()) {
+                    $user->stripe_id = is_string($session->customer) ? $session->customer : $session->customer->id;
+                    $user->save();
+                }
+                
+                // Try Cashier's sync method first
+                try {
+                    $user->syncStripeSubscriptions();
+                    Log::info('Cashier syncStripeSubscriptions called (manual sync)', [
+                        'user_id' => $user->id,
+                        'subscription_id' => $subscriptionId,
+                    ]);
+                } catch (\Exception $syncError) {
+                    Log::warning('syncStripeSubscriptions failed, trying direct retrieval (manual sync)', [
+                        'user_id' => $user->id,
+                        'error' => $syncError->getMessage(),
+                    ]);
+                }
+                
+                // Fallback: Directly retrieve and create/update subscription
+                try {
+                    $stripeSubscription = StripeSubscription::retrieve($subscriptionId);
+                    
+                    $subscription = \Laravel\Cashier\Subscription::updateOrCreate(
+                        [
+                            'stripe_id' => $stripeSubscription->id,
+                        ],
+                        [
+                            'user_id' => $user->id,
+                            'type' => 'default',
+                            'stripe_status' => $stripeSubscription->status,
+                            'stripe_price' => $stripeSubscription->items->data[0]->price->id ?? null,
+                            'quantity' => $stripeSubscription->items->data[0]->quantity ?? null,
+                            'trial_ends_at' => $stripeSubscription->trial_end ? \Carbon\Carbon::createFromTimestamp($stripeSubscription->trial_end) : null,
+                            'ends_at' => $stripeSubscription->cancel_at ? \Carbon\Carbon::createFromTimestamp($stripeSubscription->cancel_at) : ($stripeSubscription->cancel_at_period_end && $stripeSubscription->current_period_end ? \Carbon\Carbon::createFromTimestamp($stripeSubscription->current_period_end) : null),
+                        ]
+                    );
+                    
+                    // Sync subscription items
+                    foreach ($stripeSubscription->items->data as $item) {
+                        $subscription->items()->updateOrCreate(
+                            [
+                                'stripe_id' => $item->id,
+                            ],
+                            [
+                                'stripe_product' => $item->price->product,
+                                'stripe_price' => $item->price->id,
+                                'quantity' => $item->quantity ?? null,
+                            ]
+                        );
+                    }
+                    
+                    Log::info('Manual subscription sync completed (direct method)', [
+                        'user_id' => $user->id,
+                        'session_id' => $sessionId,
+                        'subscription_id' => $subscriptionId,
+                        'status' => $stripeSubscription->status,
+                    ]);
+                } catch (\Exception $directError) {
+                    Log::error('Direct subscription sync failed (manual sync)', [
+                        'user_id' => $user->id,
+                        'session_id' => $sessionId,
+                        'subscription_id' => $subscriptionId,
+                        'error' => $directError->getMessage(),
+                    ]);
+                    throw $directError;
+                }
+                
+                // Verify subscription exists
+                $subscription = $user->subscription('default');
+                if (!$subscription) {
+                    throw new \Exception('Subscription not found after sync');
+                }
                 
                 if ($request->expectsJson()) {
                     return response()->json([
                         'success' => true,
                         'message' => 'Subscription synced successfully',
+                        'subscription_status' => $subscription->stripe_status,
                     ]);
                 }
                 

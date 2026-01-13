@@ -130,12 +130,24 @@
                                 <h3 class="text-sm font-semibold text-yellow-800 mb-2">⚠️ Subscription Not Detected</h3>
                                 <p class="text-xs text-yellow-700 mb-3">
                                     Your payment was successful, but the subscription hasn't been synced yet. 
-                                    This usually happens if the webhook hasn't been processed. Click the button below to manually sync.
+                                    This usually happens if the webhook hasn't been processed. Try the options below:
                                 </p>
-                                <a href="{{ route('billing.index', ['refresh' => 1]) }}" 
-                                   class="inline-flex items-center px-3 py-2 bg-yellow-600 text-white rounded-md hover:bg-yellow-700 text-sm font-medium">
-                                    🔄 Sync Subscription from Stripe
-                                </a>
+                                <div class="space-y-2">
+                                    <form method="POST" action="{{ route('billing.sync') }}" class="inline">
+                                        @csrf
+                                        <button type="submit" class="inline-flex items-center px-3 py-2 bg-yellow-600 text-white rounded-md hover:bg-yellow-700 text-sm font-medium">
+                                            🔄 Sync from Stripe Customer
+                                        </button>
+                                    </form>
+                                    <a href="{{ route('billing.index', ['refresh' => 1]) }}" 
+                                       class="ml-2 inline-flex items-center px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm font-medium">
+                                        🔄 Refresh Status
+                                    </a>
+                                </div>
+                                <p class="text-xs text-yellow-600 mt-3">
+                                    <strong>Note:</strong> If this persists, check your Stripe Dashboard to verify the subscription exists, 
+                                    then contact support with your Stripe customer ID: <code>{{ $debugInfo['stripe_id'] }}</code>
+                                </p>
                             </div>
                         </div>
                     @endif
