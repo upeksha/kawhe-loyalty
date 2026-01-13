@@ -185,14 +185,14 @@
                     @endif
                     
                     <!-- Debug Info (only show if Stripe not configured) -->
-                    @if(empty(config('cashier.key')) || empty(config('cashier.secret')) || empty(env('STRIPE_PRICE_ID')))
+                    @if(empty(config('cashier.key')) || empty(config('cashier.secret')) || empty(config('cashier.price_id')))
                         <div class="border-t pt-6 mt-6">
                             <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
                                 <h4 class="text-sm font-semibold text-yellow-800 mb-2">⚠️ Stripe Configuration Status</h4>
                                 <ul class="text-xs text-yellow-700 space-y-1">
                                     <li>STRIPE_KEY: {{ empty(config('cashier.key')) ? '❌ Not set' : '✅ Set' }}</li>
                                     <li>STRIPE_SECRET: {{ empty(config('cashier.secret')) ? '❌ Not set' : '✅ Set' }}</li>
-                                    <li>STRIPE_PRICE_ID: {{ empty(env('STRIPE_PRICE_ID')) ? '❌ Not set' : '✅ Set' }}</li>
+                                    <li>STRIPE_PRICE_ID: {{ empty(config('cashier.price_id')) ? '❌ Not set' : '✅ Set' }}</li>
                                 </ul>
                                 <p class="text-xs text-yellow-600 mt-2">
                                     Please configure Stripe in your <code>.env</code> file. See <a href="{{ route('billing.index') }}" class="underline">BILLING_SETUP.md</a> for instructions.

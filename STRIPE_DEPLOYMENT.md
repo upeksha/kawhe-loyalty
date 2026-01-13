@@ -45,18 +45,27 @@ php artisan migrate --force
 
 This ensures all Cashier tables exist.
 
-### 5. Clear and Cache Configuration
+### 5. Clear and Cache Configuration ⚠️ CRITICAL
+
+**IMPORTANT:** The new `price_id` config key must be cached. If you skip this step, `STRIPE_PRICE_ID` will show as "Not set" even if it's in your `.env` file.
 
 ```bash
-# Clear old config
+# Clear old config (removes cached config that doesn't have price_id)
 php artisan config:clear
 php artisan route:clear
 php artisan view:clear
 
-# Cache for production
+# Cache for production (includes new price_id from config/cashier.php)
 php artisan config:cache
 php artisan route:cache
 php artisan view:cache
+```
+
+**Verify config is cached correctly:**
+```bash
+php artisan tinker
+>>> config('cashier.price_id')
+# Should return your STRIPE_PRICE_ID value, not null
 ```
 
 ### 6. Update Environment Variables
@@ -74,6 +83,14 @@ STRIPE_WEBHOOK_SECRET=whsec_...  # From Stripe Dashboard webhook (see below)
 APP_URL=https://yourdomain.com
 APP_ENV=production
 ```
+
+**⚠️ After updating .env, you MUST clear and recache config:**
+```bash
+php artisan config:clear
+php artisan config:cache
+```
+
+This is critical because the new `price_id` config key must be in the cached config.
 
 ### 7. Restart PHP-FPM (if applicable)
 

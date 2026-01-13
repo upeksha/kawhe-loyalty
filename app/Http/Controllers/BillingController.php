@@ -60,7 +60,7 @@ class BillingController extends Controller
         return view('billing.index', [
             'stats' => $stats,
             'subscription' => $subscription,
-            'stripePriceId' => env('STRIPE_PRICE_ID'),
+            'stripePriceId' => config('cashier.price_id'),
             'debugInfo' => $debugInfo,
         ]);
     }
@@ -75,7 +75,7 @@ class BillingController extends Controller
         // Check if Stripe is configured
         $stripeKey = config('cashier.key');
         $stripeSecret = config('cashier.secret');
-        $priceId = config('cashier.price_id') ?? env('STRIPE_PRICE_ID');
+        $priceId = config('cashier.price_id');
 
         if (!$stripeKey || !$stripeSecret) {
             Log::error('Stripe keys not configured', [
