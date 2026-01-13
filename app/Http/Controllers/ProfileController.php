@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\ProfileUpdateRequest;
+use App\Services\Billing\UsageService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -11,13 +12,26 @@ use Illuminate\View\View;
 
 class ProfileController extends Controller
 {
+    protected $usageService;
+
+    public function __construct(UsageService $usageService)
+    {
+        $this->usageService = $usageService;
+    }
+
     /**
      * Display the user's profile form.
      */
     public function edit(Request $request): View
     {
+        $user = $request->user();
+        $subscription = $user->subscription('default');
+        $usageStats = $this->usageService->getUsageStats($user);
+
         return view('profile.edit', [
-            'user' => $request->user(),
+            'user' => $user,
+            'subscription' => $subscription,
+            'usageStats' => $usageStats,
         ]);
     }
 
