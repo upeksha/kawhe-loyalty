@@ -9,6 +9,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PublicStartController;
 use App\Http\Controllers\ScannerController;
 use App\Http\Controllers\StoreController;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 // Public start page for merchant onboarding
@@ -42,8 +43,10 @@ Route::middleware(['auth'])->prefix('merchant/onboarding')->name('merchant.onboa
 
 // Merchant area routes (requires store)
 Route::middleware(['auth', App\Http\Middleware\EnsureMerchantHasStore::class])->prefix('merchant')->name('merchant.')->group(function () {
-    Route::get('/dashboard', function () {
-        return view('dashboard');
+    Route::get('/dashboard', function (Request $request) {
+        $usageService = app(\App\Services\Billing\UsageService::class);
+        $stats = $usageService->getUsageStats($request->user());
+        return view('dashboard', ['usageStats' => $stats]);
     })->name('dashboard');
     
     Route::get('/stores', [StoreController::class, 'index'])->name('stores.index');
@@ -82,6 +85,16 @@ Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+    
+    // Billing routes
+    Route::get('/billing', [App\Http\Controllers\BillingController::class, 'index'])->name('billing.index');
+    Route::post('/billing/checkout', [App\Http\Controllers\BillingController::class, 'checkout'])->name('billing.checkout');
+    Route::post('/billing/portal', [App\Http\Controllers\BillingController::class, 'portal'])->name('billing.portal');
+    Route::get('/billing/success', [App\Http\Controllers\BillingController::class, 'success'])->name('billing.success');
+    Route::get('/billing/cancel', [App\Http\Controllers\BillingController::class, 'cancel'])->name('billing.cancel');
 });
+
+// Stripe webhook (must be outside auth middleware, handled by Cashier)
+Route::post('/stripe/webhook', [\Laravel\Cashier\Http\Controllers\WebhookController::class, 'handleWebhook'])->name('cashier.webhook');
 
 require __DIR__.'/auth.php';

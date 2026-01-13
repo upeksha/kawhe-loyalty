@@ -12,6 +12,7 @@ A Progressive Web App (PWA) loyalty card system built with Laravel 11. Enable me
 - 📊 **Transaction Ledger**: Immutable audit trail of all point transactions
 - 🛡️ **Data Integrity**: Idempotency, optimistic locking, and rate limiting
 - 📧 **Email Integration**: SendGrid SMTP for verification emails
+- 💳 **Subscription Billing**: Stripe integration via Laravel Cashier for merchant subscriptions
 
 ## Quick Start
 
@@ -43,6 +44,7 @@ php artisan reverb:start
 - **[RUN_PROJECT.md](RUN_PROJECT.md)** - Setup and running instructions
 - **[SENDGRID_SETUP.md](SENDGRID_SETUP.md)** - Email configuration guide
 - **[PRODUCTION_EMAIL_SETUP.md](PRODUCTION_EMAIL_SETUP.md)** - Production email setup with SendGrid and queue workers
+- **[BILLING_SETUP.md](BILLING_SETUP.md)** - Stripe billing and subscription setup guide
 
 ## Tech Stack
 
@@ -51,6 +53,7 @@ php artisan reverb:start
 - **Real-time**: Laravel Reverb (WebSockets)
 - **Database**: SQLite (dev) / PostgreSQL/MySQL (production)
 - **Email**: SendGrid SMTP
+- **Billing**: Laravel Cashier (Stripe)
 - **Testing**: Pest PHP
 
 ## Key User Flows
@@ -82,7 +85,7 @@ Run these commands on your server:
 # 1. Install dependencies
 composer install --no-dev --optimize-autoloader
 
-# 2. Run migrations (creates jobs table if needed)
+# 2. Run migrations (creates jobs table and Cashier tables if needed)
 php artisan migrate --force
 
 # 3. Clear and cache config

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Customer;
 use App\Models\LoyaltyAccount;
 use App\Models\Store;
+use App\Services\Billing\UsageService;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 
@@ -112,18 +113,44 @@ class JoinController extends Controller
             }
         }
 
-        // Find or create loyalty account specifically for this store and customer
-        $loyaltyAccount = LoyaltyAccount::firstOrCreate(
-            [
+        // Check if loyalty account already exists for this store and customer
+        $existingAccount = LoyaltyAccount::where('store_id', $store->id)
+            ->where('customer_id', $customer->id)
+            ->first();
+
+        // If account exists, redirect to it (no limit check needed)
+        if ($existingAccount) {
+            return redirect()->route('card.show', ['public_token' => $existingAccount->public_token])
+                ->with('registered', true);
+        }
+
+        // Check if merchant can create a new card (limit enforcement)
+        $merchant = $store->user;
+        $usageService = app(UsageService::class);
+
+        if (!$usageService->canCreateCard($merchant)) {
+            // Log the blocked attempt
+            \Log::warning('Customer join blocked due to free plan limit', [
                 'store_id' => $store->id,
-                'customer_id' => $customer->id,
-            ],
-            [
-                'public_token' => \Illuminate\Support\Str::random(40),
-                'stamp_count' => 0,
-                'version' => 1,
-            ]
-        );
+                'store_name' => $store->name,
+                'merchant_id' => $merchant->id,
+                'merchant_email' => $merchant->email,
+                'cards_count' => $usageService->cardsCountForUser($merchant),
+                'limit' => $usageService->freeLimit(),
+            ]);
+
+            // Return friendly error page for customer
+            return view('join.limit-reached', compact('store', 'token'));
+        }
+
+        // Create new loyalty account
+        $loyaltyAccount = LoyaltyAccount::create([
+            'store_id' => $store->id,
+            'customer_id' => $customer->id,
+            'public_token' => \Illuminate\Support\Str::random(40),
+            'stamp_count' => 0,
+            'version' => 1,
+        ]);
 
         return redirect()->route('card.show', ['public_token' => $loyaltyAccount->public_token])
             ->with('registered', true);
