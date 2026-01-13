@@ -64,19 +64,37 @@
 
     @push('scripts')
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // Get saved email from localStorage for this store
-            const savedEmail = localStorage.getItem('kawhe_last_email_{{ $store->id }}');
-            const oldEmail = '{{ old('email') }}';
-            
-            // Pre-fill email field if saved email exists and no old input (from validation errors)
-            if (savedEmail && !oldEmail) {
-                const emailInput = document.getElementById('email');
-                if (emailInput) {
-                    emailInput.value = savedEmail;
+        // Use multiple event listeners for better mobile compatibility
+        function prefillEmail() {
+            try {
+                // Get saved email from localStorage for this store
+                const savedEmail = localStorage.getItem('kawhe_last_email_{{ $store->id }}');
+                const oldEmail = '{{ old('email') }}';
+                
+                // Pre-fill email field if saved email exists and no old input (from validation errors)
+                if (savedEmail && !oldEmail) {
+                    const emailInput = document.getElementById('email');
+                    if (emailInput && !emailInput.value) {
+                        emailInput.value = savedEmail;
+                        // Trigger input event for better mobile browser compatibility
+                        emailInput.dispatchEvent(new Event('input', { bubbles: true }));
+                    }
                 }
+            } catch (e) {
+                console.error('Error pre-filling email:', e);
             }
-        });
+        }
+        
+        // Try multiple times for mobile browsers
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', prefillEmail);
+        } else {
+            prefillEmail();
+        }
+        
+        // Also try after a short delay for mobile browsers
+        setTimeout(prefillEmail, 100);
+        window.addEventListener('load', prefillEmail);
     </script>
     @endpush
 </x-guest-layout>
