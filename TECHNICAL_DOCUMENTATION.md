@@ -22,9 +22,9 @@
 - **Merchant Management**: Create and manage stores with custom branding
 - **Customer Enrollment**: Join loyalty programs via unique join links
 - **Digital Stamping**: Scan QR codes to add stamps to customer cards
-- **Reward Redemption**: Redeem rewards when stamp targets are reached
+- **Multiple Rewards**: Customers can accumulate multiple rewards (e.g., 18 stamps on 9-target card = 2 rewards)
+- **Flexible Redemption**: Merchants can redeem 1, 2, 3... or all available rewards per scan
 - **Real-time Updates**: Live synchronization via Laravel Reverb (WebSockets)
-- **Email Verification**: Secure customer email verification for reward redemption
 - **Transaction Ledger**: Immutable audit trail of all point transactions
 
 ---
@@ -121,10 +121,10 @@ Merchants can:
 - Real-time updates via WebSocket
 
 **Card States**:
-- **Collecting**: Stamps < target, reward not available
-- **Reward Available**: Stamps >= target, reward not redeemed
-- **Reward Locked**: Reward available but email not verified
-- **Reward Redeemed**: Reward was redeemed, collecting for next cycle
+- **Collecting**: `reward_balance = 0`, stamps < target, reward not available
+- **Reward Available**: `reward_balance > 0`, reward(s) available to redeem
+- **Multiple Rewards**: `reward_balance > 1`, customer can redeem multiple rewards
+- **Reward Redeemed**: Reward was redeemed, but `reward_balance` may still be > 0 if multiple rewards existed
 
 ### 5. QR Code Scanner
 **Route**: `/merchant/scanner`
@@ -146,43 +146,77 @@ Merchants can:
 **Process**:
 1. Merchant scans customer's stamp QR code
 2. System validates:
-   - Token belongs to selected store
-   - Cooldown period has passed (30 seconds)
+   - Token belongs to selected store (auto-detected from token)
+   - Server-side idempotency window (5 seconds) - prevents duplicate scans
+   - Cooldown period has passed (30 seconds, with override option)
    - Store ownership verified
 3. Database transaction:
    - Lock loyalty account row
-   - Increment stamp count
+   - Increment stamp count by `count` (default 1)
+   - Calculate newly earned rewards: `floor(stamp_count / reward_target)`
+   - Update `reward_balance`: `reward_balance += newlyEarned`
+   - Update `stamp_count`: `stamp_count = stamp_count % reward_target`
+   - Generate `redeem_token` if `reward_balance > 0` and token is null
    - Update version (optimistic locking)
    - Create ledger entry (`PointsTransaction`)
    - Create event record (`StampEvent`)
-   - Check if reward target reached
 4. Broadcast real-time update via WebSocket
 5. Return success response with receipt
 
-**Idempotency**: Uses idempotency keys to prevent duplicate processing
+**Multiple Rewards**: Stamps can accumulate beyond the target. For example:
+- Card with `reward_target = 9`
+- Customer has 18 stamps
+- System calculates: `reward_balance = floor(18/9) = 2`, `stamp_count = 18 % 9 = 0`
+- Customer now has 2 rewards available
+
+**Idempotency**: 
+- Uses idempotency keys to prevent duplicate processing
+- Server-side idempotency window: Same store + same account + same action within 5 seconds = duplicate (ignored)
+
+**Cooldown Override**:
+- Default: 30-second cooldown between stamps
+- If within cooldown, returns HTTP 409 with `allow_override: true`
+- Merchant can confirm override to proceed (still subject to server-side idempotency)
 
 ### 7. Reward Redemption
 **Endpoint**: `POST /redeem`
+**Info Endpoint**: `POST /redeem/info` (get reward balance before showing modal)
 
 **Process**:
 1. Merchant scans customer's redeem QR code
-2. System validates:
+2. Frontend calls `POST /redeem/info` to fetch `reward_balance`
+3. If `reward_balance > 1`:
+   - Modal shows quantity selector (1, 2, 3... or "Redeem All")
+   - Merchant selects quantity to redeem
+4. If `reward_balance === 1`:
+   - Simple confirmation modal (no quantity selector)
+5. System validates:
    - Redeem token is valid and not expired
-   - Customer email is verified
-   - Reward hasn't been redeemed already
+   - `quantity` doesn't exceed `reward_balance`
    - Store ownership verified
-3. Database transaction:
+6. Database transaction:
    - Lock loyalty account row
+   - Consume specified quantity: `reward_balance -= quantity`
    - Set `reward_redeemed_at` timestamp
-   - Invalidate `redeem_token`
-   - Deduct stamps (reset to 0 or remaining)
-   - Reset `reward_available_at`
-   - Create ledger entry
+   - If `reward_balance > 0`: Keep `redeem_token` (persists for multiple redemptions)
+   - If `reward_balance === 0`: Clear `redeem_token` and `reward_available_at`
+   - Do NOT deduct `stamp_count` (represents progress toward next reward)
+   - Create ledger entry with `points = -reward_target * quantity`
    - Create event record
-4. Broadcast real-time update
-5. Return success response
+7. Broadcast real-time update
+8. Return success response with remaining rewards
 
-**Email Verification Requirement**: Customers must verify their email before redeeming rewards
+**Multiple Rewards Example**:
+- Customer has 3 rewards (`reward_balance = 3`)
+- Merchant scans → modal shows "Customer has 3 rewards available"
+- Merchant selects 1 → redeems 1, 2 remain
+- QR code remains valid (same `redeem_token`)
+- Merchant can scan again to redeem more
+
+**Token Persistence**: 
+- `redeem_token` persists across multiple redemptions
+- Only cleared when `reward_balance` reaches 0
+- Prevents "invalid or expired" errors after partial redemption
 
 ### 8. Email Verification
 **Routes**: `/c/{public_token}/verify-email/*`
@@ -250,17 +284,25 @@ Merchants can:
 
 ### Redemption Flow
 ```
-1. Customer reaches reward target
-2. Reward becomes available (if email verified)
-3. Merchant scans redeem QR code
-4. Backend processes redemption:
-   - Validates redeem token
-   - Checks email verification
-   - Deducts stamps
-   - Marks reward as redeemed
+1. Customer accumulates stamps beyond target
+2. System calculates reward_balance (e.g., 18 stamps / 9 target = 2 rewards)
+3. Reward becomes available (reward_balance > 0)
+4. Merchant scans redeem QR code
+5. Frontend fetches reward balance via POST /redeem/info
+6. If reward_balance > 1:
+   - Modal shows quantity selector
+   - Merchant selects quantity (1, 2, 3... or All)
+7. Backend processes redemption:
+   - Validates redeem token (persists across redemptions)
+   - Validates quantity doesn't exceed reward_balance
+   - Consumes specified quantity: reward_balance -= quantity
+   - Keeps redeem_token if reward_balance > 0
+   - Clears redeem_token only if reward_balance = 0
+   - Does NOT deduct stamp_count (represents progress toward next reward)
    - Broadcasts update
-5. Customer's card updates in real-time
-6. Cycle resets for next reward
+8. Customer's card updates in real-time
+9. QR code remains valid if rewards remain
+10. Merchant can scan again to redeem remaining rewards
 ```
 
 ---
@@ -286,9 +328,15 @@ Customer profiles (can have multiple loyalty accounts)
 #### `loyalty_accounts`
 Links customers to stores, tracks stamp progress
 - `id`, `store_id`, `customer_id`, `stamp_count`, `public_token` (40 chars)
-- `redeem_token` (40 chars, nullable), `last_stamped_at`
-- `reward_available_at`, `reward_redeemed_at`, `verified_at`
+- `reward_balance` (integer, default 0) - Number of rewards available
+- `redeem_token` (40 chars, nullable) - Token for redemption (persists until all rewards redeemed)
+- `last_stamped_at`, `reward_available_at`, `reward_redeemed_at`
 - `version` (optimistic locking), `timestamps`
+
+**Key Fields**:
+- `stamp_count`: Current progress toward next reward (0 to reward_target-1)
+- `reward_balance`: Number of rewards available (can be > 1)
+- `redeem_token`: Persists across multiple redemptions, only cleared when `reward_balance = 0`
 
 #### `stamp_events`
 Event log of all stamp/redeem actions
@@ -339,9 +387,16 @@ LoyaltyAccount → hasMany → StampEvent
 
 #### Stamping & Redemption
 - `POST /stamp` - Add stamps to card
-  - Body: `{token, store_id, count?, idempotency_key?}`
-- `POST /redeem` - Redeem reward
-  - Body: `{token, store_id, idempotency_key?}`
+  - Body: `{token, store_id?, count?, idempotency_key?, override_cooldown?}`
+  - `store_id` is optional (auto-detected from token)
+  - `override_cooldown`: Boolean to bypass 30s cooldown
+- `POST /redeem/info` - Get reward balance before redemption
+  - Body: `{token, store_id}`
+  - Returns: `{success, reward_balance, reward_title, customer_name}`
+- `POST /redeem` - Redeem reward(s)
+  - Body: `{token, store_id, quantity?, idempotency_key?}`
+  - `quantity`: Number of rewards to redeem (default 1)
+  - Returns remaining rewards in response
 
 #### Store Management
 - `GET /merchant/stores` - List stores
@@ -364,11 +419,16 @@ LoyaltyAccount → hasMany → StampEvent
 **Success Response (Stamping)**:
 ```json
 {
+  "status": "success",
   "success": true,
   "message": "Successfully added 1 stamp!",
   "storeName": "Coffee Shop",
+  "store_id_used": 1,
+  "store_name_used": "Coffee Shop",
+  "store_switched": false,
   "customerLabel": "John Doe",
   "stampCount": 5,
+  "rewardBalance": 0,
   "rewardTarget": 10,
   "rewardAvailable": false,
   "stampsRemaining": 5,
@@ -378,6 +438,49 @@ LoyaltyAccount → hasMany → StampEvent
     "stamps_added": 1,
     "new_total": 5
   }
+}
+```
+
+**Success Response (Redemption)**:
+```json
+{
+  "success": true,
+  "message": "Successfully redeemed 2 rewards! Enjoy your Free Coffee!",
+  "customerLabel": "John Doe",
+  "receipt": {
+    "transaction_id": 124,
+    "timestamp": "2026-01-11T19:05:00Z",
+    "reward_title": "Free Coffee",
+    "rewards_redeemed": 2,
+    "remaining_rewards": 1,
+    "remaining_stamps": 3
+  }
+}
+```
+
+**Cooldown Response**:
+```json
+{
+  "status": "cooldown",
+  "success": false,
+  "message": "Stamped 12s ago",
+  "seconds_since_last": 12,
+  "cooldown_seconds": 30,
+  "allow_override": true,
+  "next_action": "confirm_override",
+  "stampCount": 5,
+  "rewardBalance": 0
+}
+```
+
+**Duplicate Response**:
+```json
+{
+  "status": "duplicate",
+  "success": false,
+  "message": "Duplicate scan ignored",
+  "stampCount": 5,
+  "seconds_since_last": 2
 }
 ```
 
@@ -455,7 +558,11 @@ Echo.private(`loyalty-card.${publicToken}`)
 ### Token Security
 - **Join Tokens**: 32-character random strings (required in URL)
 - **Public Tokens**: 40-character random strings (for card access)
-- **Redeem Tokens**: 40-character random strings (single-use, invalidated after redemption)
+- **Redeem Tokens**: 40-character random strings (persist until all rewards redeemed)
+  - Generated when `reward_balance` goes from 0 → 1
+  - Persists across multiple redemptions
+  - Only cleared when `reward_balance` reaches 0
+  - Prevents "invalid or expired" errors after partial redemption
 - **Email Verification Tokens**: 40-character random strings (expire after 60 minutes)
 
 ### Logging & Audit
@@ -489,8 +596,10 @@ The `points_transactions` table serves as an immutable audit trail:
 ### Validation
 - Store ownership verified before processing
 - Token validation (public_token for stamps, redeem_token for redemption)
-- Cooldown checks prevent accidental double-stamping
-- Email verification required for redemption
+- Server-side idempotency window (5 seconds) prevents duplicate scans
+- Cooldown checks prevent accidental double-stamping (30s, with override option)
+- Quantity validation ensures redemption doesn't exceed available rewards
+- Store auto-detection from token (prevents wrong store selection)
 
 ---
 
@@ -586,6 +695,26 @@ php artisan test --filter=EnrollmentTest
 - Check Laravel logs for broadcast errors
 
 ---
+
+## Recent Features (2026)
+
+### Multiple Rewards System
+- **Reward Stacking**: Customers can accumulate multiple rewards when stamps exceed target
+  - Example: 18 stamps on 9-target card = 2 rewards available
+  - `reward_balance` tracks available rewards (can be > 1)
+  - `stamp_count` represents progress toward next reward (0 to reward_target-1)
+
+### Flexible Redemption
+- **Quantity Selector**: Merchants can redeem 1, 2, 3... or all available rewards per scan
+- **Token Persistence**: `redeem_token` persists across multiple redemptions
+  - Only cleared when all rewards are redeemed
+  - Prevents QR code invalidation after partial redemption
+- **Info Endpoint**: `POST /redeem/info` allows frontend to fetch reward balance before showing modal
+
+### Enhanced Stamping
+- **Server-Side Idempotency**: 5-second window prevents duplicate scans even if client idempotency key changes
+- **Cooldown Override**: Merchants can override 30-second cooldown with confirmation
+- **Store Auto-Detection**: System auto-detects store from token, prevents wrong store selection
 
 ## Future Enhancements
 
