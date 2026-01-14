@@ -279,11 +279,60 @@ class ScannerController extends Controller
         });
     }
 
+    /**
+     * Get reward balance information from a redeem token.
+     * Used by frontend to show quantity selector.
+     */
+    public function getRedeemInfo(Request $request)
+    {
+        $request->validate([
+            'token' => 'required|string',
+            'store_id' => 'required|exists:stores,id',
+        ]);
+
+        $token = $request->token;
+        // Strip "REDEEM:" prefix if present
+        if (Str::startsWith($token, 'REDEEM:')) {
+            $token = Str::substr($token, 7);
+        }
+
+        $storeId = $request->store_id;
+
+        // Verify user owns the store
+        $store = Auth::user()->stores()->where('id', $storeId)->first();
+        if (!$store) {
+            abort(403, 'You do not own this store.');
+        }
+
+        // Find loyalty account by redeem_token
+        $account = LoyaltyAccount::where('redeem_token', $token)
+            ->where('store_id', $storeId)
+            ->with(['customer', 'store'])
+            ->first();
+
+        if (!$account) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid redemption code.',
+            ], 404);
+        }
+
+        $rewardBalance = $account->reward_balance ?? 0;
+
+        return response()->json([
+            'success' => true,
+            'reward_balance' => $rewardBalance,
+            'reward_title' => $store->reward_title,
+            'customer_name' => $account->customer->name ?? 'Customer',
+        ]);
+    }
+
     public function redeem(Request $request)
     {
         $request->validate([
             'token' => 'required|string',
             'store_id' => 'required|exists:stores,id',
+            'quantity' => 'nullable|integer|min:1', // Number of rewards to redeem (default 1)
             'idempotency_key' => 'nullable|string|max:255', // Optional idempotency key from client
         ]);
 
@@ -294,6 +343,7 @@ class ScannerController extends Controller
         }
 
         $storeId = $request->store_id;
+        $quantity = $request->input('quantity', 1); // Default to 1 for backward compatibility
         $idempotencyKey = $request->input('idempotency_key', Str::uuid()->toString());
 
         // Verify user owns the store
@@ -307,7 +357,7 @@ class ScannerController extends Controller
         $ipAddress = $request->ip();
 
         // Use database transaction for atomicity
-        return DB::transaction(function () use ($token, $storeId, $idempotencyKey, $store, $userAgent, $ipAddress) {
+        return DB::transaction(function () use ($token, $storeId, $quantity, $idempotencyKey, $store, $userAgent, $ipAddress) {
             // Check if this idempotency key was already processed
             $existingEvent = StampEvent::where('idempotency_key', $idempotencyKey)
                 ->where('type', 'redeem')
@@ -345,12 +395,19 @@ class ScannerController extends Controller
                 ]);
             }
 
+            // Validate quantity doesn't exceed available rewards
+            if ($quantity > $rewardBalance) {
+                throw ValidationException::withMessages([
+                    'quantity' => "Cannot redeem {$quantity} reward(s). Only {$rewardBalance} reward(s) available."
+                ]);
+            }
+
             // Store original values for ledger
             $originalVersion = $account->version;
             $rewardBalanceBefore = $rewardBalance;
 
-            // Process redemption: consume exactly ONE reward
-            $account->reward_balance = $rewardBalance - 1;
+            // Process redemption: consume the specified quantity of rewards
+            $account->reward_balance = $rewardBalance - $quantity;
             $account->reward_redeemed_at = now(); // Last redeemed timestamp
             $account->increment('version'); // Increment version for optimistic locking
             
@@ -368,18 +425,18 @@ class ScannerController extends Controller
             $account->save();
             
             // Create ledger entry for redemption
-            // Using Option A: points = -reward_target (for historical consistency)
+            // Using Option A: points = -reward_target * quantity (for historical consistency)
             PointsTransaction::create([
                 'loyalty_account_id' => $account->id,
                 'store_id' => $store->id,
                 'user_id' => Auth::id(),
                 'type' => 'redeem',
-                'points' => -$store->reward_target, // Negative for redemption (one reward = target stamps)
+                'points' => -($store->reward_target * $quantity), // Negative for redemption (quantity * target stamps)
                 'idempotency_key' => $idempotencyKey,
                 'metadata' => [
                     'reward_balance_before' => $rewardBalanceBefore,
                     'reward_balance_after' => $account->reward_balance,
-                    'rewards_redeemed' => 1,
+                    'rewards_redeemed' => $quantity,
                     'stamp_count' => $account->stamp_count, // Unchanged
                     'version_before' => $originalVersion,
                     'version_after' => $account->version,
@@ -415,15 +472,19 @@ class ScannerController extends Controller
             // Get the transaction for receipt
             $transaction = PointsTransaction::where('idempotency_key', $idempotencyKey)->first();
             
+            $message = $quantity > 1 
+                ? "Successfully redeemed {$quantity} rewards! Enjoy your {$store->reward_title}!"
+                : "Reward redeemed successfully! Enjoy your {$store->reward_title}!";
+            
             return response()->json([
                 'success' => true,
-                'message' => "Reward redeemed successfully! Enjoy your {$store->reward_title}!",
+                'message' => $message,
                 'customerLabel' => $account->customer->name ?? 'Customer',
                 'receipt' => [
                     'transaction_id' => $transaction->id ?? null,
                     'timestamp' => now()->toIso8601String(),
                     'reward_title' => $store->reward_title,
-                    'rewards_redeemed' => 1,
+                    'rewards_redeemed' => $quantity,
                     'remaining_rewards' => $account->reward_balance ?? 0,
                     'remaining_stamps' => $account->stamp_count,
                 ],

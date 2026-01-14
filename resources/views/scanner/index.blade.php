@@ -31,7 +31,7 @@
                                 </select>
                             </div>
 
-                            <div id="reader" class="w-full mb-6 bg-black rounded-lg overflow-hidden" style="min-height: 300px;"></div>
+                            <div id="reader" class="w-full mb-6 bg-black rounded-lg overflow-hidden" style="min-height: 300px; color: white;"></div>
 
                             <!-- Manual Input -->
                             <div class="mb-6">
@@ -42,15 +42,37 @@
                                 </div>
                             </div>
 
-                            <!-- Modal for Stamp Count -->
+                            <!-- Modal for Stamp Count / Reward Quantity -->
                             <div x-show="showModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50" style="display: none;">
                                 <div class="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-sm">
                                     <h3 class="text-lg font-bold mb-4 text-gray-900 dark:text-white">Action Required</h3>
                                     
                                     <div x-show="isRedeem" class="mb-4">
-                                        <div class="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4" role="alert">
+                                        <div class="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-4" role="alert">
                                             <p class="font-bold">Redeem Reward?</p>
-                                            <p>This will deduct stamps and mark the reward as claimed.</p>
+                                            <p x-show="rewardBalance > 1" x-text="'Customer has ' + rewardBalance + ' rewards available.'"></p>
+                                            <p x-show="rewardBalance === 1">Customer has 1 reward available.</p>
+                                        </div>
+                                        
+                                        <!-- Quantity selector for multiple rewards -->
+                                        <div x-show="rewardBalance > 1">
+                                            <h4 class="text-md font-semibold mb-2 text-gray-700 dark:text-gray-300">How many rewards to redeem?</h4>
+                                            <div class="flex items-center justify-center space-x-4 mb-4">
+                                                <button @click="redeemQuantity = Math.max(1, redeemQuantity - 1)" class="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-xl font-bold text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600">-</button>
+                                                <span class="text-2xl font-bold text-gray-900 dark:text-white" x-text="redeemQuantity"></span>
+                                                <button @click="redeemQuantity = Math.min(rewardBalance, redeemQuantity + 1)" class="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-xl font-bold text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600">+</button>
+                                            </div>
+                                            <div class="text-center mb-2">
+                                                <button @click="redeemQuantity = rewardBalance" class="text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 underline" x-text="'Redeem All (' + rewardBalance + ')'"></button>
+                                            </div>
+                                            <p class="text-xs text-gray-500 dark:text-gray-400 text-center">
+                                                <span x-text="'After redeeming ' + redeemQuantity + ', ' + (rewardBalance - redeemQuantity) + ' reward(s) will remain.'"></span>
+                                            </p>
+                                        </div>
+                                        
+                                        <!-- Single reward message -->
+                                        <div x-show="rewardBalance === 1" class="text-sm text-gray-600 dark:text-gray-400">
+                                            <p>This will redeem 1 reward.</p>
                                         </div>
                                     </div>
 
@@ -65,7 +87,7 @@
 
                                     <div class="flex justify-end space-x-2">
                                         <button @click="showModal = false" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600">Cancel</button>
-                                        <button @click="confirmAction()" class="px-4 py-2 text-sm font-medium text-white bg-blue-700 rounded-lg hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800" x-text="isRedeem ? 'Redeem' : 'Add Stamps'"></button>
+                                        <button @click="confirmAction()" class="px-4 py-2 text-sm font-medium text-white bg-blue-700 rounded-lg hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800" x-text="isRedeem ? (rewardBalance > 1 ? 'Redeem ' + redeemQuantity : 'Redeem') : 'Add Stamps'"></button>
                                     </div>
                                 </div>
                             </div>
@@ -129,6 +151,8 @@
                 stampCount: 1,
                 pendingToken: null,
                 isRedeem: false,
+                rewardBalance: 1, // Default to 1 for single reward
+                redeemQuantity: 1, // Quantity to redeem (default 1)
                 storeSwitched: false,
                 switchedStoreName: '',
                 showCooldownModal: false,
@@ -162,7 +186,7 @@
                     this.html5QrcodeScanner.render(onScanSuccess, onScanFailure);
                 },
 
-                handleScan(token) {
+                async handleScan(token) {
                     if (!token) return;
                     
                     // Note: store_id is now optional - backend will auto-detect from token
@@ -175,10 +199,47 @@
                         }
                         this.isRedeem = true;
                         this.pendingToken = token;
+                        
+                        // Fetch reward balance to show quantity selector if needed
+                        await this.fetchRedeemInfo(token);
+                        
                         this.showModal = true;
                     } else {
                         this.isRedeem = false;
                         this.showStampModal(token);
+                    }
+                },
+                
+                async fetchRedeemInfo(token) {
+                    try {
+                        const response = await fetch('{{ route("redeem.info") }}', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/json',
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                            },
+                            body: JSON.stringify({
+                                token: token,
+                                store_id: Number(this.activeStoreId)
+                            })
+                        });
+
+                        const data = await response.json();
+                        
+                        if (data.success) {
+                            this.rewardBalance = data.reward_balance || 1;
+                            this.redeemQuantity = Math.min(this.rewardBalance, 1); // Default to 1, but can't exceed balance
+                        } else {
+                            // Fallback to 1 if fetch fails
+                            this.rewardBalance = 1;
+                            this.redeemQuantity = 1;
+                        }
+                    } catch (error) {
+                        console.error('Error fetching redeem info:', error);
+                        // Fallback to 1 if fetch fails
+                        this.rewardBalance = 1;
+                        this.redeemQuantity = 1;
                     }
                 },
 
@@ -192,10 +253,13 @@
                 confirmAction() {
                     this.showModal = false;
                     if (this.isRedeem) {
-                        this.redeem(this.pendingToken);
+                        this.redeem(this.pendingToken, this.redeemQuantity);
                     } else {
                         this.stamp(this.pendingToken, this.stampCount);
                     }
+                    
+                    // Reset redeem quantity for next time
+                    this.redeemQuantity = 1;
                     
                     // Resume scanning after a delay if using scanner
                     if (this.html5QrcodeScanner) {
@@ -205,7 +269,7 @@
                     }
                 },
 
-                async redeem(token) {
+                async redeem(token, quantity = 1) {
                     this.message = '';
                     this.success = false;
                     this.resultData = null;
@@ -220,7 +284,8 @@
                             },
                             body: JSON.stringify({
                                 token: token,
-                                store_id: Number(this.activeStoreId)
+                                store_id: Number(this.activeStoreId),
+                                quantity: quantity
                             })
                         });
 
@@ -236,11 +301,19 @@
                         if (response.ok) {
                             this.success = true;
                             this.message = data.message || 'Reward redeemed successfully!';
-                            this.resultData = { customerLabel: data.customerLabel };
+                            this.resultData = { 
+                                customerLabel: data.customerLabel,
+                                remaining_rewards: data.receipt?.remaining_rewards || 0
+                            };
+                            
+                            // Show remaining rewards if any
+                            if (data.receipt && data.receipt.remaining_rewards > 0) {
+                                this.message += ` (${data.receipt.remaining_rewards} reward(s) remaining)`;
+                            }
                         } else {
                             this.success = false;
                             // Use improved error messages from server
-                            this.message = data.message || data.errors?.token?.[0] || 'Redemption failed. Please try again.';
+                            this.message = data.message || data.errors?.token?.[0] || data.errors?.quantity?.[0] || 'Redemption failed. Please try again.';
                         }
                     } catch (error) {
                         console.error('Error:', error);
