@@ -15,15 +15,22 @@ class CardController extends Controller
             ->where('public_token', $public_token)
             ->firstOrFail();
 
-        // Check if reward should be available but isn't set (migration fix)
-        if ($account->stamp_count >= $account->store->reward_target && is_null($account->reward_available_at) && is_null($account->reward_redeemed_at)) {
-            $account->reward_available_at = now();
-            $account->redeem_token = Str::random(40);
-            $account->save();
+        // Ensure redeem_token exists if reward_balance > 0 (but don't regenerate if it already exists)
+        $rewardBalance = $account->reward_balance ?? 0;
+        if ($rewardBalance > 0) {
+            if (is_null($account->reward_available_at)) {
+                $account->reward_available_at = now();
+            }
+            // Only generate token if it doesn't exist - never regenerate existing tokens
+            if (is_null($account->redeem_token)) {
+                $account->redeem_token = Str::random(40);
+                $account->save();
+            }
         }
 
         // Fix for accounts stuck in "Redeemed" state but have started a new cycle
-        if (!is_null($account->reward_redeemed_at) && $account->stamp_count > 0 && $account->stamp_count < $account->store->reward_target) {
+        // Only clear reward_redeemed_at if they've started earning stamps again (old logic for backward compatibility)
+        if (!is_null($account->reward_redeemed_at) && $account->stamp_count > 0 && $account->stamp_count < $account->store->reward_target && $rewardBalance == 0) {
             $account->reward_redeemed_at = null;
             $account->save();
         }
@@ -37,15 +44,22 @@ class CardController extends Controller
             ->where('public_token', $public_token)
             ->firstOrFail();
 
-        // Check if reward should be available but isn't set (migration fix)
-        if ($account->stamp_count >= $account->store->reward_target && is_null($account->reward_available_at) && is_null($account->reward_redeemed_at)) {
-            $account->reward_available_at = now();
-            $account->redeem_token = Str::random(40);
-            $account->save();
+        // Ensure redeem_token exists if reward_balance > 0 (but don't regenerate if it already exists)
+        $rewardBalance = $account->reward_balance ?? 0;
+        if ($rewardBalance > 0) {
+            if (is_null($account->reward_available_at)) {
+                $account->reward_available_at = now();
+            }
+            // Only generate token if it doesn't exist - never regenerate existing tokens
+            if (is_null($account->redeem_token)) {
+                $account->redeem_token = Str::random(40);
+                $account->save();
+            }
         }
 
         // Fix for accounts stuck in "Redeemed" state but have started a new cycle
-        if (!is_null($account->reward_redeemed_at) && $account->stamp_count > 0 && $account->stamp_count < $account->store->reward_target) {
+        // Only clear reward_redeemed_at if they've started earning stamps again (old logic for backward compatibility)
+        if (!is_null($account->reward_redeemed_at) && $account->stamp_count > 0 && $account->stamp_count < $account->store->reward_target && $rewardBalance == 0) {
             $account->reward_redeemed_at = null;
             $account->save();
         }
@@ -56,6 +70,8 @@ class CardController extends Controller
         return response()->json([
             'stamp_count' => $account->stamp_count,
             'reward_target' => $account->store->reward_target,
+            'reward_balance' => $rewardBalance,
+            'reward_available' => $rewardBalance > 0,
             'reward_available_at' => $account->reward_available_at?->toIso8601String(),
             'reward_redeemed_at' => $account->reward_redeemed_at?->toIso8601String(),
             'redeem_token' => $account->redeem_token,
