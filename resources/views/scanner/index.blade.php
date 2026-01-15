@@ -31,7 +31,40 @@
                                 </select>
                             </div>
 
+                            <!-- Scanner Controls -->
+                            <div class="flex items-center justify-between mb-2">
+                                <p class="text-xs text-gray-600 dark:text-gray-300" x-text="cameraStatus"></p>
+                                <div class="flex items-center gap-2">
+                                    <button
+                                        type="button"
+                                        @click="switchCamera()"
+                                        :disabled="!canSwitchCamera"
+                                        class="px-3 py-2 text-xs font-medium rounded-lg border transition disabled:opacity-50 disabled:cursor-not-allowed bg-white hover:bg-gray-50 text-gray-800 border-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-white dark:border-gray-600"
+                                    >
+                                        Switch camera
+                                    </button>
+                                </div>
+                            </div>
                             <div id="reader" class="w-full mb-6 bg-black rounded-lg overflow-hidden" style="min-height: 300px; color: white;"></div>
+
+                            <!-- Hidden fallback: upload image -->
+                            <div class="mb-6">
+                                <button
+                                    type="button"
+                                    @click="showUploadFallback = !showUploadFallback"
+                                    class="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 underline"
+                                >
+                                    Having trouble? Upload an image of the QR code
+                                </button>
+                                <div x-show="showUploadFallback" x-cloak class="mt-3 flex items-center gap-2">
+                                    <input
+                                        type="file"
+                                        accept="image/*"
+                                        @change="scanFromImageFile($event)"
+                                        class="block w-full text-xs text-gray-700 bg-gray-50 border border-gray-300 rounded-lg cursor-pointer dark:text-gray-300 dark:bg-gray-700 dark:border-gray-600"
+                                    />
+                                </div>
+                            </div>
 
                             <!-- Manual Input -->
                             <div class="mb-6">
@@ -86,7 +119,7 @@
                                     </div>
 
                                     <div class="flex justify-end space-x-2">
-                                        <button @click="showModal = false" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600">Cancel</button>
+                                        <button @click="cancelActionModal()" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600">Cancel</button>
                                         <button @click="confirmAction()" class="px-4 py-2 text-sm font-medium text-white bg-blue-700 rounded-lg hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800" x-text="isRedeem ? (rewardBalance > 1 ? 'Redeem ' + redeemQuantity : 'Redeem') : 'Add Stamps'"></button>
                                     </div>
                                 </div>
@@ -146,7 +179,6 @@
                 success: false,
                 resultData: null,
                 isScanning: true,
-                html5QrcodeScanner: null,
                 showModal: false,
                 stampCount: 1,
                 pendingToken: null,
@@ -162,29 +194,194 @@
 
                 init() {
                     this.$nextTick(() => {
-                        this.startScanner();
+                                        // Auto-start scanner on page load for best UX.
+                                        this.startScanner();
                     });
                 },
 
-                startScanner() {
-                    const onScanSuccess = (decodedText, decodedResult) => {
-                        console.log(`Code matched = ${decodedText}`, decodedResult);
-                        this.handleScan(decodedText);
-                        
-                        this.html5QrcodeScanner.pause();
-                    };
+                                // Camera / scanner state
+                                html5QrCode: null,
+                                cameras: [],
+                                activeCameraId: null,
+                                cameraStatus: 'Starting camera…',
+                                showUploadFallback: false,
+                                isProcessingScan: false,
 
-                    const onScanFailure = (error) => {
-                        // handle scan failure
-                    };
+                                get canSwitchCamera() {
+                                    return (this.cameras && this.cameras.length > 1);
+                                },
 
-                    this.html5QrcodeScanner = new Html5QrcodeScanner(
-                        "reader",
-                        { fps: 10, qrbox: {width: 250, height: 250} },
-                        /* verbose= */ false
-                    );
-                    this.html5QrcodeScanner.render(onScanSuccess, onScanFailure);
-                },
+                                async startScanner() {
+                                    this.cameraStatus = 'Requesting camera permission…';
+
+                                    try {
+                                        if (!this.html5QrCode) {
+                                            this.html5QrCode = new Html5Qrcode('reader');
+                                        }
+
+                                        // Try to use the last chosen camera first (device-specific).
+                                        const storedCameraId = localStorage.getItem('kawhe_scanner_camera_id');
+                                        if (storedCameraId) {
+                                            try {
+                                                await this.startWithCameraId(storedCameraId);
+                                                return;
+                                            } catch (e) {
+                                                // Fall through to auto-pick if stored device isn't available anymore.
+                                                console.warn('Stored camera not available, falling back to auto camera selection:', e);
+                                            }
+                                        }
+
+                                        // First start with facingMode to get permission + video quickly.
+                                        await this.startWithFacingMode('environment');
+
+                                        // After permission is granted, enumerate cameras and restart with a stable deviceId.
+                                        await this.loadCameras();
+                                        const preferred = this.pickPreferredCameraId(this.cameras);
+                                        if (preferred) {
+                                            await this.restartWithCameraId(preferred);
+                                        }
+                                    } catch (e) {
+                                        console.error('Failed to start scanner:', e);
+                                        this.cameraStatus = 'Camera blocked or unavailable. Allow camera access, then refresh.';
+                                    }
+                                },
+
+                                async loadCameras() {
+                                    try {
+                                        const cams = await Html5Qrcode.getCameras();
+                                        this.cameras = cams || [];
+                                    } catch (e) {
+                                        console.warn('Unable to enumerate cameras:', e);
+                                        this.cameras = [];
+                                    }
+                                },
+
+                                pickPreferredCameraId(cameras) {
+                                    if (!cameras || cameras.length === 0) return null;
+                                    if (cameras.length === 1) return cameras[0].id;
+
+                                    // Prefer a back camera if labels are available (labels often blank until permission).
+                                    const byLabel = cameras.find(c => (c.label || '').toLowerCase().includes('back'))
+                                        || cameras.find(c => (c.label || '').toLowerCase().includes('rear'))
+                                        || cameras.find(c => (c.label || '').toLowerCase().includes('environment'));
+                                    if (byLabel) return byLabel.id;
+
+                                    // Heuristic: on many devices, the last camera is the back camera.
+                                    return cameras[cameras.length - 1].id;
+                                },
+
+                                async startWithFacingMode(mode) {
+                                    const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+                                    const constraints = { facingMode: mode };
+                                    await this.html5QrCode.start(
+                                        constraints,
+                                        config,
+                                        (decodedText) => this.onScanSuccess(decodedText),
+                                        () => {}
+                                    );
+                                    this.cameraStatus = 'Scanning…';
+                                },
+
+                                async startWithCameraId(cameraId) {
+                                    const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+                                    await this.html5QrCode.start(
+                                        { deviceId: { exact: cameraId } },
+                                        config,
+                                        (decodedText) => this.onScanSuccess(decodedText),
+                                        () => {}
+                                    );
+                                    this.activeCameraId = cameraId;
+                                    localStorage.setItem('kawhe_scanner_camera_id', cameraId);
+                                    await this.loadCameras();
+                                    this.cameraStatus = 'Scanning…';
+                                },
+
+                                async restartWithCameraId(cameraId) {
+                                    try {
+                                        await this.stopScanner();
+                                    } catch (e) {
+                                        // ignore
+                                    }
+                                    await this.startWithCameraId(cameraId);
+                                },
+
+                                async stopScanner() {
+                                    if (!this.html5QrCode) return;
+                                    // stop() throws if not running; guard with try
+                                    try {
+                                        await this.html5QrCode.stop();
+                                    } catch (e) {
+                                        // ignore
+                                    }
+                                },
+
+                                pauseScanner() {
+                                    try {
+                                        if (this.html5QrCode && typeof this.html5QrCode.pause === 'function') {
+                                            this.html5QrCode.pause(true);
+                                        }
+                                    } catch (e) {
+                                        // ignore
+                                    }
+                                },
+
+                                resumeScanner() {
+                                    try {
+                                        if (this.html5QrCode && typeof this.html5QrCode.resume === 'function') {
+                                            this.html5QrCode.resume();
+                                        }
+                                    } catch (e) {
+                                        // ignore
+                                    }
+                                },
+
+                                async switchCamera() {
+                                    if (!this.canSwitchCamera) return;
+                                    const ids = this.cameras.map(c => c.id);
+                                    const currentIdx = this.activeCameraId ? ids.indexOf(this.activeCameraId) : -1;
+                                    const nextIdx = (currentIdx >= 0 ? currentIdx + 1 : 1) % ids.length;
+                                    const nextId = ids[nextIdx];
+                                    this.cameraStatus = 'Switching camera…';
+                                    try {
+                                        await this.restartWithCameraId(nextId);
+                                    } catch (e) {
+                                        console.error('Failed to switch camera:', e);
+                                        this.cameraStatus = 'Could not switch camera.';
+                                    }
+                                },
+
+                                async scanFromImageFile(event) {
+                                    const file = event?.target?.files?.[0];
+                                    if (!file) return;
+
+                                    try {
+                                        this.pauseScanner();
+                                        // scanFile works even if the camera is running; we pause to avoid double processing.
+                                        const decodedText = await this.html5QrCode.scanFile(file, true);
+                                        await this.onScanSuccess(decodedText);
+                                    } catch (e) {
+                                        console.error('Image scan failed:', e);
+                                        this.success = false;
+                                        this.message = 'Could not read a QR code from that image.';
+                                        // Resume camera scanning
+                                        this.resumeScanner();
+                                    } finally {
+                                        // allow re-uploading the same file
+                                        event.target.value = '';
+                                    }
+                                },
+
+                                async onScanSuccess(decodedText) {
+                                    if (this.isProcessingScan) return;
+                                    this.isProcessingScan = true;
+                                    this.pauseScanner();
+                                    try {
+                                        await this.handleScan(decodedText);
+                                    } finally {
+                                        // handleScan opens modals; scanner will be resumed on confirm/cancel.
+                                        this.isProcessingScan = false;
+                                    }
+                                },
 
                 async handleScan(token) {
                     if (!token) return;
@@ -231,15 +428,21 @@
                             this.rewardBalance = data.reward_balance || 1;
                             this.redeemQuantity = Math.min(this.rewardBalance, 1); // Default to 1, but can't exceed balance
                         } else {
-                            // Fallback to 1 if fetch fails
+                                            // Fallback to 1 if fetch fails
                             this.rewardBalance = 1;
                             this.redeemQuantity = 1;
+                                            // Close modal on error and resume scanning
+                                            this.showModal = false;
+                                            this.resumeScanner();
                         }
                     } catch (error) {
                         console.error('Error fetching redeem info:', error);
                         // Fallback to 1 if fetch fails
                         this.rewardBalance = 1;
                         this.redeemQuantity = 1;
+                                        // Close modal on error and resume scanning
+                                        this.showModal = false;
+                                        this.resumeScanner();
                     }
                 },
 
@@ -249,6 +452,12 @@
                     this.stampCount = 1;
                     this.showModal = true;
                 },
+
+                                cancelActionModal() {
+                                    this.showModal = false;
+                                    // Resume scanning quickly so the merchant can scan again
+                                    setTimeout(() => this.resumeScanner(), 200);
+                                },
 
                 confirmAction() {
                     this.showModal = false;
@@ -261,12 +470,8 @@
                     // Reset redeem quantity for next time
                     this.redeemQuantity = 1;
                     
-                    // Resume scanning after a delay if using scanner
-                    if (this.html5QrcodeScanner) {
-                        setTimeout(() => {
-                            this.html5QrcodeScanner.resume();
-                        }, 2000);
-                    }
+                                    // Resume scanning after a short delay
+                                    setTimeout(() => this.resumeScanner(), 1200);
                 },
 
                 async redeem(token, quantity = 1) {
