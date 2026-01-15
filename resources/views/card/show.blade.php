@@ -90,11 +90,18 @@
                 @endif
 
                 <!-- Main Loyalty Card -->
-                <div class="bg-gray-800 rounded-2xl shadow-2xl overflow-hidden mb-4 qr-pattern" style="position: relative;">
+                <div class="bg-gray-800 rounded-2xl shadow-2xl overflow-hidden mb-4 qr-pattern" style="position: relative; border: 3px solid {{ $account->store->brand_color ?? '#0EA5E9' }};">
                     <!-- QR Glow Effect -->
                     <div class="qr-glow"></div>
                     
                     <div class="p-6 relative z-10">
+                        <!-- Store Logo (if available) -->
+                        @if($account->store->logo_path)
+                            <div class="flex justify-center mb-4">
+                                <img src="{{ asset('storage/' . $account->store->logo_path) }}" alt="{{ $account->store->name }} logo" class="h-20 w-20 object-contain rounded-lg bg-white/10 backdrop-blur-sm p-2 border-2" style="border-color: {{ $account->store->brand_color ?? '#0EA5E9' }};">
+                            </div>
+                        @endif
+                        
                         <!-- Always Visible QR Code for Stamping -->
                         <div class="flex justify-center mb-6">
                             <div class="bg-white rounded-xl p-3 shadow-lg">
