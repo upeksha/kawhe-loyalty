@@ -29,6 +29,11 @@ Route::get('/c/{public_token}', [CardController::class, 'show'])->name('card.sho
 Route::get('/api/card/{public_token}', [CardController::class, 'api'])->name('card.api');
 Route::get('/api/card/{public_token}/transactions', [CardController::class, 'transactions'])->name('card.transactions');
 
+// Apple Wallet pass download (signed URL for security)
+Route::get('/wallet/apple/{public_token}/download', [App\Http\Controllers\WalletController::class, 'downloadApplePass'])
+    ->name('wallet.apple.download')
+    ->middleware('signed');
+
 Route::post('/c/{public_token}/verify/send', [App\Http\Controllers\VerificationController::class, 'send'])->name('card.verification.send');
 Route::get('/c/{public_token}/verify/{id}/{hash}', [App\Http\Controllers\VerificationController::class, 'verify'])->name('card.verification.verify')->middleware('signed');
 

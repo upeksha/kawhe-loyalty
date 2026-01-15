@@ -13,6 +13,7 @@ A Progressive Web App (PWA) loyalty card system built with Laravel 11. Enable me
 - 🛡️ **Data Integrity**: Idempotency, optimistic locking, and rate limiting
 - 📧 **Email Integration**: SendGrid SMTP for verification emails
 - 💳 **Subscription Billing**: Stripe integration via Laravel Cashier for merchant subscriptions
+- 🍎 **Apple Wallet**: Generate and download Apple Wallet passes for customer loyalty cards
 
 ## Quick Start
 
@@ -45,6 +46,7 @@ php artisan reverb:start
 - **[SENDGRID_SETUP.md](SENDGRID_SETUP.md)** - Email configuration guide
 - **[PRODUCTION_EMAIL_SETUP.md](PRODUCTION_EMAIL_SETUP.md)** - Production email setup with SendGrid and queue workers
 - **[BILLING_SETUP.md](BILLING_SETUP.md)** - Stripe billing and subscription setup guide
+- **[APPLE_WALLET_SETUP.md](APPLE_WALLET_SETUP.md)** - Apple Wallet pass generation setup and configuration
 
 ## Tech Stack
 
