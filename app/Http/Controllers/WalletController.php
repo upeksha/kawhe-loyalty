@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\LoyaltyAccount;
 use App\Services\Wallet\AppleWalletPassService;
+use Byte5\PassGenerator;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 
@@ -32,9 +33,12 @@ class WalletController extends Controller
             $pkpassData = $this->passService->generatePass($account);
             $storeSlug = $account->store->slug ?? 'kawhe';
 
+            // Use the package's MIME type method and add all required headers for Safari
             return response($pkpassData, 200, [
-                'Content-Type' => 'application/vnd.apple.pkpass',
+                'Content-Type' => PassGenerator::getPassMimeType(),
                 'Content-Disposition' => sprintf('attachment; filename="kawhe-%s.pkpass"', $storeSlug),
+                'Content-Length' => strlen($pkpassData),
+                'Content-Transfer-Encoding' => 'binary',
                 'Cache-Control' => 'no-store, no-cache, must-revalidate, max-age=0',
                 'Pragma' => 'no-cache',
                 'Expires' => '0',
