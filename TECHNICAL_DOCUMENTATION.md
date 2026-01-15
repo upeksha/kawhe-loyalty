@@ -68,14 +68,18 @@ Merchants can:
 - Access QR scanner for stamping/redeeming
 
 ### 2. Store Management
-**Routes**: `/merchant/stores/*`
+**Routes**: `/merchant/stores/*` and `/merchant/onboarding/store`
 
 **Features**:
 - Create stores with custom names, addresses, and reward configurations
+- **Unified Forms**: Onboarding and regular create forms have identical fields and styling
+  - Both support: Store Name, Address, Reward Target, Reward Title
+  - Both support: Brand Color, Background Color, Logo Upload
+  - Onboarding form includes welcome message but uses same structure
 - Set reward target (e.g., "10 stamps = Free Coffee")
-- Upload store logo
-- Set brand color (for card UI)
-- Set background color (for card page background)
+- Upload store logo (PNG, JPG, WebP, max 2MB)
+- Set brand color (hex color picker + text input, used for card border accent)
+- Set background color (hex color picker + text input, used for card page background)
 - Generate unique join tokens and QR codes
 - Each store has a unique slug and join token
 
@@ -113,13 +117,18 @@ Merchants can:
 
 **Features**:
 - Wallet-style pass design with always-visible QR code
-- Store branding (logo, colors)
+- **Store Branding**:
+  - Store logo displayed at top of card (if `logo_path` is set)
+  - Brand color used as card border accent (3px solid border)
+  - Background color applied to entire page background
+  - All branding elements customizable per store
 - Customer name and masked card ID
 - Progress visualization (circular stamp dots)
 - Reward status (available, redeemed, locked)
 - Recent activity/transaction history
 - Email verification status
 - Real-time updates via WebSocket
+- Auto-refresh after reward redemption to ensure UI consistency
 
 **Card States**:
 - **Collecting**: `reward_balance = 0`, stamps < target, reward not available
@@ -131,11 +140,20 @@ Merchants can:
 **Route**: `/merchant/scanner`
 
 **Functionality**:
+- **Auto-start**: Scanner automatically starts on page load, requesting camera permission immediately
+- **Camera Selection**:
+  - Defaults to back camera (`facingMode: "environment"`)
+  - Automatically switches to saved camera preference (stored in `localStorage`)
+  - Always-visible "Switch Camera" button when multiple cameras available
 - Merchant selects store from dropdown
 - Scans customer's QR code (stamp or redeem)
 - System validates token and processes transaction
 - Real-time feedback with customer name and stamp count
-- Prevents double-scanning with cooldown periods
+- **Visual Cooldown**: After successful scan, 3-second cooldown overlay appears with countdown
+  - Scanner pauses during cooldown
+  - Prevents duplicate scans automatically
+  - Resumes automatically after cooldown
+- Upload image fallback available (hidden behind "Having trouble?" link)
 
 **QR Code Formats**:
 - **Stamping**: `LA:{public_token}` (always visible on card)
@@ -716,6 +734,29 @@ php artisan test --filter=EnrollmentTest
 - **Server-Side Idempotency**: 5-second window prevents duplicate scans even if client idempotency key changes
 - **Cooldown Override**: Merchants can override 30-second cooldown with confirmation
 - **Store Auto-Detection**: System auto-detects store from token, prevents wrong store selection
+
+### Scanner UX Improvements
+- **Auto-Start**: Scanner automatically starts on page load, immediately requests camera permission
+- **Back Camera Default**: Defaults to back camera (`facingMode: "environment"`) for better QR scanning
+- **Camera Memory**: Remembers merchant's camera choice in `localStorage` (device-specific)
+- **Visual Cooldown**: 3-second cooldown overlay with countdown after successful scans
+  - Prevents duplicate scans automatically
+  - Shows large countdown number (3... 2... 1...)
+  - Scanner pauses during cooldown, resumes automatically
+- **Switch Camera**: Always-visible button to toggle between front/back cameras
+- **Upload Fallback**: Image upload option hidden behind "Having trouble?" link
+
+### Store Branding on Customer Cards
+- **Logo Display**: Store logo appears at top of customer card (if uploaded)
+  - Size: 80x80px with semi-transparent background
+  - Brand color border accent around logo
+- **Brand Color**: Used as 3px solid border around entire card
+  - Provides visual brand identity
+  - Default: `#0EA5E9` if not set
+- **Background Color**: Applied to entire page background
+  - Creates immersive branded experience
+  - Default: `#1F2937` if not set
+- All three branding elements (logo, brand_color, background_color) are optional but recommended
 
 ## Future Enhancements
 
