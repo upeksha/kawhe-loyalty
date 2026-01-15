@@ -82,29 +82,29 @@ class AppleWalletPassService
         // Initialize pass generator
         // Certificates are automatically loaded from config in constructor
         // Pass ID is optional - we use serial number for identification
-        $passId = $this->generateSerialNumber($account);
-        $passGenerator = new PassGenerator($passId);
+        $passIdentifier = $this->generateSerialNumber($account);
+        $pass = new PassGenerator($passIdentifier);
         
         // Set pass definition
-        $passGenerator->setPassDefinition($passDefinition);
+        $pass->setPassDefinition($passDefinition);
 
         // Add assets (images) - addAsset() expects file paths, not file contents
         $assetsPath = resource_path('wallet/apple/default');
         if (file_exists($assetsPath . '/icon.png')) {
-            $passGenerator->addAsset($assetsPath . '/icon.png');
+            $pass->addAsset($assetsPath . '/icon.png');
         }
         if (file_exists($assetsPath . '/logo.png')) {
-            $passGenerator->addAsset($assetsPath . '/logo.png');
+            $pass->addAsset($assetsPath . '/logo.png');
         }
         if (file_exists($assetsPath . '/background.png')) {
-            $passGenerator->addAsset($assetsPath . '/background.png');
+            $pass->addAsset($assetsPath . '/background.png');
         }
         if (file_exists($assetsPath . '/strip.png')) {
-            $passGenerator->addAsset($assetsPath . '/strip.png');
+            $pass->addAsset($assetsPath . '/strip.png');
         }
 
         // Generate and return pkpass binary
-        return $passGenerator->create();
+        return $pass->create();
     }
 
     /**
