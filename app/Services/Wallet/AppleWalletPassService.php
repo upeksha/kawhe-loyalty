@@ -79,77 +79,32 @@ class AppleWalletPassService
             $passDefinition['labelColor'] = $this->hexToRgb($store->brand_color ?? '#FFFFFF');
         }
 
-        // Initialize pass generator with certificate configuration
-        // Note: Verify PassGenerator API matches byte5/laravel-passgenerator package
-        // Methods may need adjustment based on actual package implementation
-        $passGenerator = new PassGenerator();
+        // Initialize pass generator
+        // Certificates are automatically loaded from config in constructor
+        // Pass ID is optional - we use serial number for identification
+        $passId = $this->generateSerialNumber($account);
+        $passGenerator = new PassGenerator($passId);
         
-        // Configure certificates
-        $certificatePath = storage_path('app/' . config('passgenerator.certificate_path'));
-        $wwdrPath = storage_path('app/' . config('passgenerator.wwdr_certificate'));
-        
-        if (file_exists($certificatePath)) {
-            // Set certificate - verify method name matches package API
-            if (method_exists($passGenerator, 'setCertificate')) {
-                $passGenerator->setCertificate($certificatePath, config('passgenerator.certificate_pass'));
-            } elseif (method_exists($passGenerator, 'certificate')) {
-                $passGenerator->certificate($certificatePath, config('passgenerator.certificate_pass'));
-            }
-        }
-        if (file_exists($wwdrPath)) {
-            // Set WWDR certificate - verify method name matches package API
-            if (method_exists($passGenerator, 'setWWDRCertificate')) {
-                $passGenerator->setWWDRCertificate($wwdrPath);
-            } elseif (method_exists($passGenerator, 'wwdrCertificate')) {
-                $passGenerator->wwdrCertificate($wwdrPath);
-            }
-        }
-        
-        // Set pass definition - verify method name matches package API
-        if (method_exists($passGenerator, 'setPassDefinition')) {
-            $passGenerator->setPassDefinition($passDefinition);
-        } elseif (method_exists($passGenerator, 'passDefinition')) {
-            $passGenerator->passDefinition($passDefinition);
-        } elseif (method_exists($passGenerator, 'setData')) {
-            $passGenerator->setData($passDefinition);
-        }
+        // Set pass definition
+        $passGenerator->setPassDefinition($passDefinition);
 
-        // Add assets (images) - verify method name matches package API
+        // Add assets (images) - addAsset() expects file paths, not file contents
         $assetsPath = resource_path('wallet/apple/default');
-        $addAssetMethod = null;
-        if (method_exists($passGenerator, 'addAsset')) {
-            $addAssetMethod = 'addAsset';
-        } elseif (method_exists($passGenerator, 'asset')) {
-            $addAssetMethod = 'asset';
-        } elseif (method_exists($passGenerator, 'addImage')) {
-            $addAssetMethod = 'addImage';
+        if (file_exists($assetsPath . '/icon.png')) {
+            $passGenerator->addAsset($assetsPath . '/icon.png');
         }
-        
-        if ($addAssetMethod) {
-            if (file_exists($assetsPath . '/icon.png')) {
-                $passGenerator->$addAssetMethod('icon.png', file_get_contents($assetsPath . '/icon.png'));
-            }
-            if (file_exists($assetsPath . '/logo.png')) {
-                $passGenerator->$addAssetMethod('logo.png', file_get_contents($assetsPath . '/logo.png'));
-            }
-            if (file_exists($assetsPath . '/background.png')) {
-                $passGenerator->$addAssetMethod('background.png', file_get_contents($assetsPath . '/background.png'));
-            }
-            if (file_exists($assetsPath . '/strip.png')) {
-                $passGenerator->$addAssetMethod('strip.png', file_get_contents($assetsPath . '/strip.png'));
-            }
+        if (file_exists($assetsPath . '/logo.png')) {
+            $passGenerator->addAsset($assetsPath . '/logo.png');
+        }
+        if (file_exists($assetsPath . '/background.png')) {
+            $passGenerator->addAsset($assetsPath . '/background.png');
+        }
+        if (file_exists($assetsPath . '/strip.png')) {
+            $passGenerator->addAsset($assetsPath . '/strip.png');
         }
 
-        // Generate and return pkpass binary - verify method name matches package API
-        if (method_exists($passGenerator, 'generate')) {
-            return $passGenerator->generate();
-        } elseif (method_exists($passGenerator, 'create')) {
-            return $passGenerator->create();
-        } elseif (method_exists($passGenerator, 'output')) {
-            return $passGenerator->output();
-        } else {
-            throw new \Exception('PassGenerator does not have a generate/create/output method. Please verify package API.');
-        }
+        // Generate and return pkpass binary
+        return $passGenerator->create();
     }
 
     /**
