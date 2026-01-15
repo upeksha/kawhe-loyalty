@@ -32,18 +32,32 @@ class WalletController extends Controller
         try {
             $pkpassData = $this->passService->generatePass($account);
             $storeSlug = $account->store->slug ?? 'kawhe';
+            
+            // Verify the pass is valid (is a ZIP)
+            if (substr($pkpassData, 0, 2) !== 'PK') {
+                \Log::error('Generated pass is not a valid ZIP file', [
+                    'public_token' => $public_token,
+                    'first_bytes' => bin2hex(substr($pkpassData, 0, 10)),
+                ]);
+                abort(500, 'Invalid pass file generated');
+            }
 
             // Use the package's MIME type method and add all required headers for Safari
-            // Safari requires inline disposition for .pkpass files to trigger Wallet app
-            return response($pkpassData, 200, [
+            // Safari on iPhone requires specific headers and MIME type
+            $response = response($pkpassData, 200, [
                 'Content-Type' => PassGenerator::getPassMimeType(),
-                'Content-Disposition' => sprintf('inline; filename="kawhe-%s.pkpass"', $storeSlug),
+                'Content-Disposition' => sprintf('attachment; filename="kawhe-%s.pkpass"', $storeSlug),
                 'Content-Length' => strlen($pkpassData),
-                'Content-Transfer-Encoding' => 'binary',
                 'Cache-Control' => 'no-store, no-cache, must-revalidate, max-age=0',
                 'Pragma' => 'no-cache',
                 'Expires' => '0',
+                'X-Content-Type-Options' => 'nosniff',
             ]);
+            
+            // Remove Content-Transfer-Encoding as it can cause issues with Safari
+            // Safari handles binary content automatically when Content-Type is correct
+            
+            return $response;
         } catch (\Exception $e) {
             \Log::error('Failed to generate Apple Wallet pass', [
                 'public_token' => $public_token,

@@ -7,13 +7,13 @@
     "license": "MIT",
     "require": {
         "php": "^8.2",
+        "byte5/laravel-passgenerator": "*",
         "laravel/cashier": "^16.2",
         "laravel/framework": "^12.0",
         "laravel/reverb": "^1.7",
         "laravel/tinker": "^2.10.1",
         "pusher/pusher-php-server": "^7.2",
-        "simplesoftwareio/simple-qrcode": "^4.2",
-        "byte5/laravel-passgenerator": "^1.0"
+        "simplesoftwareio/simple-qrcode": "^4.2"
     },
     "require-dev": {
         "fakerphp/faker": "^1.23",
