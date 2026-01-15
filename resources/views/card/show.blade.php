@@ -431,6 +431,7 @@
 
                         // Update reward balance (Alpine.js reactive state)
                         const rewardBalance = data.reward_balance ?? 0;
+                        const previousRewardBalance = this.rewardBalance;
                         this.rewardBalance = rewardBalance;
                         this.hasRedeemToken = !!data.redeem_token;
                         
@@ -455,18 +456,20 @@
                             }
                         }
 
-                        // Update progress circles
+                        // Update progress circles - ALWAYS update them, even after redemption
                         const circles = document.querySelectorAll('.stamp-circle');
-                        circles.forEach((circle, index) => {
-                            const stampNumber = index + 1;
-                            if (stampNumber <= data.stamp_count) {
-                                circle.className = 'stamp-circle w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold bg-green-500 text-white';
-                                circle.innerHTML = '<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>';
-                            } else {
-                                circle.className = 'stamp-circle w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold bg-gray-700 text-gray-400 border-2 border-gray-600';
-                                circle.textContent = stampNumber;
-                            }
-                        });
+                        if (circles.length > 0 && data.stamp_count !== undefined) {
+                            circles.forEach((circle, index) => {
+                                const stampNumber = index + 1;
+                                if (stampNumber <= data.stamp_count) {
+                                    circle.className = 'stamp-circle w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold bg-green-500 text-white';
+                                    circle.innerHTML = '<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>';
+                                } else {
+                                    circle.className = 'stamp-circle w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold bg-gray-700 text-gray-400 border-2 border-gray-600';
+                                    circle.textContent = stampNumber;
+                                }
+                            });
+                        }
 
                         // Check if reward was redeemed
                         if (data.reward_redeemed_at) {
@@ -475,8 +478,9 @@
                             this.showRedeemModal = false; // Close modal if open
                         }
 
-                        // Reload page if reward becomes available to show unlock card
-                        if (data.reward_available && !this.rewardRedeemed) {
+                        // Only reload page if reward FIRST becomes available (0 -> >0), not on redemption
+                        // This prevents unnecessary reloads that hide the stamp circles
+                        if (data.reward_available && previousRewardBalance === 0 && rewardBalance > 0 && !this.rewardRedeemed) {
                             window.location.reload();
                         }
                     },
