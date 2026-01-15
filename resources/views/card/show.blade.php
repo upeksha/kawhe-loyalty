@@ -139,7 +139,7 @@
                                 </p>
                             @endif
                             <!-- Circular Checkmarks Row -->
-                            <div class="flex gap-2 justify-center flex-wrap">
+                            <div id="stamp-circles-container" class="flex gap-2 justify-center flex-wrap">
                                 @for ($i = 1; $i <= $account->store->reward_target; $i++)
                                     <div class="stamp-circle w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold
                                         {{ $i <= $account->stamp_count
@@ -457,18 +457,37 @@
                         }
 
                         // Update progress circles - ALWAYS update them, even after redemption
-                        const circles = document.querySelectorAll('.stamp-circle');
-                        if (circles.length > 0 && data.stamp_count !== undefined) {
-                            circles.forEach((circle, index) => {
-                                const stampNumber = index + 1;
-                                if (stampNumber <= data.stamp_count) {
-                                    circle.className = 'stamp-circle w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold bg-green-500 text-white';
-                                    circle.innerHTML = '<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>';
-                                } else {
-                                    circle.className = 'stamp-circle w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold bg-gray-700 text-gray-400 border-2 border-gray-600';
-                                    circle.textContent = stampNumber;
+                        // Use the container ID to ensure we're updating the right element
+                        const circlesContainer = document.getElementById('stamp-circles-container');
+                        if (circlesContainer) {
+                            const circles = circlesContainer.querySelectorAll('.stamp-circle');
+                            if (circles.length > 0 && data.stamp_count !== undefined && data.reward_target !== undefined) {
+                                // Ensure we have the right number of circles
+                                const targetCount = data.reward_target;
+                                if (circles.length !== targetCount) {
+                                    console.warn(`Circle count mismatch: found ${circles.length}, expected ${targetCount}`);
                                 }
-                            });
+                                
+                                circles.forEach((circle, index) => {
+                                    const stampNumber = index + 1;
+                                    if (stampNumber <= data.stamp_count) {
+                                        circle.className = 'stamp-circle w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold bg-green-500 text-white';
+                                        circle.innerHTML = '<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>';
+                                    } else {
+                                        circle.className = 'stamp-circle w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold bg-gray-700 text-gray-400 border-2 border-gray-600';
+                                        circle.textContent = stampNumber;
+                                    }
+                                });
+                            } else {
+                                console.warn('Cannot update circles:', {
+                                    container: !!circlesContainer,
+                                    circlesLength: circles?.length || 0,
+                                    stampCount: data.stamp_count,
+                                    rewardTarget: data.reward_target
+                                });
+                            }
+                        } else {
+                            console.error('Stamp circles container not found!');
                         }
 
                         // Check if reward was redeemed
