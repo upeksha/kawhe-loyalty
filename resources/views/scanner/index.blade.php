@@ -45,7 +45,29 @@
                                     </button>
                                 </div>
                             </div>
-                            <div id="reader" class="w-full mb-6 bg-black rounded-lg overflow-hidden" style="min-height: 300px; color: white;"></div>
+                            <!-- Scanner Container with Cooldown Overlay -->
+                            <div class="relative w-full mb-6 bg-black rounded-lg overflow-hidden" style="min-height: 300px;">
+                                <div id="reader" class="w-full" style="min-height: 300px; color: white;"></div>
+                                
+                                <!-- Cooldown Overlay -->
+                                <div 
+                                    x-show="cooldownActive" 
+                                    x-cloak
+                                    class="absolute inset-0 bg-black bg-opacity-75 flex flex-col items-center justify-center z-50 rounded-lg"
+                                    x-transition:enter="transition ease-out duration-200"
+                                    x-transition:enter-start="opacity-0"
+                                    x-transition:enter-end="opacity-100"
+                                    x-transition:leave="transition ease-in duration-200"
+                                    x-transition:leave-start="opacity-100"
+                                    x-transition:leave-end="opacity-0"
+                                >
+                                    <div class="text-center">
+                                        <div class="text-6xl font-bold text-white mb-4" x-text="cooldownSeconds"></div>
+                                        <p class="text-white text-lg font-semibold">Please wait...</p>
+                                        <p class="text-gray-300 text-sm mt-2">Scanner will resume automatically</p>
+                                    </div>
+                                </div>
+                            </div>
 
                             <!-- Hidden fallback: upload image -->
                             <div class="mb-6">
@@ -191,6 +213,9 @@
                 cooldownData: null,
                 pendingCooldownToken: null,
                 pendingCooldownCount: 1,
+                cooldownActive: false,
+                cooldownSeconds: 3,
+                cooldownInterval: null,
 
                 init() {
                     this.$nextTick(() => {
@@ -335,6 +360,36 @@
                                     }
                                 },
 
+                                startCooldown(seconds = 3) {
+                                    // Clear any existing cooldown
+                                    if (this.cooldownInterval) {
+                                        clearInterval(this.cooldownInterval);
+                                    }
+                                    
+                                    // Pause scanner during cooldown
+                                    this.pauseScanner();
+                                    
+                                    // Set cooldown state
+                                    this.cooldownActive = true;
+                                    this.cooldownSeconds = seconds;
+                                    
+                                    // Start countdown
+                                    this.cooldownInterval = setInterval(() => {
+                                        this.cooldownSeconds--;
+                                        
+                                        if (this.cooldownSeconds <= 0) {
+                                            // Cooldown finished
+                                            clearInterval(this.cooldownInterval);
+                                            this.cooldownInterval = null;
+                                            this.cooldownActive = false;
+                                            this.cooldownSeconds = 3;
+                                            
+                                            // Resume scanner
+                                            this.resumeScanner();
+                                        }
+                                    }, 1000);
+                                },
+
                                 async switchCamera() {
                                     if (!this.canSwitchCamera) return;
                                     const ids = this.cameras.map(c => c.id);
@@ -372,6 +427,12 @@
                                 },
 
                                 async onScanSuccess(decodedText) {
+                                    // Don't process scans during cooldown
+                                    if (this.cooldownActive) {
+                                        console.log('Scan ignored: cooldown active');
+                                        return;
+                                    }
+                                    
                                     if (this.isProcessingScan) return;
                                     this.isProcessingScan = true;
                                     this.pauseScanner();
@@ -470,8 +531,7 @@
                     // Reset redeem quantity for next time
                     this.redeemQuantity = 1;
                     
-                                    // Resume scanning after a short delay
-                                    setTimeout(() => this.resumeScanner(), 1200);
+                    // Note: Scanner will resume automatically after cooldown via startCooldown()
                 },
 
                 async redeem(token, quantity = 1) {
@@ -515,6 +575,9 @@
                             if (data.receipt && data.receipt.remaining_rewards > 0) {
                                 this.message += ` (${data.receipt.remaining_rewards} reward(s) remaining)`;
                             }
+                            
+                            // Start cooldown after successful redemption
+                            this.startCooldown(3);
                         } else {
                             this.success = false;
                             // Use improved error messages from server
@@ -614,6 +677,9 @@
                             } else if (data.rewardAvailable) {
                                 this.message += ' 🎉 Reward unlocked!';
                             }
+                            
+                            // Start cooldown after successful stamp
+                            this.startCooldown(3);
                         } else {
                             this.success = false;
                             this.storeSwitched = false;
