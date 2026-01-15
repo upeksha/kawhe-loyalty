@@ -18,7 +18,7 @@ return [
     'wwdr_certificate_path' => env('WWDR_CERTIFICATE', 'passgenerator/certs/AppleWWDRCA.pem'), // Get from here https://www.apple.com/certificateauthority/ and export to PEM
 
     'storage_disk' => env('PASSGENERATOR_STORAGE_DISK', 'local'), // The disk to use for storing the pass files
-    'storage_path' => env('PASSGENERATOR_STORAGE_PATH', 'passgenerator/passes'), // The path to store the pass files on the disk
+    'storage_path' => env('PASSGENERATOR_STORAGE_PATH', 'passgenerator/passes'), // The path to store the pass files on the disk (NOT certs!)
 
     'pass_type_identifier' => env('APPLE_PASS_TYPE_IDENTIFIER', env('PASS_TYPE_IDENTIFIER', 'pass.com.kawhe.loyalty')),
     'organization_name' => env('APPLE_ORGANIZATION_NAME', env('ORGANIZATION_NAME', 'Kawhe')),
