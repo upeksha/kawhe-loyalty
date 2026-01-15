@@ -34,9 +34,10 @@ class WalletController extends Controller
             $storeSlug = $account->store->slug ?? 'kawhe';
 
             // Use the package's MIME type method and add all required headers for Safari
+            // Safari requires inline disposition for .pkpass files to trigger Wallet app
             return response($pkpassData, 200, [
                 'Content-Type' => PassGenerator::getPassMimeType(),
-                'Content-Disposition' => sprintf('attachment; filename="kawhe-%s.pkpass"', $storeSlug),
+                'Content-Disposition' => sprintf('inline; filename="kawhe-%s.pkpass"', $storeSlug),
                 'Content-Length' => strlen($pkpassData),
                 'Content-Transfer-Encoding' => 'binary',
                 'Cache-Control' => 'no-store, no-cache, must-revalidate, max-age=0',
