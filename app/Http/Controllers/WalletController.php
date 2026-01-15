@@ -47,11 +47,20 @@ class WalletController extends Controller
                 'line' => $e->getLine(),
                 'trace' => $e->getTraceAsString(),
                 'config' => [
-                    'certificate_path' => config('passgenerator.certificate_path'),
-                    'wwdr_certificate' => config('passgenerator.wwdr_certificate'),
+                    'certificate_store_path' => config('passgenerator.certificate_store_path'),
+                    'certificate_store_password' => config('passgenerator.certificate_store_password') ? '***SET***' : 'NOT SET',
+                    'wwdr_certificate_path' => config('passgenerator.wwdr_certificate_path'),
                     'pass_type_identifier' => config('passgenerator.pass_type_identifier'),
                     'team_identifier' => config('passgenerator.team_identifier'),
                     'organization_name' => config('passgenerator.organization_name'),
+                    'storage_disk' => config('passgenerator.storage_disk'),
+                    'storage_path' => config('passgenerator.storage_path'),
+                ],
+                'file_checks' => [
+                    'certificate_exists' => file_exists(storage_path('app/private/' . config('passgenerator.certificate_store_path'))),
+                    'wwdr_exists' => file_exists(storage_path('app/private/' . config('passgenerator.wwdr_certificate_path'))),
+                    'passes_dir_exists' => is_dir(storage_path('app/private/' . config('passgenerator.storage_path'))),
+                    'passes_dir_writable' => is_writable(storage_path('app/private/' . config('passgenerator.storage_path'))),
                 ],
             ]);
 
