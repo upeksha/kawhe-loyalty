@@ -43,8 +43,27 @@ class WalletController extends Controller
             \Log::error('Failed to generate Apple Wallet pass', [
                 'public_token' => $public_token,
                 'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
                 'trace' => $e->getTraceAsString(),
+                'config' => [
+                    'certificate_path' => config('passgenerator.certificate_path'),
+                    'wwdr_certificate' => config('passgenerator.wwdr_certificate'),
+                    'pass_type_identifier' => config('passgenerator.pass_type_identifier'),
+                    'team_identifier' => config('passgenerator.team_identifier'),
+                    'organization_name' => config('passgenerator.organization_name'),
+                ],
             ]);
+
+            // In development, show more details
+            if (config('app.debug')) {
+                return response()->json([
+                    'error' => 'Failed to generate Apple Wallet pass',
+                    'message' => $e->getMessage(),
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
+                ], 500);
+            }
 
             abort(500, 'Failed to generate Apple Wallet pass. Please try again later.');
         }
