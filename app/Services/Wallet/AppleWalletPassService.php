@@ -24,9 +24,9 @@ class AppleWalletPassService
         // Build pass definition
         $passDefinition = [
             'formatVersion' => 1,
-            'passTypeIdentifier' => config('passgenerator.pass_type_identifier'),
-            'teamIdentifier' => config('passgenerator.team_identifier'),
-            'organizationName' => config('passgenerator.organization_name'),
+            'passTypeIdentifier' => config('passgenerator.pass_type_identifier') ?: config('passgenerator.pass_type_identifier'),
+            'teamIdentifier' => config('passgenerator.team_identifier') ?: config('passgenerator.team_identifier'),
+            'organizationName' => config('passgenerator.organization_name') ?: config('passgenerator.organization_name'),
             'description' => 'Kawhe Loyalty Card',
             'serialNumber' => $this->generateSerialNumber($account),
             'logoText' => $store->name,
