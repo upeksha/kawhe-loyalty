@@ -495,6 +495,13 @@
                             // Hide button and banner if no rewards left
                             this.rewardRedeemed = rewardBalance <= 0;
                             this.showRedeemModal = false; // Close modal if open
+                            
+                            // Reload page after redemption to ensure card state is correct
+                            // This fixes issues with stamp circles disappearing
+                            setTimeout(() => {
+                                window.location.reload();
+                            }, 500); // Small delay to show success message
+                            return; // Exit early to prevent further updates
                         }
 
                         // Only reload page if reward FIRST becomes available (0 -> >0), not on redemption
