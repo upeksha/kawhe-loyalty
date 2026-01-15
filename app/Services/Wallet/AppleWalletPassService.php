@@ -3,7 +3,7 @@
 namespace App\Services\Wallet;
 
 use App\Models\LoyaltyAccount;
-use Byte5\LaravelPassGenerator\PassGenerator;
+use Byte5\PassGenerator;
 use Illuminate\Support\Facades\Storage;
 
 class AppleWalletPassService
