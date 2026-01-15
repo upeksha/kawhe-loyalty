@@ -51,7 +51,7 @@
             <div class="w-full max-w-md mx-auto px-4 pt-6">
                 <!-- Reward Unlocked Card (Top) -->
                 @if(($account->reward_balance ?? 0) > 0)
-                    <div x-show="rewardBalance > 0 && !rewardRedeemed" class="bg-gradient-to-r from-yellow-400 via-yellow-500 to-yellow-600 rounded-2xl shadow-xl overflow-hidden mb-4">
+                    <div x-show="rewardBalance > 0" class="bg-gradient-to-r from-yellow-400 via-yellow-500 to-yellow-600 rounded-2xl shadow-xl overflow-hidden mb-4">
                         <div class="p-6 text-white">
                             <div class="flex items-start gap-3 mb-4">
                                 <div class="text-4xl">🎉</div>
@@ -198,7 +198,7 @@
             <!-- Redeem QR Code Modal (Full Screen Popup) -->
             @if(($account->reward_balance ?? 0) > 0 && $account->redeem_token)
                 <div 
-                    x-show="showRedeemModal && rewardBalance > 0 && hasRedeemToken && !rewardRedeemed" 
+                    x-show="showRedeemModal && rewardBalance > 0 && hasRedeemToken" 
                     x-cloak
                     @click.away="showRedeemModal = false"
                     @keydown.escape.window="showRedeemModal = false"
@@ -273,7 +273,10 @@
                     accountData: null,
                     bannerDismissed: false,
                     showRedeemModal: false,
-                    rewardRedeemed: {{ $account->reward_redeemed_at ? 'true' : 'false' }},
+                    // IMPORTANT:
+                    // reward_redeemed_at is a "last redeemed at" timestamp and can be set even when reward_balance > 0
+                    // (partial redemption). So we only consider the reward "fully redeemed" when no rewards remain.
+                    rewardRedeemed: {{ ($account->reward_redeemed_at && (($account->reward_balance ?? 0) <= 0)) ? 'true' : 'false' }},
                     rewardBalance: {{ $account->reward_balance ?? 0 }},
                     hasRedeemToken: {{ $account->redeem_token ? 'true' : 'false' }},
                     emailVerified: {{ $account->customer->email_verified_at ? 'true' : 'false' }},

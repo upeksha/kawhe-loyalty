@@ -66,6 +66,8 @@ class CardController extends Controller
 
         // Refresh the account to get latest data
         $account->refresh();
+        // Re-read balance after refresh so the API always returns the latest value (prevents stale UI after redeem)
+        $rewardBalance = $account->reward_balance ?? 0;
 
         return response()->json([
             'stamp_count' => $account->stamp_count,
