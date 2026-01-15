@@ -24,9 +24,9 @@ class AppleWalletPassService
         // Build pass definition
         $passDefinition = [
             'formatVersion' => 1,
-            'passTypeIdentifier' => config('passgenerator.pass_type_identifier') ?: config('passgenerator.pass_type_identifier'),
-            'teamIdentifier' => config('passgenerator.team_identifier') ?: config('passgenerator.team_identifier'),
-            'organizationName' => config('passgenerator.organization_name') ?: config('passgenerator.organization_name'),
+            'passTypeIdentifier' => config('passgenerator.pass_type_identifier'),
+            'teamIdentifier' => config('passgenerator.team_identifier'),
+            'organizationName' => config('passgenerator.organization_name'),
             'description' => 'Kawhe Loyalty Card',
             'serialNumber' => $this->generateSerialNumber($account),
             'logoText' => $store->name,
@@ -82,8 +82,9 @@ class AppleWalletPassService
         // Initialize pass generator
         // Certificates are automatically loaded from config in constructor
         // Pass ID is optional - we use serial number for identification
+        // Set replaceExistent=true to allow regenerating passes (e.g., after stamp updates)
         $passIdentifier = $this->generateSerialNumber($account);
-        $pass = new PassGenerator($passIdentifier);
+        $pass = new PassGenerator($passIdentifier, true); // true = replace existing pass
         
         // Set pass definition
         $pass->setPassDefinition($passDefinition);
