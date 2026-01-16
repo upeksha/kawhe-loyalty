@@ -32,8 +32,22 @@ php artisan migrate --force
 
 echo ""
 echo "6. Setting permissions..."
-chmod -R 775 storage bootstrap/cache
-chown -R www-data:www-data storage bootstrap/cache 2>/dev/null || chown -R www-data:www-data storage bootstrap/cache
+# Set ownership first
+chown -R www-data:www-data storage bootstrap/cache
+
+# Set directory permissions
+find storage -type d -exec chmod 775 {} \;
+find bootstrap/cache -type d -exec chmod 775 {} \;
+
+# Set file permissions
+find storage -type f -exec chmod 664 {} \;
+find bootstrap/cache -type f -exec chmod 664 {} \;
+
+# Ensure specific directories are writable
+chmod -R 775 storage/framework
+chmod -R 775 storage/logs
+chmod -R 775 storage/app
+chmod -R 775 bootstrap/cache
 
 echo ""
 echo "7. Checking database schema..."
