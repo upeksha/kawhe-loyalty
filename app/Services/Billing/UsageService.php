@@ -5,6 +5,7 @@ namespace App\Services\Billing;
 use App\Models\User;
 use App\Models\LoyaltyAccount;
 use App\Models\Store;
+use Illuminate\Support\Facades\Schema;
 
 class UsageService
 {
@@ -41,13 +42,16 @@ class UsageService
             // If not including grandfathered, exclude cards created before subscription cancellation
             if (!$includeGrandfathered) {
                 try {
-                    $subscription = $user->subscription('default');
-                    
-                    // If subscription exists and has an ends_at date (cancelled), exclude cards created before that
-                    if ($subscription && $subscription->ends_at) {
-                        $query->where('created_at', '>=', $subscription->ends_at);
+                    // Only check subscription if tables exist
+                    if (\Schema::hasTable('subscriptions') && \Schema::hasColumn('users', 'stripe_id')) {
+                        $subscription = $user->subscription('default');
+                        
+                        // If subscription exists and has an ends_at date (cancelled), exclude cards created before that
+                        if ($subscription && $subscription->ends_at) {
+                            $query->where('created_at', '>=', $subscription->ends_at);
+                        }
+                        // If no subscription or no ends_at, all cards count (no grandfathering)
                     }
-                    // If no subscription or no ends_at, all cards count (no grandfathering)
                 } catch (\Exception $e) {
                     // If subscription check fails, count all cards (no grandfathering)
                     \Log::warning('Error checking subscription for grandfathering', [
@@ -77,6 +81,11 @@ class UsageService
     public function grandfatheredCardsCount(User $user): int
     {
         try {
+            // Only check subscription if tables exist
+            if (!\Schema::hasTable('subscriptions') || !\Schema::hasColumn('users', 'stripe_id')) {
+                return 0;
+            }
+            
             $subscription = $user->subscription('default');
             
             // Only grandfathered if subscription exists and was cancelled (has ends_at)
@@ -111,8 +120,20 @@ class UsageService
     public function isSubscribed(User $user): bool
     {
         try {
+            // First check if Cashier columns exist in database
+            if (!\Schema::hasColumn('users', 'stripe_id')) {
+                \Log::warning('Cashier migrations not run - stripe_id column missing');
+                return false;
+            }
+            
             // Check if user has a Stripe ID first
             if (!$user->hasStripeId()) {
+                return false;
+            }
+            
+            // Check if subscriptions table exists
+            if (!\Schema::hasTable('subscriptions')) {
+                \Log::warning('Cashier migrations not run - subscriptions table missing');
                 return false;
             }
             
@@ -133,6 +154,7 @@ class UsageService
             \Log::warning('Error checking subscription status', [
                 'user_id' => $user->id,
                 'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
             ]);
             return false;
         }
