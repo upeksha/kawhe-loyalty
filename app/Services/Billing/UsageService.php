@@ -120,20 +120,35 @@ class UsageService
     public function isSubscribed(User $user): bool
     {
         try {
-            // First check if Cashier columns exist in database
-            if (!\Schema::hasColumn('users', 'stripe_id')) {
-                \Log::warning('Cashier migrations not run - stripe_id column missing');
+            // First check if Cashier columns exist in database (with error handling)
+            try {
+                if (!Schema::hasColumn('users', 'stripe_id')) {
+                    \Log::warning('Cashier migrations not run - stripe_id column missing');
+                    return false;
+                }
+            } catch (\Exception $e) {
+                \Log::warning('Error checking for stripe_id column', ['error' => $e->getMessage()]);
                 return false;
             }
             
             // Check if user has a Stripe ID first
-            if (!$user->hasStripeId()) {
+            try {
+                if (!$user->hasStripeId()) {
+                    return false;
+                }
+            } catch (\Exception $e) {
+                \Log::warning('Error checking hasStripeId', ['error' => $e->getMessage()]);
                 return false;
             }
             
             // Check if subscriptions table exists
-            if (!\Schema::hasTable('subscriptions')) {
-                \Log::warning('Cashier migrations not run - subscriptions table missing');
+            try {
+                if (!Schema::hasTable('subscriptions')) {
+                    \Log::warning('Cashier migrations not run - subscriptions table missing');
+                    return false;
+                }
+            } catch (\Exception $e) {
+                \Log::warning('Error checking for subscriptions table', ['error' => $e->getMessage()]);
                 return false;
             }
             
@@ -154,7 +169,8 @@ class UsageService
             \Log::warning('Error checking subscription status', [
                 'user_id' => $user->id,
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
             ]);
             return false;
         }
