@@ -136,24 +136,43 @@ class JoinController extends Controller
             abort(500, 'Store configuration error. Please contact support.');
         }
         
-        $usageService = app(UsageService::class);
+        // Try to check usage limit, but allow card creation if check fails
+        try {
+            $usageService = app(UsageService::class);
 
-        if (!$usageService->canCreateCard($merchant)) {
-            // Log the blocked attempt
-            $stats = $usageService->getUsageStats($merchant);
-            \Log::warning('Customer join blocked due to free plan limit', [
+            if (!$usageService->canCreateCard($merchant)) {
+                // Log the blocked attempt
+                try {
+                    $stats = $usageService->getUsageStats($merchant);
+                    \Log::warning('Customer join blocked due to free plan limit', [
+                        'store_id' => $store->id,
+                        'store_name' => $store->name,
+                        'merchant_id' => $merchant->id,
+                        'merchant_email' => $merchant->email,
+                        'total_cards_count' => $stats['cards_count'] ?? 0,
+                        'non_grandfathered_count' => $stats['non_grandfathered_count'] ?? 0,
+                        'grandfathered_count' => $stats['grandfathered_count'] ?? 0,
+                        'limit' => $usageService->freeLimit(),
+                    ]);
+                } catch (\Exception $e) {
+                    \Log::warning('Error getting usage stats, but card creation blocked', [
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+
+                // Return friendly error page for customer
+                return view('join.limit-reached', compact('store', 'token'));
+            }
+        } catch (\Exception $e) {
+            // If usage check fails, log but allow card creation (fail open)
+            \Log::error('Error checking usage limit, allowing card creation', [
                 'store_id' => $store->id,
-                'store_name' => $store->name,
                 'merchant_id' => $merchant->id,
-                'merchant_email' => $merchant->email,
-                'total_cards_count' => $stats['cards_count'],
-                'non_grandfathered_count' => $stats['non_grandfathered_count'],
-                'grandfathered_count' => $stats['grandfathered_count'],
-                'limit' => $usageService->freeLimit(),
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
             ]);
-
-            // Return friendly error page for customer
-            return view('join.limit-reached', compact('store', 'token'));
+            // Continue to create the card - fail open rather than blocking customers
         }
 
         // Create new loyalty account

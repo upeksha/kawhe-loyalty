@@ -11,31 +11,71 @@ class CardController extends Controller
 {
     public function show(string $public_token)
     {
-        $account = LoyaltyAccount::with(['store', 'customer'])
-            ->where('public_token', $public_token)
-            ->firstOrFail();
+        try {
+            $account = LoyaltyAccount::with(['store', 'customer'])
+                ->where('public_token', $public_token)
+                ->firstOrFail();
 
-        // Ensure redeem_token exists if reward_balance > 0 (but don't regenerate if it already exists)
-        $rewardBalance = $account->reward_balance ?? 0;
-        if ($rewardBalance > 0) {
-            if (is_null($account->reward_available_at)) {
-                $account->reward_available_at = now();
+            // Ensure relationships are loaded
+            if (!$account->store) {
+                \Log::error('LoyaltyAccount has no store', ['account_id' => $account->id]);
+                abort(500, 'Card configuration error. Please contact support.');
             }
-            // Only generate token if it doesn't exist - never regenerate existing tokens
-            if (is_null($account->redeem_token)) {
-                $account->redeem_token = Str::random(40);
-                $account->save();
+
+            if (!$account->customer) {
+                \Log::error('LoyaltyAccount has no customer', ['account_id' => $account->id]);
+                abort(500, 'Card configuration error. Please contact support.');
             }
-        }
 
-        // Fix for accounts stuck in "Redeemed" state but have started a new cycle
-        // Only clear reward_redeemed_at if they've started earning stamps again (old logic for backward compatibility)
-        if (!is_null($account->reward_redeemed_at) && $account->stamp_count > 0 && $account->stamp_count < $account->store->reward_target && $rewardBalance == 0) {
-            $account->reward_redeemed_at = null;
-            $account->save();
-        }
+            // Ensure redeem_token exists if reward_balance > 0 (but don't regenerate if it already exists)
+            $rewardBalance = $account->reward_balance ?? 0;
+            if ($rewardBalance > 0) {
+                try {
+                    if (is_null($account->reward_available_at)) {
+                        $account->reward_available_at = now();
+                    }
+                    // Only generate token if it doesn't exist - never regenerate existing tokens
+                    if (is_null($account->redeem_token)) {
+                        $account->redeem_token = Str::random(40);
+                        $account->save();
+                    }
+                } catch (\Exception $e) {
+                    \Log::warning('Error updating redeem token', [
+                        'account_id' => $account->id,
+                        'error' => $e->getMessage(),
+                    ]);
+                    // Continue - token generation is not critical
+                }
+            }
 
-        return view('card.show', compact('account'));
+            // Fix for accounts stuck in "Redeemed" state but have started a new cycle
+            // Only clear reward_redeemed_at if they've started earning stamps again (old logic for backward compatibility)
+            try {
+                if (!is_null($account->reward_redeemed_at) && $account->stamp_count > 0 && $account->stamp_count < $account->store->reward_target && $rewardBalance == 0) {
+                    $account->reward_redeemed_at = null;
+                    $account->save();
+                }
+            } catch (\Exception $e) {
+                \Log::warning('Error clearing reward_redeemed_at', [
+                    'account_id' => $account->id,
+                    'error' => $e->getMessage(),
+                ]);
+                // Continue - this is just a cleanup operation
+            }
+
+            return view('card.show', compact('account'));
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            abort(404, 'Loyalty card not found.');
+        } catch (\Exception $e) {
+            \Log::error('Error loading card', [
+                'public_token' => $public_token,
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            abort(500, 'Error loading card. Please try again later.');
+        }
     }
 
     public function api(string $public_token)
