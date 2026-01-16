@@ -188,13 +188,14 @@
                         <p class="text-gray-400 text-xs mb-4">
                             <span class="font-semibold text-gray-300">Tip:</span> Add your loyalty card to Apple Wallet for quick access!
                         </p>
-                        <a href="{{ URL::signedRoute('wallet.apple.download', ['public_token' => $account->public_token]) }}" 
-                           class="inline-flex items-center justify-center gap-2 w-full bg-black hover:bg-gray-900 text-white font-semibold py-3 px-4 rounded-lg transition-colors">
+                        <button 
+                            onclick="downloadAppleWalletPass('{{ URL::signedRoute('wallet.apple.download', ['public_token' => $account->public_token]) }}')"
+                            class="inline-flex items-center justify-center gap-2 w-full bg-black hover:bg-gray-900 text-white font-semibold py-3 px-4 rounded-lg transition-colors">
                             <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
                                 <path d="M17.05 20.28c-.98.95-2.05.88-3.08.82-.52-.03-1.04-.06-1.56-.1-1.98-.18-3.96-.36-5.85-1.1-1.23-.48-2.18-1.21-2.8-2.33-1.24-2.26-.6-4.67.95-6.68.93-1.2 2.1-2.1 3.5-2.7 1.4-.6 2.9-.9 4.4-.9 1.5 0 3 .3 4.4.9 1.4.6 2.6 1.5 3.5 2.7 1.55 2.01 2.19 4.42.95 6.68-.62 1.12-1.57 1.85-2.8 2.33-.3.12-.6.22-.9.3-.3.08-.6.15-.9.2-.3.05-.6.1-.9.13-.3.03-.6.05-.9.07-.3.02-.6.03-.9.03zm-1.05-8.28c0-1.1-.9-2-2-2s-2 .9-2 2 .9 2 2 2 2-.9 2-2zm-6 0c0-1.1-.9-2-2-2s-2 .9-2 2 .9 2 2 2 2-.9 2-2zm6 4c0-1.1-.9-2-2-2s-2 .9-2 2 .9 2 2 2 2-.9 2-2zm-6 0c0-1.1-.9-2-2-2s-2 .9-2 2 .9 2 2 2 2-.9 2-2z"/>
                             </svg>
                             <span>Add to Apple Wallet</span>
-                        </a>
+                        </button>
                     </div>
                 </div>
 
@@ -577,6 +578,29 @@
                     }
                 }));
             });
+
+            // Apple Wallet download handler
+            function downloadAppleWalletPass(url) {
+                console.log('Downloading Apple Wallet pass from:', url);
+                
+                // Try multiple methods for Safari compatibility
+                try {
+                    // Method 1: Open in new window (Safari on iPhone prefers this)
+                    const newWindow = window.open(url, '_blank');
+                    
+                    // If popup blocked, try Method 2: Direct navigation
+                    if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
+                        console.log('Popup blocked, trying direct navigation');
+                        window.location.href = url;
+                    } else {
+                        console.log('Opened in new window');
+                    }
+                } catch (e) {
+                    console.error('Error opening pass:', e);
+                    // Fallback: Direct navigation
+                    window.location.href = url;
+                }
+            }
         </script>
     </body>
 </html>
