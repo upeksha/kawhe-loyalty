@@ -43,19 +43,15 @@ class WalletController extends Controller
             }
 
             // Use the package's MIME type method and add all required headers for Safari
-            // Safari on iPhone requires specific headers and MIME type
+            // Safari on iPhone requires specific headers - use inline for direct opening
             $response = response($pkpassData, 200, [
                 'Content-Type' => PassGenerator::getPassMimeType(),
-                'Content-Disposition' => sprintf('attachment; filename="kawhe-%s.pkpass"', $storeSlug),
+                'Content-Disposition' => sprintf('inline; filename="kawhe-%s.pkpass"', $storeSlug),
                 'Content-Length' => strlen($pkpassData),
                 'Cache-Control' => 'no-store, no-cache, must-revalidate, max-age=0',
                 'Pragma' => 'no-cache',
                 'Expires' => '0',
-                'X-Content-Type-Options' => 'nosniff',
             ]);
-            
-            // Remove Content-Transfer-Encoding as it can cause issues with Safari
-            // Safari handles binary content automatically when Content-Type is correct
             
             return $response;
         } catch (\Exception $e) {
