@@ -41,12 +41,21 @@ class WalletController extends Controller
                 ]);
                 abort(500, 'Invalid pass file generated');
             }
+            
+            // Log pass generation for debugging
+            \Log::info('Apple Wallet pass generated', [
+                'public_token' => $public_token,
+                'size' => strlen($pkpassData),
+                'store_slug' => $storeSlug,
+            ]);
 
             // Use the package's MIME type method and add all required headers for Safari
-            // Safari on iPhone requires specific headers - use inline for direct opening
+            // Safari on iPhone requires specific headers - use attachment for download, then Safari will open it
+            $mimeType = PassGenerator::getPassMimeType();
+            
             $response = response($pkpassData, 200, [
-                'Content-Type' => PassGenerator::getPassMimeType(),
-                'Content-Disposition' => sprintf('inline; filename="kawhe-%s.pkpass"', $storeSlug),
+                'Content-Type' => $mimeType,
+                'Content-Disposition' => sprintf('attachment; filename="kawhe-%s.pkpass"', $storeSlug),
                 'Content-Length' => strlen($pkpassData),
                 'Cache-Control' => 'no-store, no-cache, must-revalidate, max-age=0',
                 'Pragma' => 'no-cache',
