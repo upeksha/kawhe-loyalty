@@ -126,6 +126,16 @@ class JoinController extends Controller
 
         // Check if merchant can create a new card (limit enforcement)
         $merchant = $store->user;
+        
+        // Ensure merchant exists
+        if (!$merchant) {
+            \Log::error('Store has no owner user', [
+                'store_id' => $store->id,
+                'store_name' => $store->name,
+            ]);
+            abort(500, 'Store configuration error. Please contact support.');
+        }
+        
         $usageService = app(UsageService::class);
 
         if (!$usageService->canCreateCard($merchant)) {

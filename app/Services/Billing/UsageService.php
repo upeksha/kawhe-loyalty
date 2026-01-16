@@ -28,27 +28,44 @@ class UsageService
      */
     public function cardsCountForUser(User $user, bool $includeGrandfathered = true): int
     {
-        // Get all store IDs owned by this user
-        $storeIds = $user->stores()->pluck('id');
+        try {
+            // Get all store IDs owned by this user
+            $storeIds = $user->stores()->pluck('id');
 
-        if ($storeIds->isEmpty()) {
+            if ($storeIds->isEmpty()) {
+                return 0;
+            }
+
+            $query = LoyaltyAccount::whereIn('store_id', $storeIds);
+
+            // If not including grandfathered, exclude cards created before subscription cancellation
+            if (!$includeGrandfathered) {
+                try {
+                    $subscription = $user->subscription('default');
+                    
+                    // If subscription exists and has an ends_at date (cancelled), exclude cards created before that
+                    if ($subscription && $subscription->ends_at) {
+                        $query->where('created_at', '>=', $subscription->ends_at);
+                    }
+                    // If no subscription or no ends_at, all cards count (no grandfathering)
+                } catch (\Exception $e) {
+                    // If subscription check fails, count all cards (no grandfathering)
+                    \Log::warning('Error checking subscription for grandfathering', [
+                        'user_id' => $user->id,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            }
+
+            return $query->count();
+        } catch (\Exception $e) {
+            \Log::error('Error counting cards for user', [
+                'user_id' => $user->id,
+                'error' => $e->getMessage(),
+            ]);
+            // Return 0 on error to be safe
             return 0;
         }
-
-        $query = LoyaltyAccount::whereIn('store_id', $storeIds);
-
-        // If not including grandfathered, exclude cards created before subscription cancellation
-        if (!$includeGrandfathered) {
-            $subscription = $user->subscription('default');
-            
-            // If subscription exists and has an ends_at date (cancelled), exclude cards created before that
-            if ($subscription && $subscription->ends_at) {
-                $query->where('created_at', '>=', $subscription->ends_at);
-            }
-            // If no subscription or no ends_at, all cards count (no grandfathering)
-        }
-
-        return $query->count();
     }
 
     /**
@@ -59,22 +76,30 @@ class UsageService
      */
     public function grandfatheredCardsCount(User $user): int
     {
-        $subscription = $user->subscription('default');
-        
-        // Only grandfathered if subscription exists and was cancelled (has ends_at)
-        if (!$subscription || !$subscription->ends_at) {
+        try {
+            $subscription = $user->subscription('default');
+            
+            // Only grandfathered if subscription exists and was cancelled (has ends_at)
+            if (!$subscription || !$subscription->ends_at) {
+                return 0;
+            }
+
+            $storeIds = $user->stores()->pluck('id');
+            if ($storeIds->isEmpty()) {
+                return 0;
+            }
+
+            // Count cards created BEFORE subscription cancellation
+            return LoyaltyAccount::whereIn('store_id', $storeIds)
+                ->where('created_at', '<', $subscription->ends_at)
+                ->count();
+        } catch (\Exception $e) {
+            \Log::warning('Error counting grandfathered cards', [
+                'user_id' => $user->id,
+                'error' => $e->getMessage(),
+            ]);
             return 0;
         }
-
-        $storeIds = $user->stores()->pluck('id');
-        if ($storeIds->isEmpty()) {
-            return 0;
-        }
-
-        // Count cards created BEFORE subscription cancellation
-        return LoyaltyAccount::whereIn('store_id', $storeIds)
-            ->where('created_at', '<', $subscription->ends_at)
-            ->count();
     }
 
     /**
@@ -85,23 +110,32 @@ class UsageService
      */
     public function isSubscribed(User $user): bool
     {
-        // Check if user has a Stripe ID first
-        if (!$user->hasStripeId()) {
+        try {
+            // Check if user has a Stripe ID first
+            if (!$user->hasStripeId()) {
+                return false;
+            }
+            
+            // Check for active subscription
+            $subscription = $user->subscription('default');
+            
+            if (!$subscription) {
+                return false;
+            }
+            
+            // Check if subscription is active (not cancelled, not past due, etc.)
+            return in_array($subscription->stripe_status, [
+                'active',
+                'trialing',
+            ]);
+        } catch (\Exception $e) {
+            // If there's any error checking subscription, assume not subscribed
+            \Log::warning('Error checking subscription status', [
+                'user_id' => $user->id,
+                'error' => $e->getMessage(),
+            ]);
             return false;
         }
-        
-        // Check for active subscription
-        $subscription = $user->subscription('default');
-        
-        if (!$subscription) {
-            return false;
-        }
-        
-        // Check if subscription is active (not cancelled, not past due, etc.)
-        return in_array($subscription->stripe_status, [
-            'active',
-            'trialing',
-        ]);
     }
 
     /**
