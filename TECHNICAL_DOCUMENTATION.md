@@ -10,8 +10,9 @@
 7. [Real-time Features](#real-time-features)
 8. [Security Features](#security-features)
 9. [Data Integrity](#data-integrity)
-10. [Setup & Deployment](#setup--deployment)
-11. [Appendix: Consolidated Project Docs](#appendix-consolidated-project-docs)
+10. [Apple Wallet Integration](#9-apple-wallet-integration-phase-1)
+11. [Setup & Deployment](#setup--deployment)
+12. [Appendix: Consolidated Project Docs](#appendix-consolidated-project-docs)
 
 ---
 
@@ -27,6 +28,7 @@
 - **Flexible Redemption**: Merchants can redeem 1, 2, 3... or all available rewards per scan
 - **Real-time Updates**: Live synchronization via Laravel Reverb (WebSockets)
 - **Transaction Ledger**: Immutable audit trail of all point transactions
+- **Apple Wallet Integration**: Generate and download Apple Wallet passes for customer loyalty cards
 
 ---
 
@@ -39,6 +41,8 @@
 - **Queue System**: Database queues for email processing
 - **Email**: SendGrid SMTP
 - **QR Code Generation**: SimpleSoftwareIO/QrCode
+- **Apple Wallet**: byte5/laravel-passgenerator for .pkpass generation
+- **Billing**: Laravel Cashier (Stripe) for merchant subscriptions
 
 ### Frontend
 - **CSS Framework**: Tailwind CSS 3
@@ -251,6 +255,94 @@ Merchants can:
 **Rate Limiting**: 3 requests per 10 minutes per card
 **Token Expiry**: 60 minutes
 
+### 9. Apple Wallet Integration (Phase 1)
+**Route**: `GET /wallet/apple/{public_token}/download` (signed URL)
+
+**Overview**:
+Customers can add their loyalty card to Apple Wallet for quick access. The pass displays current stamps, rewards, and customer information, and can be scanned by merchants for stamping.
+
+**Implementation**:
+- **Package**: `byte5/laravel-passgenerator` for .pkpass generation
+- **Service**: `App\Services\Wallet\AppleWalletPassService` handles pass generation
+- **Controller**: `App\Http\Controllers\WalletController` serves pass downloads
+- **Security**: Signed URLs prevent unauthorized access
+
+**Pass Structure**:
+- **Type**: `storeCard` (Apple Wallet pass type)
+- **Barcode**: QR code containing `LA:{public_token}` (matches web QR format for scanner compatibility)
+- **Display Fields**:
+  - Primary: Stamps (e.g., "5/10")
+  - Secondary: Rewards (e.g., "2")
+  - Auxiliary: Customer name
+  - Back: Support contact and terms
+- **Branding**: Uses store's brand color, background color, and logo if available
+- **Serial Number**: Stable format `kawhe-{store_id}-{customer_id}` (ensures same account always gets same serial)
+
+**Assets**:
+- **icon.png** (29x29px) - Required - Icon for notifications and lock screen
+- **logo.png** (160x50px) - Required - Logo at top of pass
+- **background.png** (180x220px) - Optional - Background image
+- **strip.png** (375x98px) - Optional - Strip image behind content
+
+**Configuration** (`.env`):
+```env
+CERTIFICATE_PATH=passgenerator/certs/certificate.p12
+CERTIFICATE_PASS=your_certificate_password
+WWDR_CERTIFICATE=passgenerator/certs/AppleWWDRCA.pem
+APPLE_PASS_TYPE_IDENTIFIER=pass.com.kawhe.loyalty
+APPLE_TEAM_IDENTIFIER=YOUR_TEAM_ID
+APPLE_ORGANIZATION_NAME=Kawhe
+```
+
+**Certificate Requirements**:
+- **Apple Developer Account** required ($99/year)
+- **Pass Type ID** must be registered in Apple Developer Portal
+- **Apple-issued certificate** (not self-signed) required
+- Certificate must be exported with **"Legacy" or "3DES" encryption** (not AES-256) for OpenSSL 3.x compatibility
+
+**Setup Process**:
+1. Register Pass Type ID in Apple Developer Portal
+2. Create certificate for Pass Type ID
+3. Download certificate and install in Keychain Access (Mac)
+4. Export as .p12 with Legacy encryption
+5. Upload to `storage/app/private/passgenerator/certs/certificate.p12`
+6. Download WWDR certificate from Apple and save as `AppleWWDRCA.pem`
+7. Configure environment variables
+8. Add pass assets (icon.png, logo.png, etc.)
+
+**Usage Flow**:
+1. Customer views loyalty card page (`/c/{public_token}`)
+2. Clicks "Add to Apple Wallet" button
+3. System generates signed URL with 30-minute expiry
+4. Safari on iPhone recognizes .pkpass MIME type
+5. Pass downloads and prompts to add to Wallet
+6. Customer adds pass to Apple Wallet
+7. Merchant can scan pass barcode to stamp/redeem (same as web QR code)
+
+**Technical Details**:
+- **Pass Generation**: Dynamic generation on-demand (not cached)
+- **Response Headers**: 
+  - `Content-Type: application/vnd.apple.pkpass`
+  - `Content-Disposition: attachment; filename="kawhe-{store-slug}.pkpass"`
+  - `Content-Length`: Actual file size
+  - `Cache-Control: no-store, no-cache, must-revalidate, max-age=0`
+- **Signed URLs**: Prevents unauthorized access and URL tampering
+- **Barcode Format**: QR code with message `LA:{public_token}` (scanner compatible)
+- **Pass Updates**: Currently static (Phase 1). Future Phase 2 will support push updates.
+
+**Troubleshooting**:
+- **"Safari cannot download this file"**: Check Content-Type and Content-Length headers
+- **Black screen on iPhone**: Usually indicates certificate issue (self-signed or wrong encryption)
+- **OpenSSL error "digital envelope routines::unsupported"**: Certificate needs Legacy/3DES encryption
+- **Pass won't install**: Verify Team ID, Pass Type ID, and certificate match Apple Developer Portal
+
+**Files**:
+- `app/Services/Wallet/AppleWalletPassService.php` - Pass generation logic
+- `app/Http/Controllers/WalletController.php` - Download endpoint
+- `resources/wallet/apple/default/` - Pass assets (icon.png, logo.png, etc.)
+- `config/passgenerator.php` - Package configuration
+- `routes/web.php` - Signed route definition
+
 ---
 
 ## User Flows
@@ -324,6 +416,24 @@ Merchants can:
 10. Merchant can scan again to redeem remaining rewards
 ```
 
+### Apple Wallet Flow
+```
+1. Customer views loyalty card page (/c/{public_token})
+2. Clicks "Add to Apple Wallet" button
+3. System generates signed URL with 30-minute expiry
+4. Safari on iPhone recognizes .pkpass MIME type
+5. Pass downloads and prompts "Add to Apple Wallet"
+6. Customer taps "Add" to install pass in Wallet app
+7. Pass displays:
+   - Current stamps (e.g., "5/10")
+   - Available rewards (e.g., "2")
+   - Customer name
+   - Store branding (colors, logo)
+8. Merchant can scan pass barcode (same as web QR code)
+9. Scanner recognizes "LA:{public_token}" format
+10. Stamping/redeeming works identically to web QR codes
+```
+
 ---
 
 ## Database Schema
@@ -390,6 +500,12 @@ LoyaltyAccount → hasMany → StampEvent
 - `GET /c/{public_token}` - Display loyalty card
 - `GET /api/card/{public_token}` - Get card data (JSON)
 - `GET /api/card/{public_token}/transactions` - Get transaction history
+
+#### Apple Wallet
+- `GET /wallet/apple/{public_token}/download` - Download Apple Wallet pass (.pkpass file)
+  - Requires signed URL (30-minute expiry)
+  - Returns: Binary .pkpass file with proper MIME type
+  - Headers: `Content-Type: application/vnd.apple.pkpass`, `Content-Disposition: attachment`
 
 #### Join Flow
 - `GET /join/{slug}` - Join landing page (requires `?t={token}`)
