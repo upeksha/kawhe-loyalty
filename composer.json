@@ -8,6 +8,7 @@
     "require": {
         "php": "^8.2",
         "byte5/laravel-passgenerator": "*",
+        "google/apiclient": "^2.15",
         "laravel/cashier": "^16.2",
         "laravel/framework": "^12.0",
         "laravel/reverb": "^1.7",

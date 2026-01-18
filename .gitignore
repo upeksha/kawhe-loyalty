@@ -18,6 +18,7 @@
 /public/storage
 /storage/*.key
 /storage/pail
+/storage/app/private/google-wallet/*.json
 /vendor
 Homestead.json
 Homestead.yaml

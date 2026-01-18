@@ -4,17 +4,20 @@ namespace App\Http\Controllers;
 
 use App\Models\LoyaltyAccount;
 use App\Services\Wallet\AppleWalletPassService;
+use App\Services\Wallet\GoogleWalletPassService;
 use Byte5\PassGenerator;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 
 class WalletController extends Controller
 {
-    protected $passService;
+    protected $applePassService;
+    protected $googlePassService;
 
-    public function __construct(AppleWalletPassService $passService)
+    public function __construct(AppleWalletPassService $applePassService, GoogleWalletPassService $googlePassService)
     {
-        $this->passService = $passService;
+        $this->applePassService = $applePassService;
+        $this->googlePassService = $googlePassService;
     }
 
     /**
@@ -30,7 +33,7 @@ class WalletController extends Controller
             ->firstOrFail();
 
         try {
-            $pkpassData = $this->passService->generatePass($account);
+            $pkpassData = $this->applePassService->generatePass($account);
             $storeSlug = $account->store->slug ?? 'kawhe';
             
             // Verify the pass is valid (is a ZIP)
@@ -102,6 +105,51 @@ class WalletController extends Controller
             }
 
             abort(500, 'Failed to generate Apple Wallet pass. Please try again later.');
+        }
+    }
+
+    /**
+     * Generate "Save to Google Wallet" link for a loyalty account
+     *
+     * @param string $public_token
+     * @return \Illuminate\Http\RedirectResponse
+     */
+    public function saveGooglePass(string $public_token)
+    {
+        $account = LoyaltyAccount::with(['store', 'customer'])
+            ->where('public_token', $public_token)
+            ->firstOrFail();
+
+        try {
+            $saveUrl = $this->googlePassService->generateSaveLink($account);
+            
+            \Log::info('Google Wallet save link generated', [
+                'public_token' => $public_token,
+                'account_id' => $account->id,
+            ]);
+
+            // Redirect to Google Wallet save URL
+            return redirect($saveUrl);
+        } catch (\Exception $e) {
+            \Log::error('Failed to generate Google Wallet save link', [
+                'public_token' => $public_token,
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            // In development, show more details
+            if (config('app.debug')) {
+                return response()->json([
+                    'error' => 'Failed to generate Google Wallet save link',
+                    'message' => $e->getMessage(),
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
+                ], 500);
+            }
+
+            abort(500, 'Failed to generate Google Wallet save link. Please try again later.');
         }
     }
 }

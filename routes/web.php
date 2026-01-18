@@ -34,6 +34,11 @@ Route::get('/wallet/apple/{public_token}/download', [App\Http\Controllers\Wallet
     ->name('wallet.apple.download')
     ->middleware('signed');
 
+// Google Wallet save link (signed URL for security)
+Route::get('/wallet/google/{public_token}/save', [App\Http\Controllers\WalletController::class, 'saveGooglePass'])
+    ->name('wallet.google.save')
+    ->middleware('signed');
+
 Route::post('/c/{public_token}/verify/send', [App\Http\Controllers\VerificationController::class, 'send'])->name('card.verification.send');
 Route::get('/c/{public_token}/verify/{id}/{hash}', [App\Http\Controllers\VerificationController::class, 'verify'])->name('card.verification.verify')->middleware('signed');
 

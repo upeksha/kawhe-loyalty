@@ -41,4 +41,10 @@ return [
         'webhook_secret' => env('STRIPE_WEBHOOK_SECRET'),
     ],
 
+    'google_wallet' => [
+        'issuer_id' => env('GOOGLE_WALLET_ISSUER_ID'),
+        'class_id' => env('GOOGLE_WALLET_CLASS_ID', 'loyalty_class_kawhe'),
+        'service_account_key' => env('GOOGLE_WALLET_SERVICE_ACCOUNT_KEY'),
+    ],
+
 ];
