@@ -116,27 +116,41 @@ class WalletController extends Controller
      */
     public function saveGooglePass(string $public_token)
     {
-        $account = LoyaltyAccount::with(['store', 'customer'])
-            ->where('public_token', $public_token)
-            ->firstOrFail();
-
+        \Log::info('Google Wallet: Request received', ['public_token' => $public_token]);
+        
         try {
+            $account = LoyaltyAccount::with(['store', 'customer'])
+                ->where('public_token', $public_token)
+                ->firstOrFail();
+            
+            \Log::info('Google Wallet: Account found', [
+                'account_id' => $account->id,
+                'store_id' => $account->store_id,
+            ]);
+
             $saveUrl = $this->googlePassService->generateSaveLink($account);
             
-            \Log::info('Google Wallet save link generated', [
+            \Log::info('Google Wallet: Save link generated', [
                 'public_token' => $public_token,
                 'account_id' => $account->id,
+                'url_length' => strlen($saveUrl),
             ]);
 
             // Redirect to Google Wallet save URL
             return redirect($saveUrl);
         } catch (\Exception $e) {
-            \Log::error('Failed to generate Google Wallet save link', [
+            \Log::error('Google Wallet: Failed to generate save link', [
                 'public_token' => $public_token,
                 'error' => $e->getMessage(),
                 'file' => $e->getFile(),
                 'line' => $e->getLine(),
                 'trace' => $e->getTraceAsString(),
+                'config' => [
+                    'issuer_id' => config('services.google_wallet.issuer_id'),
+                    'class_id' => config('services.google_wallet.class_id'),
+                    'service_account_key' => config('services.google_wallet.service_account_key'),
+                    'service_account_exists' => file_exists(config('services.google_wallet.service_account_key')) || file_exists(storage_path('app/private/' . config('services.google_wallet.service_account_key'))),
+                ],
             ]);
 
             // In development, show more details
@@ -146,10 +160,11 @@ class WalletController extends Controller
                     'message' => $e->getMessage(),
                     'file' => $e->getFile(),
                     'line' => $e->getLine(),
+                    'trace' => $e->getTraceAsString(),
                 ], 500);
             }
 
-            abort(500, 'Failed to generate Google Wallet save link. Please try again later.');
+            abort(500, 'Failed to generate Google Wallet save link. Please check logs for details.');
         }
     }
 }

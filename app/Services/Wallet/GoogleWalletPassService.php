@@ -28,8 +28,29 @@ class GoogleWalletPassService
         
         // Load service account credentials
         $serviceAccountPath = config('services.google_wallet.service_account_key');
-        if (!$serviceAccountPath || !file_exists($serviceAccountPath)) {
-            throw new \Exception('Google Wallet service account key not found. Please configure GOOGLE_WALLET_SERVICE_ACCOUNT_KEY in .env');
+        if (!$serviceAccountPath) {
+            throw new \Exception('Google Wallet service account key path not configured. Please set GOOGLE_WALLET_SERVICE_ACCOUNT_KEY in .env');
+        }
+        
+        // Resolve path (handle both relative and absolute paths)
+        if (!file_exists($serviceAccountPath)) {
+            // Try relative to storage/app/private
+            $relativePath = storage_path('app/private/' . $serviceAccountPath);
+            if (file_exists($relativePath)) {
+                $serviceAccountPath = $relativePath;
+            } else {
+                // Try absolute path from project root
+                $absolutePath = base_path($serviceAccountPath);
+                if (file_exists($absolutePath)) {
+                    $serviceAccountPath = $absolutePath;
+                } else {
+                    throw new \Exception('Google Wallet service account key not found at: ' . $serviceAccountPath . '. Also tried: ' . $relativePath . ' and ' . $absolutePath);
+                }
+            }
+        }
+        
+        if (!is_readable($serviceAccountPath)) {
+            throw new \Exception('Google Wallet service account key file is not readable. Check file permissions.');
         }
         
         $this->client->setAuthConfig($serviceAccountPath);
@@ -206,7 +227,26 @@ class GoogleWalletPassService
         $classId = "{$this->issuerId}.{$this->getClassIdForStore($account->store)}";
         
         // Get service account email from credentials
-        $credentials = json_decode(file_get_contents(config('services.google_wallet.service_account_key')), true);
+        $serviceAccountPath = config('services.google_wallet.service_account_key');
+        
+        // Resolve path (same logic as constructor)
+        if (!file_exists($serviceAccountPath)) {
+            $relativePath = storage_path('app/private/' . $serviceAccountPath);
+            if (file_exists($relativePath)) {
+                $serviceAccountPath = $relativePath;
+            } else {
+                $absolutePath = base_path($serviceAccountPath);
+                if (file_exists($absolutePath)) {
+                    $serviceAccountPath = $absolutePath;
+                }
+            }
+        }
+        
+        $credentials = json_decode(file_get_contents($serviceAccountPath), true);
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            throw new \Exception('Invalid JSON in service account key file: ' . json_last_error_msg());
+        }
+        
         $serviceAccountEmail = $credentials['client_email'] ?? null;
         
         if (!$serviceAccountEmail) {
