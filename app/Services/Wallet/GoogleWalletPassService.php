@@ -139,13 +139,9 @@ class GoogleWalletPassService
         $loyaltyObject->setClassId("{$this->issuerId}.{$this->getClassIdForStore($store)}");
         $loyaltyObject->setState('ACTIVE');
         
-        // Account info
-        $accountName = new \Google_Service_Walletobjects_LocalizedString();
-        $translatedString = new \Google_Service_Walletobjects_TranslatedString();
-        $translatedString->setLanguage('en-US');
-        $translatedString->setValue($customer->name ?? $customer->email ?? 'Valued Customer');
-        $accountName->setDefaultValue($translatedString);
-        $loyaltyObject->setAccountName($accountName);
+        // Account info - accountName must be a plain string, not LocalizedString
+        $accountNameValue = $customer->name ?? $customer->email ?? 'Valued Customer';
+        $loyaltyObject->setAccountName($accountNameValue);
         
         // Account ID (stable identifier)
         $loyaltyObject->setAccountId((string) $account->id);
