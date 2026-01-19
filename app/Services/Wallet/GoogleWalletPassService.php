@@ -78,7 +78,13 @@ class GoogleWalletPassService
             $loyaltyClass->setId("{$this->issuerId}.{$classId}");
             $loyaltyClass->setIssuerName(config('app.name', 'Kawhe'));
             $loyaltyClass->setProgramName($store->name);
-            $loyaltyClass->setProgramLogo($this->getLogoUri($store));
+            
+            // Only set logo if store has one
+            $logoUri = $this->getLogoUri($store);
+            if ($logoUri) {
+                $loyaltyClass->setProgramLogo($logoUri);
+            }
+            
             $loyaltyClass->setReviewStatus('UNDER_REVIEW'); // Or 'APPROVED' if pre-approved
             
             // Add text modules
@@ -356,10 +362,10 @@ class GoogleWalletPassService
     }
 
     /**
-     * Get logo URI for store
+     * Get logo Image object for store
      *
      * @param \App\Models\Store $store
-     * @return \Google_Service_Walletobjects_ImageUri|null
+     * @return \Google_Service_Walletobjects_Image|null
      */
     protected function getLogoUri($store)
     {
@@ -367,9 +373,12 @@ class GoogleWalletPassService
             return null;
         }
         
+        // Create Image object (not ImageUri)
+        $image = new \Google_Service_Walletobjects_Image();
         $imageUri = new \Google_Service_Walletobjects_ImageUri();
         $imageUri->setUri(asset('storage/' . $store->logo_path));
+        $image->setSourceUri($imageUri);
         
-        return $imageUri;
+        return $image;
     }
 }
