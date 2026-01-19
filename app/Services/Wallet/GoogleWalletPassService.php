@@ -304,11 +304,11 @@ class GoogleWalletPassService
         
         $signature = '';
         if (!openssl_sign($signingInput, $signature, $keyResource, OPENSSL_ALGO_SHA256)) {
-            openssl_free_key($keyResource);
+            // Key resource is automatically freed in PHP 8.0+
             throw new \Exception('Failed to sign JWT: ' . openssl_error_string());
         }
         
-        openssl_free_key($keyResource);
+        // Key resource is automatically freed in PHP 8.0+ (no need for openssl_free_key)
         
         $segments[] = $this->base64UrlEncode($signature);
         
