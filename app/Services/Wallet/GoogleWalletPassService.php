@@ -80,11 +80,13 @@ class GoogleWalletPassService
             $loyaltyClass->setIssuerName(config('app.name', 'Kawhe'));
             $loyaltyClass->setProgramName($store->name);
             
-            // Only set logo if store has one
+            // Google Wallet requires a program logo - use store logo or default
             $logoUri = $this->getLogoUri($store);
-            if ($logoUri) {
-                $loyaltyClass->setProgramLogo($logoUri);
+            if (!$logoUri) {
+                // Use default logo if store doesn't have one
+                $logoUri = $this->getDefaultLogoUri();
             }
+            $loyaltyClass->setProgramLogo($logoUri);
             
             $loyaltyClass->setReviewStatus('UNDER_REVIEW'); // Or 'APPROVED' if pre-approved
             
@@ -366,6 +368,42 @@ class GoogleWalletPassService
         $image = new \Google_Service_Walletobjects_Image();
         $imageUri = new \Google_Service_Walletobjects_ImageUri();
         $imageUri->setUri(asset('storage/' . $store->logo_path));
+        $image->setSourceUri($imageUri);
+        
+        return $image;
+    }
+
+    /**
+     * Get default logo Image object (required by Google Wallet)
+     *
+     * @return \Google_Service_Walletobjects_Image
+     */
+    protected function getDefaultLogoUri()
+    {
+        // Use default logo - check if it exists in public/wallet/google
+        $defaultLogoPath = 'wallet/google/program-logo.png';
+        $defaultLogoUrl = asset($defaultLogoPath);
+        
+        // If file doesn't exist, use a placeholder or create one
+        if (!file_exists(public_path($defaultLogoPath))) {
+            // Fallback to Apple Wallet logo if Google one doesn't exist
+            $fallbackPath = 'wallet/apple/default/logo.png';
+            if (file_exists(resource_path($fallbackPath))) {
+                // Copy to public if needed
+                $publicPath = public_path('wallet/google');
+                if (!is_dir($publicPath)) {
+                    mkdir($publicPath, 0755, true);
+                }
+                copy(resource_path($fallbackPath), public_path($defaultLogoPath));
+            } else {
+                // Use a simple placeholder URL (you can replace with your own)
+                $defaultLogoUrl = config('app.url') . '/wallet/google/program-logo.png';
+            }
+        }
+        
+        $image = new \Google_Service_Walletobjects_Image();
+        $imageUri = new \Google_Service_Walletobjects_ImageUri();
+        $imageUri->setUri($defaultLogoUrl);
         $image->setSourceUri($imageUri);
         
         return $image;
