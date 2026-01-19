@@ -24,7 +24,8 @@ class GoogleWalletPassService
         // Initialize Google Client
         $this->client = new Google_Client();
         $this->client->setApplicationName('Kawhe Loyalty');
-        $this->client->setScopes(Google_Service_Walletobjects::WALLET_OBJECT_ISSUER);
+        // Use full scope URL for Wallet API
+        $this->client->setScopes('https://www.googleapis.com/auth/wallet_object.issuer');
         
         // Load service account credentials
         $serviceAccountPath = config('services.google_wallet.service_account_key');
