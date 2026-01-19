@@ -238,8 +238,14 @@ class GoogleWalletPassService
                 $absolutePath = base_path($serviceAccountPath);
                 if (file_exists($absolutePath)) {
                     $serviceAccountPath = $absolutePath;
+                } else {
+                    throw new \Exception('Service account key file not found. Tried: ' . config('services.google_wallet.service_account_key') . ', ' . $relativePath . ', ' . $absolutePath);
                 }
             }
+        }
+        
+        if (!is_readable($serviceAccountPath)) {
+            throw new \Exception('Service account key file is not readable: ' . $serviceAccountPath);
         }
         
         $credentials = json_decode(file_get_contents($serviceAccountPath), true);
