@@ -107,11 +107,8 @@ class GoogleWalletPassService
                 $loyaltyClass->setImageModulesData($imageModulesData);
             }
             
-            // Add barcode
-            $barcode = new \Google_Service_Walletobjects_Barcode();
-            $barcode->setType('QR_CODE');
-            $barcode->setAlternateText('Scan to stamp');
-            $loyaltyClass->setBarcode($barcode);
+            // Note: Barcode is set on LoyaltyObject, not LoyaltyClass
+            // The class is just a template, barcodes are per-object
             
             return $this->service->loyaltyclass->insert($loyaltyClass);
         }
