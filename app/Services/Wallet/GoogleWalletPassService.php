@@ -364,10 +364,14 @@ class GoogleWalletPassService
             return null;
         }
         
+        // Google Wallet requires absolute HTTPS URL
+        $appUrl = rtrim(config('app.url'), '/');
+        $logoUrl = $appUrl . '/storage/' . $store->logo_path;
+        
         // Create Image object (not ImageUri)
         $image = new \Google_Service_Walletobjects_Image();
         $imageUri = new \Google_Service_Walletobjects_ImageUri();
-        $imageUri->setUri(asset('storage/' . $store->logo_path));
+        $imageUri->setUri($logoUrl);
         $image->setSourceUri($imageUri);
         
         return $image;
@@ -380,25 +384,19 @@ class GoogleWalletPassService
      */
     protected function getDefaultLogoUri()
     {
-        // Use default logo - check if it exists in public/wallet/google
+        // Use default logo - Google Wallet requires absolute HTTPS URL
         $defaultLogoPath = 'wallet/google/program-logo.png';
-        $defaultLogoUrl = asset($defaultLogoPath);
         
-        // If file doesn't exist, use a placeholder or create one
+        // Ensure we use absolute URL (Google Wallet requirement)
+        $appUrl = rtrim(config('app.url'), '/');
+        $defaultLogoUrl = $appUrl . '/' . $defaultLogoPath;
+        
+        // Verify file exists, if not log warning but still use the URL
         if (!file_exists(public_path($defaultLogoPath))) {
-            // Fallback to Apple Wallet logo if Google one doesn't exist
-            $fallbackPath = 'wallet/apple/default/logo.png';
-            if (file_exists(resource_path($fallbackPath))) {
-                // Copy to public if needed
-                $publicPath = public_path('wallet/google');
-                if (!is_dir($publicPath)) {
-                    mkdir($publicPath, 0755, true);
-                }
-                copy(resource_path($fallbackPath), public_path($defaultLogoPath));
-            } else {
-                // Use a simple placeholder URL (you can replace with your own)
-                $defaultLogoUrl = config('app.url') . '/wallet/google/program-logo.png';
-            }
+            \Log::warning('Google Wallet: Default logo file not found', [
+                'path' => public_path($defaultLogoPath),
+                'url' => $defaultLogoUrl,
+            ]);
         }
         
         $image = new \Google_Service_Walletobjects_Image();
