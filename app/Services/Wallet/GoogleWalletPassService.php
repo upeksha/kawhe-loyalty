@@ -141,10 +141,10 @@ class GoogleWalletPassService
         
         // Account info
         $accountName = new \Google_Service_Walletobjects_LocalizedString();
-        $accountName->setDefaultValue([
-            'language' => 'en-US',
-            'value' => $customer->name ?? $customer->email ?? 'Valued Customer',
-        ]);
+        $translatedString = new \Google_Service_Walletobjects_TranslatedString();
+        $translatedString->setLanguage('en-US');
+        $translatedString->setValue($customer->name ?? $customer->email ?? 'Valued Customer');
+        $accountName->setDefaultValue($translatedString);
         $loyaltyObject->setAccountName($accountName);
         
         // Account ID (stable identifier)
