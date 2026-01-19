@@ -119,6 +119,8 @@ class WalletController extends Controller
         \Log::info('Google Wallet: Request received', ['public_token' => $public_token]);
         
         try {
+            \Log::info('Google Wallet: Loading account', ['public_token' => $public_token]);
+            
             $account = LoyaltyAccount::with(['store', 'customer'])
                 ->where('public_token', $public_token)
                 ->firstOrFail();
@@ -126,18 +128,30 @@ class WalletController extends Controller
             \Log::info('Google Wallet: Account found', [
                 'account_id' => $account->id,
                 'store_id' => $account->store_id,
+                'store_name' => $account->store->name ?? 'N/A',
             ]);
 
-            $saveUrl = $this->googlePassService->generateSaveLink($account);
+            \Log::info('Google Wallet: Creating service instance');
+            $service = app(\App\Services\Wallet\GoogleWalletPassService::class);
             
-            \Log::info('Google Wallet: Save link generated', [
+            \Log::info('Google Wallet: Generating save link');
+            $saveUrl = $service->generateSaveLink($account);
+            
+            \Log::info('Google Wallet: Save link generated successfully', [
                 'public_token' => $public_token,
                 'account_id' => $account->id,
                 'url_length' => strlen($saveUrl),
+                'url_preview' => substr($saveUrl, 0, 80) . '...',
             ]);
 
             // Redirect to Google Wallet save URL
             return redirect($saveUrl);
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            \Log::error('Google Wallet: Account not found', [
+                'public_token' => $public_token,
+                'error' => $e->getMessage(),
+            ]);
+            abort(404, 'Loyalty account not found.');
         } catch (\Exception $e) {
             \Log::error('Google Wallet: Failed to generate save link', [
                 'public_token' => $public_token,
