@@ -88,7 +88,11 @@ class GoogleWalletPassService
             }
             $loyaltyClass->setProgramLogo($logoUri);
             
-            $loyaltyClass->setReviewStatus('UNDER_REVIEW'); // Or 'APPROVED' if pre-approved
+            // Set review status based on environment
+            // For production, this should be 'APPROVED' after Google reviews your account
+            // For testing, use 'UNDER_REVIEW' and add test users in Google Wallet Console
+            $reviewStatus = config('services.google_wallet.review_status', 'UNDER_REVIEW');
+            $loyaltyClass->setReviewStatus($reviewStatus);
             
             // Add text modules
             $textModulesData = [

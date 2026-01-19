@@ -51,6 +51,7 @@ Add these to your `.env` file:
 GOOGLE_WALLET_ISSUER_ID=your_issuer_id_here
 GOOGLE_WALLET_CLASS_ID=loyalty_class_kawhe
 GOOGLE_WALLET_SERVICE_ACCOUNT_KEY=storage/app/private/google-wallet/service-account.json
+GOOGLE_WALLET_REVIEW_STATUS=UNDER_REVIEW  # Use 'UNDER_REVIEW' for testing, 'APPROVED' for production (after Google approval)
 ```
 
 **Important**: 
@@ -107,9 +108,41 @@ composer require google/apiclient
 - Ensure OpenSSL extension is enabled in PHP
 - Verify service account JSON file is valid JSON
 
+### "This pass is only for testing - ask your administrator to give you access"
+
+This error occurs because your Google Wallet account is in **Demo Mode** (testing mode). You have two options:
+
+#### Option 1: Add Test Users (Quick Fix for Testing)
+
+1. Go to [Google Wallet API Console](https://pay.google.com/business/console)
+2. Navigate to **Settings** → **Test Users**
+3. Click **Add Test User**
+4. Enter the email address of users who should be able to add passes
+5. Click **Save**
+
+**Note**: Only users added as test users can add passes in demo mode.
+
+#### Option 2: Request Publishing Access (For Production)
+
+To allow any user to add passes:
+
+1. **Complete Business Profile**:
+   - Go to [Google Wallet API Console](https://pay.google.com/business/console)
+   - Fill out all required business information (legal entity, address, contact info)
+
+2. **Request Publishing Access**:
+   - Navigate to **Settings** → **Get Publishing Access**
+   - Submit your request
+   - Google will review your setup (usually takes a few days)
+
+3. **After Approval**:
+   - Update `.env`: `GOOGLE_WALLET_REVIEW_STATUS=APPROVED`
+   - Clear config cache: `php artisan config:clear`
+   - The "[TEST ONLY]" tag will be removed from passes
+
 ### Pass shows "[TEST ONLY]"
-- This is normal during development
-- Request publishing access in Google Wallet API console to remove test tag
+- This is normal during development (Demo Mode)
+- Request publishing access to remove the test tag (see above)
 
 ## Security Notes
 
