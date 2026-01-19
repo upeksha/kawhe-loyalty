@@ -6,6 +6,7 @@ use App\Events\StampUpdated;
 use App\Models\LoyaltyAccount;
 use App\Models\PointsTransaction;
 use App\Models\StampEvent;
+use App\Services\Loyalty\StampLoyaltyService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -20,7 +21,7 @@ class ScannerController extends Controller
         return view('scanner.index', compact('stores'));
     }
 
-    public function store(Request $request)
+    public function store(Request $request, StampLoyaltyService $stampService)
     {
         $request->validate([
             'token' => 'required|string',
@@ -48,235 +49,123 @@ class ScannerController extends Controller
         $userAgent = $request->userAgent();
         $ipAddress = $request->ip();
 
-        // Use database transaction for atomicity
-        return DB::transaction(function () use ($token, $requestedStoreId, $count, $idempotencyKey, $overrideCooldown, $userAgent, $ipAddress) {
-            // Check if this idempotency key was already processed
-            $existingEvent = StampEvent::where('idempotency_key', $idempotencyKey)->first();
-            if ($existingEvent) {
-                // Return the existing result (idempotent)
-                $account = $existingEvent->loyaltyAccount;
-                $account->load(['store', 'customer']);
-                $store = $account->store;
-                
+        // STEP 1: Lookup loyalty account by public_token (no store filter for auto-detection)
+        $account = LoyaltyAccount::where('public_token', $token)
+            ->with(['customer', 'store'])
+            ->first();
+
+        if (!$account) {
+            throw ValidationException::withMessages([
+                'token' => 'This loyalty card is invalid or not found. Please check the QR code and try again.'
+            ]);
+        }
+
+        // STEP 2: Determine the store from the account
+        $actualStore = $account->store;
+        $actualStoreId = $actualStore->id;
+
+        // STEP 3: Determine if store was switched (for response metadata)
+        $storeSwitched = $requestedStoreId && $requestedStoreId != $actualStoreId;
+
+        // STEP 4: COOLDOWN CHECK (30 seconds) - UX feature to prevent accidental double-clicks
+        // This is a controller-level check before calling the service
+        $secondsSinceLastStamp = $account->last_stamped_at 
+            ? $account->last_stamped_at->diffInSeconds(now()) 
+            : null;
+
+        if ($secondsSinceLastStamp !== null && $secondsSinceLastStamp < 30) {
+            // Within cooldown period
+            if (!$overrideCooldown) {
+                // Return structured cooldown response
                 return response()->json([
-                    'status' => 'duplicate',
-                    'success' => true,
-                    'storeName' => $store->name,
-                    'store_id_used' => $store->id,
-                    'store_name_used' => $store->name,
-                    'store_switched' => false,
-                    'customerLabel' => $account->customer->name ?? 'Customer',
-                    'stampCount' => $account->stamp_count,
-                    'rewardBalance' => $account->reward_balance ?? 0,
-                    'rewardTarget' => $store->reward_target,
-                    'rewardAvailable' => ($account->reward_balance ?? 0) > 0,
-                    'message' => 'Already processed',
-                ]);
-            }
-
-            // STEP 1: Lookup loyalty account by public_token ONLY (no store filter)
-            // Use conditional locking based on database driver
-            $accountQuery = LoyaltyAccount::where('public_token', $token);
-            if (DB::getDriverName() !== 'sqlite') {
-                $accountQuery->lockForUpdate();
-            }
-            $account = $accountQuery->with(['customer', 'store'])->first();
-
-            if (!$account) {
-                throw ValidationException::withMessages([
-                    'token' => 'This loyalty card is invalid or not found. Please check the QR code and try again.'
-                ]);
-            }
-
-            // STEP 2: Determine the store from the account
-            $actualStore = $account->store;
-            $actualStoreId = $actualStore->id;
-
-            // STEP 3: Authorization - Check if merchant has access to this store
-            $merchant = Auth::user();
-            $merchantOwnsStore = $merchant->stores()->where('id', $actualStoreId)->exists();
-            
-            // Super admins can access any store
-            if (!$merchantOwnsStore && !$merchant->isSuperAdmin()) {
-                // Security: Don't expose store name if merchant doesn't have access
-                throw ValidationException::withMessages([
-                    'token' => 'This loyalty card belongs to a store you do not have access to. Please contact support if you believe this is an error.'
-                ]);
-            }
-
-            // STEP 4: Determine if store was switched
-            $storeSwitched = $requestedStoreId && $requestedStoreId != $actualStoreId;
-
-            // STEP 5: Use the account's store for the transaction (ignore dropdown if different)
-            $store = $actualStore;
-            $storeId = $actualStoreId;
-
-            // SERVER-SIDE IDEMPOTENCY WINDOW CHECK (5 seconds)
-            // Check if a stamp event was created for this account within the last 5 seconds
-            $recentEvent = StampEvent::where('loyalty_account_id', $account->id)
-                ->where('store_id', $storeId)
-                ->where('type', 'stamp')
-                ->where('created_at', '>=', now()->subSeconds(5))
-                ->orderBy('created_at', 'desc')
-                ->first();
-
-            // Also check last_stamped_at as a fallback
-            $secondsSinceLastStamp = $account->last_stamped_at 
-                ? $account->last_stamped_at->diffInSeconds(now()) 
-                : null;
-
-            if ($recentEvent || ($secondsSinceLastStamp !== null && $secondsSinceLastStamp < 5)) {
-                // Duplicate detected - return without creating events/transactions
-                $account->refresh();
-                $account->load(['store', 'customer']);
-                
-                return response()->json([
-                    'status' => 'duplicate',
+                    'status' => 'cooldown',
                     'success' => false,
-                    'message' => 'Duplicate scan ignored',
+                    'message' => "Stamped {$secondsSinceLastStamp}s ago",
+                    'seconds_since_last' => $secondsSinceLastStamp,
+                    'cooldown_seconds' => 30,
+                    'allow_override' => true,
+                    'next_action' => 'confirm_override',
                     'stampCount' => $account->stamp_count,
                     'rewardBalance' => $account->reward_balance ?? 0,
-                    'rewardTarget' => $store->reward_target,
-                    'seconds_since_last' => $secondsSinceLastStamp ?? 0,
-                ], 200);
+                ], 409); // HTTP 409 Conflict
             }
+            // override_cooldown is true - proceed to stamp
+        }
 
-            // COOLDOWN CHECK (30 seconds) - with override support
-            $secondsSinceLastStamp = $account->last_stamped_at 
-                ? $account->last_stamped_at->diffInSeconds(now()) 
-                : null;
+        // STEP 5: Call the service to perform the actual stamping
+        // The service handles: authorization, idempotency, DB transaction, locking, audit logs, wallet job
+        try {
+            $result = $stampService->stamp(
+                account: $account,
+                staff: Auth::user(),
+                count: $count,
+                idempotencyKey: $idempotencyKey,
+                userAgent: $userAgent,
+                ipAddress: $ipAddress
+            );
+        } catch (ValidationException $e) {
+            // Re-throw validation exceptions (e.g., access denied)
+            throw $e;
+        }
 
-            if ($secondsSinceLastStamp !== null && $secondsSinceLastStamp < 30) {
-                // Within cooldown period
-                if (!$overrideCooldown) {
-                    // Return structured cooldown response
-                    $secondsRemaining = 30 - $secondsSinceLastStamp;
-                    return response()->json([
-                        'status' => 'cooldown',
-                        'success' => false,
-                        'message' => "Stamped {$secondsSinceLastStamp}s ago",
-                        'seconds_since_last' => $secondsSinceLastStamp,
-                        'cooldown_seconds' => 30,
-                        'allow_override' => true,
-                        'next_action' => 'confirm_override',
-                        'stampCount' => $account->stamp_count,
-                        'rewardBalance' => $account->reward_balance ?? 0,
-                    ], 409); // HTTP 409 Conflict
-                }
-                // override_cooldown is true - proceed to stamp (but still subject to idempotency window above)
-            }
-
-            // Store original version for optimistic locking check
-            $originalVersion = $account->version;
-            $stampCountBefore = $account->stamp_count;
-            $rewardBalanceBefore = $account->reward_balance ?? 0;
-            
-            // Increment stamp count
-            $account->increment('stamp_count', $count);
-            $account->last_stamped_at = now();
-            $account->increment('version'); // Increment version for optimistic locking
-
-            // Calculate newly earned rewards and update reward_balance
-            $newStampCount = $account->stamp_count;
-            $newlyEarned = intval(floor($newStampCount / $store->reward_target));
-            $remainder = $newStampCount % $store->reward_target;
-            
-            // Update reward_balance and stamp_count
-            $account->reward_balance = ($account->reward_balance ?? 0) + $newlyEarned;
-            $account->stamp_count = $remainder;
-            
-            // Update reward_available_at and redeem_token based on reward_balance
-            if ($account->reward_balance > 0) {
-                // Ensure reward_available_at is set when rewards become available
-                if (is_null($account->reward_available_at)) {
-                    $account->reward_available_at = now();
-                }
-                // Ensure redeem_token exists
-                if (is_null($account->redeem_token)) {
-                    $account->redeem_token = Str::random(40);
-                }
-            } else {
-                // No rewards available
-                $account->reward_available_at = null;
-                $account->redeem_token = null;
-            }
-
-            $account->save();
-            
-            // Create ledger entry (immutable audit trail)
-            PointsTransaction::create([
-                'loyalty_account_id' => $account->id,
-                'store_id' => $store->id,
-                'user_id' => Auth::id(),
-                'type' => 'earn',
-                'points' => $count,
-                'idempotency_key' => $idempotencyKey,
-                'metadata' => [
-                    'stamp_count_before' => $stampCountBefore,
-                    'stamp_count_after' => $account->stamp_count,
-                    'reward_balance_before' => $rewardBalanceBefore,
-                    'reward_balance_after' => $account->reward_balance,
-                    'newly_earned_rewards' => $newlyEarned,
-                    'version_before' => $originalVersion,
-                    'version_after' => $account->version,
-                ],
-                'user_agent' => $userAgent,
-                'ip_address' => $ipAddress,
-            ]);
-
-            // Record event
-            StampEvent::create([
-                'loyalty_account_id' => $account->id,
-                'store_id' => $store->id,
-                'user_id' => Auth::id(),
-                'type' => 'stamp',
-                'count' => $count,
-                'idempotency_key' => $idempotencyKey,
-                'user_agent' => $userAgent,
-                'ip_address' => $ipAddress,
-            ]);
-            
-            // Refresh account with relationships before broadcasting
+        // STEP 6: Handle duplicate/idempotent response
+        if ($result->isDuplicate) {
             $account->refresh();
             $account->load(['store', 'customer']);
-
-            // Dispatch real-time event
-            \Log::info('Dispatching StampUpdated event (stamp)', [
-                'public_token' => $account->public_token,
-                'channel' => 'loyalty-card.' . $account->public_token,
-                'stamp_count' => $account->stamp_count
-            ]);
-            
-            StampUpdated::dispatch($account);
-
-            // Get the transaction for receipt
-            $transaction = PointsTransaction::where('idempotency_key', $idempotencyKey)->first();
+            $store = $account->store;
             
             return response()->json([
-                'status' => 'success',
+                'status' => 'duplicate',
                 'success' => true,
-                'message' => $count > 1 
-                    ? "Successfully added {$count} stamps!" 
-                    : "Successfully added 1 stamp!",
-                'storeName' => $store->name, // Keep for backwards compatibility
+                'storeName' => $store->name,
                 'store_id_used' => $store->id,
                 'store_name_used' => $store->name,
                 'store_switched' => $storeSwitched,
-                'loyalty_account_id' => $account->id,
                 'customerLabel' => $account->customer->name ?? 'Customer',
-                'stampCount' => $account->stamp_count,
-                'rewardBalance' => $account->reward_balance ?? 0,
-                'rewardTarget' => $store->reward_target,
-                'rewardAvailable' => ($account->reward_balance ?? 0) > 0,
-                'stampsRemaining' => max(0, $store->reward_target - $account->stamp_count),
-                'receipt' => [
-                    'transaction_id' => $transaction->id ?? null,
-                    'timestamp' => now()->toIso8601String(),
-                    'stamps_added' => $count,
-                    'new_total' => $account->stamp_count,
-                ],
+                'stampCount' => $result->stampCount,
+                'rewardBalance' => $result->rewardBalance,
+                'rewardTarget' => $result->rewardTarget,
+                'rewardAvailable' => $result->rewardBalance > 0,
+                'message' => 'Already processed',
             ]);
-        });
+        }
+
+        // STEP 7: Format success response
+        $account->refresh();
+        $account->load(['store', 'customer']);
+        $store = $account->store;
+
+        // Get transaction for receipt (if points_transactions table exists)
+        $transaction = null;
+        if (\Schema::hasTable('points_transactions')) {
+            $transaction = PointsTransaction::where('idempotency_key', $idempotencyKey)->first();
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'success' => true,
+            'message' => $count > 1 
+                ? "Successfully added {$count} stamps!" 
+                : "Successfully added 1 stamp!",
+            'storeName' => $store->name, // Keep for backwards compatibility
+            'store_id_used' => $store->id,
+            'store_name_used' => $store->name,
+            'store_switched' => $storeSwitched,
+            'loyalty_account_id' => $account->id,
+            'customerLabel' => $account->customer->name ?? 'Customer',
+            'stampCount' => $result->stampCount,
+            'rewardBalance' => $result->rewardBalance,
+            'rewardTarget' => $result->rewardTarget,
+            'rewardAvailable' => $result->rewardBalance > 0,
+            'rewardEarned' => $result->rewardEarned,
+            'stampsRemaining' => max(0, $result->rewardTarget - $result->stampCount),
+            'receipt' => [
+                'transaction_id' => $transaction->id ?? null,
+                'timestamp' => now()->toIso8601String(),
+                'stamps_added' => $count,
+                'new_total' => $result->stampCount,
+            ],
+        ]);
     }
 
     /**
