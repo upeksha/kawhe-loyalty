@@ -19,9 +19,10 @@ return Application::configure(basePath: dirname(__DIR__))
             'merchant.has.store' => \App\Http\Middleware\EnsureMerchantHasStore::class,
         ]);
         
-        // Exclude Stripe webhook from CSRF verification
+        // Exclude Stripe webhook and Apple Wallet web service from CSRF verification
         $middleware->validateCsrfTokens(except: [
             'stripe/webhook',
+            'wallet/v1/*',
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

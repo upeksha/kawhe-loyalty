@@ -3,32 +3,34 @@
 namespace App\Services\Wallet;
 
 use App\Models\LoyaltyAccount;
-use App\Services\Wallet\AppleWalletPassService;
+use App\Services\Wallet\Apple\ApplePassService;
+use App\Services\Wallet\Apple\ApplePushService;
 use App\Services\Wallet\GoogleWalletPassService;
 use Illuminate\Support\Facades\Log;
 
 /**
  * Service to sync loyalty account state to wallet passes (Apple Wallet & Google Wallet).
  * 
- * Phase 1: Stub implementation that logs and exits cleanly.
- * Future phases will implement actual push updates to wallet passes.
+ * Phase 2: Implements Apple Wallet push notifications via APNs.
  */
 class WalletSyncService
 {
-    protected ?AppleWalletPassService $appleService = null;
+    protected ?ApplePassService $applePassService = null;
+    protected ?ApplePushService $applePushService = null;
     protected ?GoogleWalletPassService $googleService = null;
 
-    public function __construct()
-    {
-        // Initialize services if they exist and are configured
-        // For Phase 1, we'll just log - actual implementation comes later
+    public function __construct(
+        ?ApplePassService $applePassService = null,
+        ?ApplePushService $applePushService = null
+    ) {
+        $this->applePassService = $applePassService ?? app(ApplePassService::class);
+        $this->applePushService = $applePushService ?? app(ApplePushService::class);
     }
 
     /**
      * Sync loyalty account state to wallet passes.
      * 
-     * Phase 1: Logs the sync request and exits cleanly.
-     * Future: Will push updates to Apple Wallet and Google Wallet.
+     * Phase 2: Sends Apple Wallet push notifications via APNs.
      *
      * @param LoyaltyAccount $account
      * @return void
@@ -45,15 +47,21 @@ class WalletSyncService
             'store_id' => $account->store_id,
         ]);
 
-        // Phase 1: Stub implementation
-        // Future phases will:
-        // 1. Check if account has Apple Wallet pass installed
-        // 2. Check if account has Google Wallet pass installed
-        // 3. Push updates via Apple Push Notification Service (APNs)
-        // 4. Push updates via Google Wallet API
-        // 5. Handle errors gracefully
+        // Phase 2: Send Apple Wallet push notifications
+        try {
+            $passTypeIdentifier = config('passgenerator.pass_type_identifier');
+            $serialNumber = $this->applePassService->getSerialNumber($account);
+            
+            $this->applePushService->sendPassUpdatePushes($passTypeIdentifier, $serialNumber);
+        } catch (\Exception $e) {
+            Log::error('Failed to send Apple Wallet push notifications', [
+                'loyalty_account_id' => $account->id,
+                'error' => $e->getMessage(),
+            ]);
+            // Don't throw - allow Google Wallet sync to continue
+        }
 
-        // For now, just log that sync was requested
-        // The actual wallet update push will be implemented in Phase 2
+        // Google Wallet sync (stub for now)
+        // Future: Implement Google Wallet push updates
     }
 }

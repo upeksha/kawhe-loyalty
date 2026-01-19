@@ -109,4 +109,28 @@ Route::middleware('auth')->group(function () {
 // Stripe webhook (must be outside auth middleware, handled by Cashier)
 Route::post('/stripe/webhook', [\Laravel\Cashier\Http\Controllers\WebhookController::class, 'handleWebhook'])->name('cashier.webhook');
 
+// Apple Wallet Pass Web Service endpoints
+// These routes are public but protected by ApplePassAuthMiddleware
+// They must be excluded from CSRF verification (handled in bootstrap/app.php)
+Route::prefix('wallet/v1')->middleware([App\Http\Middleware\ApplePassAuthMiddleware::class])->group(function () {
+    // Register device for pass updates
+    Route::post('/devices/{deviceLibraryIdentifier}/registrations/{passTypeIdentifier}/{serialNumber}', 
+        [App\Http\Controllers\Wallet\AppleWalletController::class, 'registerDevice']);
+    
+    // Unregister device
+    Route::delete('/devices/{deviceLibraryIdentifier}/registrations/{passTypeIdentifier}/{serialNumber}', 
+        [App\Http\Controllers\Wallet\AppleWalletController::class, 'unregisterDevice']);
+    
+    // Get updated pass file
+    Route::get('/passes/{passTypeIdentifier}/{serialNumber}', 
+        [App\Http\Controllers\Wallet\AppleWalletController::class, 'getPass']);
+    
+    // Get list of updated serial numbers for a device
+    Route::get('/devices/{deviceLibraryIdentifier}/registrations/{passTypeIdentifier}', 
+        [App\Http\Controllers\Wallet\AppleWalletController::class, 'getUpdatedSerials']);
+    
+    // Log endpoint
+    Route::post('/log', [App\Http\Controllers\Wallet\AppleWalletController::class, 'log']);
+});
+
 require __DIR__.'/auth.php';
