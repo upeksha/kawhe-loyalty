@@ -97,20 +97,11 @@ class GoogleWalletPassService
             $loyaltyClass->setTextModulesData($textModulesData);
             
             // Add image modules (if store has logo)
-            if ($store->logo_path) {
+            $logoImage = $this->getLogoUri($store);
+            if ($logoImage) {
                 $imageModulesData = [
                     [
-                        'mainImage' => [
-                            'sourceUri' => [
-                                'uri' => $this->getLogoUri($store),
-                            ],
-                            'contentDescription' => [
-                                'defaultValue' => [
-                                    'language' => 'en-US',
-                                    'value' => $store->name . ' Logo',
-                                ],
-                            ],
-                        ],
+                        'mainImage' => $logoImage,
                     ],
                 ];
                 $loyaltyClass->setImageModulesData($imageModulesData);
