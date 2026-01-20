@@ -34,8 +34,8 @@ class ApplePassAuthMiddleware
             $token = $authHeader;
         }
 
-        // For registration and pass retrieval, we need to validate against the pass's authenticationToken
-        // Extract serial number from route if available
+        // For endpoints with serial numbers (registration, pass retrieval), validate against pass's public_token
+        // For endpoints without serial numbers (log), use global token
         $serialNumber = $request->route('serialNumber');
         
         if ($serialNumber) {
@@ -49,8 +49,16 @@ class ApplePassAuthMiddleware
                     \Log::debug('Apple Wallet authentication: Token validated against pass', [
                         'serial_number' => $serialNumber,
                         'loyalty_account_id' => $account->id,
+                        'path' => $request->path(),
                     ]);
                     return $next($request);
+                } else if ($account) {
+                    \Log::debug('Apple Wallet authentication: Token mismatch for pass', [
+                        'serial_number' => $serialNumber,
+                        'loyalty_account_id' => $account->id,
+                        'expected_token_preview' => substr($account->public_token, 0, 10) . '...',
+                        'provided_token_preview' => substr($token, 0, 10) . '...',
+                    ]);
                 }
             } catch (\Exception $e) {
                 \Log::warning('Apple Wallet authentication: Error resolving account', [
@@ -60,19 +68,26 @@ class ApplePassAuthMiddleware
             }
         }
 
-        // Fallback: Check against global web service auth token (for backward compatibility)
+        // Fallback: Check against global web service auth token
+        // This is used for:
+        // 1. Endpoints without serial numbers (like /log)
+        // 2. Backward compatibility
         $expectedToken = config('wallet.apple.web_service_auth_token');
         if ($expectedToken && $token === $expectedToken) {
-            \Log::debug('Apple Wallet authentication: Token validated against global config');
+            \Log::debug('Apple Wallet authentication: Token validated against global config', [
+                'path' => $request->path(),
+                'has_serial' => !empty($serialNumber),
+            ]);
             return $next($request);
         }
 
         \Log::warning('Apple Wallet authentication failed', [
             'path' => $request->path(),
             'serial_number' => $serialNumber ?? 'N/A',
-            'provided_token_preview' => substr($token, 0, 10) . '...',
+            'provided_token_preview' => substr($token, 0, 20) . '...',
             'token_length' => strlen($token),
             'ip' => $request->ip(),
+            'user_agent' => $request->userAgent(),
         ]);
         return response('Unauthorized', 401);
     }

@@ -272,13 +272,20 @@ class AppleWalletController extends Controller
      * Log endpoint for Apple Wallet.
      * 
      * POST /wallet/v1/log
+     * Note: This endpoint doesn't have a serial number, so authentication
+     * must use the global web service auth token.
      */
     public function log(Request $request): Response
     {
+        Log::debug('Apple Wallet log endpoint called', [
+            'has_logs' => $request->has('logs'),
+            'ip_address' => $request->ip(),
+        ]);
+
         $logs = $request->input('logs', []);
 
         foreach ($logs as $log) {
-            Log::info('Apple Wallet log', [
+            Log::info('Apple Wallet diagnostic log', [
                 'level' => $log['level'] ?? 'info',
                 'message' => $log['message'] ?? '',
                 'data' => $log,
