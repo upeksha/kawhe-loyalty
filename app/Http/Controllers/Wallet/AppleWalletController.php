@@ -180,10 +180,9 @@ class AppleWalletController extends Controller
                     'if_modified_since' => $ifModifiedSince,
                     'account_updated_at' => $account->updated_at->toRfc7231String(),
                 ]);
-                return response('', 304)->withHeaders([
-                    'Last-Modified' => $account->updated_at->toRfc7231String(),
-                    'Cache-Control' => 'no-store',
-                ]);
+                return response('', 304)
+                    ->header('Last-Modified', $account->updated_at->toRfc7231String())
+                    ->header('Cache-Control', 'no-store');
             }
         }
 

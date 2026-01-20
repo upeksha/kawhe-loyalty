@@ -307,6 +307,7 @@ test('get pass returns 304 when if-modified-since is newer', function () {
     $ifModifiedSince = now()->toRfc7231String();
 
     // Use the account's public_token for authentication (as per Apple Wallet spec)
+    // This matches how Apple Wallet sends the authenticationToken from pass.json
     $response = $this->get("/wallet/v1/passes/pass.com.kawhe.loyalty/{$serialNumber}", [
         'Authorization' => 'ApplePass ' . $account->public_token,
         'If-Modified-Since' => $ifModifiedSince,
