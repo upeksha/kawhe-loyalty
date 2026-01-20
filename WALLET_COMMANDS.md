@@ -36,32 +36,39 @@ php artisan wallet:apns-test kawhe-1-2
 
 ## Running Tests
 
-### Option 1: Using Laravel's test command (if available)
-```bash
-php artisan test --filter AppleWalletWebServiceTest
-```
+**⚠️ Important:** Tests should be run locally, NOT on production servers. Test dependencies are not installed in production.
 
-### Option 2: Using Pest directly
+### Local Development (Recommended)
+
 ```bash
+# Using Composer script
+composer test
+
+# Or using Pest directly
+./vendor/bin/pest
+
+# Filter specific tests
+composer test -- --filter AppleWalletWebServiceTest
+# OR
 ./vendor/bin/pest --filter AppleWalletWebServiceTest
 ```
 
-### Option 3: Using PHPUnit directly
+### Production Verification (Instead of Tests)
+
+On production, verify functionality manually:
+
 ```bash
-./vendor/bin/phpunit --filter AppleWalletWebServiceTest
+# Test APNs push
+php artisan wallet:apns-test kawhe-1-2
+
+# Check logs
+tail -f storage/logs/laravel.log | grep -i "wallet\|push\|apns"
+
+# Monitor nginx
+tail -f /var/log/nginx/access.log | grep "wallet/v1"
 ```
 
-### Run all tests
-```bash
-# Laravel
-php artisan test
-
-# Pest
-./vendor/bin/pest
-
-# PHPUnit
-./vendor/bin/phpunit
-```
+See `RUNNING_TESTS.md` for complete guide.
 
 ## Monitoring Logs
 

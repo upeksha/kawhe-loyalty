@@ -8,7 +8,6 @@ use App\Models\LoyaltyAccount;
 use App\Services\Wallet\Apple\ApplePassService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
-use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Log;
 use Byte5\PassGenerator;
 
@@ -180,7 +179,9 @@ class AppleWalletController extends Controller
                     'if_modified_since' => $ifModifiedSince,
                     'account_updated_at' => $account->updated_at->toRfc7231String(),
                 ]);
-                return response('', 304)->header('Last-Modified', $account->updated_at->toRfc7231String());
+                return response('', 304, [
+                    'Last-Modified' => $account->updated_at->toRfc7231String(),
+                ]);
             }
         }
 
@@ -229,7 +230,7 @@ class AppleWalletController extends Controller
      * 
      * GET /wallet/v1/devices/{deviceLibraryIdentifier}/registrations/{passTypeIdentifier}?passesUpdatedSince=<timestamp>
      */
-    public function getUpdatedSerials(Request $request, string $deviceLibraryIdentifier, string $passTypeIdentifier): JsonResponse
+    public function getUpdatedSerials(Request $request, string $deviceLibraryIdentifier, string $passTypeIdentifier): Response
     {
         Log::info('Apple Wallet device updates list requested', [
             'device_library_identifier' => $deviceLibraryIdentifier,
@@ -297,7 +298,7 @@ class AppleWalletController extends Controller
                 'passes_updated_since' => $passesUpdatedSince,
                 'total_registrations' => $registrations->count(),
             ]);
-            return response('', 204);
+            return response()->noContent(204);
         }
 
         // Use latest account updated_at, or current time if no accounts found
