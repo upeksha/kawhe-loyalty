@@ -160,13 +160,17 @@ class ApplePushService
             try {
                 $this->cachedJWT = $this->generateJWT();
                 $this->jwtGeneratedAt = $now;
-                Log::debug('Apple Wallet APNs JWT regenerated', [
+                Log::info('Apple Wallet APNs JWT regenerated', [
                     'jwt_age_seconds' => $this->jwtGeneratedAt ? ($now - $this->jwtGeneratedAt) : 0,
+                    'key_id' => $this->apnsKeyId,
+                    'team_id' => $this->apnsTeamId,
+                    'jwt_preview' => substr($this->cachedJWT, 0, 50) . '...',
                 ]);
             } catch (\Exception $e) {
                 Log::error('Apple Wallet APNs JWT generation failed', [
                     'registration_id' => $registration->id,
                     'error' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString(),
                 ]);
                 throw $e;
             }
@@ -318,20 +322,38 @@ class ApplePushService
             throw new \Exception('APNs configuration incomplete');
         }
 
+        // Resolve key file path
         $authKeyFullPath = $this->apnsAuthKeyPath;
         if (!str_starts_with($authKeyFullPath, '/')) {
-            $authKeyFullPath = storage_path('app/private/' . $this->apnsAuthKeyPath);
+            // Relative path - resolve from storage
+            $authKeyFullPath = storage_path('app/private/' . ltrim($this->apnsAuthKeyPath, '/'));
         }
 
         if (!file_exists($authKeyFullPath)) {
+            Log::error('Apple Wallet APNs key file not found', [
+                'configured_path' => $this->apnsAuthKeyPath,
+                'resolved_path' => $authKeyFullPath,
+                'file_exists' => file_exists($authKeyFullPath),
+            ]);
             throw new \Exception("APNs auth key file not found: {$authKeyFullPath}");
+        }
+        
+        if (!is_readable($authKeyFullPath)) {
+            throw new \Exception("APNs auth key file is not readable: {$authKeyFullPath}");
         }
 
         // Read the .p8 key file
         $keyContent = file_get_contents($authKeyFullPath);
-        if (!$keyContent) {
-            throw new \Exception("Failed to read APNs auth key file");
+        if ($keyContent === false || empty($keyContent)) {
+            throw new \Exception("Failed to read APNs auth key file: {$authKeyFullPath}");
         }
+        
+        // Log key file info for debugging (without exposing content)
+        Log::debug('Apple Wallet APNs key file loaded', [
+            'path' => $authKeyFullPath,
+            'size' => strlen($keyContent),
+            'starts_with' => substr($keyContent, 0, 30) . '...',
+        ]);
 
         // JWT header
         $header = [
@@ -356,53 +378,29 @@ class ApplePushService
         // Sign with ES256 (ECDSA P-256 SHA-256)
         $privateKey = openssl_pkey_get_private($keyContent);
         if (!$privateKey) {
-            throw new \Exception('Failed to load APNs private key: ' . openssl_error_string());
+            $opensslError = openssl_error_string();
+            throw new \Exception('Failed to load APNs private key: ' . ($opensslError ?: 'Unknown error'));
         }
 
         $signature = '';
         if (!openssl_sign($signatureInput, $signature, $privateKey, OPENSSL_ALGO_SHA256)) {
-            throw new \Exception('Failed to sign JWT: ' . openssl_error_string());
+            $opensslError = openssl_error_string();
+            throw new \Exception('Failed to sign JWT: ' . ($opensslError ?: 'Unknown error'));
         }
 
         // ES256 signature is in DER format, need to convert to R|S format (64 bytes)
         // OpenSSL returns DER format, we need to extract R and S (32 bytes each)
-        $der = $signature;
-        $r = '';
-        $s = '';
+        $rsSignature = $this->derToRS($signature);
         
-        // Parse DER to extract R and S
-        // This is a simplified parser - for production, consider using a library
-        $offset = 4; // Skip DER header
-        if (ord($der[$offset]) === 0x02) { // INTEGER tag
-            $rLen = ord($der[$offset + 1]);
-            $rStart = $offset + 2;
-            if ($rLen > 32) {
-                // Skip leading zero if present
-                $rStart++;
-                $rLen--;
-            }
-            $r = substr($der, $rStart, min(32, $rLen));
-            if (strlen($r) < 32) {
-                $r = str_pad($r, 32, "\0", STR_PAD_LEFT);
-            }
-            $offset += 2 + ord($der[$offset + 1]);
+        if (strlen($rsSignature) !== 64) {
+            Log::error('Apple Wallet APNs JWT signature length invalid', [
+                'expected' => 64,
+                'actual' => strlen($rsSignature),
+                'der_length' => strlen($signature),
+            ]);
+            throw new \Exception('Invalid signature length after DER to R|S conversion');
         }
         
-        if (ord($der[$offset]) === 0x02) { // INTEGER tag
-            $sLen = ord($der[$offset + 1]);
-            $sStart = $offset + 2;
-            if ($sLen > 32) {
-                $sStart++;
-                $sLen--;
-            }
-            $s = substr($der, $sStart, min(32, $sLen));
-            if (strlen($s) < 32) {
-                $s = str_pad($s, 32, "\0", STR_PAD_LEFT);
-            }
-        }
-        
-        // Combine R and S (64 bytes total)
-        $rsSignature = $r . $s;
         $signatureEncoded = $this->base64UrlEncode($rsSignature);
 
         // Note: openssl_free_key is deprecated in PHP 8.0+, but safe to call
@@ -411,6 +409,111 @@ class ApplePushService
         }
 
         return "{$headerEncoded}.{$payloadEncoded}.{$signatureEncoded}";
+    }
+
+    /**
+     * Convert DER-encoded ECDSA signature to R|S format (64 bytes).
+     *
+     * @param string $der
+     * @return string 64-byte string (32 bytes R + 32 bytes S)
+     */
+    protected function derToRS(string $der): string
+    {
+        // DER format: SEQUENCE { INTEGER r, INTEGER s }
+        // We need to extract r and s, each padded to 32 bytes
+        
+        $r = '';
+        $s = '';
+        $offset = 0;
+        $derLen = strlen($der);
+        
+        // Skip SEQUENCE header (0x30)
+        if ($offset >= $derLen || ord($der[$offset]) !== 0x30) {
+            throw new \Exception('Invalid DER format: expected SEQUENCE');
+        }
+        $offset++;
+        
+        // Skip length byte(s)
+        $seqLen = ord($der[$offset]);
+        $offset++;
+        if ($seqLen & 0x80) {
+            // Long form length
+            $lenBytes = $seqLen & 0x7F;
+            $seqLen = 0;
+            for ($i = 0; $i < $lenBytes; $i++) {
+                $seqLen = ($seqLen << 8) | ord($der[$offset]);
+                $offset++;
+            }
+        }
+        
+        // Extract R (first INTEGER)
+        if ($offset >= $derLen || ord($der[$offset]) !== 0x02) {
+            throw new \Exception('Invalid DER format: expected INTEGER for R');
+        }
+        $offset++;
+        
+        $rLen = ord($der[$offset]);
+        $offset++;
+        
+        // Handle long form length for R
+        if ($rLen & 0x80) {
+            $lenBytes = $rLen & 0x7F;
+            $rLen = 0;
+            for ($i = 0; $i < $lenBytes; $i++) {
+                $rLen = ($rLen << 8) | ord($der[$offset]);
+                $offset++;
+            }
+        }
+        
+        // Read R value
+        $rBytes = substr($der, $offset, $rLen);
+        $offset += $rLen;
+        
+        // Remove leading zero if present (for negative numbers, but we handle it)
+        if (strlen($rBytes) > 0 && ord($rBytes[0]) === 0x00 && strlen($rBytes) > 32) {
+            $rBytes = substr($rBytes, 1);
+        }
+        
+        // Pad R to 32 bytes
+        if (strlen($rBytes) > 32) {
+            throw new \Exception('R value too long: ' . strlen($rBytes) . ' bytes');
+        }
+        $r = str_pad($rBytes, 32, "\0", STR_PAD_LEFT);
+        
+        // Extract S (second INTEGER)
+        if ($offset >= $derLen || ord($der[$offset]) !== 0x02) {
+            throw new \Exception('Invalid DER format: expected INTEGER for S');
+        }
+        $offset++;
+        
+        $sLen = ord($der[$offset]);
+        $offset++;
+        
+        // Handle long form length for S
+        if ($sLen & 0x80) {
+            $lenBytes = $sLen & 0x7F;
+            $sLen = 0;
+            for ($i = 0; $i < $lenBytes; $i++) {
+                $sLen = ($sLen << 8) | ord($der[$offset]);
+                $offset++;
+            }
+        }
+        
+        // Read S value
+        $sBytes = substr($der, $offset, $sLen);
+        
+        // Remove leading zero if present
+        if (strlen($sBytes) > 0 && ord($sBytes[0]) === 0x00 && strlen($sBytes) > 32) {
+            $sBytes = substr($sBytes, 1);
+        }
+        
+        // Pad S to 32 bytes
+        if (strlen($sBytes) > 32) {
+            throw new \Exception('S value too long: ' . strlen($sBytes) . ' bytes');
+        }
+        $s = str_pad($sBytes, 32, "\0", STR_PAD_LEFT);
+        
+        return $r . $s;
     }
 
     /**
