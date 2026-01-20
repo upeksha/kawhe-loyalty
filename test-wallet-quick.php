@@ -31,16 +31,22 @@ $account = \App\Models\LoyaltyAccount::where('store_id', $store->id)->first();
 if (!$account) {
     echo "⚠️  No loyalty account found. Creating one...\n";
     
-    $customer = \App\Models\Customer::factory()->create([
+    // Create customer directly (avoid factory issues)
+    $customer = \App\Models\Customer::create([
         'name' => 'Test Customer',
         'email' => 'test@example.com',
+        'phone' => '+1234567890',
     ]);
     
-    $account = \App\Models\LoyaltyAccount::factory()->create([
+    // Create account directly (avoid factory issues)
+    $account = \App\Models\LoyaltyAccount::create([
         'store_id' => $store->id,
         'customer_id' => $customer->id,
         'stamp_count' => 5,
         'reward_balance' => 0,
+        'public_token' => \Illuminate\Support\Str::random(40),
+        'wallet_auth_token' => \Illuminate\Support\Str::random(40),
+        'version' => 1,
     ]);
     
     echo "✓ Created account: ID {$account->id}\n";
