@@ -213,6 +213,28 @@
     @push('scripts')
     <style>
         [x-cloak] { display: none !important; }
+        
+        /* Ensure video element is visible on iOS Safari */
+        #reader video {
+            width: 100% !important;
+            height: 100% !important;
+            object-fit: cover !important;
+            display: block !important;
+            background: #000 !important;
+        }
+        
+        #reader canvas {
+            display: block !important;
+        }
+        
+        /* Ensure reader container is visible */
+        #reader {
+            position: relative !important;
+            width: 100% !important;
+            min-height: 300px !important;
+            background: #000 !important;
+            overflow: hidden !important;
+        }
     </style>
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
     <script>
