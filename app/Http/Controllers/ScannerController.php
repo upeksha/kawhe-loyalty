@@ -237,8 +237,10 @@ class ScannerController extends Controller
         ]);
 
         $token = $request->token;
-        // Strip "REDEEM:" prefix if present
-        if (Str::startsWith($token, 'REDEEM:')) {
+        // Strip "LR:" or "REDEEM:" prefix if present (support both for backward compatibility)
+        if (Str::startsWith($token, 'LR:')) {
+            $token = Str::substr($token, 3);
+        } elseif (Str::startsWith($token, 'REDEEM:')) {
             $token = Str::substr($token, 7);
         }
 
