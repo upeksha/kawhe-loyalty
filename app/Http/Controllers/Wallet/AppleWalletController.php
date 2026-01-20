@@ -175,14 +175,19 @@ class AppleWalletController extends Controller
             $accountUpdated = $account->updated_at->timestamp;
             
             if ($modifiedSince && $accountUpdated <= $modifiedSince) {
+                $lastModified = $account->updated_at->toRfc7231String();
                 Log::debug('Apple Wallet pass: 304 Not Modified', [
                     'serial_number' => $serialNumber,
                     'if_modified_since' => $ifModifiedSince,
-                    'account_updated_at' => $account->updated_at->toRfc7231String(),
+                    'account_updated_at' => $lastModified,
                 ]);
-                return response('', 304)
-                    ->header('Last-Modified', $account->updated_at->toRfc7231String())
-                    ->header('Cache-Control', 'no-store');
+                
+                // Return 304 with required headers
+                // Using withHeaders() to ensure headers are set correctly
+                return response('', 304)->withHeaders([
+                    'Last-Modified' => $lastModified,
+                    'Cache-Control' => 'no-store',
+                ]);
             }
         }
 
