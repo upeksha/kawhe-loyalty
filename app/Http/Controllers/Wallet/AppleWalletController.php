@@ -8,6 +8,7 @@ use App\Models\LoyaltyAccount;
 use App\Services\Wallet\Apple\ApplePassService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Log;
 use Byte5\PassGenerator;
 
@@ -179,7 +180,7 @@ class AppleWalletController extends Controller
      * 
      * GET /wallet/v1/devices/{deviceLibraryIdentifier}/registrations/{passTypeIdentifier}?passesUpdatedSince=<timestamp>
      */
-    public function getUpdatedSerials(Request $request, string $deviceLibraryIdentifier, string $passTypeIdentifier): Response
+    public function getUpdatedSerials(Request $request, string $deviceLibraryIdentifier, string $passTypeIdentifier): JsonResponse
     {
         $passesUpdatedSince = $request->query('passesUpdatedSince');
 
@@ -198,12 +199,20 @@ class AppleWalletController extends Controller
                 ? (int) $passesUpdatedSince 
                 : strtotime($passesUpdatedSince);
 
+            if ($updatedSince === false) {
+                // Invalid timestamp, treat as 0
+                $updatedSince = 0;
+            }
+
             foreach ($registrations as $registration) {
-                if ($registration->loyaltyAccount) {
+                if ($registration->loyaltyAccount && $registration->loyaltyAccount->updated_at) {
                     $accountUpdated = $registration->loyaltyAccount->updated_at->timestamp;
                     if ($accountUpdated > $updatedSince) {
                         $serialNumbers[] = $registration->serial_number;
                     }
+                } else {
+                    // If no account or updated_at, include it (safer default)
+                    $serialNumbers[] = $registration->serial_number;
                 }
             }
         } else {
