@@ -373,7 +373,7 @@ LoyaltyAccount
 
 **Cooldown Logic:**
 - Prevents rapid duplicate scans
-- Default: 3 seconds between stamps
+- Default: 30 seconds between stamps
 - Can be overridden with `override_cooldown=true`
 
 ### 4.4 Redemption Flow
