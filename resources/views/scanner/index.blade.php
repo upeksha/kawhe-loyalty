@@ -37,8 +37,16 @@
                                 <div class="flex items-center gap-2">
                                     <button
                                         type="button"
+                                        x-show="!isScanning"
+                                        @click="startScanner()"
+                                        class="px-3 py-2 text-xs font-medium rounded-lg bg-blue-600 hover:bg-blue-700 text-white transition"
+                                    >
+                                        Start Camera
+                                    </button>
+                                    <button
+                                        type="button"
                                         @click="switchCamera()"
-                                        :disabled="!canSwitchCamera"
+                                        :disabled="!canSwitchCamera || !isScanning"
                                         class="px-3 py-2 text-xs font-medium rounded-lg border transition disabled:opacity-50 disabled:cursor-not-allowed bg-white hover:bg-gray-50 text-gray-800 border-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-white dark:border-gray-600"
                                     >
                                         Switch camera
@@ -48,6 +56,21 @@
                             <!-- Scanner Container with Cooldown Overlay -->
                             <div class="relative w-full mb-6 bg-black rounded-lg overflow-hidden" style="min-height: 300px;">
                                 <div id="reader" class="w-full" style="min-height: 300px; color: white;"></div>
+                                
+                                <!-- Start Camera Button (shown when camera not started) -->
+                                <div 
+                                    x-show="!isScanning && cameraStatus !== 'Scanning…'" 
+                                    x-cloak
+                                    class="absolute inset-0 flex items-center justify-center bg-gray-900 bg-opacity-90 z-40 rounded-lg"
+                                >
+                                    <button
+                                        type="button"
+                                        @click="startScanner()"
+                                        class="px-6 py-3 text-base font-medium rounded-lg bg-blue-600 hover:bg-blue-700 text-white transition shadow-lg"
+                                    >
+                                        📷 Start Camera
+                                    </button>
+                                </div>
                                 
                                 <!-- Cooldown Overlay -->
                                 <div 
@@ -218,10 +241,20 @@
                 cooldownInterval: null,
 
                 init() {
-                    this.$nextTick(() => {
-                                        // Auto-start scanner on page load for best UX.
-                                        this.startScanner();
-                    });
+                    // Don't auto-start on iOS Safari - requires user gesture
+                    // Check if iOS Safari
+                    const isIOSSafari = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+                    
+                    if (!isIOSSafari) {
+                        // Auto-start on other browsers
+                        this.$nextTick(() => {
+                            this.startScanner();
+                        });
+                    } else {
+                        // iOS Safari: Show start button
+                        this.cameraStatus = 'Tap "Start Camera" to begin scanning';
+                        this.isScanning = false;
+                    }
                 },
 
                                 // Camera / scanner state
@@ -238,36 +271,84 @@
 
                                 async startScanner() {
                                     this.cameraStatus = 'Requesting camera permission…';
+                                    this.isScanning = true;
 
                                     try {
                                         if (!this.html5QrCode) {
                                             this.html5QrCode = new Html5Qrcode('reader');
                                         }
 
-                                        // Try to use the last chosen camera first (device-specific).
-                                        const storedCameraId = localStorage.getItem('kawhe_scanner_camera_id');
-                                        if (storedCameraId) {
+                                        // For iOS Safari, we need to enumerate cameras first to get deviceId
+                                        // facingMode doesn't work reliably on iOS Safari
+                                        const isIOSSafari = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+                                        
+                                        if (isIOSSafari) {
+                                            // iOS Safari: Enumerate cameras first, then use deviceId
                                             try {
-                                                await this.startWithCameraId(storedCameraId);
-                                                return;
+                                                await this.loadCameras();
+                                                
+                                                if (this.cameras.length === 0) {
+                                                    throw new Error('No cameras found');
+                                                }
+                                                
+                                                // Try stored camera first
+                                                const storedCameraId = localStorage.getItem('kawhe_scanner_camera_id');
+                                                if (storedCameraId && this.cameras.find(c => c.id === storedCameraId)) {
+                                                    await this.startWithCameraId(storedCameraId);
+                                                    return;
+                                                }
+                                                
+                                                // Pick preferred camera (back camera)
+                                                const preferred = this.pickPreferredCameraId(this.cameras);
+                                                if (preferred) {
+                                                    await this.startWithCameraId(preferred);
+                                                } else {
+                                                    // Fallback to first available camera
+                                                    await this.startWithCameraId(this.cameras[0].id);
+                                                }
                                             } catch (e) {
-                                                // Fall through to auto-pick if stored device isn't available anymore.
-                                                console.warn('Stored camera not available, falling back to auto camera selection:', e);
+                                                console.error('iOS Safari camera start failed:', e);
+                                                // Fallback: try facingMode as last resort
+                                                try {
+                                                    await this.startWithFacingMode('environment');
+                                                } catch (e2) {
+                                                    throw e; // Throw original error
+                                                }
                                             }
-                                        }
+                                        } else {
+                                            // Non-iOS: Try stored camera first
+                                            const storedCameraId = localStorage.getItem('kawhe_scanner_camera_id');
+                                            if (storedCameraId) {
+                                                try {
+                                                    await this.startWithCameraId(storedCameraId);
+                                                    return;
+                                                } catch (e) {
+                                                    console.warn('Stored camera not available, falling back:', e);
+                                                }
+                                            }
 
-                                        // First start with facingMode to get permission + video quickly.
-                                        await this.startWithFacingMode('environment');
+                                            // Start with facingMode to get permission quickly
+                                            await this.startWithFacingMode('environment');
 
-                                        // After permission is granted, enumerate cameras and restart with a stable deviceId.
-                                        await this.loadCameras();
-                                        const preferred = this.pickPreferredCameraId(this.cameras);
-                                        if (preferred) {
-                                            await this.restartWithCameraId(preferred);
+                                            // After permission, enumerate and switch to deviceId
+                                            await this.loadCameras();
+                                            const preferred = this.pickPreferredCameraId(this.cameras);
+                                            if (preferred) {
+                                                await this.restartWithCameraId(preferred);
+                                            }
                                         }
                                     } catch (e) {
                                         console.error('Failed to start scanner:', e);
-                                        this.cameraStatus = 'Camera blocked or unavailable. Allow camera access, then refresh.';
+                                        this.isScanning = false;
+                                        
+                                        // Better error messages
+                                        if (e.name === 'NotAllowedError' || e.message.includes('permission')) {
+                                            this.cameraStatus = 'Camera permission denied. Please allow camera access in Safari settings.';
+                                        } else if (e.name === 'NotFoundError' || e.message.includes('camera')) {
+                                            this.cameraStatus = 'No camera found. Please check your device.';
+                                        } else {
+                                            this.cameraStatus = 'Camera unavailable. Tap "Start Camera" to try again.';
+                                        }
                                     }
                                 },
 
@@ -296,29 +377,53 @@
                                 },
 
                                 async startWithFacingMode(mode) {
-                                    const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+                                    const config = { 
+                                        fps: 10, 
+                                        qrbox: { width: 250, height: 250 },
+                                        aspectRatio: 1.0
+                                    };
                                     const constraints = { facingMode: mode };
                                     await this.html5QrCode.start(
                                         constraints,
                                         config,
                                         (decodedText) => this.onScanSuccess(decodedText),
-                                        () => {}
+                                        (errorMessage) => {
+                                            console.debug('Scan error:', errorMessage);
+                                        }
                                     );
                                     this.cameraStatus = 'Scanning…';
+                                    this.isScanning = true;
                                 },
 
                                 async startWithCameraId(cameraId) {
-                                    const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+                                    const config = { 
+                                        fps: 10, 
+                                        qrbox: { width: 250, height: 250 },
+                                        aspectRatio: 1.0, // Square aspect ratio for better QR scanning
+                                        // iOS Safari specific settings
+                                        supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA]
+                                    };
+                                    
+                                    // For iOS Safari, use simpler constraints
+                                    const isIOSSafari = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+                                    const videoConstraints = isIOSSafari 
+                                        ? { deviceId: { exact: cameraId } }
+                                        : { deviceId: { exact: cameraId }, facingMode: 'environment' };
+                                    
                                     await this.html5QrCode.start(
-                                        { deviceId: { exact: cameraId } },
+                                        videoConstraints,
                                         config,
                                         (decodedText) => this.onScanSuccess(decodedText),
-                                        () => {}
+                                        (errorMessage) => {
+                                            // Error callback - can be empty, errors are handled in catch
+                                            console.debug('Scan error:', errorMessage);
+                                        }
                                     );
                                     this.activeCameraId = cameraId;
                                     localStorage.setItem('kawhe_scanner_camera_id', cameraId);
                                     await this.loadCameras();
                                     this.cameraStatus = 'Scanning…';
+                                    this.isScanning = true;
                                 },
 
                                 async restartWithCameraId(cameraId) {
@@ -335,8 +440,10 @@
                                     // stop() throws if not running; guard with try
                                     try {
                                         await this.html5QrCode.stop();
+                                        this.isScanning = false;
                                     } catch (e) {
                                         // ignore
+                                        this.isScanning = false;
                                     }
                                 },
 
