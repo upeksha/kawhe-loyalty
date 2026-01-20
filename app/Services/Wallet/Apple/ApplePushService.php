@@ -36,8 +36,14 @@ class ApplePushService
      */
     public function sendPassUpdatePushes(string $passTypeIdentifier, string $serialNumber): void
     {
+        Log::info('Apple Wallet push notification request received', [
+            'pass_type_identifier' => $passTypeIdentifier,
+            'serial_number' => $serialNumber,
+            'push_enabled' => $this->enabled,
+        ]);
+
         if (!$this->enabled) {
-            Log::debug('Apple Wallet push notifications disabled by config', [
+            Log::warning('Apple Wallet push notifications disabled by config', [
                 'pass_type_identifier' => $passTypeIdentifier,
                 'serial_number' => $serialNumber,
             ]);
@@ -45,13 +51,21 @@ class ApplePushService
         }
 
         // Find all active registrations for this pass
+        // CRITICAL: Do NOT filter out null/empty - only filter by active=true
         $registrations = AppleWalletRegistration::where('pass_type_identifier', $passTypeIdentifier)
             ->where('serial_number', $serialNumber)
             ->where('active', true)
             ->get();
 
+        Log::info('Apple Wallet registrations found', [
+            'pass_type_identifier' => $passTypeIdentifier,
+            'serial_number' => $serialNumber,
+            'registrations_found' => $registrations->count(),
+            'registration_ids' => $registrations->pluck('id')->toArray(),
+        ]);
+
         if ($registrations->isEmpty()) {
-            Log::debug('No active registrations found for pass update', [
+            Log::warning('No active registrations found for pass update', [
                 'pass_type_identifier' => $passTypeIdentifier,
                 'serial_number' => $serialNumber,
             ]);
@@ -69,8 +83,20 @@ class ApplePushService
 
         foreach ($registrations as $registration) {
             try {
+                Log::debug('Sending push to device', [
+                    'registration_id' => $registration->id,
+                    'device_library_identifier' => $registration->device_library_identifier,
+                    'serial_number' => $serialNumber,
+                    'push_token_length' => strlen($registration->push_token),
+                ]);
+                
                 $this->sendPushNotification($registration);
                 $successCount++;
+                
+                Log::info('Push notification sent successfully to device', [
+                    'registration_id' => $registration->id,
+                    'device_library_identifier' => $registration->device_library_identifier,
+                ]);
             } catch (\Exception $e) {
                 $failureCount++;
                 Log::error('Failed to send Apple Wallet push notification', [
@@ -83,7 +109,7 @@ class ApplePushService
             }
         }
 
-        Log::info('Apple Wallet push notifications completed', [
+        Log::info('Apple Wallet push notifications batch completed', [
             'pass_type_identifier' => $passTypeIdentifier,
             'serial_number' => $serialNumber,
             'total_devices' => $registrations->count(),
@@ -124,12 +150,22 @@ class ApplePushService
         }
 
         // Generate JWT token for APNs authentication
-        $jwt = $this->generateJWT();
+        try {
+            $jwt = $this->generateJWT();
+        } catch (\Exception $e) {
+            Log::error('Apple Wallet APNs JWT generation failed', [
+                'registration_id' => $registration->id,
+                'error' => $e->getMessage(),
+            ]);
+            throw $e;
+        }
 
-        // APNs endpoint
-        $apnsUrl = $this->apnsProduction
-            ? 'https://api.push.apple.com'
-            : 'https://api.sandbox.push.apple.com';
+        // APNs endpoint - use sandbox if APPLE_APNS_USE_SANDBOX=true, otherwise production
+        // Note: apns_production is inverted from APPLE_APNS_USE_SANDBOX in config
+        $useSandbox = !$this->apnsProduction;
+        $apnsUrl = $useSandbox
+            ? 'https://api.sandbox.push.apple.com'
+            : 'https://api.push.apple.com';
 
         $deviceToken = $registration->push_token;
         $url = "{$apnsUrl}/3/device/{$deviceToken}";
@@ -146,6 +182,14 @@ class ApplePushService
             'Content-Type: application/json',
             'Content-Length: ' . strlen($payload),
         ];
+        
+        Log::debug('Apple Wallet APNs request prepared', [
+            'registration_id' => $registration->id,
+            'url' => $url,
+            'topic' => $this->apnsTopic,
+            'production' => $this->apnsProduction,
+            'jwt_preview' => substr($jwt, 0, 50) . '...',
+        ]);
 
         // Send HTTP/2 request using cURL
         $ch = curl_init();
@@ -178,6 +222,12 @@ class ApplePushService
         // Parse response headers and body
         $responseHeaders = substr($response, 0, $headerSize);
         $responseBody = substr($response, $headerSize);
+        
+        // Parse JSON error response if present
+        $errorData = null;
+        if ($responseBody) {
+            $errorData = json_decode($responseBody, true);
+        }
 
         if ($httpCode === 200) {
             Log::info('Apple Wallet push notification sent successfully', [
@@ -187,14 +237,26 @@ class ApplePushService
                 'apns_id' => $this->extractApnsId($responseHeaders),
             ]);
         } else {
-            Log::warning('Apple Wallet push notification failed', [
+            // Enhanced error logging for 403 and other failures
+            $logData = [
                 'registration_id' => $registration->id,
                 'device_library_identifier' => $registration->device_library_identifier,
                 'serial_number' => $registration->serial_number,
                 'http_code' => $httpCode,
-                'response_body' => $responseBody,
                 'apns_reason' => $this->extractApnsReason($responseHeaders),
-            ]);
+                'response_body' => $responseBody,
+                'response_body_length' => strlen($responseBody),
+                'apns_topic' => $this->apnsTopic,
+                'apns_url' => $apnsUrl,
+                'apns_production' => $this->apnsProduction,
+            ];
+            
+            if ($errorData) {
+                $logData['error_reason'] = $errorData['reason'] ?? null;
+                $logData['error_timestamp'] = $errorData['timestamp'] ?? null;
+            }
+            
+            Log::error('Apple Wallet push notification failed', $logData);
 
             // If device token is invalid, deactivate registration
             if ($httpCode === 410) {
@@ -203,6 +265,12 @@ class ApplePushService
                     'registration_id' => $registration->id,
                     'serial_number' => $registration->serial_number,
                 ]);
+            }
+            
+            // For 403 errors, provide helpful error message
+            if ($httpCode === 403) {
+                $reason = $this->extractApnsReason($responseHeaders) ?? ($errorData['reason'] ?? 'Unknown');
+                throw new \Exception("APNs authentication failed (403): {$reason}. Check APNs key permissions and topic configuration.");
             }
         }
     }

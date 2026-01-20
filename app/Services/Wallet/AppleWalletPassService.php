@@ -3,6 +3,7 @@
 namespace App\Services\Wallet;
 
 use App\Models\LoyaltyAccount;
+use App\Services\Wallet\Apple\AppleWalletSerial;
 use Byte5\PassGenerator;
 use Illuminate\Support\Facades\Storage;
 
@@ -28,7 +29,7 @@ class AppleWalletPassService
             'teamIdentifier' => config('passgenerator.team_identifier'),
             'organizationName' => config('passgenerator.organization_name'),
             'description' => 'Kawhe Loyalty Card',
-            'serialNumber' => $this->generateSerialNumber($account),
+            'serialNumber' => AppleWalletSerial::fromAccount($account),
             'logoText' => $store->name,
             // Apple Wallet Web Service configuration (required for push notifications)
             // Note: Apple automatically appends /v1 to webServiceURL, so we only specify /wallet
@@ -89,7 +90,7 @@ class AppleWalletPassService
         // Certificates are automatically loaded from config in constructor
         // Pass ID is optional - we use serial number for identification
         // Set replaceExistent=true to allow regenerating passes (e.g., after stamp updates)
-        $passIdentifier = $this->generateSerialNumber($account);
+        $passIdentifier = AppleWalletSerial::fromAccount($account);
         $pass = new PassGenerator($passIdentifier, true); // true = replace existing pass
         
         // Set pass definition
@@ -114,18 +115,6 @@ class AppleWalletPassService
         return $pass->create();
     }
 
-    /**
-     * Generate stable unique serial number for pass
-     *
-     * @param LoyaltyAccount $account
-     * @return string
-     */
-    protected function generateSerialNumber(LoyaltyAccount $account): string
-    {
-        // Use a stable format: kawhe-{store_id}-{customer_id}
-        // This ensures the same account always gets the same serial number
-        return sprintf('kawhe-%d-%d', $account->store_id, $account->customer_id);
-    }
 
     /**
      * Convert hex color to RGB format for Apple Wallet

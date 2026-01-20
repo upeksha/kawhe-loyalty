@@ -5,6 +5,7 @@ namespace App\Services\Wallet;
 use App\Models\LoyaltyAccount;
 use App\Services\Wallet\Apple\ApplePassService;
 use App\Services\Wallet\Apple\ApplePushService;
+use App\Services\Wallet\Apple\AppleWalletSerial;
 use App\Services\Wallet\GoogleWalletPassService;
 use Illuminate\Support\Facades\Log;
 
@@ -50,26 +51,28 @@ class WalletSyncService
         // Phase 2: Send Apple Wallet push notifications
         try {
             $passTypeIdentifier = config('passgenerator.pass_type_identifier');
-            $serialNumber = $this->applePassService->getSerialNumber($account);
+            // Use centralized serial number helper to ensure consistency
+            $serialNumber = AppleWalletSerial::fromAccount($account);
             
-            Log::info('Sending Apple Wallet push notifications for stamp update', [
+            Log::info('Wallet sync: Preparing to send Apple Wallet push notifications', [
                 'loyalty_account_id' => $account->id,
                 'serial_number' => $serialNumber,
                 'pass_type_identifier' => $passTypeIdentifier,
                 'stamp_count' => $account->stamp_count,
                 'reward_balance' => $account->reward_balance ?? 0,
+                'account_updated_at' => $account->updated_at->toIso8601String(),
             ]);
             
             $this->applePushService->sendPassUpdatePushes($passTypeIdentifier, $serialNumber);
             
-            Log::info('Apple Wallet push notifications sent', [
+            Log::info('Wallet sync: Apple Wallet push notifications completed', [
                 'loyalty_account_id' => $account->id,
                 'serial_number' => $serialNumber,
             ]);
         } catch (\Exception $e) {
-            Log::error('Failed to send Apple Wallet push notifications', [
+            Log::error('Wallet sync: Failed to send Apple Wallet push notifications', [
                 'loyalty_account_id' => $account->id,
-                'serial_number' => $serialNumber ?? 'unknown',
+                'serial_number' => AppleWalletSerial::fromAccount($account),
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
             ]);

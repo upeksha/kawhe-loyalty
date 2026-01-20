@@ -40,6 +40,6 @@ return [
         'apns_team_id' => env('APPLE_APNS_TEAM_ID'),
         'apns_auth_key_path' => env('APPLE_APNS_AUTH_KEY_PATH'),
         'apns_topic' => env('APPLE_APNS_TOPIC', env('APPLE_PASS_TYPE_IDENTIFIER')),
-        'apns_production' => env('APPLE_APNS_PRODUCTION', true),
+        'apns_production' => env('APPLE_APNS_PRODUCTION', !env('APPLE_APNS_USE_SANDBOX', false)),
     ],
 ];

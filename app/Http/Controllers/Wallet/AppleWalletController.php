@@ -68,11 +68,12 @@ class AppleWalletController extends Controller
         }
 
         // Upsert registration (idempotent)
+        // CRITICAL: Ensure serial_number matches exactly what's in pass.json
         $registration = AppleWalletRegistration::updateOrCreate(
             [
                 'device_library_identifier' => $deviceLibraryIdentifier,
                 'pass_type_identifier' => $passTypeIdentifier,
-                'serial_number' => $serialNumber,
+                'serial_number' => $serialNumber, // Must match pass.json serialNumber exactly
             ],
             [
                 'push_token' => $pushToken,
@@ -94,6 +95,8 @@ class AppleWalletController extends Controller
             'push_token_length' => strlen($pushToken),
             'is_new' => $isNew,
             'ip_address' => $request->ip(),
+            'registration_saved' => true,
+            'active' => $registration->active,
         ]);
 
         return response('', $isNew ? 201 : 200);
@@ -195,10 +198,14 @@ class AppleWalletController extends Controller
 
             $mimeType = PassGenerator::getPassMimeType();
 
-            Log::info('Apple Wallet pass generated for web service', [
+            Log::info('Apple Wallet pass generated and served for web service', [
                 'serial_number' => $serialNumber,
                 'loyalty_account_id' => $account->id,
+                'stamp_count' => $account->stamp_count,
+                'reward_balance' => $account->reward_balance ?? 0,
                 'size' => strlen($pkpassData),
+                'ip_address' => $request->ip(),
+                'user_agent' => $request->userAgent(),
             ]);
 
             return response($pkpassData, 200, [
