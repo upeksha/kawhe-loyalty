@@ -54,8 +54,8 @@
                                 </div>
                             </div>
                             <!-- Scanner Container with Cooldown Overlay -->
-                            <div class="relative w-full mb-6 bg-black rounded-lg overflow-hidden" style="min-height: 300px;">
-                                <div id="reader" class="w-full" style="min-height: 300px; color: white;"></div>
+                            <div class="relative w-full mb-6 bg-black rounded-lg overflow-hidden" style="min-height: 300px; position: relative;">
+                                <div id="reader" class="w-full" style="min-height: 300px; width: 100%; position: relative; background: #000;"></div>
                                 
                                 <!-- Start Camera Button (shown when camera not started) -->
                                 <div 
@@ -383,47 +383,103 @@
                                         aspectRatio: 1.0
                                     };
                                     const constraints = { facingMode: mode };
-                                    await this.html5QrCode.start(
-                                        constraints,
-                                        config,
-                                        (decodedText) => this.onScanSuccess(decodedText),
-                                        (errorMessage) => {
-                                            console.debug('Scan error:', errorMessage);
-                                        }
-                                    );
-                                    this.cameraStatus = 'Scanning…';
-                                    this.isScanning = true;
+                                    try {
+                                        await this.html5QrCode.start(
+                                            constraints,
+                                            config,
+                                            (decodedText) => this.onScanSuccess(decodedText),
+                                            (errorMessage) => {
+                                                console.debug('Scan error:', errorMessage);
+                                            }
+                                        );
+                                        this.cameraStatus = 'Scanning…';
+                                        this.isScanning = true;
+                                    } catch (e) {
+                                        console.error('Failed to start camera with facingMode:', e);
+                                        throw e;
+                                    }
                                 },
 
                                 async startWithCameraId(cameraId) {
-                                    const config = { 
-                                        fps: 10, 
-                                        qrbox: { width: 250, height: 250 },
-                                        aspectRatio: 1.0, // Square aspect ratio for better QR scanning
-                                        // iOS Safari specific settings
-                                        supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA]
-                                    };
+                                    const isIOSSafari = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+                                    
+                                    // iOS Safari needs different configuration
+                                    let config;
+                                    if (isIOSSafari) {
+                                        // For iOS Safari, use viewfinder dimensions instead of qrbox
+                                        // This ensures the video stream is visible
+                                        const readerElement = document.getElementById('reader');
+                                        const containerWidth = readerElement.offsetWidth || 300;
+                                        const containerHeight = readerElement.offsetHeight || 300;
+                                        
+                                        config = { 
+                                            fps: 10,
+                                            // Use viewfinder for iOS Safari - ensures video is visible
+                                            viewfinderWidth: containerWidth,
+                                            viewfinderHeight: containerHeight,
+                                            // Smaller qrbox for better scanning
+                                            qrbox: function(viewfinderWidth, viewfinderHeight) {
+                                                const minEdgePercentage = 0.7; // Use 70% of the smaller edge
+                                                const minEdgeSize = Math.min(viewfinderWidth, viewfinderHeight);
+                                                const qrboxSize = Math.floor(minEdgeSize * minEdgePercentage);
+                                                return {
+                                                    width: qrboxSize,
+                                                    height: qrboxSize
+                                                };
+                                            },
+                                            aspectRatio: 1.0,
+                                            supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA],
+                                            // iOS Safari specific: disable experimental features
+                                            experimentalFeatures: {
+                                                useBarCodeDetectorIfSupported: false
+                                            }
+                                        };
+                                    } else {
+                                        config = { 
+                                            fps: 10, 
+                                            qrbox: { width: 250, height: 250 },
+                                            aspectRatio: 1.0,
+                                            supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA]
+                                        };
+                                    }
                                     
                                     // For iOS Safari, use simpler constraints
-                                    const isIOSSafari = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
                                     const videoConstraints = isIOSSafari 
                                         ? { deviceId: { exact: cameraId } }
                                         : { deviceId: { exact: cameraId }, facingMode: 'environment' };
                                     
-                                    await this.html5QrCode.start(
-                                        videoConstraints,
-                                        config,
-                                        (decodedText) => this.onScanSuccess(decodedText),
-                                        (errorMessage) => {
-                                            // Error callback - can be empty, errors are handled in catch
-                                            console.debug('Scan error:', errorMessage);
+                                    try {
+                                        await this.html5QrCode.start(
+                                            videoConstraints,
+                                            config,
+                                            (decodedText) => this.onScanSuccess(decodedText),
+                                            (errorMessage) => {
+                                                // Error callback - can be empty, errors are handled in catch
+                                                console.debug('Scan error:', errorMessage);
+                                            }
+                                        );
+                                        this.activeCameraId = cameraId;
+                                        localStorage.setItem('kawhe_scanner_camera_id', cameraId);
+                                        await this.loadCameras();
+                                        this.cameraStatus = 'Scanning…';
+                                        this.isScanning = true;
+                                        
+                                        // Force video element to be visible on iOS Safari
+                                        if (isIOSSafari) {
+                                            setTimeout(() => {
+                                                const videoElement = document.querySelector('#reader video');
+                                                if (videoElement) {
+                                                    videoElement.style.width = '100%';
+                                                    videoElement.style.height = '100%';
+                                                    videoElement.style.objectFit = 'cover';
+                                                    videoElement.style.display = 'block';
+                                                }
+                                            }, 100);
                                         }
-                                    );
-                                    this.activeCameraId = cameraId;
-                                    localStorage.setItem('kawhe_scanner_camera_id', cameraId);
-                                    await this.loadCameras();
-                                    this.cameraStatus = 'Scanning…';
-                                    this.isScanning = true;
+                                    } catch (e) {
+                                        console.error('Failed to start camera with deviceId:', e);
+                                        throw e;
+                                    }
                                 },
 
                                 async restartWithCameraId(cameraId) {
