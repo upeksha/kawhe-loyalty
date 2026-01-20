@@ -167,7 +167,13 @@ test('GET device registrations list returns serialNumbers when updated_at change
     ]);
 
     // Update account (simulating a stamp)
+    // Get timestamp BEFORE updating
     $oldTimestamp = $account->updated_at->timestamp;
+    
+    // Wait a moment to ensure timestamp difference (timestamps are in seconds)
+    sleep(1);
+    
+    // Update account (simulating a stamp)
     $account->touch(); // Update updated_at
     $account->refresh();
 

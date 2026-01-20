@@ -8,6 +8,7 @@ use App\Models\LoyaltyAccount;
 use App\Services\Wallet\Apple\ApplePassService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Log;
 use Byte5\PassGenerator;
 
@@ -230,7 +231,7 @@ class AppleWalletController extends Controller
      * 
      * GET /wallet/v1/devices/{deviceLibraryIdentifier}/registrations/{passTypeIdentifier}?passesUpdatedSince=<timestamp>
      */
-    public function getUpdatedSerials(Request $request, string $deviceLibraryIdentifier, string $passTypeIdentifier): Response
+    public function getUpdatedSerials(Request $request, string $deviceLibraryIdentifier, string $passTypeIdentifier): Response|JsonResponse
     {
         Log::info('Apple Wallet device updates list requested', [
             'device_library_identifier' => $deviceLibraryIdentifier,
