@@ -15,11 +15,46 @@ class ApplePassAuthMiddleware
      */
     public function handle(Request $request, Closure $next): Response
     {
+        $path = $request->path();
+        
+        // Endpoints that don't require authentication:
+        // - GET /wallet/v1/devices/{device}/registrations/{passType} (device updates list)
+        // - POST /wallet/v1/log (logging endpoint)
+        $noAuthPaths = [
+            'wallet/v1/devices/',
+            'wallet/v1/log',
+        ];
+        
+        $requiresAuth = true;
+        foreach ($noAuthPaths as $noAuthPath) {
+            if (str_contains($path, $noAuthPath)) {
+                // Special handling for device registrations list
+                if (str_contains($path, 'wallet/v1/devices/') && !$request->route('serialNumber')) {
+                    // This is GET /devices/{device}/registrations/{passType} (no serial)
+                    $requiresAuth = false;
+                    break;
+                }
+                // POST /wallet/v1/log doesn't require auth
+                if (str_contains($path, 'wallet/v1/log') && $request->isMethod('POST')) {
+                    $requiresAuth = false;
+                    break;
+                }
+            }
+        }
+        
+        if (!$requiresAuth) {
+            \Log::debug('Apple Wallet Web Service: Skipping auth for public endpoint', [
+                'path' => $path,
+                'method' => $request->method(),
+            ]);
+            return $next($request);
+        }
+
         $authHeader = $request->header('Authorization');
 
         if (!$authHeader) {
             \Log::warning('Apple Wallet Web Service: Missing Authorization header', [
-                'path' => $request->path(),
+                'path' => $path,
                 'ip' => $request->ip(),
             ]);
             return response('Unauthorized', 401);

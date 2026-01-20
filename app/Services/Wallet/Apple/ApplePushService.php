@@ -16,6 +16,10 @@ class ApplePushService
     protected ?string $apnsTopic = null;
     protected bool $apnsProduction = true;
     protected bool $enabled = false;
+    
+    // JWT cache to avoid regenerating on every push (JWT expires after 1 hour, rebuild at 50 minutes)
+    protected ?string $cachedJWT = null;
+    protected ?int $jwtGeneratedAt = null;
 
     public function __construct()
     {
@@ -150,15 +154,24 @@ class ApplePushService
         }
 
         // Generate JWT token for APNs authentication
-        try {
-            $jwt = $this->generateJWT();
-        } catch (\Exception $e) {
-            Log::error('Apple Wallet APNs JWT generation failed', [
-                'registration_id' => $registration->id,
-                'error' => $e->getMessage(),
-            ]);
-            throw $e;
+        // Rebuild JWT if older than 50 minutes (JWT expires after 1 hour)
+        $now = time();
+        if (!$this->cachedJWT || !$this->jwtGeneratedAt || ($now - $this->jwtGeneratedAt) > 3000) {
+            try {
+                $this->cachedJWT = $this->generateJWT();
+                $this->jwtGeneratedAt = $now;
+                Log::debug('Apple Wallet APNs JWT regenerated', [
+                    'jwt_age_seconds' => $this->jwtGeneratedAt ? ($now - $this->jwtGeneratedAt) : 0,
+                ]);
+            } catch (\Exception $e) {
+                Log::error('Apple Wallet APNs JWT generation failed', [
+                    'registration_id' => $registration->id,
+                    'error' => $e->getMessage(),
+                ]);
+                throw $e;
+            }
         }
+        $jwt = $this->cachedJWT;
 
         // APNs endpoint - use sandbox if APPLE_APNS_USE_SANDBOX=true, otherwise production
         // Note: apns_production is inverted from APPLE_APNS_USE_SANDBOX in config
@@ -238,25 +251,32 @@ class ApplePushService
             ]);
         } else {
             // Enhanced error logging for 403 and other failures
+            $apnsReason = $this->extractApnsReason($responseHeaders);
+            $errorReason = $errorData['reason'] ?? null;
+            
             $logData = [
                 'registration_id' => $registration->id,
                 'device_library_identifier' => $registration->device_library_identifier,
                 'serial_number' => $registration->serial_number,
                 'http_code' => $httpCode,
-                'apns_reason' => $this->extractApnsReason($responseHeaders),
+                'apns_reason' => $apnsReason,
                 'response_body' => $responseBody,
+                'response_body_full' => $responseBody, // Full body for debugging
                 'response_body_length' => strlen($responseBody),
                 'apns_topic' => $this->apnsTopic,
                 'apns_url' => $apnsUrl,
                 'apns_production' => $this->apnsProduction,
+                'apns_key_id' => $this->apnsKeyId,
+                'apns_team_id' => $this->apnsTeamId,
             ];
             
             if ($errorData) {
-                $logData['error_reason'] = $errorData['reason'] ?? null;
+                $logData['error_reason'] = $errorReason;
                 $logData['error_timestamp'] = $errorData['timestamp'] ?? null;
+                $logData['error_data_full'] = $errorData; // Full error JSON
             }
             
-            Log::error('Apple Wallet push notification failed', $logData);
+            Log::error('Apple Wallet push notification failed - FULL APNs RESPONSE', $logData);
 
             // If device token is invalid, deactivate registration
             if ($httpCode === 410) {
@@ -265,12 +285,23 @@ class ApplePushService
                     'registration_id' => $registration->id,
                     'serial_number' => $registration->serial_number,
                 ]);
+                // Don't throw - allow other registrations to continue
+                return;
             }
             
-            // For 403 errors, provide helpful error message
+            // For 403 errors, log but don't throw (allow other pushes to continue)
             if ($httpCode === 403) {
-                $reason = $this->extractApnsReason($responseHeaders) ?? ($errorData['reason'] ?? 'Unknown');
-                throw new \Exception("APNs authentication failed (403): {$reason}. Check APNs key permissions and topic configuration.");
+                $reason = $apnsReason ?? $errorReason ?? 'Unknown';
+                Log::error('APNs 403 Forbidden - Authentication failed', [
+                    'registration_id' => $registration->id,
+                    'reason' => $reason,
+                    'apns_topic' => $this->apnsTopic,
+                    'apns_url' => $apnsUrl,
+                    'full_error_response' => $errorData,
+                    'suggestion' => 'Check APNs key permissions in Apple Developer Portal. Topic must match Pass Type Identifier exactly: ' . $this->apnsTopic,
+                ]);
+                // Don't throw - continue with other registrations
+                return;
             }
         }
     }

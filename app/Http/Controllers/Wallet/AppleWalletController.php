@@ -271,10 +271,9 @@ class AppleWalletController extends Controller
                             $latestUpdated = $accountUpdated;
                         }
                     }
-                } else {
-                    // If no account or updated_at, include it (safer default)
-                    $serialNumbers[] = $registration->serial_number;
                 }
+                // Note: We don't include registrations without accounts or updated_at
+                // when filtering by timestamp (safer - only return passes that actually updated)
             }
         } else {
             // Return all serial numbers if no timestamp provided
@@ -290,18 +289,32 @@ class AppleWalletController extends Controller
             }
         }
 
+        // If no updated serials found, return 204 No Content
+        if (empty($serialNumbers)) {
+            Log::info('Apple Wallet device updates list: No updates found', [
+                'device_library_identifier' => $deviceLibraryIdentifier,
+                'pass_type_identifier' => $passTypeIdentifier,
+                'passes_updated_since' => $passesUpdatedSince,
+                'total_registrations' => $registrations->count(),
+            ]);
+            return response('', 204);
+        }
+
         // Use latest account updated_at, or current time if no accounts found
         $lastUpdated = $latestUpdated > 0 ? $latestUpdated : now()->timestamp;
+        
+        // Convert to ISO8601 format as required by Apple
+        $lastUpdatedISO = \Carbon\Carbon::createFromTimestamp($lastUpdated)->toIso8601String();
 
         Log::info('Apple Wallet device updates list response', [
             'device_library_identifier' => $deviceLibraryIdentifier,
             'serial_count' => count($serialNumbers),
-            'last_updated' => $lastUpdated,
+            'last_updated' => $lastUpdatedISO,
             'serial_numbers' => $serialNumbers,
         ]);
 
         return response()->json([
-            'lastUpdated' => (string) $lastUpdated,
+            'lastUpdated' => $lastUpdatedISO,
             'serialNumbers' => $serialNumbers,
         ]);
     }
