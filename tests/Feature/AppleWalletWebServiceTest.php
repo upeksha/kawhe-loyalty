@@ -306,8 +306,9 @@ test('get pass returns 304 when if-modified-since is newer', function () {
     $serialNumber = "kawhe-{$store->id}-{$customer->id}";
     $ifModifiedSince = now()->toRfc7231String();
 
+    // Use the account's public_token for authentication (as per Apple Wallet spec)
     $response = $this->get("/wallet/v1/passes/pass.com.kawhe.loyalty/{$serialNumber}", [
-        'Authorization' => 'ApplePass test-auth-token-123',
+        'Authorization' => 'ApplePass ' . $account->public_token,
         'If-Modified-Since' => $ifModifiedSince,
     ]);
 
