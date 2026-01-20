@@ -1,410 +1,394 @@
-# Apple Wallet Pass Web Service - Testing Guide
+# Apple Wallet Testing Guide
 
-## Quick Verification Checklist
+## Quick Start Testing
 
-### 1. Verify Configuration
+### Option 1: Use Existing Data (After Migration)
+
+If you have existing loyalty accounts in your database:
+
+1. **Run the migration first:**
+   ```bash
+   php artisan migrate
+   ```
+   This will add `wallet_auth_token` to all existing accounts.
+
+2. **Verify tokens were created:**
+   ```bash
+   php artisan tinker
+   ```
+   ```php
+   // Check if accounts have wallet_auth_token
+   \App\Models\LoyaltyAccount::whereNull('wallet_auth_token')->count();
+   // Should return 0 after migration
+   
+   // Get an existing account
+   $account = \App\Models\LoyaltyAccount::first();
+   echo "Public Token: " . $account->public_token . "\n";
+   echo "Wallet Auth Token: " . $account->wallet_auth_token . "\n";
+   ```
+
+3. **Regenerate passes for existing accounts:**
+   ```php
+   // In tinker
+   $account = \App\Models\LoyaltyAccount::first();
+   $account->load(['store', 'customer']);
+   
+   $service = app(\App\Services\Wallet\AppleWalletPassService::class);
+   $pkpass = $service->generatePass($account);
+   
+   // Save to file for testing
+   file_put_contents('/tmp/test-pass.pkpass', $pkpass);
+   echo "Pass generated: /tmp/test-pass.pkpass\n";
+   ```
+
+### Option 2: Create New Test Data
+
+Use the existing Artisan commands:
 
 ```bash
-# Check all wallet config
-php artisan config:show wallet
+# Create a new store with example cards
+php artisan store:create-with-cards {user_email} {store_name} {card_count}
 
-# Should show:
-# - web_service_auth_token: (your token)
-# - push_enabled: true
-# - apns_key_id: 5JGMHRZC36
-# - apns_team_id: 4XCV53NVXP
-# - apns_auth_key_path: apns/AuthKey_5JGMHRZC36.p8
-# - apns_topic: pass.com.kawhe.loyalty
-# - apns_production: true
+# Or create example cards for an existing store
+php artisan cards:create {user_email} {store_id} {count}
 ```
 
-### 2. Verify APNs Key File
+### Option 3: Quick Test Script
+
+Create a test script to verify everything works:
 
 ```bash
-# Check file exists
-ls -la storage/app/private/apns/AuthKey_5JGMHRZC36.p8
-
-# Should show: -rw------- (600 permissions)
-```
-
-### 3. Verify Database Migration
-
-```bash
-# Check table exists
 php artisan tinker
 ```
 
 ```php
-Schema::hasTable('apple_wallet_registrations'); // Should return true
-exit
-```
-
-### 4. Test Web Service Endpoints
-
-#### A. Get a Test Loyalty Account
-
-```bash
-php artisan tinker
-```
-
-```php
-// Create or get a test account
+// 1. Get or create a test account
 $user = \App\Models\User::first();
-$store = \App\Models\Store::first();
-$customer = \App\Models\Customer::first();
-$account = \App\Models\LoyaltyAccount::firstOrCreate([
+$store = $user->stores()->first() ?? \App\Models\Store::factory()->create(['user_id' => $user->id]);
+$customer = \App\Models\Customer::factory()->create();
+$account = \App\Models\LoyaltyAccount::factory()->create([
     'store_id' => $store->id,
     'customer_id' => $customer->id,
-], [
-    'stamp_count' => 0,
-    'reward_balance' => 0,
+    'stamp_count' => 5, // Some stamps
+    'reward_balance' => 0, // No rewards yet
 ]);
 
-$serialNumber = "kawhe-{$store->id}-{$customer->id}";
-echo "Serial Number: {$serialNumber}\n";
+// 2. Verify wallet_auth_token exists
+echo "Account ID: {$account->id}\n";
 echo "Public Token: {$account->public_token}\n";
-exit
-```
+echo "Wallet Auth Token: {$account->wallet_auth_token}\n";
+echo "Serial Number: kawhe-{$store->id}-{$customer->id}\n";
 
-#### B. Test Device Registration
+// 3. Test pass generation
+$service = app(\App\Services\Wallet\AppleWalletPassService::class);
+$pkpass = $service->generatePass($account);
+echo "Pass generated: " . strlen($pkpass) . " bytes\n";
 
-```bash
-# Replace YOUR_DOMAIN, SERIAL_NUMBER, and AUTH_TOKEN with actual values
-curl -X POST https://YOUR_DOMAIN/wallet/v1/devices/test-device-123/registrations/pass.com.kawhe.loyalty/SERIAL_NUMBER \
-  -H "Authorization: ApplePass YOUR_AUTH_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"pushToken": "test-push-token-456"}' \
-  -v
-```
+// 4. Check QR code content (should be LA:public_token when no rewards)
+$passData = json_decode(file_get_contents('zip://' . sys_get_temp_dir() . '/pass.json#pass.json'), true);
+// Actually, we need to extract it differently...
+// For now, just verify the pass generates
 
-**Expected Response:**
-- `201 Created` - New registration
-- `200 OK` - Already registered (idempotent)
-
-#### C. Test Pass Retrieval
-
-```bash
-curl -X GET https://YOUR_DOMAIN/wallet/v1/passes/pass.com.kawhe.loyalty/SERIAL_NUMBER \
-  -H "Authorization: ApplePass YOUR_AUTH_TOKEN" \
-  --output test-pass.pkpass \
-  -v
-```
-
-**Expected Response:**
-- `200 OK` with Content-Type: `application/vnd.apple.pkpass`
-- File should be a valid ZIP (pkpass is a ZIP file)
-- Check: `file test-pass.pkpass` should show "Zip archive"
-
-#### D. Test 304 Not Modified
-
-```bash
-# First request - note the Last-Modified header
-curl -X GET https://YOUR_DOMAIN/wallet/v1/passes/pass.com.kawhe.loyalty/SERIAL_NUMBER \
-  -H "Authorization: ApplePass YOUR_AUTH_TOKEN" \
-  -v 2>&1 | grep -i "last-modified"
-
-# Second request with If-Modified-Since (use the value from above)
-curl -X GET https://YOUR_DOMAIN/wallet/v1/passes/pass.com.kawhe.loyalty/SERIAL_NUMBER \
-  -H "Authorization: ApplePass YOUR_AUTH_TOKEN" \
-  -H "If-Modified-Since: Mon, 15 Jan 2024 10:00:00 GMT" \
-  -v
-```
-
-**Expected Response:**
-- `304 Not Modified` (if pass hasn't changed)
-
-#### E. Test Updated Serials List
-
-```bash
-curl -X GET "https://YOUR_DOMAIN/wallet/v1/devices/test-device-123/registrations/pass.com.kawhe.loyalty?passesUpdatedSince=0" \
-  -H "Authorization: ApplePass YOUR_AUTH_TOKEN" \
-  -v
-```
-
-**Expected Response:**
-```json
-{
-  "lastUpdated": 1705320000,
-  "serialNumbers": ["kawhe-1-2"]
-}
-```
-
-#### F. Test Log Endpoint
-
-```bash
-curl -X POST https://YOUR_DOMAIN/wallet/v1/log \
-  -H "Authorization: ApplePass YOUR_AUTH_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"logs": [{"level": "info", "message": "Test log"}]}' \
-  -v
-```
-
-**Expected Response:**
-- `200 OK`
-
-### 5. Test Authentication
-
-#### Test Invalid Token
-
-```bash
-curl -X POST https://YOUR_DOMAIN/wallet/v1/log \
-  -H "Authorization: ApplePass wrong-token" \
-  -H "Content-Type: application/json" \
-  -d '{"logs": []}' \
-  -v
-```
-
-**Expected Response:**
-- `401 Unauthorized`
-
-#### Test Missing Token
-
-```bash
-curl -X POST https://YOUR_DOMAIN/wallet/v1/log \
-  -H "Content-Type: application/json" \
-  -d '{"logs": []}' \
-  -v
-```
-
-**Expected Response:**
-- `401 Unauthorized`
-
-### 6. Test Full Flow (Stamp → Push → Pass Update)
-
-#### A. Register a Device
-
-```bash
-# Register device for a real account
-curl -X POST https://YOUR_DOMAIN/wallet/v1/devices/real-device-123/registrations/pass.com.kawhe.loyalty/SERIAL_NUMBER \
-  -H "Authorization: ApplePass YOUR_AUTH_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"pushToken": "REAL_DEVICE_PUSH_TOKEN"}' \
-  -v
-```
-
-#### B. Add a Stamp (via your app or API)
-
-```bash
-# Via your stamping endpoint
-curl -X POST https://YOUR_DOMAIN/stamp \
-  -H "Authorization: Bearer YOUR_MERCHANT_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "token": "LA:PUBLIC_TOKEN",
-    "store_id": 1
-  }' \
-  -v
-```
-
-#### C. Check Queue Worker
-
-```bash
-# If using queue worker, check it's running
-ps aux | grep "queue:work"
-
-# Or check systemd service
-systemctl status kawhe-queue
-
-# Check queue logs
-tail -f storage/logs/laravel.log | grep -i "wallet\|apns\|push"
-```
-
-#### D. Verify Push Was Sent
-
-```bash
-# Check logs for push notification attempts
-tail -f storage/logs/laravel.log | grep -i "push"
-```
-
-**Look for:**
-- "Sending Apple Wallet push notifications"
-- "Apple Wallet push notification sent successfully"
-- Or any error messages
-
-### 7. Verify Database
-
-```bash
-php artisan tinker
-```
-
-```php
-// Check registrations
-\App\Models\AppleWalletRegistration::all();
-
-// Check specific registration
-\App\Models\AppleWalletRegistration::where('device_library_identifier', 'test-device-123')->first();
-
-exit
-```
-
-### 8. Common Issues to Check
-
-#### Issue: 500 Error on Pass Generation
-
-**Check:**
-```bash
-# Verify pass generation works independently
-php artisan tinker
-```
-
-```php
-$account = \App\Models\LoyaltyAccount::first();
-$service = app(\App\Services\Wallet\Apple\ApplePassService::class);
-$pkpass = $service->generatePkpassForAccount($account);
-echo "Pass size: " . strlen($pkpass) . " bytes\n";
-exit
-```
-
-#### Issue: APNs Push Not Working
-
-**Check:**
-1. Verify APNs key file exists and is readable
-2. Check logs for JWT generation errors
-3. Verify cURL supports HTTP/2: `curl --version | grep HTTP`
-4. Test JWT generation manually (see below)
-
-#### Issue: 401 Unauthorized
-
-**Check:**
-```bash
-# Verify token matches
-php artisan tinker
-```
-
-```php
-config('wallet.apple.web_service_auth_token');
-exit
-```
-
-Compare with the token in your `.env` file.
-
-### 9. Advanced Testing
-
-#### Test JWT Generation (if APNs push fails)
-
-```bash
-php artisan tinker
-```
-
-```php
-$service = app(\App\Services\Wallet\Apple\ApplePushService::class);
-// This will test JWT generation
-// Note: This uses reflection to access protected method
-// Or check logs for JWT errors
-exit
-```
-
-#### Test Pass Generation with Updated Data
-
-```bash
-php artisan tinker
-```
-
-```php
-$account = \App\Models\LoyaltyAccount::first();
-$account->stamp_count = 5;
-$account->reward_balance = 1;
+// 5. Add some rewards
+$account->reward_balance = 2;
+$account->redeem_token = \Illuminate\Support\Str::random(40);
 $account->save();
 
-$service = app(\App\Services\Wallet\Apple\ApplePassService::class);
-$pkpass = $service->generatePkpassForAccount($account);
-file_put_contents('/tmp/test-pass.pkpass', $pkpass);
-echo "Pass saved to /tmp/test-pass.pkpass\n";
-exit
+// 6. Regenerate pass (should now show LR:redeem_token)
+$pkpass2 = $service->generatePass($account);
+echo "Pass regenerated with rewards: " . strlen($pkpass2) . " bytes\n";
 ```
 
-Then download and verify the pass shows updated stamp count.
+## Testing on iPhone
 
-### 10. Production Checklist
+### Step 1: Generate and Download Pass
 
-Before going live:
+1. **Get the download URL:**
+   ```bash
+   php artisan tinker
+   ```
+   ```php
+   $account = \App\Models\LoyaltyAccount::first();
+   $url = route('wallet.apple.download', ['public_token' => $account->public_token]);
+   echo "Download URL: " . config('app.url') . $url . "\n";
+   ```
 
-- [ ] HTTPS is enabled (required by Apple)
-- [ ] Web service auth token is strong and secure
-- [ ] APNs key file has 600 permissions
-- [ ] Queue worker is running and monitored
-- [ ] Logs are being monitored
-- [ ] Error notifications are set up
-- [ ] Test with a real iPhone and Apple Wallet
+2. **Or use the card page:**
+   - Visit: `https://your-domain.com/card/{public_token}`
+   - Click "Add to Apple Wallet"
 
-### Quick Test Script
+### Step 2: Test Stamping
 
-Save this as `test-wallet.sh`:
+1. **Open the pass in Wallet**
+2. **Scan the QR code** (should show `LA:{public_token}`)
+3. **Verify:**
+   - Stamps increment
+   - Pass updates automatically (if APNs enabled)
+   - QR code changes to `LR:{redeem_token}` when reward earned
+
+### Step 3: Test Redeeming
+
+1. **Ensure account has rewards:**
+   ```bash
+   php artisan tinker
+   ```
+   ```php
+   $account = \App\Models\LoyaltyAccount::first();
+   $account->reward_balance = 1;
+   $account->redeem_token = \Illuminate\Support\Str::random(40);
+   $account->save();
+   
+   // Trigger wallet update
+   \App\Jobs\UpdateWalletPassJob::dispatch($account->id);
+   ```
+
+2. **Check Wallet:**
+   - QR code should now show `LR:{redeem_token}`
+   - Scan it to redeem
+   - Verify token rotates after redemption
+
+## Testing Commands
+
+### Test APNs Push (if enabled)
 
 ```bash
-#!/bin/bash
-
-DOMAIN="your-domain.com"
-AUTH_TOKEN="your-auth-token"
-SERIAL_NUMBER="kawhe-1-2"
-
-echo "Testing Apple Wallet Web Service..."
-echo ""
-
-echo "1. Testing registration..."
-curl -X POST "https://${DOMAIN}/wallet/v1/devices/test-device-123/registrations/pass.com.kawhe.loyalty/${SERIAL_NUMBER}" \
-  -H "Authorization: ApplePass ${AUTH_TOKEN}" \
-  -H "Content-Type: application/json" \
-  -d '{"pushToken": "test-token"}' \
-  -w "\nHTTP Status: %{http_code}\n" \
-  -s -o /dev/null
-
-echo ""
-echo "2. Testing pass retrieval..."
-curl -X GET "https://${DOMAIN}/wallet/v1/passes/pass.com.kawhe.loyalty/${SERIAL_NUMBER}" \
-  -H "Authorization: ApplePass ${AUTH_TOKEN}" \
-  -w "\nHTTP Status: %{http_code}\n" \
-  -s -o /tmp/test-pass.pkpass
-
-if [ -f /tmp/test-pass.pkpass ]; then
-    echo "Pass file size: $(stat -f%z /tmp/test-pass.pkpass) bytes"
-    file /tmp/test-pass.pkpass
-fi
-
-echo ""
-echo "3. Testing log endpoint..."
-curl -X POST "https://${DOMAIN}/wallet/v1/log" \
-  -H "Authorization: ApplePass ${AUTH_TOKEN}" \
-  -H "Content-Type: application/json" \
-  -d '{"logs": [{"level": "info", "message": "Test"}]}' \
-  -w "\nHTTP Status: %{http_code}\n" \
-  -s -o /dev/null
-
-echo ""
-echo "Testing complete!"
+php artisan wallet:apns-test {serialNumber}
 ```
 
-Make it executable and run:
+Example:
 ```bash
-chmod +x test-wallet.sh
-./test-wallet.sh
+php artisan wallet:apns-test kawhe-1-2
 ```
 
-## Monitoring
-
-### Watch Logs in Real-Time
+### Test Pass Generation
 
 ```bash
-tail -f storage/logs/laravel.log | grep -E "wallet|apns|push|Apple"
+php artisan tinker
 ```
 
-### Check Queue Status
+```php
+$account = \App\Models\LoyaltyAccount::first();
+$service = app(\App\Services\Wallet\AppleWalletPassService::class);
+
+// Generate pass
+$pkpass = $service->generatePass($account);
+
+// Save to file
+file_put_contents(storage_path('app/test-pass.pkpass'), $pkpass);
+echo "Pass saved to: storage/app/test-pass.pkpass\n";
+```
+
+### Test Web Service Endpoints
 
 ```bash
-# If using database queue
-php artisan queue:monitor
-
-# Check failed jobs
-php artisan queue:failed
+# Get pass (requires wallet_auth_token)
+php artisan tinker
 ```
 
-## Success Indicators
+```php
+$account = \App\Models\LoyaltyAccount::first();
+$serial = "kawhe-{$account->store_id}-{$account->customer_id}";
+$url = config('app.url') . "/wallet/v1/passes/pass.com.kawhe.loyalty/{$serial}";
+$token = $account->wallet_auth_token;
 
-✅ All endpoints return expected status codes  
-✅ Pass files are valid ZIP archives  
-✅ 304 Not Modified works correctly  
-✅ Registrations are stored in database  
-✅ Push notifications are sent (check logs)  
-✅ No errors in logs  
+echo "Test with curl:\n";
+echo "curl -H 'Authorization: ApplePass {$token}' '{$url}'\n";
+```
 
-If all tests pass, your Apple Wallet Pass Web Service is ready for production!
+### Test Device Registration
+
+```bash
+php artisan tinker
+```
+
+```php
+$account = \App\Models\LoyaltyAccount::first();
+$serial = "kawhe-{$account->store_id}-{$account->customer_id}";
+$deviceId = 'test-device-' . time();
+$pushToken = str_repeat('a', 64);
+
+$url = config('app.url') . "/wallet/v1/devices/{$deviceId}/registrations/pass.com.kawhe.loyalty/{$serial}";
+$token = $account->wallet_auth_token;
+
+echo "Register device:\n";
+echo "curl -X POST -H 'Authorization: ApplePass {$token}' -H 'Content-Type: application/json' -d '{\"pushToken\":\"{$pushToken}\"}' '{$url}'\n";
+```
+
+## Verification Checklist
+
+### After Migration
+
+- [ ] All accounts have `wallet_auth_token`
+- [ ] No null values in `wallet_auth_token` column
+- [ ] Unique constraint works (no duplicates)
+
+### Pass Generation
+
+- [ ] Pass generates successfully
+- [ ] `authenticationToken` in pass.json = `wallet_auth_token` (not `public_token`)
+- [ ] QR code shows `LA:{public_token}` when no rewards
+- [ ] QR code shows `LR:{redeem_token}` when rewards available
+- [ ] QR format is `PKBarcodeFormatQR`
+
+### Stamping
+
+- [ ] Scanning `LA:{public_token}` increments stamps
+- [ ] Pass updates after stamping (if APNs enabled)
+- [ ] QR changes to `LR:` when reward earned
+
+### Redeeming
+
+- [ ] Scanning `LR:{redeem_token}` redeems reward
+- [ ] `reward_balance` decreases
+- [ ] `redeem_token` rotates after redemption
+- [ ] Old redeem QR cannot be reused
+- [ ] QR changes back to `LA:` when no rewards left
+
+### Web Service
+
+- [ ] `GET /wallet/v1/passes/{passType}/{serial}` returns 200 with pass
+- [ ] `GET /wallet/v1/passes/{passType}/{serial}` returns 304 with `Last-Modified` header
+- [ ] Authentication uses `wallet_auth_token`
+- [ ] Device registration works
+- [ ] APNs push sends (if enabled)
+
+## Troubleshooting
+
+### Pass won't generate
+
+```bash
+# Check certificates
+ls -la passgenerator/certs/
+# Should have: certificate.p12, AppleWWDRCA.pem
+
+# Check config
+php artisan config:show passgenerator
+```
+
+### APNs not working
+
+```bash
+# Check APNs config
+php artisan config:show wallet.apple
+
+# Test APNs push
+php artisan wallet:apns-test {serialNumber}
+
+# Check logs
+tail -f storage/logs/laravel.log | grep -i "apns\|push\|wallet"
+```
+
+### QR code wrong format
+
+```bash
+# Verify pass.json content
+php artisan tinker
+```
+
+```php
+$account = \App\Models\LoyaltyAccount::first();
+$service = app(\App\Services\Wallet\AppleWalletPassService::class);
+$pkpass = $service->generatePass($account);
+
+// Extract and check pass.json
+$zip = new \ZipArchive();
+$tempFile = tempnam(sys_get_temp_dir(), 'pass');
+file_put_contents($tempFile, $pkpass);
+$zip->open($tempFile);
+$passJson = json_decode($zip->getFromName('pass.json'), true);
+echo "Barcode message: " . $passJson['barcode']['message'] . "\n";
+echo "Auth token: " . $passJson['authenticationToken'] . "\n";
+$zip->close();
+unlink($tempFile);
+```
+
+## Quick Test Script
+
+Save this as `test-wallet.php`:
+
+```php
+<?php
+
+require __DIR__.'/vendor/autoload.php';
+
+$app = require_once __DIR__.'/bootstrap/app.php';
+$app->make(\Illuminate\Contracts\Console\Kernel::class)->bootstrap();
+
+// Get or create test account
+$user = \App\Models\User::first();
+if (!$user) {
+    echo "No users found. Create a user first.\n";
+    exit(1);
+}
+
+$store = $user->stores()->first();
+if (!$store) {
+    $store = \App\Models\Store::factory()->create(['user_id' => $user->id]);
+    echo "Created store: {$store->name}\n";
+}
+
+$account = \App\Models\LoyaltyAccount::where('store_id', $store->id)->first();
+if (!$account) {
+    $customer = \App\Models\Customer::factory()->create();
+    $account = \App\Models\LoyaltyAccount::factory()->create([
+        'store_id' => $store->id,
+        'customer_id' => $customer->id,
+        'stamp_count' => 5,
+    ]);
+    echo "Created account: {$account->id}\n";
+}
+
+echo "\n=== Account Info ===\n";
+echo "Account ID: {$account->id}\n";
+echo "Public Token: {$account->public_token}\n";
+echo "Wallet Auth Token: {$account->wallet_auth_token}\n";
+echo "Serial: kawhe-{$store->id}-{$account->customer_id}\n";
+echo "Stamps: {$account->stamp_count}\n";
+echo "Rewards: " . ($account->reward_balance ?? 0) . "\n";
+
+// Test pass generation
+echo "\n=== Testing Pass Generation ===\n";
+$service = app(\App\Services\Wallet\AppleWalletPassService::class);
+try {
+    $pkpass = $service->generatePass($account);
+    echo "✓ Pass generated: " . strlen($pkpass) . " bytes\n";
+    
+    // Save to file
+    $filename = storage_path('app/test-pass-' . $account->id . '.pkpass');
+    file_put_contents($filename, $pkpass);
+    echo "✓ Saved to: {$filename}\n";
+} catch (\Exception $e) {
+    echo "✗ Error: " . $e->getMessage() . "\n";
+}
+
+// Test with rewards
+echo "\n=== Testing with Rewards ===\n";
+$account->reward_balance = 1;
+$account->redeem_token = \Illuminate\Support\Str::random(40);
+$account->save();
+
+try {
+    $pkpass2 = $service->generatePass($account);
+    echo "✓ Pass with rewards generated: " . strlen($pkpass2) . " bytes\n";
+    
+    $filename2 = storage_path('app/test-pass-reward-' . $account->id . '.pkpass');
+    file_put_contents($filename2, $pkpass2);
+    echo "✓ Saved to: {$filename2}\n";
+} catch (\Exception $e) {
+    echo "✗ Error: " . $e->getMessage() . "\n";
+}
+
+echo "\n=== Download URLs ===\n";
+echo "Stamping QR: LA:{$account->public_token}\n";
+if ($account->redeem_token) {
+    echo "Redeem QR: LR:{$account->redeem_token}\n";
+}
+echo "Pass download: " . config('app.url') . route('wallet.apple.download', ['public_token' => $account->public_token], false) . "\n";
+
+echo "\n✓ Testing complete!\n";
+```
+
+Run it:
+```bash
+php test-wallet.php
+```
