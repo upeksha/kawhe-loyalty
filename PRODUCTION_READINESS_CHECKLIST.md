@@ -45,10 +45,14 @@
 - [ ] **Job timeout** settings appropriate
 
 ### Database
+- [ ] **MySQL/PostgreSQL** configured (NOT SQLite for production!)
+- [ ] **Database created** with utf8mb4 charset
+- [ ] **User created** with secure password
 - [ ] **Migrations run**: `php artisan migrate --force`
 - [ ] **Database backups** configured
 - [ ] **Connection pooling** if needed
 - [ ] **Indexes** on frequently queried columns
+- [ ] **Slow query log** enabled
 
 ## 📊 Monitoring & Logging
 
