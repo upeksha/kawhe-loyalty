@@ -262,30 +262,50 @@ class AppleWalletController extends Controller
             $updatedTimestamps = [];
 
             if ($passesUpdatedSince) {
-            // Parse passesUpdatedSince timestamp (can be ISO8601 string or Unix timestamp)
-            try {
-                // Try parsing as ISO8601 first (Apple's preferred format)
-                $since = \Carbon\Carbon::parse($passesUpdatedSince);
-                // Ensure UTC timezone for consistent comparison
-                $since = $since->utc();
-            } catch (\Exception $e) {
-                // Fallback to numeric timestamp
-                if (is_numeric($passesUpdatedSince)) {
-                    $since = \Carbon\Carbon::createFromTimestamp((int) $passesUpdatedSince)->utc();
-                } else {
-                    // Invalid timestamp, log and return empty (safer than returning all)
-                    Log::warning('Apple Wallet device updates list: Invalid passesUpdatedSince timestamp', [
-                        'device_library_identifier' => $deviceLibraryIdentifier,
-                        'pass_type_identifier' => $passTypeIdentifier,
-                        'passes_updated_since' => $passesUpdatedSince,
+                // Normalize passesUpdatedSince: replace spaces with '+' (URL decoding issue)
+                // Apple may send "2026-01-20T21:52:23 00:00" instead of "2026-01-20T21:52:23+00:00"
+                $normalizedSince = str_replace(' ', '+', $passesUpdatedSince);
+                
+                Log::debug('Apple Wallet device updates: Parsing passesUpdatedSince', [
+                    'raw' => $passesUpdatedSince,
+                    'normalized' => $normalizedSince,
+                ]);
+
+                // Parse passesUpdatedSince timestamp (can be ISO8601 string or Unix timestamp)
+                try {
+                    // Try parsing as ISO8601 first (Apple's preferred format)
+                    $since = \Carbon\Carbon::parse($normalizedSince);
+                    // Ensure UTC timezone for consistent comparison
+                    $since = $since->utc();
+                    
+                    Log::debug('Apple Wallet device updates: Successfully parsed timestamp', [
+                        'parsed' => $since->toIso8601String(),
+                        'utc' => $since->utc()->toIso8601String(),
                     ]);
-                    // Return JSON with empty array and lastUpdated = passesUpdatedSince
-                    return response()->json([
-                        'lastUpdated' => $passesUpdatedSince,
-                        'serialNumbers' => [],
-                    ]);
+                } catch (\Exception $e) {
+                    // Fallback to numeric timestamp
+                    if (is_numeric($passesUpdatedSince)) {
+                        $since = \Carbon\Carbon::createFromTimestamp((int) $passesUpdatedSince)->utc();
+                        Log::debug('Apple Wallet device updates: Parsed as Unix timestamp', [
+                            'timestamp' => $passesUpdatedSince,
+                            'parsed' => $since->toIso8601String(),
+                        ]);
+                    } else {
+                        // Invalid timestamp, log and return empty (safer than returning all)
+                        Log::warning('Apple Wallet device updates list: Invalid passesUpdatedSince timestamp', [
+                            'device_library_identifier' => $deviceLibraryIdentifier,
+                            'pass_type_identifier' => $passTypeIdentifier,
+                            'passes_updated_since_raw' => $passesUpdatedSince,
+                            'passes_updated_since_normalized' => $normalizedSince,
+                            'error' => $e->getMessage(),
+                        ]);
+                        // Return JSON with empty array and lastUpdated in Zulu format
+                        return response()->json([
+                            'lastUpdated' => now()->utc()->format('Y-m-d\TH:i:s\Z'),
+                            'serialNumbers' => [],
+                        ]);
+                    }
                 }
-            }
 
                 // Filter registrations: only include if LoyaltyAccount->updated_at > passesUpdatedSince (STRICT)
                 foreach ($registrations as $registration) {
@@ -309,16 +329,23 @@ class AppleWalletController extends Controller
                     $isNewer = $accountUpdated->gt($since);
                     Log::debug('Apple Wallet device updates: Checking account', [
                         'serial_number' => $registration->serial_number,
-                        'account_updated_at' => $accountUpdated->toIso8601String(),
-                        'passes_updated_since' => $since->toIso8601String(),
+                        'account_updated_at' => $accountUpdated->format('Y-m-d\TH:i:s\Z'),
+                        'account_updated_at_iso' => $accountUpdated->toIso8601String(),
+                        'passes_updated_since' => $since->format('Y-m-d\TH:i:s\Z'),
+                        'passes_updated_since_iso' => $since->toIso8601String(),
                         'is_newer' => $isNewer,
                         'difference_seconds' => $accountUpdated->diffInSeconds($since, false),
+                        'included' => $isNewer,
                     ]);
                     
                     if ($isNewer) {
                         // Account was updated AFTER passesUpdatedSince - include it
                         $serialNumbers[] = $registration->serial_number;
                         $updatedTimestamps[] = $accountUpdated;
+                        Log::debug('Apple Wallet device updates: Serial included', [
+                            'serial_number' => $registration->serial_number,
+                            'account_id' => $account->id,
+                        ]);
                     }
                 }
 
@@ -327,14 +354,15 @@ class AppleWalletController extends Controller
                     Log::info('Apple Wallet device updates list: No updates found', [
                         'device_library_identifier' => $deviceLibraryIdentifier,
                         'pass_type_identifier' => $passTypeIdentifier,
-                        'passes_updated_since' => $passesUpdatedSince,
-                        'since_parsed' => $since->toIso8601String(),
+                        'passes_updated_since_raw' => $passesUpdatedSince,
+                        'since_parsed' => $since->format('Y-m-d\TH:i:s\Z'),
                         'total_registrations' => $registrations->count(),
                     ]);
                     
                     // Return JSON with empty array (not 204) to match Apple's expectation
+                    // Use Zulu format (Z) instead of +00:00 to avoid URL encoding issues
                     return response()->json([
-                        'lastUpdated' => $since->toIso8601String(),
+                        'lastUpdated' => $since->format('Y-m-d\TH:i:s\Z'),
                         'serialNumbers' => [],
                     ]);
                 }
@@ -372,13 +400,15 @@ class AppleWalletController extends Controller
                 }
             }
 
-            // Convert to ISO8601 format as required by Apple
-            $lastUpdatedISO = $lastUpdated->toIso8601String();
+            // Convert to Zulu format (Z) instead of +00:00 to avoid URL encoding issues
+            // Apple expects ISO8601 but Zulu format (Z) is more reliable for URL parameters
+            $lastUpdatedISO = $lastUpdated->format('Y-m-d\TH:i:s\Z');
 
             Log::info('Apple Wallet device updates list response', [
                 'device_library_identifier' => $deviceLibraryIdentifier,
                 'serial_count' => count($serialNumbers),
-                'last_updated' => $lastUpdatedISO,
+                'last_updated_zulu' => $lastUpdatedISO,
+                'last_updated_iso' => $lastUpdated->toIso8601String(),
                 'serial_numbers' => $serialNumbers,
             ]);
 
@@ -395,8 +425,9 @@ class AppleWalletController extends Controller
             ]);
             
             // Return empty response on error (safer than crashing)
+            // Use Zulu format (Z) instead of +00:00 to avoid URL encoding issues
             return response()->json([
-                'lastUpdated' => now()->utc()->toIso8601String(),
+                'lastUpdated' => now()->utc()->format('Y-m-d\TH:i:s\Z'),
                 'serialNumbers' => [],
             ], 500);
         }
