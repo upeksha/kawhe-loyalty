@@ -79,8 +79,8 @@ class ApplePassAuthMiddleware
                 $passService = app(\App\Services\Wallet\Apple\ApplePassService::class);
                 $account = $passService->resolveLoyaltyAccount($serialNumber);
                 
-                if ($account && $account->public_token === $token) {
-                    // Token matches the pass's public_token (which is used as authenticationToken)
+                if ($account && $account->wallet_auth_token === $token) {
+                    // Token matches the pass's wallet_auth_token (which is used as authenticationToken)
                     \Log::debug('Apple Wallet authentication: Token validated against pass', [
                         'serial_number' => $serialNumber,
                         'loyalty_account_id' => $account->id,
@@ -91,7 +91,7 @@ class ApplePassAuthMiddleware
                     \Log::debug('Apple Wallet authentication: Token mismatch for pass', [
                         'serial_number' => $serialNumber,
                         'loyalty_account_id' => $account->id,
-                        'expected_token_preview' => substr($account->public_token, 0, 10) . '...',
+                        'expected_token_preview' => substr($account->wallet_auth_token, 0, 10) . '...',
                         'provided_token_preview' => substr($token, 0, 10) . '...',
                     ]);
                 }

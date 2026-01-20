@@ -191,7 +191,7 @@ class ApplePushService
             'Authorization: Bearer ' . $jwt,
             'apns-topic: ' . $this->apnsTopic,
             'apns-push-type: background',
-            'apns-priority: 10',
+            'apns-priority: 5', // Recommended priority for Wallet updates
             'Content-Type: application/json',
             'Content-Length: ' . strlen($payload),
         ];

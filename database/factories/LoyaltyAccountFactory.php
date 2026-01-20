@@ -25,6 +25,7 @@ class LoyaltyAccountFactory extends Factory
             'customer_id' => Customer::factory(),
             'stamp_count' => 0,
             'public_token' => Str::random(40),
+            'wallet_auth_token' => Str::random(40),
             'version' => 1,
         ];
     }

@@ -27,6 +27,7 @@ class LoyaltyAccount extends Model
         'stamp_count',
         'reward_balance',
         'public_token',
+        'wallet_auth_token',
         'redeem_token',
         'last_stamped_at',
         'reward_available_at',
@@ -54,6 +55,9 @@ class LoyaltyAccount extends Model
         static::creating(function ($account) {
             if (empty($account->public_token)) {
                 $account->public_token = Str::random(40);
+            }
+            if (empty($account->wallet_auth_token)) {
+                $account->wallet_auth_token = Str::random(40);
             }
         });
     }

@@ -215,7 +215,7 @@ class AppleWalletController extends Controller
                 'user_agent' => $request->userAgent(),
             ]);
 
-            return response($pkpassData, 200, [
+            return response($pkpassData, 200)->withHeaders([
                 'Content-Type' => $mimeType,
                 'Content-Disposition' => 'attachment; filename="pass.pkpass"',
                 'Content-Length' => strlen($pkpassData),

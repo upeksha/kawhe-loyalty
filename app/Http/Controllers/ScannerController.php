@@ -32,13 +32,24 @@ class ScannerController extends Controller
         ]);
 
         $token = $request->token;
-        // Strip "LA:" prefix if present
-        if (Str::startsWith($token, 'LA:')) {
+        
+        // Handle LR: (redeem) vs LA: (stamp) prefixes
+        $isRedeem = false;
+        if (Str::startsWith($token, 'LR:')) {
             $token = Str::substr($token, 3);
+            $isRedeem = true;
+        } elseif (Str::startsWith($token, 'LA:')) {
+            $token = Str::substr($token, 3);
+            $isRedeem = false;
         }
 
         // Trim token to prevent whitespace issues
         $token = trim($token);
+        
+        // If this is a redeem request, route to redeem method
+        if ($isRedeem) {
+            return $this->redeem($request->merge(['token' => $token]));
+        }
 
         $requestedStoreId = $request->store_id; // Store from dropdown (may be wrong)
         $count = $request->input('count', 1);
@@ -300,10 +311,11 @@ class ScannerController extends Controller
             $account->reward_redeemed_at = now(); // Last redeemed timestamp
             $account->increment('version'); // Increment version for optimistic locking
             
-            // Update reward_available_at and redeem_token based on remaining balance
+            // Rotate redeem_token after each redemption to prevent reuse
+            // This ensures old QR codes cannot be scanned again
             if ($account->reward_balance > 0) {
-                // Still have rewards, keep token and availability
-                // redeem_token stays the same (one token can represent "redeem 1 reward")
+                // Still have rewards, rotate token for security
+                $account->redeem_token = Str::random(40);
             } else {
                 // No rewards left
                 $account->reward_available_at = null;
@@ -346,6 +358,10 @@ class ScannerController extends Controller
             ]);
             
             StampUpdated::dispatch($account);
+            
+            // Dispatch wallet update job to regenerate pass and send APNs push
+            \App\Jobs\UpdateWalletPassJob::dispatch($account->id)
+                ->afterCommit();
 
             // Record event
             StampEvent::create([

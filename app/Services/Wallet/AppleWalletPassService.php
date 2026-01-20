@@ -34,11 +34,14 @@ class AppleWalletPassService
             // Apple Wallet Web Service configuration (required for push notifications)
             // Note: Apple automatically appends /v1 to webServiceURL, so we only specify /wallet
             'webServiceURL' => rtrim(config('app.url'), '/') . '/wallet',
-            // Use public_token as authenticationToken for per-pass security
-            // This allows each pass to have a unique token tied to the loyalty account
-            'authenticationToken' => $account->public_token,
+            // Use wallet_auth_token as authenticationToken for per-pass security
+            // This is separate from public_token for security (QR code contains public_token, not wallet_auth_token)
+            'authenticationToken' => $account->wallet_auth_token,
             'barcode' => [
-                'message' => 'LA:' . $account->public_token, // Critical: must match web QR format for scanner compatibility
+                // Dynamic QR message: LR:{redeem_token} when reward available, else LA:{public_token}
+                'message' => ($account->reward_balance ?? 0) > 0 && $account->redeem_token
+                    ? 'LR:' . $account->redeem_token
+                    : 'LA:' . $account->public_token,
                 'format' => 'PKBarcodeFormatQR',
                 'messageEncoding' => 'utf-8',
             ],
