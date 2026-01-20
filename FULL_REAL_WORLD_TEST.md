@@ -80,33 +80,18 @@ Test the complete flow: Create Merchant → Create Card → Add to Wallet → Te
 
 3. **Verify Device Registration:**
    ```bash
-   php artisan tinker
+   # Easiest way - use the command
+   php artisan wallet:check-registration
+   
+   # Or check specific account
+   php artisan wallet:check-registration {public_token}
    ```
-   ```php
-   // Get the account you just created
-   $account = \App\Models\LoyaltyAccount::latest()->first();
-   $serial = 'kawhe-' . $account->store_id . '-' . $account->customer_id;
    
-   echo "Account ID: {$account->id}\n";
-   echo "Public Token: {$account->public_token}\n";
-   echo "Serial: {$serial}\n";
-   echo "Card URL: " . config('app.url') . "/c/{$account->public_token}\n\n";
-   
-   // Check registration
-   $reg = \App\Models\AppleWalletRegistration::where('serial_number', $serial)
-       ->where('active', true)
-       ->first();
-   
-   if ($reg) {
-       echo "✓ Device registered!\n";
-       echo "Device ID: {$reg->device_library_identifier}\n";
-       echo "Registered at: {$reg->last_registered_at}\n";
-   } else {
-       echo "⚠️  Not registered yet. Wait 10-20 seconds and check again.\n";
-       echo "Or remove and re-add the pass to Wallet.\n";
-   }
-   exit
-   ```
+   This will show:
+   - Account information
+   - Card URL
+   - Device registrations (if any)
+   - Push token preview
 
 ## Step 4: Test Stamping (As Merchant)
 
