@@ -251,17 +251,17 @@ class AppleWalletController extends Controller
 
             $passesUpdatedSince = $request->query('passesUpdatedSince');
 
-        // Get all active registrations for this device and pass type
-        $registrations = AppleWalletRegistration::where('device_library_identifier', $deviceLibraryIdentifier)
-            ->where('pass_type_identifier', $passTypeIdentifier)
-            ->where('active', true)
-            ->with('loyaltyAccount')
-            ->get();
+            // Get all active registrations for this device and pass type
+            $registrations = AppleWalletRegistration::where('device_library_identifier', $deviceLibraryIdentifier)
+                ->where('pass_type_identifier', $passTypeIdentifier)
+                ->where('active', true)
+                ->with('loyaltyAccount')
+                ->get();
 
-        $serialNumbers = [];
-        $updatedTimestamps = [];
+            $serialNumbers = [];
+            $updatedTimestamps = [];
 
-        if ($passesUpdatedSince) {
+            if ($passesUpdatedSince) {
             // Parse passesUpdatedSince timestamp (can be ISO8601 string or Unix timestamp)
             try {
                 // Try parsing as ISO8601 first (Apple's preferred format)
@@ -287,100 +287,100 @@ class AppleWalletController extends Controller
                 }
             }
 
-            // Filter registrations: only include if LoyaltyAccount->updated_at > passesUpdatedSince (STRICT)
-            foreach ($registrations as $registration) {
-                if (!$registration->loyaltyAccount) {
-                    // Skip registrations without accounts
-                    continue;
+                // Filter registrations: only include if LoyaltyAccount->updated_at > passesUpdatedSince (STRICT)
+                foreach ($registrations as $registration) {
+                    if (!$registration->loyaltyAccount) {
+                        // Skip registrations without accounts
+                        continue;
+                    }
+
+                    $account = $registration->loyaltyAccount;
+                    
+                    // Ensure account has updated_at
+                    if (!$account->updated_at) {
+                        continue;
+                    }
+
+                    // Use STRICT comparison: updated_at must be strictly greater than passesUpdatedSince
+                    // This ensures we only return passes that actually changed
+                    $accountUpdated = $account->updated_at->utc();
+                    
+                    // Log comparison for debugging
+                    $isNewer = $accountUpdated->gt($since);
+                    Log::debug('Apple Wallet device updates: Checking account', [
+                        'serial_number' => $registration->serial_number,
+                        'account_updated_at' => $accountUpdated->toIso8601String(),
+                        'passes_updated_since' => $since->toIso8601String(),
+                        'is_newer' => $isNewer,
+                        'difference_seconds' => $accountUpdated->diffInSeconds($since, false),
+                    ]);
+                    
+                    if ($isNewer) {
+                        // Account was updated AFTER passesUpdatedSince - include it
+                        $serialNumbers[] = $registration->serial_number;
+                        $updatedTimestamps[] = $accountUpdated;
+                    }
                 }
 
-                $account = $registration->loyaltyAccount;
-                
-                // Ensure account has updated_at
-                if (!$account->updated_at) {
-                    continue;
+                // If no serials changed, return JSON with empty array and lastUpdated = passesUpdatedSince
+                if (empty($serialNumbers)) {
+                    Log::info('Apple Wallet device updates list: No updates found', [
+                        'device_library_identifier' => $deviceLibraryIdentifier,
+                        'pass_type_identifier' => $passTypeIdentifier,
+                        'passes_updated_since' => $passesUpdatedSince,
+                        'since_parsed' => $since->toIso8601String(),
+                        'total_registrations' => $registrations->count(),
+                    ]);
+                    
+                    // Return JSON with empty array (not 204) to match Apple's expectation
+                    return response()->json([
+                        'lastUpdated' => $since->toIso8601String(),
+                        'serialNumbers' => [],
+                    ]);
                 }
 
-                // Use STRICT comparison: updated_at must be strictly greater than passesUpdatedSince
-                // This ensures we only return passes that actually changed
-                $accountUpdated = $account->updated_at->utc();
-                
-                // Log comparison for debugging
-                $isNewer = $accountUpdated->gt($since);
-                Log::debug('Apple Wallet device updates: Checking account', [
-                    'serial_number' => $registration->serial_number,
-                    'account_updated_at' => $accountUpdated->toIso8601String(),
-                    'passes_updated_since' => $since->toIso8601String(),
-                    'is_newer' => $isNewer,
-                    'difference_seconds' => $accountUpdated->diffInSeconds($since, false),
-                ]);
-                
-                if ($isNewer) {
-                    // Account was updated AFTER passesUpdatedSince - include it
-                    $serialNumbers[] = $registration->serial_number;
-                    $updatedTimestamps[] = $accountUpdated;
-                }
-            }
-
-            // If no serials changed, return JSON with empty array and lastUpdated = passesUpdatedSince
-            if (empty($serialNumbers)) {
-                Log::info('Apple Wallet device updates list: No updates found', [
-                    'device_library_identifier' => $deviceLibraryIdentifier,
-                    'pass_type_identifier' => $passTypeIdentifier,
-                    'passes_updated_since' => $passesUpdatedSince,
-                    'since_parsed' => $since->toIso8601String(),
-                    'total_registrations' => $registrations->count(),
-                ]);
-                
-                // Return JSON with empty array (not 204) to match Apple's expectation
-                return response()->json([
-                    'lastUpdated' => $since->toIso8601String(),
-                    'serialNumbers' => [],
-                ]);
-            }
-
-            // Calculate lastUpdated as max updated_at from the returned serials
-            if (!empty($updatedTimestamps)) {
-                $lastUpdated = collect($updatedTimestamps)->max();
-                // Ensure we have a valid Carbon instance
-                if (!$lastUpdated instanceof \Carbon\Carbon) {
-                    $lastUpdated = now()->utc();
-                }
-            } else {
-                // Fallback: use passesUpdatedSince if no timestamps (shouldn't happen, but safety)
-                $lastUpdated = $since;
-            }
-        } else {
-            // No passesUpdatedSince provided - return all active registrations
-            $serialNumbers = $registrations->pluck('serial_number')->toArray();
-            
-            // Find latest updated_at from all accounts
-            foreach ($registrations as $registration) {
-                if ($registration->loyaltyAccount && $registration->loyaltyAccount->updated_at) {
-                    $updatedTimestamps[] = $registration->loyaltyAccount->updated_at->utc();
-                }
-            }
-            
-            if (!empty($updatedTimestamps)) {
-                $lastUpdated = collect($updatedTimestamps)->max();
-                // Ensure we have a valid Carbon instance
-                if (!$lastUpdated instanceof \Carbon\Carbon) {
-                    $lastUpdated = now()->utc();
+                // Calculate lastUpdated as max updated_at from the returned serials
+                if (!empty($updatedTimestamps)) {
+                    $lastUpdated = collect($updatedTimestamps)->max();
+                    // Ensure we have a valid Carbon instance
+                    if (!$lastUpdated instanceof \Carbon\Carbon) {
+                        $lastUpdated = now()->utc();
+                    }
+                } else {
+                    // Fallback: use passesUpdatedSince if no timestamps (shouldn't happen, but safety)
+                    $lastUpdated = $since;
                 }
             } else {
-                $lastUpdated = now()->utc();
+                // No passesUpdatedSince provided - return all active registrations
+                $serialNumbers = $registrations->pluck('serial_number')->toArray();
+                
+                // Find latest updated_at from all accounts
+                foreach ($registrations as $registration) {
+                    if ($registration->loyaltyAccount && $registration->loyaltyAccount->updated_at) {
+                        $updatedTimestamps[] = $registration->loyaltyAccount->updated_at->utc();
+                    }
+                }
+                
+                if (!empty($updatedTimestamps)) {
+                    $lastUpdated = collect($updatedTimestamps)->max();
+                    // Ensure we have a valid Carbon instance
+                    if (!$lastUpdated instanceof \Carbon\Carbon) {
+                        $lastUpdated = now()->utc();
+                    }
+                } else {
+                    $lastUpdated = now()->utc();
+                }
             }
-        }
 
-        // Convert to ISO8601 format as required by Apple
-        $lastUpdatedISO = $lastUpdated->toIso8601String();
+            // Convert to ISO8601 format as required by Apple
+            $lastUpdatedISO = $lastUpdated->toIso8601String();
 
-        Log::info('Apple Wallet device updates list response', [
-            'device_library_identifier' => $deviceLibraryIdentifier,
-            'serial_count' => count($serialNumbers),
-            'last_updated' => $lastUpdatedISO,
-            'serial_numbers' => $serialNumbers,
-        ]);
+            Log::info('Apple Wallet device updates list response', [
+                'device_library_identifier' => $deviceLibraryIdentifier,
+                'serial_count' => count($serialNumbers),
+                'last_updated' => $lastUpdatedISO,
+                'serial_numbers' => $serialNumbers,
+            ]);
 
             return response()->json([
                 'lastUpdated' => $lastUpdatedISO,
