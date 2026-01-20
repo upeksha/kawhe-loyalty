@@ -30,6 +30,12 @@ class AppleWalletPassService
             'description' => 'Kawhe Loyalty Card',
             'serialNumber' => $this->generateSerialNumber($account),
             'logoText' => $store->name,
+            // Apple Wallet Web Service configuration (required for push notifications)
+            // Note: Apple automatically appends /v1 to webServiceURL, so we only specify /wallet
+            'webServiceURL' => rtrim(config('app.url'), '/') . '/wallet',
+            // Use public_token as authenticationToken for per-pass security
+            // This allows each pass to have a unique token tied to the loyalty account
+            'authenticationToken' => $account->public_token,
             'barcode' => [
                 'message' => 'LA:' . $account->public_token, // Critical: must match web QR format for scanner compatibility
                 'format' => 'PKBarcodeFormatQR',

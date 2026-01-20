@@ -28,9 +28,21 @@ class AppleWalletController extends Controller
      */
     public function registerDevice(Request $request, string $deviceLibraryIdentifier, string $passTypeIdentifier, string $serialNumber): Response
     {
+        // Log incoming request for debugging
+        Log::info('Apple Wallet registration request received', [
+            'device_library_identifier' => $deviceLibraryIdentifier,
+            'pass_type_identifier' => $passTypeIdentifier,
+            'serial_number' => $serialNumber,
+            'has_push_token' => $request->has('pushToken'),
+            'ip_address' => $request->ip(),
+            'user_agent' => $request->userAgent(),
+        ]);
+
         $request->validate([
             'pushToken' => 'required|string',
         ]);
+
+        $pushToken = $request->input('pushToken');
 
         // Resolve loyalty account from serial number
         $account = $this->passService->resolveLoyaltyAccount($serialNumber);
@@ -38,6 +50,7 @@ class AppleWalletController extends Controller
             Log::warning('Apple Wallet registration: Account not found', [
                 'serial_number' => $serialNumber,
                 'device_library_identifier' => $deviceLibraryIdentifier,
+                'pass_type_identifier' => $passTypeIdentifier,
             ]);
             return response('Pass not found', 404);
         }
@@ -48,6 +61,8 @@ class AppleWalletController extends Controller
             Log::warning('Apple Wallet registration: Pass type mismatch', [
                 'expected' => $expectedPassTypeIdentifier,
                 'received' => $passTypeIdentifier,
+                'serial_number' => $serialNumber,
+                'device_library_identifier' => $deviceLibraryIdentifier,
             ]);
             return response('Invalid pass type', 400);
         }
@@ -60,7 +75,7 @@ class AppleWalletController extends Controller
                 'serial_number' => $serialNumber,
             ],
             [
-                'push_token' => $request->input('pushToken'),
+                'push_token' => $pushToken,
                 'loyalty_account_id' => $account->id,
                 'active' => true,
                 'last_registered_at' => now(),
@@ -69,12 +84,16 @@ class AppleWalletController extends Controller
 
         $isNew = $registration->wasRecentlyCreated;
 
-        Log::info('Apple Wallet device registered', [
+        Log::info('Apple Wallet device registered successfully', [
             'registration_id' => $registration->id,
             'device_library_identifier' => $deviceLibraryIdentifier,
             'serial_number' => $serialNumber,
+            'pass_type_identifier' => $passTypeIdentifier,
             'loyalty_account_id' => $account->id,
+            'public_token' => $account->public_token,
+            'push_token_length' => strlen($pushToken),
             'is_new' => $isNew,
+            'ip_address' => $request->ip(),
         ]);
 
         return response('', $isNew ? 201 : 200);
@@ -85,8 +104,15 @@ class AppleWalletController extends Controller
      * 
      * DELETE /wallet/v1/devices/{deviceLibraryIdentifier}/registrations/{passTypeIdentifier}/{serialNumber}
      */
-    public function unregisterDevice(string $deviceLibraryIdentifier, string $passTypeIdentifier, string $serialNumber): Response
+    public function unregisterDevice(Request $request, string $deviceLibraryIdentifier, string $passTypeIdentifier, string $serialNumber): Response
     {
+        Log::info('Apple Wallet unregistration request', [
+            'device_library_identifier' => $deviceLibraryIdentifier,
+            'pass_type_identifier' => $passTypeIdentifier,
+            'serial_number' => $serialNumber,
+            'ip_address' => $request->ip(),
+        ]);
+
         $deleted = AppleWalletRegistration::where('device_library_identifier', $deviceLibraryIdentifier)
             ->where('pass_type_identifier', $passTypeIdentifier)
             ->where('serial_number', $serialNumber)
@@ -95,6 +121,7 @@ class AppleWalletController extends Controller
         Log::info('Apple Wallet device unregistered', [
             'device_library_identifier' => $deviceLibraryIdentifier,
             'serial_number' => $serialNumber,
+            'pass_type_identifier' => $passTypeIdentifier,
             'deleted' => $deleted > 0,
         ]);
 
@@ -109,15 +136,30 @@ class AppleWalletController extends Controller
      */
     public function getPass(Request $request, string $passTypeIdentifier, string $serialNumber): Response
     {
+        Log::info('Apple Wallet pass retrieval request', [
+            'pass_type_identifier' => $passTypeIdentifier,
+            'serial_number' => $serialNumber,
+            'if_modified_since' => $request->header('If-Modified-Since'),
+            'ip_address' => $request->ip(),
+        ]);
+
         // Verify pass type identifier
         $expectedPassTypeIdentifier = config('passgenerator.pass_type_identifier');
         if ($passTypeIdentifier !== $expectedPassTypeIdentifier) {
+            Log::warning('Apple Wallet pass retrieval: Invalid pass type', [
+                'expected' => $expectedPassTypeIdentifier,
+                'received' => $passTypeIdentifier,
+                'serial_number' => $serialNumber,
+            ]);
             return response('Invalid pass type', 400);
         }
 
         // Resolve loyalty account
         $account = $this->passService->resolveLoyaltyAccount($serialNumber);
         if (!$account) {
+            Log::warning('Apple Wallet pass retrieval: Account not found', [
+                'serial_number' => $serialNumber,
+            ]);
             return response('Pass not found', 404);
         }
 
