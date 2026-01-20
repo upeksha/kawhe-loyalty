@@ -361,9 +361,12 @@ class ScannerController extends Controller
             
             StampUpdated::dispatch($account);
             
-            // Dispatch wallet update job to regenerate pass and send APNs push
-            \App\Jobs\UpdateWalletPassJob::dispatch($account->id)
-                ->afterCommit();
+            // Dispatch wallet update job AFTER transaction commits
+            // This ensures the job runs with the committed data (matching stamping service pattern)
+            DB::afterCommit(function () use ($account) {
+                \App\Jobs\UpdateWalletPassJob::dispatch($account->id)
+                    ->onQueue('default');
+            });
 
             // Record event
             StampEvent::create([
