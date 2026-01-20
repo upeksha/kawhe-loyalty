@@ -52,11 +52,26 @@ class WalletSyncService
             $passTypeIdentifier = config('passgenerator.pass_type_identifier');
             $serialNumber = $this->applePassService->getSerialNumber($account);
             
+            Log::info('Sending Apple Wallet push notifications for stamp update', [
+                'loyalty_account_id' => $account->id,
+                'serial_number' => $serialNumber,
+                'pass_type_identifier' => $passTypeIdentifier,
+                'stamp_count' => $account->stamp_count,
+                'reward_balance' => $account->reward_balance ?? 0,
+            ]);
+            
             $this->applePushService->sendPassUpdatePushes($passTypeIdentifier, $serialNumber);
+            
+            Log::info('Apple Wallet push notifications sent', [
+                'loyalty_account_id' => $account->id,
+                'serial_number' => $serialNumber,
+            ]);
         } catch (\Exception $e) {
             Log::error('Failed to send Apple Wallet push notifications', [
                 'loyalty_account_id' => $account->id,
+                'serial_number' => $serialNumber ?? 'unknown',
                 'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
             ]);
             // Don't throw - allow Google Wallet sync to continue
         }

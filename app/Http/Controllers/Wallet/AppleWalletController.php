@@ -224,6 +224,13 @@ class AppleWalletController extends Controller
      */
     public function getUpdatedSerials(Request $request, string $deviceLibraryIdentifier, string $passTypeIdentifier): JsonResponse
     {
+        Log::info('Apple Wallet device updates list requested', [
+            'device_library_identifier' => $deviceLibraryIdentifier,
+            'pass_type_identifier' => $passTypeIdentifier,
+            'passes_updated_since' => $request->query('passesUpdatedSince'),
+            'ip_address' => $request->ip(),
+        ]);
+
         $passesUpdatedSince = $request->query('passesUpdatedSince');
 
         // Get all active registrations for this device and pass type
@@ -234,6 +241,7 @@ class AppleWalletController extends Controller
             ->get();
 
         $serialNumbers = [];
+        $latestUpdated = 0;
 
         if ($passesUpdatedSince) {
             // Filter by updated_at timestamp
@@ -251,6 +259,10 @@ class AppleWalletController extends Controller
                     $accountUpdated = $registration->loyaltyAccount->updated_at->timestamp;
                     if ($accountUpdated > $updatedSince) {
                         $serialNumbers[] = $registration->serial_number;
+                        // Track the latest updated timestamp
+                        if ($accountUpdated > $latestUpdated) {
+                            $latestUpdated = $accountUpdated;
+                        }
                     }
                 } else {
                     // If no account or updated_at, include it (safer default)
@@ -260,10 +272,29 @@ class AppleWalletController extends Controller
         } else {
             // Return all serial numbers if no timestamp provided
             $serialNumbers = $registrations->pluck('serial_number')->toArray();
+            // Find latest updated_at from all accounts
+            foreach ($registrations as $registration) {
+                if ($registration->loyaltyAccount && $registration->loyaltyAccount->updated_at) {
+                    $accountUpdated = $registration->loyaltyAccount->updated_at->timestamp;
+                    if ($accountUpdated > $latestUpdated) {
+                        $latestUpdated = $accountUpdated;
+                    }
+                }
+            }
         }
 
+        // Use latest account updated_at, or current time if no accounts found
+        $lastUpdated = $latestUpdated > 0 ? $latestUpdated : now()->timestamp;
+
+        Log::info('Apple Wallet device updates list response', [
+            'device_library_identifier' => $deviceLibraryIdentifier,
+            'serial_count' => count($serialNumbers),
+            'last_updated' => $lastUpdated,
+            'serial_numbers' => $serialNumbers,
+        ]);
+
         return response()->json([
-            'lastUpdated' => now()->timestamp,
+            'lastUpdated' => (string) $lastUpdated,
             'serialNumbers' => $serialNumbers,
         ]);
     }

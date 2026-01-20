@@ -37,7 +37,7 @@ class ApplePushService
     public function sendPassUpdatePushes(string $passTypeIdentifier, string $serialNumber): void
     {
         if (!$this->enabled) {
-            Log::debug('Apple Wallet push notifications disabled', [
+            Log::debug('Apple Wallet push notifications disabled by config', [
                 'pass_type_identifier' => $passTypeIdentifier,
                 'serial_number' => $serialNumber,
             ]);
@@ -64,17 +64,32 @@ class ApplePushService
             'device_count' => $registrations->count(),
         ]);
 
+        $successCount = 0;
+        $failureCount = 0;
+
         foreach ($registrations as $registration) {
             try {
                 $this->sendPushNotification($registration);
+                $successCount++;
             } catch (\Exception $e) {
+                $failureCount++;
                 Log::error('Failed to send Apple Wallet push notification', [
                     'registration_id' => $registration->id,
                     'device_library_identifier' => $registration->device_library_identifier,
+                    'serial_number' => $serialNumber,
                     'error' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString(),
                 ]);
             }
         }
+
+        Log::info('Apple Wallet push notifications completed', [
+            'pass_type_identifier' => $passTypeIdentifier,
+            'serial_number' => $serialNumber,
+            'total_devices' => $registrations->count(),
+            'successful' => $successCount,
+            'failed' => $failureCount,
+        ]);
     }
 
     /**
@@ -119,8 +134,8 @@ class ApplePushService
         $deviceToken = $registration->push_token;
         $url = "{$apnsUrl}/3/device/{$deviceToken}";
 
-        // Payload for Wallet pass update (empty JSON)
-        $payload = json_encode([]);
+        // Payload for Wallet pass update (must be valid JSON with aps key)
+        $payload = json_encode(['aps' => []]);
 
         // Headers
         $headers = [
@@ -148,22 +163,37 @@ class ApplePushService
         $response = curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         $error = curl_error($ch);
+        $headerSize = curl_getinfo($ch, CURLINFO_HEADER_SIZE);
         curl_close($ch);
 
         if ($error) {
+            Log::error('Apple Wallet APNs cURL error', [
+                'registration_id' => $registration->id,
+                'device_library_identifier' => $registration->device_library_identifier,
+                'error' => $error,
+            ]);
             throw new \Exception("cURL error: {$error}");
         }
+
+        // Parse response headers and body
+        $responseHeaders = substr($response, 0, $headerSize);
+        $responseBody = substr($response, $headerSize);
 
         if ($httpCode === 200) {
             Log::info('Apple Wallet push notification sent successfully', [
                 'registration_id' => $registration->id,
                 'device_library_identifier' => $registration->device_library_identifier,
+                'serial_number' => $registration->serial_number,
+                'apns_id' => $this->extractApnsId($responseHeaders),
             ]);
         } else {
             Log::warning('Apple Wallet push notification failed', [
                 'registration_id' => $registration->id,
+                'device_library_identifier' => $registration->device_library_identifier,
+                'serial_number' => $registration->serial_number,
                 'http_code' => $httpCode,
-                'response' => $response,
+                'response_body' => $responseBody,
+                'apns_reason' => $this->extractApnsReason($responseHeaders),
             ]);
 
             // If device token is invalid, deactivate registration
@@ -171,6 +201,7 @@ class ApplePushService
                 $registration->update(['active' => false]);
                 Log::info('Deactivated registration due to invalid device token', [
                     'registration_id' => $registration->id,
+                    'serial_number' => $registration->serial_number,
                 ]);
             }
         }
@@ -292,5 +323,33 @@ class ApplePushService
     protected function base64UrlEncode(string $data): string
     {
         return rtrim(strtr(base64_encode($data), '+/', '-_'), '=');
+    }
+
+    /**
+     * Extract APNs ID from response headers.
+     *
+     * @param string $headers
+     * @return string|null
+     */
+    protected function extractApnsId(string $headers): ?string
+    {
+        if (preg_match('/apns-id:\s*([^\r\n]+)/i', $headers, $matches)) {
+            return trim($matches[1]);
+        }
+        return null;
+    }
+
+    /**
+     * Extract APNs reason from response headers.
+     *
+     * @param string $headers
+     * @return string|null
+     */
+    protected function extractApnsReason(string $headers): ?string
+    {
+        if (preg_match('/apns-reason:\s*([^\r\n]+)/i', $headers, $matches)) {
+            return trim($matches[1]);
+        }
+        return null;
     }
 }
