@@ -104,9 +104,12 @@ try {
 }
 
 echo "\n=== Download URLs ===\n";
-$downloadUrl = config('app.url') . route('wallet.apple.download', ['public_token' => $account->public_token], false);
-echo "Pass download: {$downloadUrl}\n";
-echo "Card page: " . config('app.url') . "/card/{$account->public_token}\n";
+// Generate signed URL for download (required by middleware)
+$downloadUrl = \Illuminate\Support\Facades\URL::signedRoute('wallet.apple.download', ['public_token' => $account->public_token]);
+echo "Pass download (signed): {$downloadUrl}\n";
+// Card page uses /c/ route, not /card/
+$cardUrl = config('app.url') . route('card.show', ['public_token' => $account->public_token], false);
+echo "Card page: {$cardUrl}\n";
 echo "\n=== QR Codes ===\n";
 echo "Stamping QR: LA:{$account->public_token}\n";
 if ($account->redeem_token) {
