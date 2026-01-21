@@ -216,12 +216,57 @@ class GoogleWalletPassService
             try {
                 $existing = $this->service->loyaltyobject->get($objectId);
                 
+                // Check if there's a significant change that warrants a notification
+                $previousStampCount = $existing->getLoyaltyPoints()?->getBalance()?->getInt() ?? 0;
+                $previousRewardBalance = $existing->getSecondaryLoyaltyPoints()?->getBalance()?->getInt() ?? 0;
+                
+                $stampChanged = $previousStampCount !== $account->stamp_count;
+                $rewardChanged = $previousRewardBalance !== ($account->reward_balance ?? 0);
+                $rewardEarned = ($account->reward_balance ?? 0) > $previousRewardBalance;
+                
+                // Add notification message for significant changes
+                // Note: Google limits to 3 notifications per 24 hours per pass
+                if ($stampChanged || $rewardChanged) {
+                    $messages = [];
+                    
+                    if ($rewardEarned) {
+                        // Reward earned - most important notification
+                        $messages[] = [
+                            'header' => '🎉 Reward Earned!',
+                            'body' => sprintf('You earned %d %s!', ($account->reward_balance ?? 0) - $previousRewardBalance, $store->reward_title ?? 'reward'),
+                            'actionUri' => [
+                                'uri' => config('app.url') . '/c/' . $account->public_token,
+                                'description' => 'View Card',
+                            ],
+                        ];
+                    } elseif ($stampChanged) {
+                        // Stamp count changed
+                        $stampDiff = $account->stamp_count - $previousStampCount;
+                        if ($stampDiff > 0) {
+                            $messages[] = [
+                                'header' => '✅ Stamped!',
+                                'body' => sprintf('You now have %d / %d stamps', $account->stamp_count, $store->reward_target ?? 10),
+                            ];
+                        }
+                    }
+                    
+                    if (!empty($messages)) {
+                        $loyaltyObject->setMessages($messages);
+                        Log::info('Google Wallet: Adding notification message', [
+                            'object_id' => $objectId,
+                            'message_count' => count($messages),
+                        ]);
+                    }
+                }
+                
                 // Object exists - use patch for partial update (more efficient and safer)
                 // Patch only updates the fields we send, preserving other fields
                 Log::info('Google Wallet: Patching existing loyalty object', [
                     'object_id' => $objectId,
                     'stamp_count' => $account->stamp_count,
                     'reward_balance' => $account->reward_balance ?? 0,
+                    'stamp_changed' => $stampChanged,
+                    'reward_changed' => $rewardChanged,
                 ]);
                 
                 return $this->service->loyaltyobject->patch($objectId, $loyaltyObject);
