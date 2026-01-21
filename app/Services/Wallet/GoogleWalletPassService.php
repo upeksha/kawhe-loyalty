@@ -60,6 +60,16 @@ class GoogleWalletPassService
     }
 
     /**
+     * Get the Google Wallet service instance
+     *
+     * @return Google_Service_Walletobjects
+     */
+    public function getService(): Google_Service_Walletobjects
+    {
+        return $this->service;
+    }
+
+    /**
      * Create or get loyalty class (template for passes)
      * This should be called once during setup
      *
@@ -202,11 +212,38 @@ class GoogleWalletPassService
         $loyaltyObject->setTextModulesData($textModulesData);
         
         try {
-            // Try to update existing object
-            return $this->service->loyaltyobject->update($objectId, $loyaltyObject);
+            // First, try to get existing object to check if it exists
+            try {
+                $existing = $this->service->loyaltyobject->get($objectId);
+                
+                // Object exists - use patch for partial update (more efficient and safer)
+                // Patch only updates the fields we send, preserving other fields
+                Log::info('Google Wallet: Patching existing loyalty object', [
+                    'object_id' => $objectId,
+                    'stamp_count' => $account->stamp_count,
+                    'reward_balance' => $account->reward_balance ?? 0,
+                ]);
+                
+                return $this->service->loyaltyobject->patch($objectId, $loyaltyObject);
+            } catch (\Google\Service\Exception $e) {
+                if ($e->getCode() === 404) {
+                    // Object doesn't exist, create it
+                    Log::info('Google Wallet: Creating new loyalty object', [
+                        'object_id' => $objectId,
+                        'stamp_count' => $account->stamp_count,
+                        'reward_balance' => $account->reward_balance ?? 0,
+                    ]);
+                    return $this->service->loyaltyobject->insert($loyaltyObject);
+                }
+                throw $e;
+            }
         } catch (\Exception $e) {
-            // Object doesn't exist, create it
-            return $this->service->loyaltyobject->insert($loyaltyObject);
+            Log::error('Google Wallet: Failed to create/update loyalty object', [
+                'object_id' => $objectId,
+                'error' => $e->getMessage(),
+                'code' => $e->getCode(),
+            ]);
+            throw $e;
         }
     }
 
