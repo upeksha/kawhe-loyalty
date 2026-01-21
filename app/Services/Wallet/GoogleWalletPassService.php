@@ -168,11 +168,20 @@ class GoogleWalletPassService
             $loyaltyObject->setSecondaryLoyaltyPoints($secondaryPoints);
         }
         
-        // Barcode with public_token
+        // Dynamic barcode: LR:{redeem_token} when reward available, else LA:{public_token}
+        // This matches Apple Wallet behavior for consistency
+        $barcodeValue = ($account->reward_balance ?? 0) > 0 && $account->redeem_token
+            ? 'LR:' . $account->redeem_token
+            : 'LA:' . $account->public_token;
+        
         $barcode = new \Google_Service_Walletobjects_Barcode();
         $barcode->setType('QR_CODE');
-        $barcode->setValue('LA:' . $account->public_token); // Match scanner format
-        $barcode->setAlternateText('Scan to stamp');
+        $barcode->setValue($barcodeValue);
+        $barcode->setAlternateText(
+            ($account->reward_balance ?? 0) > 0 && $account->redeem_token
+                ? 'Scan to redeem'
+                : 'Scan to stamp'
+        );
         $loyaltyObject->setBarcode($barcode);
         
         // Text modules
