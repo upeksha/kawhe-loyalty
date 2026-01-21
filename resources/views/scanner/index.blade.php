@@ -510,21 +510,6 @@
                                     }, 1000);
                                 },
 
-                                async switchCamera() {
-                                    if (!this.canSwitchCamera) return;
-                                    const ids = this.cameras.map(c => c.id);
-                                    const currentIdx = this.activeCameraId ? ids.indexOf(this.activeCameraId) : -1;
-                                    const nextIdx = (currentIdx >= 0 ? currentIdx + 1 : 1) % ids.length;
-                                    const nextId = ids[nextIdx];
-                                    this.cameraStatus = 'Switching camera…';
-                                    try {
-                                        await this.restartWithCameraId(nextId);
-                                    } catch (e) {
-                                        console.error('Failed to switch camera:', e);
-                                        this.cameraStatus = 'Could not switch camera.';
-                                    }
-                                },
-
                                 async scanFromImageFile(event) {
                                     const file = event?.target?.files?.[0];
                                     if (!file) return;
