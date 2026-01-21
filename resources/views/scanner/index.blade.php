@@ -307,65 +307,30 @@
                                             this.html5QrCode = new Html5Qrcode('reader');
                                         }
 
-                                        // For iOS Safari, we need to enumerate cameras first to get deviceId
-                                        // facingMode doesn't work reliably on iOS Safari
-                                        const isIOSSafari = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+                                        // Simple approach: Use facingMode for all browsers
+                                        // This works on iOS Safari too
+                                        const config = { 
+                                            fps: 10, 
+                                            qrbox: { width: 250, height: 250 }
+                                        };
                                         
-                                        if (isIOSSafari) {
-                                            // iOS Safari: Enumerate cameras first, then use deviceId
-                                            try {
-                                                await this.loadCameras();
-                                                
-                                                if (this.cameras.length === 0) {
-                                                    throw new Error('No cameras found');
-                                                }
-                                                
-                                                // Try stored camera first
-                                                const storedCameraId = localStorage.getItem('kawhe_scanner_camera_id');
-                                                if (storedCameraId && this.cameras.find(c => c.id === storedCameraId)) {
-                                                    await this.startWithCameraId(storedCameraId);
-                                                    return;
-                                                }
-                                                
-                                                // Pick preferred camera (back camera)
-                                                const preferred = this.pickPreferredCameraId(this.cameras);
-                                                if (preferred) {
-                                                    await this.startWithCameraId(preferred);
-                                                } else {
-                                                    // Fallback to first available camera
-                                                    await this.startWithCameraId(this.cameras[0].id);
-                                                }
-                                            } catch (e) {
-                                                console.error('iOS Safari camera start failed:', e);
-                                                // Fallback: try facingMode as last resort
-                                                try {
-                                                    await this.startWithFacingMode('environment');
-                                                } catch (e2) {
-                                                    throw e; // Throw original error
+                                        await this.html5QrCode.start(
+                                            { facingMode: 'environment' },
+                                            config,
+                                            (decodedText) => this.onScanSuccess(decodedText),
+                                            (errorMessage) => {
+                                                // Silently ignore "no QR code found" errors
+                                                if (errorMessage && !errorMessage.includes('No MultiFormat Readers') && !errorMessage.includes('QR code parse error')) {
+                                                    console.warn('Unexpected scan error:', errorMessage);
                                                 }
                                             }
-                                        } else {
-                                            // Non-iOS: Try stored camera first
-                                            const storedCameraId = localStorage.getItem('kawhe_scanner_camera_id');
-                                            if (storedCameraId) {
-                                                try {
-                                                    await this.startWithCameraId(storedCameraId);
-                                                    return;
-                                                } catch (e) {
-                                                    console.warn('Stored camera not available, falling back:', e);
-                                                }
-                                            }
-
-                                            // Start with facingMode to get permission quickly
-                                            await this.startWithFacingMode('environment');
-
-                                            // After permission, enumerate and switch to deviceId
-                                            await this.loadCameras();
-                                            const preferred = this.pickPreferredCameraId(this.cameras);
-                                            if (preferred) {
-                                                await this.restartWithCameraId(preferred);
-                                            }
-                                        }
+                                        );
+                                        
+                                        this.cameraStatus = 'Scanning…';
+                                        this.isScanning = true;
+                                        
+                                        // Load cameras for switching (optional)
+                                        await this.loadCameras();
                                     } catch (e) {
                                         console.error('Failed to start scanner:', e);
                                         this.isScanning = false;
@@ -412,142 +377,64 @@
                                     return cameras[cameras.length - 1].id;
                                 },
 
-                                async startWithFacingMode(mode) {
-                                    // Ensure scanner is stopped before starting
-                                    try {
-                                        await this.stopScanner();
-                                    } catch (e) {
-                                        // Ignore - might not be running
-                                    }
+                                async switchCamera() {
+                                    if (!this.canSwitchCamera) return;
                                     
-                                    const config = { 
-                                        fps: 10, 
-                                        qrbox: { width: 250, height: 250 },
-                                        aspectRatio: 1.0
-                                    };
-                                    const constraints = { facingMode: mode };
-                                    try {
-                                        await this.html5QrCode.start(
-                                            constraints,
-                                            config,
-                                            (decodedText) => this.onScanSuccess(decodedText),
-                                            (errorMessage) => {
-                                                // Silently ignore "no QR code found" errors - these are expected
-                                                // Only log actual errors (not parse errors)
-                                                if (errorMessage && !errorMessage.includes('No MultiFormat Readers') && !errorMessage.includes('QR code parse error')) {
-                                                    console.warn('Unexpected scan error:', errorMessage);
-                                                }
-                                            }
-                                        );
-                                        this.cameraStatus = 'Scanning…';
-                                        this.isScanning = true;
-                                    } catch (e) {
-                                        console.error('Failed to start camera with facingMode:', e);
-                                        throw e;
-                                    }
-                                },
-
-                                async startWithCameraId(cameraId) {
-                                    // Ensure scanner is stopped before starting
-                                    try {
-                                        await this.stopScanner();
-                                    } catch (e) {
-                                        // Ignore - might not be running
-                                    }
-                                    
-                                    const isIOSSafari = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-                                    
-                                    // iOS Safari needs different configuration
-                                    let config;
-                                    if (isIOSSafari) {
-                                        // For iOS Safari, use viewfinder dimensions instead of qrbox
-                                        // This ensures the video stream is visible
-                                        const readerElement = document.getElementById('reader');
-                                        const containerWidth = readerElement.offsetWidth || 300;
-                                        const containerHeight = readerElement.offsetHeight || 300;
-                                        
-                                        config = { 
-                                            fps: 10,
-                                            // Use viewfinder for iOS Safari - ensures video is visible
-                                            viewfinderWidth: containerWidth,
-                                            viewfinderHeight: containerHeight,
-                                            // Smaller qrbox for better scanning
-                                            qrbox: function(viewfinderWidth, viewfinderHeight) {
-                                                const minEdgePercentage = 0.7; // Use 70% of the smaller edge
-                                                const minEdgeSize = Math.min(viewfinderWidth, viewfinderHeight);
-                                                const qrboxSize = Math.floor(minEdgeSize * minEdgePercentage);
-                                                return {
-                                                    width: qrboxSize,
-                                                    height: qrboxSize
-                                                };
-                                            },
-                                            aspectRatio: 1.0,
-                                            supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA],
-                                            // iOS Safari specific: disable experimental features
-                                            experimentalFeatures: {
-                                                useBarCodeDetectorIfSupported: false
-                                            }
-                                        };
-                                    } else {
-                                        config = { 
-                                            fps: 10, 
-                                            qrbox: { width: 250, height: 250 },
-                                            aspectRatio: 1.0,
-                                            supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA]
-                                        };
-                                    }
-                                    
-                                    // For iOS Safari, use simpler constraints
-                                    const videoConstraints = isIOSSafari 
-                                        ? { deviceId: { exact: cameraId } }
-                                        : { deviceId: { exact: cameraId }, facingMode: 'environment' };
-                                    
-                                    try {
-                                        await this.html5QrCode.start(
-                                            videoConstraints,
-                                            config,
-                                            (decodedText) => this.onScanSuccess(decodedText),
-                                            (errorMessage) => {
-                                                // Silently ignore "no QR code found" errors - these are expected
-                                                // Only log actual errors (not parse errors)
-                                                if (errorMessage && !errorMessage.includes('No MultiFormat Readers') && !errorMessage.includes('QR code parse error')) {
-                                                    console.warn('Unexpected scan error:', errorMessage);
-                                                }
-                                            }
-                                        );
-                                        this.activeCameraId = cameraId;
-                                        localStorage.setItem('kawhe_scanner_camera_id', cameraId);
+                                    // Load cameras if not loaded
+                                    if (this.cameras.length === 0) {
                                         await this.loadCameras();
+                                    }
+                                    
+                                    if (this.cameras.length < 2) {
+                                        this.cameraStatus = 'Only one camera available';
+                                        return;
+                                    }
+                                    
+                                    const ids = this.cameras.map(c => c.id);
+                                    const currentIdx = this.activeCameraId ? ids.indexOf(this.activeCameraId) : -1;
+                                    const nextIdx = (currentIdx >= 0 ? currentIdx + 1 : 1) % ids.length;
+                                    const nextId = ids[nextIdx];
+                                    
+                                    this.cameraStatus = 'Switching camera…';
+                                    
+                                    try {
+                                        // Stop current scanner
+                                        await this.stopScanner();
+                                        
+                                        // Small delay
+                                        await new Promise(resolve => setTimeout(resolve, 200));
+                                        
+                                        // Start with new camera using deviceId
+                                        const config = { 
+                                            fps: 10, 
+                                            qrbox: { width: 250, height: 250 }
+                                        };
+                                        
+                                        await this.html5QrCode.start(
+                                            { deviceId: { exact: nextId } },
+                                            config,
+                                            (decodedText) => this.onScanSuccess(decodedText),
+                                            (errorMessage) => {
+                                                if (errorMessage && !errorMessage.includes('No MultiFormat Readers') && !errorMessage.includes('QR code parse error')) {
+                                                    console.warn('Unexpected scan error:', errorMessage);
+                                                }
+                                            }
+                                        );
+                                        
+                                        this.activeCameraId = nextId;
+                                        localStorage.setItem('kawhe_scanner_camera_id', nextId);
                                         this.cameraStatus = 'Scanning…';
                                         this.isScanning = true;
-                                        
-                                        // Force video element to be visible on iOS Safari
-                                        if (isIOSSafari) {
-                                            setTimeout(() => {
-                                                const videoElement = document.querySelector('#reader video');
-                                                if (videoElement) {
-                                                    videoElement.style.width = '100%';
-                                                    videoElement.style.height = '100%';
-                                                    videoElement.style.objectFit = 'cover';
-                                                    videoElement.style.display = 'block';
-                                                }
-                                            }, 100);
-                                        }
                                     } catch (e) {
-                                        console.error('Failed to start camera with deviceId:', e);
-                                        throw e;
+                                        console.error('Failed to switch camera:', e);
+                                        this.cameraStatus = 'Could not switch camera.';
+                                        // Try to restart with original method
+                                        try {
+                                            await this.startScanner();
+                                        } catch (e2) {
+                                            this.isScanning = false;
+                                        }
                                     }
-                                },
-
-                                async restartWithCameraId(cameraId) {
-                                    // Stop scanner first
-                                    await this.stopScanner();
-                                    
-                                    // Small delay to ensure stop completes
-                                    await new Promise(resolve => setTimeout(resolve, 100));
-                                    
-                                    // Then start with new camera
-                                    await this.startWithCameraId(cameraId);
                                 },
 
                                 async stopScanner() {
