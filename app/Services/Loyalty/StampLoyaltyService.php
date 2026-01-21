@@ -196,6 +196,20 @@ class StampLoyaltyService
             $account->refresh();
             $account->load(['store', 'customer']);
 
+            // Log stamping outcome (for debugging intermittent issues)
+            Log::info('Stamp applied', [
+                'loyalty_account_id' => $account->id,
+                'store_id' => $store->id,
+                'staff_id' => $staff->id,
+                'idempotency_key' => $idempotencyKey,
+                'stamp_count_before' => $stampCountBefore,
+                'stamp_count_after' => $account->stamp_count,
+                'reward_balance_before' => $rewardBalanceBefore,
+                'reward_balance_after' => $account->reward_balance ?? 0,
+                'reward_earned' => $rewardEarned,
+                'newly_earned_rewards' => $newlyEarned,
+            ]);
+
             // Dispatch wallet update job AFTER transaction commits
             // This ensures the job runs with the committed data
             // Wrap in try-catch to prevent errors from breaking the response

@@ -471,6 +471,15 @@ class ScannerController extends Controller
                 : "Reward redeemed successfully! Enjoy your {$store->reward_title}!";
             
             try {
+                \Log::info('Redeem processed', [
+                    'loyalty_account_id' => $account->id,
+                    'store_id' => $store->id,
+                    'user_id' => Auth::id(),
+                    'quantity' => $quantity,
+                    'reward_balance_after' => $account->reward_balance ?? 0,
+                    'stamp_count' => $account->stamp_count,
+                ]);
+
                 return response()->json([
                     'success' => true,
                     'message' => $message,
