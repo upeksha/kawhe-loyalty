@@ -198,13 +198,38 @@ class StampLoyaltyService
 
             // Dispatch wallet update job AFTER transaction commits
             // This ensures the job runs with the committed data
-            DB::afterCommit(function () use ($account) {
-                UpdateWalletPassJob::dispatch($account->id)
-                    ->onQueue('default');
-            });
+            // Wrap in try-catch to prevent errors from breaking the response
+            try {
+                DB::afterCommit(function () use ($account) {
+                    try {
+                        UpdateWalletPassJob::dispatch($account->id)
+                            ->onQueue('default');
+                    } catch (\Exception $e) {
+                        // Log but don't fail if job dispatch fails
+                        Log::error('Failed to dispatch UpdateWalletPassJob (stamp)', [
+                            'loyalty_account_id' => $account->id,
+                            'error' => $e->getMessage(),
+                        ]);
+                    }
+                });
+            } catch (\Exception $e) {
+                // Log but don't fail if afterCommit callback registration fails
+                Log::error('Failed to register afterCommit callback (stamp)', [
+                    'loyalty_account_id' => $account->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
 
-            // Dispatch real-time event
-            StampUpdated::dispatch($account);
+            // Dispatch real-time event (wrap in try-catch to prevent errors from breaking the response)
+            try {
+                StampUpdated::dispatch($account);
+            } catch (\Exception $e) {
+                // Log but don't fail if event dispatch fails
+                Log::error('Failed to dispatch StampUpdated event (stamp)', [
+                    'loyalty_account_id' => $account->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
 
             return new StampResultDTO(
                 stampCount: $account->stamp_count,

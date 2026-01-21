@@ -364,21 +364,45 @@ class ScannerController extends Controller
             $account->refresh();
             $account->load(['store', 'customer']);
 
-            // Dispatch real-time event
-            \Log::info('Dispatching StampUpdated event (redeem)', [
-                'public_token' => $account->public_token,
-                'channel' => 'loyalty-card.' . $account->public_token,
-                'stamp_count' => $account->stamp_count
-            ]);
-            
-            StampUpdated::dispatch($account);
+            // Dispatch real-time event (wrap in try-catch to prevent errors from breaking the response)
+            try {
+                \Log::info('Dispatching StampUpdated event (redeem)', [
+                    'public_token' => $account->public_token,
+                    'channel' => 'loyalty-card.' . $account->public_token,
+                    'stamp_count' => $account->stamp_count
+                ]);
+                
+                StampUpdated::dispatch($account);
+            } catch (\Exception $e) {
+                // Log but don't fail the request if event dispatch fails
+                \Log::error('Failed to dispatch StampUpdated event (redeem)', [
+                    'public_token' => $account->public_token,
+                    'error' => $e->getMessage(),
+                ]);
+            }
             
             // Dispatch wallet update job AFTER transaction commits
             // This ensures the job runs with the committed data (matching stamping service pattern)
-            DB::afterCommit(function () use ($account) {
-                \App\Jobs\UpdateWalletPassJob::dispatch($account->id)
-                    ->onQueue('default');
-            });
+            // Wrap in try-catch to prevent errors from breaking the response
+            try {
+                DB::afterCommit(function () use ($account) {
+                    try {
+                        \App\Jobs\UpdateWalletPassJob::dispatch($account->id)
+                            ->onQueue('default');
+                    } catch (\Exception $e) {
+                        \Log::error('Failed to dispatch UpdateWalletPassJob (redeem)', [
+                            'loyalty_account_id' => $account->id,
+                            'error' => $e->getMessage(),
+                        ]);
+                    }
+                });
+            } catch (\Exception $e) {
+                // Log but don't fail the request if afterCommit callback registration fails
+                \Log::error('Failed to register afterCommit callback (redeem)', [
+                    'loyalty_account_id' => $account->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
 
             // Record event
             StampEvent::create([
