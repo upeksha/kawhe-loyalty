@@ -183,11 +183,10 @@ class AppleWalletController extends Controller
                 ]);
                 
                 // Return 304 with required headers
-                // Using withHeaders() to ensure headers are set correctly
-                return response('', 304)->withHeaders([
-                    'Last-Modified' => $lastModified,
-                    'Cache-Control' => 'no-store',
-                ]);
+                // Using header() method to ensure Last-Modified is present
+                return response('', 304)
+                    ->header('Last-Modified', $lastModified)
+                    ->header('Cache-Control', 'no-store');
             }
         }
 

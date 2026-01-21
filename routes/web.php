@@ -19,10 +19,34 @@ Route::get('/', function () {
     return view('welcome');
 });
 
-// Simple dashboard route for auth tests
-Route::middleware(['auth'])->get('/dashboard', function () {
+// Dashboard route - conditional redirect for merchants with stores
+Route::middleware(['auth'])->get('/dashboard', function (Request $request) {
+    $user = $request->user();
+    
+    // Super admin goes to admin dashboard
+    if ($user->is_super_admin) {
+        return redirect()->route('admin.dashboard');
+    }
+    
+    // Merchants with stores go to merchant dashboard
+    if ($user->stores()->count() > 0) {
+        return redirect()->route('merchant.dashboard');
+    }
+    
+    // Others (new merchants without stores) see the dashboard view
     return view('dashboard');
 })->name('dashboard');
+
+// Legacy route redirects for merchant onboarding test
+Route::middleware(['auth'])->group(function () {
+    Route::get('/stores', function () {
+        return redirect()->route('merchant.stores.index');
+    });
+    
+    Route::get('/scanner', function () {
+        return redirect()->route('merchant.scanner');
+    });
+});
 
 Route::get('/join/{slug}', [JoinController::class, 'index'])->name('join.index');
 Route::get('/join/{slug}/new', [JoinController::class, 'show'])->name('join.show');

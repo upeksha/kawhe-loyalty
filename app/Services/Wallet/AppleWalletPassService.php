@@ -50,7 +50,7 @@ class AppleWalletPassService
                     [
                         'key' => 'stamps',
                         'label' => 'Stamps',
-                        'value' => sprintf('%d/%d', $account->stamp_count, $store->reward_target ?? 10),
+                        'value' => $this->generateCircleIndicators($account->stamp_count, $store->reward_target ?? 10),
                     ],
                 ],
                 'secondaryFields' => [
@@ -82,12 +82,13 @@ class AppleWalletPassService
             ],
         ];
 
-        // Add colors if store has branding
-        if ($store->brand_color) {
-            $passDefinition['backgroundColor'] = $this->hexToRgb($store->background_color ?? '#1F2937');
-            $passDefinition['foregroundColor'] = $this->hexToRgb($store->brand_color ?? '#FFFFFF');
-            $passDefinition['labelColor'] = $this->hexToRgb($store->brand_color ?? '#FFFFFF');
-        }
+        // Add colors from store branding (with fallbacks)
+        $backgroundColor = $store->background_color ?? '#1F2937';
+        $foregroundColor = $store->brand_color ?? '#FFFFFF';
+        
+        $passDefinition['backgroundColor'] = $this->hexToRgb($backgroundColor);
+        $passDefinition['foregroundColor'] = $this->hexToRgb($foregroundColor);
+        $passDefinition['labelColor'] = $this->hexToRgb($foregroundColor);
 
         // Initialize pass generator
         // Certificates are automatically loaded from config in constructor
@@ -101,17 +102,33 @@ class AppleWalletPassService
 
         // Add assets (images) - addAsset() expects file paths, not file contents
         $assetsPath = resource_path('wallet/apple/default');
+        
+        // Use store pass logo if available, otherwise fallback to default
+        if ($store->pass_logo_path && Storage::disk('public')->exists($store->pass_logo_path)) {
+            $passLogoPath = Storage::disk('public')->path($store->pass_logo_path);
+            if (file_exists($passLogoPath)) {
+                $pass->addAsset($passLogoPath);
+            }
+        } elseif (file_exists($assetsPath . '/logo.png')) {
+            $pass->addAsset($assetsPath . '/logo.png');
+        }
+        
+        // Use store pass hero image if available, otherwise fallback to default strip
+        if ($store->pass_hero_image_path && Storage::disk('public')->exists($store->pass_hero_image_path)) {
+            $passHeroPath = Storage::disk('public')->path($store->pass_hero_image_path);
+            if (file_exists($passHeroPath)) {
+                $pass->addAsset($passHeroPath);
+            }
+        } elseif (file_exists($assetsPath . '/strip.png')) {
+            $pass->addAsset($assetsPath . '/strip.png');
+        }
+        
+        // Always add icon and background (required by Apple Wallet)
         if (file_exists($assetsPath . '/icon.png')) {
             $pass->addAsset($assetsPath . '/icon.png');
         }
-        if (file_exists($assetsPath . '/logo.png')) {
-            $pass->addAsset($assetsPath . '/logo.png');
-        }
         if (file_exists($assetsPath . '/background.png')) {
             $pass->addAsset($assetsPath . '/background.png');
-        }
-        if (file_exists($assetsPath . '/strip.png')) {
-            $pass->addAsset($assetsPath . '/strip.png');
         }
 
         // Generate and return pkpass binary
@@ -135,5 +152,23 @@ class AppleWalletPassService
         $g = hexdec(substr($hex, 2, 2));
         $b = hexdec(substr($hex, 4, 2));
         return sprintf('rgb(%d,%d,%d)', $r, $g, $b);
+    }
+
+    /**
+     * Generate circle indicators for stamp progress
+     * Example: "●●●○○" for 3 stamps out of 5
+     *
+     * @param int $stampCount Current stamp count
+     * @param int $rewardTarget Target stamps needed
+     * @return string Circle indicators string
+     */
+    protected function generateCircleIndicators(int $stampCount, int $rewardTarget): string
+    {
+        // Clamp stamp count to valid range (0 to reward_target)
+        $filled = max(0, min($stampCount, $rewardTarget));
+        $empty = $rewardTarget - $filled;
+        
+        // Unicode circles: filled = ● (U+25CF), empty = ○ (U+25CB)
+        return str_repeat('●', $filled) . str_repeat('○', $empty);
     }
 }

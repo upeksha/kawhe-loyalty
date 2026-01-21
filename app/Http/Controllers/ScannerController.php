@@ -250,10 +250,10 @@ class ScannerController extends Controller
         ]);
 
         $token = $request->token;
-        // Strip "REDEEM:" prefix if present
-        if (Str::startsWith($token, 'REDEEM:')) {
-            $token = Str::substr($token, 7);
-        }
+        // Strip "LR:" or "REDEEM:" prefix if present (support both for backward compatibility)
+        // Also handle whitespace and case-insensitive matching
+        $raw = trim($token);
+        $token = preg_replace('/^(LR:|REDEEM:)\s*/i', '', $raw);
 
         $storeId = $request->store_id;
 
@@ -297,11 +297,9 @@ class ScannerController extends Controller
 
         $token = $request->token;
         // Strip "LR:" or "REDEEM:" prefix if present (support both for backward compatibility)
-        if (Str::startsWith($token, 'LR:')) {
-            $token = Str::substr($token, 3);
-        } elseif (Str::startsWith($token, 'REDEEM:')) {
-            $token = Str::substr($token, 7);
-        }
+        // Also handle whitespace and case-insensitive matching
+        $raw = trim($token);
+        $token = preg_replace('/^(LR:|REDEEM:)\s*/i', '', $raw);
 
         $storeId = $request->store_id;
         $quantity = $request->input('quantity', 1); // Default to 1 for backward compatibility
@@ -314,16 +312,31 @@ class ScannerController extends Controller
         }
 
         // Early verification check before further processing
+        // Find account first to check verification status
         $preAccount = LoyaltyAccount::where('redeem_token', $token)
             ->where('store_id', $storeId)
+            ->with('customer')
             ->first();
-        if ($preAccount && is_null($preAccount->verified_at)) {
-            return response()->json([
-                'message' => 'You must verify your email address before you can redeem rewards. Please check your loyalty card page for verification options.',
-                'errors' => [
-                    'token' => ['You must verify your email address before you can redeem rewards. Please check your loyalty card page for verification options.'],
-                ],
-            ], 422);
+        
+        if ($preAccount) {
+            $customer = $preAccount->customer;
+            // Customer is considered verified if ANY of these are true:
+            // 1. loyaltyAccount.verified_at is not null
+            // 2. customer.email_verified_at is not null
+            // 3. customer.email is null (no email provided)
+            $isVerified = !is_null($preAccount->verified_at) 
+                || ($customer && !is_null($customer->email_verified_at))
+                || ($customer && is_null($customer->email));
+            
+            // Only block if customer has email AND is not verified
+            if ($customer && !is_null($customer->email) && !$isVerified) {
+                return response()->json([
+                    'message' => 'You must verify your email address before you can redeem rewards. Please check your loyalty card page for verification options.',
+                    'errors' => [
+                        'token' => ['You must verify your email address before you can redeem rewards. Please check your loyalty card page for verification options.'],
+                    ],
+                ], 422);
+            }
         }
 
         // Capture logging information

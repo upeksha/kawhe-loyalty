@@ -90,8 +90,11 @@ class GoogleWalletPassService
             $loyaltyClass->setIssuerName(config('app.name', 'Kawhe'));
             $loyaltyClass->setProgramName($store->name);
             
-            // Google Wallet requires a program logo - use store logo or default
-            $logoUri = $this->getLogoUri($store);
+            // Google Wallet requires a program logo - use pass logo, then store logo, then default
+            $logoUri = $this->getPassLogoUri($store);
+            if (!$logoUri) {
+                $logoUri = $this->getLogoUri($store);
+            }
             if (!$logoUri) {
                 // Use default logo if store doesn't have one
                 $logoUri = $this->getDefaultLogoUri();
@@ -113,15 +116,34 @@ class GoogleWalletPassService
             ];
             $loyaltyClass->setTextModulesData($textModulesData);
             
-            // Add image modules (if store has logo)
-            $logoImage = $this->getLogoUri($store);
-            if ($logoImage) {
+            // Add image modules (use pass hero image if available, otherwise pass logo)
+            $heroImage = $this->getPassHeroImageUri($store);
+            if ($heroImage) {
                 $imageModulesData = [
                     [
-                        'mainImage' => $logoImage,
+                        'mainImage' => $heroImage,
                     ],
                 ];
                 $loyaltyClass->setImageModulesData($imageModulesData);
+            } else {
+                // Fallback to pass logo or store logo
+                $logoImage = $this->getPassLogoUri($store);
+                if (!$logoImage) {
+                    $logoImage = $this->getLogoUri($store);
+                }
+                if ($logoImage) {
+                    $imageModulesData = [
+                        [
+                            'mainImage' => $logoImage,
+                        ],
+                    ];
+                    $loyaltyClass->setImageModulesData($imageModulesData);
+                }
+            }
+            
+            // Apply store colors if available
+            if ($store->background_color) {
+                $loyaltyClass->setHexBackgroundColor($store->background_color);
             }
             
             // Note: Barcode is set on LoyaltyObject, not LoyaltyClass
@@ -193,11 +215,19 @@ class GoogleWalletPassService
         );
         $loyaltyObject->setBarcode($barcode);
         
-        // Text modules
+        // Apply store colors to loyalty object if available
+        if ($store->background_color) {
+            $loyaltyObject->setHexBackgroundColor($store->background_color);
+        }
+        
+        // Text modules with circle indicators
+        $rewardTarget = $store->reward_target ?? 10;
+        $circleIndicators = $this->generateCircleIndicators($account->stamp_count, $rewardTarget);
+        
         $textModulesData = [
             [
-                'header' => 'Current Status',
-                'body' => sprintf('%d / %d stamps', $account->stamp_count, $store->reward_target ?? 10),
+                'header' => 'Progress',
+                'body' => $circleIndicators . ' ' . sprintf('(%d/%d)', $account->stamp_count, $rewardTarget),
             ],
         ];
         
@@ -511,5 +541,73 @@ class GoogleWalletPassService
         $image->setSourceUri($imageUri);
         
         return $image;
+    }
+
+    /**
+     * Get pass logo Image object for store (for wallet passes)
+     *
+     * @param \App\Models\Store $store
+     * @return \Google_Service_Walletobjects_Image|null
+     */
+    protected function getPassLogoUri($store)
+    {
+        if (!$store->pass_logo_path) {
+            return null;
+        }
+        
+        // Google Wallet requires absolute HTTPS URL
+        $appUrl = rtrim(config('app.url'), '/');
+        $logoUrl = $appUrl . '/storage/' . $store->pass_logo_path;
+        
+        // Create Image object
+        $image = new \Google_Service_Walletobjects_Image();
+        $imageUri = new \Google_Service_Walletobjects_ImageUri();
+        $imageUri->setUri($logoUrl);
+        $image->setSourceUri($imageUri);
+        
+        return $image;
+    }
+
+    /**
+     * Get pass hero image Image object for store (for wallet passes)
+     *
+     * @param \App\Models\Store $store
+     * @return \Google_Service_Walletobjects_Image|null
+     */
+    protected function getPassHeroImageUri($store)
+    {
+        if (!$store->pass_hero_image_path) {
+            return null;
+        }
+        
+        // Google Wallet requires absolute HTTPS URL
+        $appUrl = rtrim(config('app.url'), '/');
+        $heroUrl = $appUrl . '/storage/' . $store->pass_hero_image_path;
+        
+        // Create Image object
+        $image = new \Google_Service_Walletobjects_Image();
+        $imageUri = new \Google_Service_Walletobjects_ImageUri();
+        $imageUri->setUri($heroUrl);
+        $image->setSourceUri($imageUri);
+        
+        return $image;
+    }
+
+    /**
+     * Generate circle indicators for stamp progress
+     * Example: "●●●○○" for 3 stamps out of 5
+     *
+     * @param int $stampCount Current stamp count
+     * @param int $rewardTarget Target stamps needed
+     * @return string Circle indicators string
+     */
+    protected function generateCircleIndicators(int $stampCount, int $rewardTarget): string
+    {
+        // Clamp stamp count to valid range (0 to reward_target)
+        $filled = max(0, min($stampCount, $rewardTarget));
+        $empty = $rewardTarget - $filled;
+        
+        // Unicode circles: filled = ● (U+25CF), empty = ○ (U+25CB)
+        return str_repeat('●', $filled) . str_repeat('○', $empty);
     }
 }

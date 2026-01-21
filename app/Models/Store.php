@@ -35,6 +35,8 @@ class Store extends Model
         'brand_color',
         'logo_path',
         'background_color',
+        'pass_logo_path',
+        'pass_hero_image_path',
     ];
 
     protected static function boot()

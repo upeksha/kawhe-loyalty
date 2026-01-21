@@ -43,6 +43,8 @@ class StoreController extends Controller
             'brand_color' => ['nullable', 'string', 'regex:/^#[0-9A-Fa-f]{6}$/'],
             'background_color' => ['nullable', 'string', 'regex:/^#[0-9A-Fa-f]{6}$/'],
             'logo' => ['nullable', 'image', 'mimes:png,jpg,jpeg,webp', 'max:2048'],
+            'pass_logo' => ['nullable', 'image', 'mimes:png,jpg,jpeg,webp', 'max:2048'],
+            'pass_hero_image' => ['nullable', 'image', 'mimes:png,jpg,jpeg,webp', 'max:2048'],
         ]);
 
         // Handle logo upload
@@ -51,8 +53,20 @@ class StoreController extends Controller
             $validated['logo_path'] = $logoPath;
         }
 
-        // Remove logo file from validated array
-        unset($validated['logo']);
+        // Handle pass logo upload
+        if ($request->hasFile('pass_logo')) {
+            $passLogoPath = $request->file('pass_logo')->store('pass-logos', 'public');
+            $validated['pass_logo_path'] = $passLogoPath;
+        }
+
+        // Handle pass hero image upload
+        if ($request->hasFile('pass_hero_image')) {
+            $passHeroPath = $request->file('pass_hero_image')->store('pass-heroes', 'public');
+            $validated['pass_hero_image_path'] = $passHeroPath;
+        }
+
+        // Remove file inputs from validated array
+        unset($validated['logo'], $validated['pass_logo'], $validated['pass_hero_image']);
 
         Auth::user()->stores()->create($validated);
 
@@ -83,6 +97,8 @@ class StoreController extends Controller
             'brand_color' => ['nullable', 'string', 'regex:/^#[0-9A-Fa-f]{6}$/'],
             'background_color' => ['nullable', 'string', 'regex:/^#[0-9A-Fa-f]{6}$/'],
             'logo' => ['nullable', 'image', 'mimes:png,jpg,jpeg,webp', 'max:2048'],
+            'pass_logo' => ['nullable', 'image', 'mimes:png,jpg,jpeg,webp', 'max:2048'],
+            'pass_hero_image' => ['nullable', 'image', 'mimes:png,jpg,jpeg,webp', 'max:2048'],
         ]);
 
         // Handle logo upload
@@ -97,13 +113,43 @@ class StoreController extends Controller
             $validated['logo_path'] = $logoPath;
         }
 
-        // Remove logo from validated if not uploaded (to avoid overwriting with null)
+        // Handle pass logo upload
+        if ($request->hasFile('pass_logo')) {
+            // Delete old pass logo if exists
+            if ($store->pass_logo_path && Storage::disk('public')->exists($store->pass_logo_path)) {
+                Storage::disk('public')->delete($store->pass_logo_path);
+            }
+
+            // Store new pass logo
+            $passLogoPath = $request->file('pass_logo')->store('pass-logos', 'public');
+            $validated['pass_logo_path'] = $passLogoPath;
+        }
+
+        // Handle pass hero image upload
+        if ($request->hasFile('pass_hero_image')) {
+            // Delete old pass hero image if exists
+            if ($store->pass_hero_image_path && Storage::disk('public')->exists($store->pass_hero_image_path)) {
+                Storage::disk('public')->delete($store->pass_hero_image_path);
+            }
+
+            // Store new pass hero image
+            $passHeroPath = $request->file('pass_hero_image')->store('pass-heroes', 'public');
+            $validated['pass_hero_image_path'] = $passHeroPath;
+        }
+
+        // Remove file inputs from validated array
+        unset($validated['logo'], $validated['pass_logo'], $validated['pass_hero_image']);
+
+        // Remove paths from validated if not uploaded (to avoid overwriting with null)
         if (!isset($validated['logo_path'])) {
             unset($validated['logo_path']);
         }
-
-        // Remove logo file from validated array (we only need the path)
-        unset($validated['logo']);
+        if (!isset($validated['pass_logo_path'])) {
+            unset($validated['pass_logo_path']);
+        }
+        if (!isset($validated['pass_hero_image_path'])) {
+            unset($validated['pass_hero_image_path']);
+        }
 
         $store->update($validated);
 
@@ -135,7 +181,17 @@ class StoreController extends Controller
      */
     public function qr(Store $store)
     {
-        $store = Store::queryForUser(Auth::user())->whereKey($store->id)->firstOrFail();
+        // First check if store exists
+        $store = Store::find($store->id);
+        if (!$store) {
+            abort(404);
+        }
+        
+        // Then check authorization - return 403 for unauthorized access
+        if ($store->user_id !== Auth::id() && !Auth::user()->is_super_admin) {
+            abort(403);
+        }
+        
         $joinUrl = route('join.index', ['slug' => $store->slug, 't' => $store->join_token]);
         return view('stores.qr', compact('store', 'joinUrl'));
     }

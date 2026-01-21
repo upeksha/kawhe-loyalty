@@ -93,8 +93,36 @@
                                 </div>
                             @endif
                             <input type="file" id="logo" name="logo" accept="image/png,image/jpeg,image/jpg,image/webp" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500">
-                            <p class="mt-1 text-xs text-gray-500">PNG, JPG, or WebP (max 2MB)</p>
+                            <p class="mt-1 text-xs text-gray-500">PNG, JPG, or WebP (max 2MB). Used for customer card page.</p>
                             <x-input-error :messages="$errors->get('logo')" class="mt-2" />
+                        </div>
+
+                        <!-- Pass Logo Upload -->
+                        <div class="mb-5">
+                            <label for="pass_logo" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Pass Logo (Wallet Passes)</label>
+                            @if($store->pass_logo_path)
+                                <div class="mb-2">
+                                    <p class="text-xs text-gray-500 mb-1">Current pass logo:</p>
+                                    <img src="{{ asset('storage/' . $store->pass_logo_path) }}" alt="Pass logo" class="h-16 w-16 object-contain rounded border border-gray-300">
+                                </div>
+                            @endif
+                            <input type="file" id="pass_logo" name="pass_logo" accept="image/png,image/jpeg,image/jpg,image/webp" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500">
+                            <p class="mt-1 text-xs text-gray-500">PNG, JPG, or WebP (max 2MB). Used for Apple Wallet and Google Wallet passes. Recommended: 160x50px.</p>
+                            <x-input-error :messages="$errors->get('pass_logo')" class="mt-2" />
+                        </div>
+
+                        <!-- Pass Hero Image Upload -->
+                        <div class="mb-5">
+                            <label for="pass_hero_image" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Pass Hero Image (Wallet Passes)</label>
+                            @if($store->pass_hero_image_path)
+                                <div class="mb-2">
+                                    <p class="text-xs text-gray-500 mb-1">Current hero image:</p>
+                                    <img src="{{ asset('storage/' . $store->pass_hero_image_path) }}" alt="Pass hero image" class="h-32 w-full object-cover rounded border border-gray-300">
+                                </div>
+                            @endif
+                            <input type="file" id="pass_hero_image" name="pass_hero_image" accept="image/png,image/jpeg,image/jpg,image/webp" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500">
+                            <p class="mt-1 text-xs text-gray-500">PNG, JPG, or WebP (max 2MB). Banner image for wallet passes. Recommended: 640x180px (Apple Wallet) or 640x200px (Google Wallet).</p>
+                            <x-input-error :messages="$errors->get('pass_hero_image')" class="mt-2" />
                         </div>
 
                         <div class="flex items-center justify-between">
