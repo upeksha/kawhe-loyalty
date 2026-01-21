@@ -169,19 +169,13 @@ class GoogleWalletPassService
         $loyaltyObject->setLoyaltyPoints($loyaltyPoints);
         
         // Secondary points (rewards)
-        // IMPORTANT: Always set this field, even if 0, to ensure it's cleared when rewards are redeemed
-        if (($account->reward_balance ?? 0) > 0) {
-            $secondaryPoints = new \Google_Service_Walletobjects_LoyaltyPoints();
-            $secondaryPoints->setLabel('Rewards');
-            $secondaryPoints->setBalance(new \Google_Service_Walletobjects_LoyaltyPointsBalance([
-                'int' => $account->reward_balance,
-            ]));
-            $loyaltyObject->setSecondaryLoyaltyPoints($secondaryPoints);
-        } else {
-            // Explicitly clear secondary loyalty points when reward_balance is 0
-            // This ensures Google Wallet removes the rewards display when all rewards are redeemed
-            $loyaltyObject->setSecondaryLoyaltyPoints(null);
-        }
+        // Google API requires a LoyaltyPoints object (cannot pass null). Use 0 when no rewards.
+        $secondaryPoints = new \Google_Service_Walletobjects_LoyaltyPoints();
+        $secondaryPoints->setLabel('Rewards');
+        $secondaryPoints->setBalance(new \Google_Service_Walletobjects_LoyaltyPointsBalance([
+            'int' => max(0, $account->reward_balance ?? 0),
+        ]));
+        $loyaltyObject->setSecondaryLoyaltyPoints($secondaryPoints);
         
         // Dynamic barcode: LR:{redeem_token} when reward available, else LA:{public_token}
         // This matches Apple Wallet behavior for consistency
