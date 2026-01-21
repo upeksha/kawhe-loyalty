@@ -79,7 +79,31 @@ class WalletSyncService
             // Don't throw - allow Google Wallet sync to continue
         }
 
-        // Google Wallet sync (stub for now)
-        // Future: Implement Google Wallet push updates
+        // Google Wallet sync: Update the loyalty object when stamps/rewards change
+        try {
+            $this->googleService = $this->googleService ?? app(GoogleWalletPassService::class);
+            
+            Log::info('Wallet sync: Updating Google Wallet loyalty object', [
+                'loyalty_account_id' => $account->id,
+                'public_token' => $account->public_token,
+                'stamp_count' => $account->stamp_count,
+                'reward_balance' => $account->reward_balance ?? 0,
+            ]);
+            
+            $this->googleService->createOrUpdateLoyaltyObject($account);
+            
+            Log::info('Wallet sync: Google Wallet loyalty object updated successfully', [
+                'loyalty_account_id' => $account->id,
+                'public_token' => $account->public_token,
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Wallet sync: Failed to update Google Wallet loyalty object', [
+                'loyalty_account_id' => $account->id,
+                'public_token' => $account->public_token,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            // Don't throw - allow the sync to complete even if Google Wallet fails
+        }
     }
 }
