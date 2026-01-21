@@ -308,7 +308,11 @@
                             <!-- QR Code -->
                             <div class="bg-white rounded-xl p-6 shadow-lg border-4 border-yellow-400 mb-4 flex justify-center">
                                 <div id="redeem-qr-container">
-                                    {!! SimpleSoftwareIO\QrCode\Facades\QrCode::size(250)->generate('REDEEM:' . $account->redeem_token) !!}
+                                    @if($account->redeem_token)
+                                        {!! SimpleSoftwareIO\QrCode\Facades\QrCode::size(250)->generate('LR:' . $account->redeem_token) !!}
+                                    @else
+                                        <p class="text-red-500">Error: Redeem token not available. Please refresh the page.</p>
+                                    @endif
                                 </div>
                             </div>
 

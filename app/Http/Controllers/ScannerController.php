@@ -284,6 +284,18 @@ class ScannerController extends Controller
                 ->first();
 
             if (!$account) {
+                // Log debug information to help diagnose the issue
+                \Log::warning('Redeem token lookup failed', [
+                    'token' => $token,
+                    'token_length' => strlen($token),
+                    'store_id' => $storeId,
+                    'user_id' => Auth::id(),
+                    'accounts_with_reward_balance' => LoyaltyAccount::where('store_id', $storeId)
+                        ->where('reward_balance', '>', 0)
+                        ->pluck('id', 'redeem_token')
+                        ->toArray(),
+                ]);
+                
                 throw ValidationException::withMessages([
                     'token' => 'This redemption code is invalid or has expired. Please check the code and try again.'
                 ]);
