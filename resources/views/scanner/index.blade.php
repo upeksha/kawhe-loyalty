@@ -214,26 +214,38 @@
     <style>
         [x-cloak] { display: none !important; }
         
-        /* Ensure video element is visible on iOS Safari */
-        #reader video {
-            width: 100% !important;
-            height: 100% !important;
-            object-fit: cover !important;
-            display: block !important;
-            background: #000 !important;
-        }
-        
-        #reader canvas {
-            display: block !important;
-        }
-        
-        /* Ensure reader container is visible */
+        /* Reader container */
         #reader {
             position: relative !important;
             width: 100% !important;
             min-height: 300px !important;
             background: #000 !important;
             overflow: hidden !important;
+        }
+        
+        /* Video element styling - let html5-qrcode handle positioning */
+        #reader video {
+            width: 100% !important;
+            height: auto !important;
+            max-height: 100% !important;
+            object-fit: contain !important;
+            display: block !important;
+            background: #000 !important;
+        }
+        
+        /* Canvas overlay for QR detection */
+        #reader canvas {
+            position: absolute !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100% !important;
+            height: 100% !important;
+            pointer-events: none !important;
+        }
+        
+        /* Hide duplicate elements */
+        #reader > *:not(video):not(canvas) {
+            display: none !important;
         }
     </style>
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
@@ -299,19 +311,27 @@
                                         // Ignore errors when stopping (might not be running)
                                     }
                                     
+                                    // Small delay to ensure cleanup completes
+                                    await new Promise(resolve => setTimeout(resolve, 100));
+                                    
+                                    // Ensure container is clean
+                                    const readerElement = document.getElementById('reader');
+                                    if (readerElement) {
+                                        readerElement.innerHTML = '';
+                                    }
+                                    
                                     this.cameraStatus = 'Requesting camera permission…';
                                     this.isScanning = true;
 
                                     try {
-                                        if (!this.html5QrCode) {
-                                            this.html5QrCode = new Html5Qrcode('reader');
-                                        }
+                                        // Always create a new instance to avoid state issues
+                                        this.html5QrCode = new Html5Qrcode('reader');
 
                                         // Simple approach: Use facingMode for all browsers
-                                        // This works on iOS Safari too
                                         const config = { 
                                             fps: 10, 
-                                            qrbox: { width: 250, height: 250 }
+                                            qrbox: { width: 250, height: 250 },
+                                            aspectRatio: 1.0
                                         };
                                         
                                         await this.html5QrCode.start(
@@ -401,13 +421,23 @@
                                         // Stop current scanner
                                         await this.stopScanner();
                                         
-                                        // Small delay
+                                        // Small delay to ensure cleanup
                                         await new Promise(resolve => setTimeout(resolve, 200));
+                                        
+                                        // Ensure container is clean
+                                        const readerElement = document.getElementById('reader');
+                                        if (readerElement) {
+                                            readerElement.innerHTML = '';
+                                        }
+                                        
+                                        // Create new instance
+                                        this.html5QrCode = new Html5Qrcode('reader');
                                         
                                         // Start with new camera using deviceId
                                         const config = { 
                                             fps: 10, 
-                                            qrbox: { width: 250, height: 250 }
+                                            qrbox: { width: 250, height: 250 },
+                                            aspectRatio: 1.0
                                         };
                                         
                                         await this.html5QrCode.start(
@@ -446,18 +476,26 @@
                                     // stop() throws if not running; guard with try
                                     try {
                                         await this.html5QrCode.stop();
-                                        this.isScanning = false;
                                     } catch (e) {
                                         // Scanner might not be running - try to clear instead
                                         try {
-                                            // Clear the scanner to reset state
                                             await this.html5QrCode.clear();
                                         } catch (clearError) {
                                             // If clear also fails, just reset the instance
                                             this.html5QrCode = null;
                                         }
-                                        this.isScanning = false;
                                     }
+                                    
+                                    // Manually clear the container to remove any leftover video/canvas elements
+                                    const readerElement = document.getElementById('reader');
+                                    if (readerElement) {
+                                        // Remove all video and canvas elements
+                                        readerElement.querySelectorAll('video, canvas').forEach(el => el.remove());
+                                        // Clear innerHTML to ensure clean state
+                                        readerElement.innerHTML = '';
+                                    }
+                                    
+                                    this.isScanning = false;
                                 },
 
                                 pauseScanner() {
