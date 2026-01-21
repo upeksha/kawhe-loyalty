@@ -480,8 +480,11 @@
                                             config,
                                             (decodedText) => this.onScanSuccess(decodedText),
                                             (errorMessage) => {
-                                                // Error callback - can be empty, errors are handled in catch
-                                                console.debug('Scan error:', errorMessage);
+                                                // Silently ignore "no QR code found" errors - these are expected
+                                                // Only log actual errors (not parse errors)
+                                                if (errorMessage && !errorMessage.includes('No MultiFormat Readers') && !errorMessage.includes('QR code parse error')) {
+                                                    console.warn('Unexpected scan error:', errorMessage);
+                                                }
                                             }
                                         );
                                         this.activeCameraId = cameraId;
