@@ -292,6 +292,13 @@
                                 },
 
                                 async startScanner() {
+                                    // Always stop scanner first if it's running
+                                    try {
+                                        await this.stopScanner();
+                                    } catch (e) {
+                                        // Ignore errors when stopping (might not be running)
+                                    }
+                                    
                                     this.cameraStatus = 'Requesting camera permission…';
                                     this.isScanning = true;
 
@@ -363,11 +370,18 @@
                                         console.error('Failed to start scanner:', e);
                                         this.isScanning = false;
                                         
-                                        // Better error messages
-                                        if (e.name === 'NotAllowedError' || e.message.includes('permission')) {
+                                        // Better error messages - safely check e.message
+                                        const errorMessage = e?.message || e?.toString() || '';
+                                        const errorName = e?.name || '';
+                                        
+                                        if (errorName === 'NotAllowedError' || errorMessage.includes('permission')) {
                                             this.cameraStatus = 'Camera permission denied. Please allow camera access in Safari settings.';
-                                        } else if (e.name === 'NotFoundError' || e.message.includes('camera')) {
+                                        } else if (errorName === 'NotFoundError' || errorMessage.includes('camera')) {
                                             this.cameraStatus = 'No camera found. Please check your device.';
+                                        } else if (errorMessage.includes('scan is ongoing')) {
+                                            // Scanner already running - try stopping and restarting
+                                            this.cameraStatus = 'Restarting camera…';
+                                            setTimeout(() => this.startScanner(), 500);
                                         } else {
                                             this.cameraStatus = 'Camera unavailable. Tap "Start Camera" to try again.';
                                         }
@@ -399,6 +413,13 @@
                                 },
 
                                 async startWithFacingMode(mode) {
+                                    // Ensure scanner is stopped before starting
+                                    try {
+                                        await this.stopScanner();
+                                    } catch (e) {
+                                        // Ignore - might not be running
+                                    }
+                                    
                                     const config = { 
                                         fps: 10, 
                                         qrbox: { width: 250, height: 250 },
@@ -427,6 +448,13 @@
                                 },
 
                                 async startWithCameraId(cameraId) {
+                                    // Ensure scanner is stopped before starting
+                                    try {
+                                        await this.stopScanner();
+                                    } catch (e) {
+                                        // Ignore - might not be running
+                                    }
+                                    
                                     const isIOSSafari = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
                                     
                                     // iOS Safari needs different configuration
@@ -521,13 +549,27 @@
                                 },
 
                                 async stopScanner() {
-                                    if (!this.html5QrCode) return;
+                                    if (!this.html5QrCode) {
+                                        this.isScanning = false;
+                                        return;
+                                    }
+                                    
                                     // stop() throws if not running; guard with try
                                     try {
-                                        await this.html5QrCode.stop();
+                                        // Check if scanner is actually scanning before stopping
+                                        const isScanning = await this.html5QrCode.getState();
+                                        if (isScanning === Html5QrcodeScannerState.SCANNING) {
+                                            await this.html5QrCode.stop();
+                                        }
                                         this.isScanning = false;
                                     } catch (e) {
-                                        // ignore
+                                        // Ignore errors - scanner might not be running
+                                        // Try to clear anyway
+                                        try {
+                                            await this.html5QrCode.clear();
+                                        } catch (clearError) {
+                                            // Ignore clear errors too
+                                        }
                                         this.isScanning = false;
                                     }
                                 },
