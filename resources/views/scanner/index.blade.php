@@ -226,11 +226,13 @@
         /* Video element styling - let html5-qrcode handle positioning */
         #reader video {
             width: 100% !important;
-            height: auto !important;
-            max-height: 100% !important;
-            object-fit: contain !important;
+            height: 100% !important;
+            object-fit: cover !important;
             display: block !important;
             background: #000 !important;
+            position: absolute !important;
+            top: 0 !important;
+            left: 0 !important;
         }
         
         /* Canvas overlay for QR detection */
@@ -327,30 +329,90 @@
                                         // Always create a new instance to avoid state issues
                                         this.html5QrCode = new Html5Qrcode('reader');
 
-                                        // Simple approach: Use facingMode for all browsers
-                                        const config = { 
-                                            fps: 10, 
-                                            qrbox: { width: 250, height: 250 },
-                                            aspectRatio: 1.0
-                                        };
+                                        // Detect iOS Safari
+                                        const isIOSSafari = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
                                         
-                                        await this.html5QrCode.start(
-                                            { facingMode: 'environment' },
-                                            config,
-                                            (decodedText) => this.onScanSuccess(decodedText),
-                                            (errorMessage) => {
-                                                // Silently ignore "no QR code found" errors
-                                                if (errorMessage && !errorMessage.includes('No MultiFormat Readers') && !errorMessage.includes('QR code parse error')) {
-                                                    console.warn('Unexpected scan error:', errorMessage);
-                                                }
+                                        if (isIOSSafari) {
+                                            // iOS Safari: Need to enumerate cameras and use deviceId
+                                            await this.loadCameras();
+                                            
+                                            if (this.cameras.length === 0) {
+                                                throw new Error('No cameras found');
                                             }
-                                        );
+                                            
+                                            // Try stored camera first, or pick preferred (back camera)
+                                            let cameraId = localStorage.getItem('kawhe_scanner_camera_id');
+                                            if (!cameraId || !this.cameras.find(c => c.id === cameraId)) {
+                                                cameraId = this.pickPreferredCameraId(this.cameras) || this.cameras[this.cameras.length - 1].id;
+                                            }
+                                            
+                                            // iOS Safari specific config - use viewfinder for better video display
+                                            const readerEl = document.getElementById('reader');
+                                            const containerWidth = readerEl.offsetWidth || 300;
+                                            const containerHeight = readerEl.offsetHeight || 300;
+                                            
+                                            const config = { 
+                                                fps: 10,
+                                                viewfinderWidth: containerWidth,
+                                                viewfinderHeight: containerHeight,
+                                                qrbox: function(viewfinderWidth, viewfinderHeight) {
+                                                    const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
+                                                    const qrboxSize = Math.floor(minEdge * 0.7);
+                                                    return { width: qrboxSize, height: qrboxSize };
+                                                },
+                                                aspectRatio: 1.0
+                                            };
+                                            
+                                            await this.html5QrCode.start(
+                                                { deviceId: { exact: cameraId } },
+                                                config,
+                                                (decodedText) => this.onScanSuccess(decodedText),
+                                                (errorMessage) => {
+                                                    if (errorMessage && !errorMessage.includes('No MultiFormat Readers') && !errorMessage.includes('QR code parse error')) {
+                                                        console.warn('Unexpected scan error:', errorMessage);
+                                                    }
+                                                }
+                                            );
+                                            
+                                            this.activeCameraId = cameraId;
+                                            localStorage.setItem('kawhe_scanner_camera_id', cameraId);
+                                            
+                                            // Force video element to be visible on iOS Safari
+                                            setTimeout(() => {
+                                                const video = readerEl.querySelector('video');
+                                                if (video) {
+                                                    video.style.width = '100%';
+                                                    video.style.height = '100%';
+                                                    video.style.objectFit = 'cover';
+                                                    video.style.display = 'block';
+                                                    video.style.background = '#000';
+                                                }
+                                            }, 200);
+                                        } else {
+                                            // Non-iOS: Use facingMode (simpler and works well)
+                                            const config = { 
+                                                fps: 10, 
+                                                qrbox: { width: 250, height: 250 },
+                                                aspectRatio: 1.0
+                                            };
+                                            
+                                            await this.html5QrCode.start(
+                                                { facingMode: 'environment' },
+                                                config,
+                                                (decodedText) => this.onScanSuccess(decodedText),
+                                                (errorMessage) => {
+                                                    if (errorMessage && !errorMessage.includes('No MultiFormat Readers') && !errorMessage.includes('QR code parse error')) {
+                                                        console.warn('Unexpected scan error:', errorMessage);
+                                                    }
+                                                }
+                                            );
+                                            
+                                            // Load cameras for switching (optional)
+                                            await this.loadCameras();
+                                        }
                                         
                                         this.cameraStatus = 'Scanning…';
                                         this.isScanning = true;
-                                        
-                                        // Load cameras for switching (optional)
-                                        await this.loadCameras();
                                     } catch (e) {
                                         console.error('Failed to start scanner:', e);
                                         this.isScanning = false;
