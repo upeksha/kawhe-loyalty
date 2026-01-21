@@ -556,19 +556,16 @@
                                     
                                     // stop() throws if not running; guard with try
                                     try {
-                                        // Check if scanner is actually scanning before stopping
-                                        const isScanning = await this.html5QrCode.getState();
-                                        if (isScanning === Html5QrcodeScannerState.SCANNING) {
-                                            await this.html5QrCode.stop();
-                                        }
+                                        await this.html5QrCode.stop();
                                         this.isScanning = false;
                                     } catch (e) {
-                                        // Ignore errors - scanner might not be running
-                                        // Try to clear anyway
+                                        // Scanner might not be running - try to clear instead
                                         try {
+                                            // Clear the scanner to reset state
                                             await this.html5QrCode.clear();
                                         } catch (clearError) {
-                                            // Ignore clear errors too
+                                            // If clear also fails, just reset the instance
+                                            this.html5QrCode = null;
                                         }
                                         this.isScanning = false;
                                     }
