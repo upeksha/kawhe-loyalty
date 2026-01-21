@@ -540,11 +540,13 @@
                                 },
 
                                 async restartWithCameraId(cameraId) {
-                                    try {
-                                        await this.stopScanner();
-                                    } catch (e) {
-                                        // ignore
-                                    }
+                                    // Stop scanner first
+                                    await this.stopScanner();
+                                    
+                                    // Small delay to ensure stop completes
+                                    await new Promise(resolve => setTimeout(resolve, 100));
+                                    
+                                    // Then start with new camera
                                     await this.startWithCameraId(cameraId);
                                 },
 
