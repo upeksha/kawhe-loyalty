@@ -359,12 +359,8 @@ class AppleWalletController extends Controller
                         'total_registrations' => $registrations->count(),
                     ]);
                     
-                    // Return JSON with empty array (not 204) to match Apple's expectation
-                    // Use Zulu format (Z) instead of +00:00 to avoid URL encoding issues
-                    return response()->json([
-                        'lastUpdated' => $since->format('Y-m-d\TH:i:s\Z'),
-                        'serialNumbers' => [],
-                    ]);
+                    // Return 204 No Content when no updates
+                    return response()->noContent();
                 }
 
                 // Calculate lastUpdated as max updated_at from the returned serials

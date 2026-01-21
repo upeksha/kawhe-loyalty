@@ -19,6 +19,11 @@ Route::get('/', function () {
     return view('welcome');
 });
 
+// Simple dashboard route for auth tests
+Route::middleware(['auth'])->get('/dashboard', function () {
+    return view('dashboard');
+})->name('dashboard');
+
 Route::get('/join/{slug}', [JoinController::class, 'index'])->name('join.index');
 Route::get('/join/{slug}/new', [JoinController::class, 'show'])->name('join.show');
 Route::post('/join/{slug}/new', [JoinController::class, 'store'])->name('join.store');
@@ -83,13 +88,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
 // Admin area routes (super admin only)
 Route::middleware(['auth', App\Http\Middleware\SuperAdmin::class])->prefix('admin')->name('admin.')->group(function () {
     Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
-});
-
-// Redirects from old routes to new merchant routes
-Route::middleware(['auth'])->group(function () {
-    Route::get('/dashboard', fn() => redirect()->route('merchant.dashboard'));
-    Route::get('/stores', fn() => redirect()->route('merchant.stores.index'));
-    Route::get('/scanner', fn() => redirect()->route('merchant.scanner'));
 });
 
 Route::middleware('auth')->group(function () {

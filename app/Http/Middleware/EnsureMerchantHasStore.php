@@ -17,6 +17,12 @@ class EnsureMerchantHasStore
     {
         $user = auth()->user();
 
+        // Exempt store management routes so merchants can create/view their first store
+        $routeName = $request->route()?->getName();
+        if ($routeName && (str_starts_with($routeName, 'merchant.stores.') || $routeName === 'merchant.stores.qr')) {
+            return $next($request);
+        }
+
         // Super admins bypass this check
         if ($user && $user->isSuperAdmin()) {
             return $next($request);

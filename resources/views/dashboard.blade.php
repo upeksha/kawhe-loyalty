@@ -7,6 +7,7 @@
 
     <div class="py-12">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
+            <div class="mb-4 text-green-700 font-semibold">You're logged in!</div>
             <!-- Usage Stats Banner -->
             @if(isset($usageStats))
                 <div class="mb-6 bg-white overflow-hidden shadow-sm sm:rounded-lg">

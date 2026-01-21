@@ -313,6 +313,19 @@ class ScannerController extends Controller
             abort(403, 'You do not own this store.');
         }
 
+        // Early verification check before further processing
+        $preAccount = LoyaltyAccount::where('redeem_token', $token)
+            ->where('store_id', $storeId)
+            ->first();
+        if ($preAccount && is_null($preAccount->verified_at)) {
+            return response()->json([
+                'message' => 'You must verify your email address before you can redeem rewards. Please check your loyalty card page for verification options.',
+                'errors' => [
+                    'token' => ['You must verify your email address before you can redeem rewards. Please check your loyalty card page for verification options.'],
+                ],
+            ], 422);
+        }
+
         // Capture logging information
         $userAgent = $request->userAgent();
         $ipAddress = $request->ip();
