@@ -53,7 +53,8 @@ class ScannerController extends Controller
 
         $requestedStoreId = $request->store_id; // Store from dropdown (may be wrong)
         $count = $request->input('count', 1);
-        $idempotencyKey = $request->input('idempotency_key', Str::uuid()->toString());
+        $incomingIdempotencyKey = $request->input('idempotency_key');
+        $idempotencyKey = $incomingIdempotencyKey ?: Str::uuid()->toString();
         $overrideCooldown = $request->boolean('override_cooldown', false);
 
         // Capture logging information
@@ -78,16 +79,35 @@ class ScannerController extends Controller
         // STEP 3: Determine if store was switched (for response metadata)
         $storeSwitched = $requestedStoreId && $requestedStoreId != $actualStoreId;
 
-        // STEP 4: COOLDOWN CHECK (30 seconds) - UX feature to prevent accidental double-clicks
-        // This is a controller-level check before calling the service
-        $secondsSinceLastStamp = $account->last_stamped_at 
-            ? $account->last_stamped_at->diffInSeconds(now()) 
+        // STEP 4a: Idempotency pre-check (before any cooldown logic)
+        if ($incomingIdempotencyKey) {
+            $existingEvent = \App\Models\StampEvent::where('idempotency_key', $incomingIdempotencyKey)->first();
+            if ($existingEvent) {
+                return response()->json([
+                    'status' => 'duplicate',
+                    'success' => false,
+                    'message' => 'Already processed',
+                    'store_switched' => false,
+                ], 200);
+            }
+        }
+
+        // STEP 4b: Hard server-side duplicate window (5s), regardless of override_cooldown
+        $secondsSinceLastStamp = $account->last_stamped_at
+            ? $account->last_stamped_at->diffInSeconds(now())
             : null;
 
+        if ($secondsSinceLastStamp !== null && $secondsSinceLastStamp < 5) {
+            return response()->json([
+                'status' => 'duplicate',
+                'success' => false,
+                'message' => 'Duplicate scan ignored',
+            ], 200);
+        }
+
+        // STEP 4c: UX cooldown (30s) - can be overridden
         if ($secondsSinceLastStamp !== null && $secondsSinceLastStamp < 30) {
-            // Within cooldown period
             if (!$overrideCooldown) {
-                // Return structured cooldown response
                 return response()->json([
                     'status' => 'cooldown',
                     'success' => false,
@@ -98,9 +118,9 @@ class ScannerController extends Controller
                     'next_action' => 'confirm_override',
                     'stampCount' => $account->stamp_count,
                     'rewardBalance' => $account->reward_balance ?? 0,
-                ], 409); // HTTP 409 Conflict
+                ], 409);
             }
-            // override_cooldown is true - proceed to stamp
+            // override_cooldown = true: allow if past 5-second hard window
         }
 
         // STEP 5: Call the service to perform the actual stamping
@@ -140,7 +160,7 @@ class ScannerController extends Controller
             
             return response()->json([
                 'status' => 'duplicate',
-                'success' => true,
+                'success' => false,
                 'storeName' => $store->name,
                 'store_id_used' => $store->id,
                 'store_name_used' => $store->name,
@@ -151,7 +171,7 @@ class ScannerController extends Controller
                 'rewardTarget' => $result->rewardTarget,
                 'rewardAvailable' => $result->rewardBalance > 0,
                 'message' => 'Already processed',
-            ]);
+            ], 200);
         }
 
         // STEP 7: Format success response
