@@ -169,6 +169,7 @@ class GoogleWalletPassService
         $loyaltyObject->setLoyaltyPoints($loyaltyPoints);
         
         // Secondary points (rewards)
+        // IMPORTANT: Always set this field, even if 0, to ensure it's cleared when rewards are redeemed
         if (($account->reward_balance ?? 0) > 0) {
             $secondaryPoints = new \Google_Service_Walletobjects_LoyaltyPoints();
             $secondaryPoints->setLabel('Rewards');
@@ -176,6 +177,10 @@ class GoogleWalletPassService
                 'int' => $account->reward_balance,
             ]));
             $loyaltyObject->setSecondaryLoyaltyPoints($secondaryPoints);
+        } else {
+            // Explicitly clear secondary loyalty points when reward_balance is 0
+            // This ensures Google Wallet removes the rewards display when all rewards are redeemed
+            $loyaltyObject->setSecondaryLoyaltyPoints(null);
         }
         
         // Dynamic barcode: LR:{redeem_token} when reward available, else LA:{public_token}
@@ -223,6 +228,7 @@ class GoogleWalletPassService
                 $stampChanged = $previousStampCount !== $account->stamp_count;
                 $rewardChanged = $previousRewardBalance !== ($account->reward_balance ?? 0);
                 $rewardEarned = ($account->reward_balance ?? 0) > $previousRewardBalance;
+                $rewardRedeemed = ($account->reward_balance ?? 0) < $previousRewardBalance;
                 
                 // Add notification message for significant changes
                 // Note: Google limits to 3 notifications per 24 hours per pass
@@ -239,6 +245,21 @@ class GoogleWalletPassService
                                 'description' => 'View Card',
                             ],
                         ];
+                    } elseif ($rewardRedeemed) {
+                        // Reward redeemed
+                        $redeemedCount = $previousRewardBalance - ($account->reward_balance ?? 0);
+                        $remainingCount = $account->reward_balance ?? 0;
+                        if ($remainingCount > 0) {
+                            $messages[] = [
+                                'header' => '✅ Reward Redeemed!',
+                                'body' => sprintf('You redeemed %d reward(s). %d remaining.', $redeemedCount, $remainingCount),
+                            ];
+                        } else {
+                            $messages[] = [
+                                'header' => '✅ Reward Redeemed!',
+                                'body' => sprintf('You redeemed %d reward(s). Keep earning stamps for more rewards!', $redeemedCount),
+                            ];
+                        }
                     } elseif ($stampChanged) {
                         // Stamp count changed
                         $stampDiff = $account->stamp_count - $previousStampCount;
