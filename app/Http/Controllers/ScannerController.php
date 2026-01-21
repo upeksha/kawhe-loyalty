@@ -117,6 +117,19 @@ class ScannerController extends Controller
         } catch (ValidationException $e) {
             // Re-throw validation exceptions (e.g., access denied)
             throw $e;
+        } catch (\Exception $e) {
+            // Log unexpected errors for debugging
+            \Log::error('Unexpected error in stamp service', [
+                'error' => $e->getMessage(),
+                'class' => get_class($e),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString(),
+                'account_id' => $account->id,
+                'user_id' => Auth::id(),
+            ]);
+            // Re-throw to return proper error response
+            throw $e;
         }
 
         // STEP 6: Handle duplicate/idempotent response
@@ -142,17 +155,26 @@ class ScannerController extends Controller
         }
 
         // STEP 7: Format success response
-        $account->refresh();
-        $account->load(['store', 'customer']);
-        $store = $account->store;
+        try {
+            $account->refresh();
+            $account->load(['store', 'customer']);
+            $store = $account->store;
 
-        // Get transaction for receipt (if points_transactions table exists)
-        $transaction = null;
-        if (\Schema::hasTable('points_transactions')) {
-            $transaction = PointsTransaction::where('idempotency_key', $idempotencyKey)->first();
-        }
+            // Get transaction for receipt (if points_transactions table exists)
+            $transaction = null;
+            try {
+                if (\Schema::hasTable('points_transactions')) {
+                    $transaction = PointsTransaction::where('idempotency_key', $idempotencyKey)->first();
+                }
+            } catch (\Exception $e) {
+                // Log but don't fail if transaction lookup fails
+                \Log::warning('Failed to lookup transaction for receipt', [
+                    'idempotency_key' => $idempotencyKey,
+                    'error' => $e->getMessage(),
+                ]);
+            }
 
-        return response()->json([
+            return response()->json([
             'status' => 'success',
             'success' => true,
             'message' => $count > 1 
@@ -177,6 +199,23 @@ class ScannerController extends Controller
                 'new_total' => $result->stampCount,
             ],
         ]);
+        } catch (\Exception $e) {
+            // Log error but still return success if stamp actually happened
+            \Log::error('Error formatting stamp response', [
+                'error' => $e->getMessage(),
+                'account_id' => $account->id ?? null,
+                'trace' => $e->getTraceAsString(),
+            ]);
+            
+            // Return minimal success response
+            return response()->json([
+                'status' => 'success',
+                'success' => true,
+                'message' => 'Stamp processed successfully',
+                'stampCount' => $result->stampCount ?? $account->stamp_count ?? 0,
+                'rewardBalance' => $result->rewardBalance ?? $account->reward_balance ?? 0,
+            ]);
+        }
     }
 
     /**
@@ -416,25 +455,50 @@ class ScannerController extends Controller
             ]);
 
             // Get the transaction for receipt
-            $transaction = PointsTransaction::where('idempotency_key', $idempotencyKey)->first();
+            $transaction = null;
+            try {
+                $transaction = PointsTransaction::where('idempotency_key', $idempotencyKey)->first();
+            } catch (\Exception $e) {
+                // Log but don't fail if transaction lookup fails
+                \Log::warning('Failed to lookup transaction for receipt (redeem)', [
+                    'idempotency_key' => $idempotencyKey,
+                    'error' => $e->getMessage(),
+                ]);
+            }
             
             $message = $quantity > 1 
                 ? "Successfully redeemed {$quantity} rewards! Enjoy your {$store->reward_title}!"
                 : "Reward redeemed successfully! Enjoy your {$store->reward_title}!";
             
-            return response()->json([
-                'success' => true,
-                'message' => $message,
-                'customerLabel' => $account->customer->name ?? 'Customer',
-                'receipt' => [
-                    'transaction_id' => $transaction->id ?? null,
-                    'timestamp' => now()->toIso8601String(),
-                    'reward_title' => $store->reward_title,
-                    'rewards_redeemed' => $quantity,
+            try {
+                return response()->json([
+                    'success' => true,
+                    'message' => $message,
+                    'customerLabel' => $account->customer->name ?? 'Customer',
+                    'receipt' => [
+                        'transaction_id' => $transaction->id ?? null,
+                        'timestamp' => now()->toIso8601String(),
+                        'reward_title' => $store->reward_title,
+                        'rewards_redeemed' => $quantity,
+                        'remaining_rewards' => $account->reward_balance ?? 0,
+                        'remaining_stamps' => $account->stamp_count,
+                    ],
+                ]);
+            } catch (\Exception $e) {
+                // Log error but still return success if redeem actually happened
+                \Log::error('Error formatting redeem response', [
+                    'error' => $e->getMessage(),
+                    'account_id' => $account->id ?? null,
+                    'trace' => $e->getTraceAsString(),
+                ]);
+                
+                // Return minimal success response
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Reward redeemed successfully',
                     'remaining_rewards' => $account->reward_balance ?? 0,
-                    'remaining_stamps' => $account->stamp_count,
-                ],
-            ]);
+                ]);
+            }
         });
     }
 }
