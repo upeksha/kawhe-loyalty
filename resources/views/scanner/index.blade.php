@@ -1,76 +1,73 @@
-<x-app-layout>
+<x-merchant-layout>
     <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            {{ __('Scanner') }}
-        </h2>
+        {{ __('Scanner') }}
     </x-slot>
 
-    <div class="py-12">
-        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-            <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
-                <div class="p-6 text-gray-900">
-                    
-                    @if($stores->isEmpty())
-                        <div class="text-center p-6">
-                            <p class="mb-4 text-gray-600">You need to create a store before you can scan cards.</p>
-                            <a href="{{ route('merchant.stores.create') }}" class="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 dark:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none dark:focus:ring-blue-800">
-                                Create Store
-                            </a>
-                        </div>
-                    @else
-                        <div class="max-w-md mx-auto" x-data="scannerApp()">
-                            
-                            <!-- Store Selector -->
-                            <div class="mb-6">
-                                <label for="store_id" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Select Active Store</label>
-                                <select id="store_id" x-model="activeStoreId" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500">
-                                    <option value="">-- Choose a Store --</option>
-                                    @foreach($stores as $store)
-                                        <option value="{{ $store->id }}">{{ $store->name }}</option>
-                                    @endforeach
-                                </select>
-                            </div>
+    <div class="max-w-2xl mx-auto">
+        @if($stores->isEmpty())
+            <x-ui.card class="p-6 text-center">
+                <p class="mb-4 text-stone-600">You need to create a store before you can scan cards.</p>
+                <x-ui.button href="{{ route('merchant.stores.create') }}" variant="primary">
+                    Create Store
+                </x-ui.button>
+            </x-ui.card>
+        @else
+            <x-ui.card class="p-6">
+                <div class="max-w-md mx-auto" x-data="scannerApp()">
+                    <!-- Store Selector -->
+                    <div class="mb-6">
+                        <label for="store_id" class="block mb-2 text-sm font-medium text-stone-700">Select Active Store</label>
+                        <select id="store_id" x-model="activeStoreId" class="block w-full rounded-lg border border-stone-300 shadow-sm px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500">
+                            <option value="">-- Choose a Store --</option>
+                            @foreach($stores as $store)
+                                <option value="{{ $store->id }}">{{ $store->name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
 
-                            <!-- Scanner Controls -->
-                            <div class="flex items-center justify-between mb-2">
-                                <p class="text-xs text-gray-600 dark:text-gray-300" x-text="cameraStatus"></p>
-                                <div class="flex items-center gap-2">
-                                    <button
-                                        type="button"
-                                        x-show="!isScanning"
-                                        @click="startScanner()"
-                                        class="px-3 py-2 text-xs font-medium rounded-lg bg-blue-600 hover:bg-blue-700 text-white transition"
-                                    >
-                                        Start Camera
-                                    </button>
-                                    <button
-                                        type="button"
-                                        @click="switchCamera()"
-                                        :disabled="!canSwitchCamera || !isScanning"
-                                        class="px-3 py-2 text-xs font-medium rounded-lg border transition disabled:opacity-50 disabled:cursor-not-allowed bg-white hover:bg-gray-50 text-gray-800 border-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-white dark:border-gray-600"
-                                    >
-                                        Switch camera
-                                    </button>
-                                </div>
-                            </div>
+                    <!-- Scanner Controls -->
+                    <div class="flex items-center justify-between mb-2">
+                        <p class="text-xs text-stone-600" x-text="cameraStatus"></p>
+                        <div class="flex items-center gap-2">
+                            <x-ui.button
+                                type="button"
+                                x-show="!isScanning"
+                                @click="startScanner()"
+                                variant="primary"
+                                size="sm"
+                            >
+                                Start Camera
+                            </x-ui.button>
+                            <x-ui.button
+                                type="button"
+                                @click="switchCamera()"
+                                :disabled="!canSwitchCamera || !isScanning"
+                                variant="secondary"
+                                size="sm"
+                            >
+                                Switch camera
+                            </x-ui.button>
+                        </div>
+                    </div>
                             <!-- Scanner Container with Cooldown Overlay -->
                             <div class="relative w-full mb-6 bg-black rounded-lg overflow-hidden" style="min-height: 300px; position: relative;">
                                 <div id="reader" class="w-full" style="min-height: 300px; width: 100%; position: relative; background: #000;"></div>
                                 
-                                <!-- Start Camera Button (shown when camera not started) -->
-                                <div 
-                                    x-show="!isScanning && cameraStatus !== 'Scanning…'" 
-                                    x-cloak
-                                    class="absolute inset-0 flex items-center justify-center bg-gray-900 bg-opacity-90 z-40 rounded-lg"
-                                >
-                                    <button
-                                        type="button"
-                                        @click="startScanner()"
-                                        class="px-6 py-3 text-base font-medium rounded-lg bg-blue-600 hover:bg-blue-700 text-white transition shadow-lg"
-                                    >
-                                        📷 Start Camera
-                                    </button>
-                                </div>
+                    <!-- Start Camera Button (shown when camera not started) -->
+                    <div 
+                        x-show="!isScanning && cameraStatus !== 'Scanning…'" 
+                        x-cloak
+                        class="absolute inset-0 flex items-center justify-center bg-stone-900 bg-opacity-90 z-40 rounded-lg"
+                    >
+                        <x-ui.button
+                            type="button"
+                            @click="startScanner()"
+                            variant="primary"
+                            size="lg"
+                        >
+                            📷 Start Camera
+                        </x-ui.button>
+                    </div>
                                 
                                 <!-- Cooldown Overlay -->
                                 <div 
@@ -92,122 +89,127 @@
                                 </div>
                             </div>
 
-                            <!-- Hidden fallback: upload image -->
-                            <div class="mb-6">
-                                <button
-                                    type="button"
-                                    @click="showUploadFallback = !showUploadFallback"
-                                    class="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 underline"
-                                >
-                                    Having trouble? Upload an image of the QR code
-                                </button>
-                                <div x-show="showUploadFallback" x-cloak class="mt-3 flex items-center gap-2">
-                                    <input
-                                        type="file"
-                                        accept="image/*"
-                                        @change="scanFromImageFile($event)"
-                                        class="block w-full text-xs text-gray-700 bg-gray-50 border border-gray-300 rounded-lg cursor-pointer dark:text-gray-300 dark:bg-gray-700 dark:border-gray-600"
-                                    />
-                                </div>
-                            </div>
-
-                            <!-- Manual Input -->
-                            <div class="mb-6">
-                                <label for="manual_token" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Or enter token manually</label>
-                                <div class="flex gap-2">
-                                    <input type="text" id="manual_token" x-model="manualToken" placeholder="e.g. LA:..." class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500">
-                                    <button @click="handleScan(manualToken)" type="button" class="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800">Scan</button>
-                                </div>
-                            </div>
-
-                            <!-- Modal for Stamp Count / Reward Quantity -->
-                            <div x-show="showModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50" style="display: none;">
-                                <div class="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-sm">
-                                    <h3 class="text-lg font-bold mb-4 text-gray-900 dark:text-white">Action Required</h3>
-                                    
-                                    <div x-show="isRedeem" class="mb-4">
-                                        <div class="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-4" role="alert">
-                                            <p class="font-bold">Redeem Reward?</p>
-                                            <p x-show="rewardBalance > 1" x-text="'Customer has ' + rewardBalance + ' rewards available.'"></p>
-                                            <p x-show="rewardBalance === 1">Customer has 1 reward available.</p>
-                                        </div>
-                                        
-                                        <!-- Quantity selector for multiple rewards -->
-                                        <div x-show="rewardBalance > 1">
-                                            <h4 class="text-md font-semibold mb-2 text-gray-700 dark:text-gray-300">How many rewards to redeem?</h4>
-                                            <div class="flex items-center justify-center space-x-4 mb-4">
-                                                <button @click="redeemQuantity = Math.max(1, redeemQuantity - 1)" class="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-xl font-bold text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600">-</button>
-                                                <span class="text-2xl font-bold text-gray-900 dark:text-white" x-text="redeemQuantity"></span>
-                                                <button @click="redeemQuantity = Math.min(rewardBalance, redeemQuantity + 1)" class="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-xl font-bold text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600">+</button>
-                                            </div>
-                                            <div class="text-center mb-2">
-                                                <button @click="redeemQuantity = rewardBalance" class="text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 underline" x-text="'Redeem All (' + rewardBalance + ')'"></button>
-                                            </div>
-                                            <p class="text-xs text-gray-500 dark:text-gray-400 text-center">
-                                                <span x-text="'After redeeming ' + redeemQuantity + ', ' + (rewardBalance - redeemQuantity) + ' reward(s) will remain.'"></span>
-                                            </p>
-                                        </div>
-                                        
-                                        <!-- Single reward message -->
-                                        <div x-show="rewardBalance === 1" class="text-sm text-gray-600 dark:text-gray-400">
-                                            <p>This will redeem 1 reward.</p>
-                                        </div>
-                                    </div>
-
-                                    <div x-show="!isRedeem">
-                                        <h4 class="text-md font-semibold mb-2 text-gray-700 dark:text-gray-300">How many stamps?</h4>
-                                        <div class="flex items-center justify-center space-x-4 mb-6">
-                                            <button @click="stampCount = Math.max(1, stampCount - 1)" class="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-xl font-bold text-gray-700 dark:text-gray-300">-</button>
-                                            <span class="text-2xl font-bold text-gray-900 dark:text-white" x-text="stampCount"></span>
-                                            <button @click="stampCount++" class="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-xl font-bold text-gray-700 dark:text-gray-300">+</button>
-                                        </div>
-                                    </div>
-
-                                    <div class="flex justify-end space-x-2">
-                                        <button @click="cancelActionModal()" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600">Cancel</button>
-                                        <button @click="confirmAction()" class="px-4 py-2 text-sm font-medium text-white bg-blue-700 rounded-lg hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800" x-text="isRedeem ? (rewardBalance > 1 ? 'Redeem ' + redeemQuantity : 'Redeem') : 'Add Stamps'"></button>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Cooldown Override Modal -->
-                            <div x-show="showCooldownModal" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-                                <div class="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-sm">
-                                    <h3 class="text-lg font-bold mb-4 text-gray-900 dark:text-white">Cooldown Active</h3>
-                                    <div class="mb-4">
-                                        <p class="text-gray-700 dark:text-gray-300 mb-2" x-text="`Stamped ${cooldownData?.seconds_since_last || 0}s ago — add another stamp anyway?`"></p>
-                                        <p class="text-sm text-gray-500 dark:text-gray-400">Cooldown: <span x-text="cooldownData?.cooldown_seconds || 30"></span> seconds</p>
-                                    </div>
-                                    <div class="flex justify-end space-x-2">
-                                        <button @click="showCooldownModal = false; cooldownData = null" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600">Cancel</button>
-                                        <button @click="confirmCooldownOverride()" class="px-4 py-2 text-sm font-medium text-white bg-blue-700 rounded-lg hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800">Add Anyway</button>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Store Switched Banner -->
-                            <div x-show="storeSwitched" x-transition class="p-4 mb-4 text-sm rounded-lg text-blue-800 bg-blue-50 dark:bg-blue-900 dark:text-blue-200" role="alert">
-                                <span class="font-medium">ℹ️ Store Switched</span>
-                                <p x-text="'Switched to ' + switchedStoreName + ' for this scan'"></p>
-                            </div>
-
-                            <!-- Feedback -->
-                            <div x-show="message" x-transition class="p-4 mb-4 text-sm rounded-lg" :class="success ? 'text-green-800 bg-green-50 dark:bg-gray-800 dark:text-green-400' : 'text-red-800 bg-red-50 dark:bg-gray-800 dark:text-red-400'" role="alert">
-                                <span class="font-medium" x-text="success ? 'Success!' : 'Error!'"></span> <span x-text="message"></span>
-                                <template x-if="success && resultData">
-                                    <div class="mt-2">
-                                        <p><strong>Customer:</strong> <span x-text="resultData.customerLabel"></span></p>
-                                        <p><strong>Store:</strong> <span x-text="resultData.store_name_used || resultData.storeName"></span></p>
-                                        <p><strong>Stamps:</strong> <span x-text="resultData.stampCount"></span> / <span x-text="resultData.rewardTarget"></span></p>
-                                    </div>
-                                </template>
-                            </div>
-
+                    <!-- Hidden fallback: upload image -->
+                    <div class="mb-6">
+                        <button
+                            type="button"
+                            @click="showUploadFallback = !showUploadFallback"
+                            class="text-xs text-stone-500 hover:text-stone-700 underline"
+                        >
+                            Having trouble? Upload an image of the QR code
+                        </button>
+                        <div x-show="showUploadFallback" x-cloak class="mt-3">
+                            <x-ui.input
+                                type="file"
+                                accept="image/*"
+                                @change="scanFromImageFile($event)"
+                            />
                         </div>
-                    @endif
+                    </div>
+
+                    <!-- Manual Input -->
+                    <div class="mb-6">
+                        <label for="manual_token" class="block mb-2 text-sm font-medium text-stone-700">Or enter token manually</label>
+                        <div class="flex gap-2">
+                            <x-ui.input type="text" id="manual_token" x-model="manualToken" placeholder="e.g. LA:..." class="flex-1" />
+                            <x-ui.button @click="handleScan(manualToken)" type="button" variant="primary" size="md">
+                                Scan
+                            </x-ui.button>
+                        </div>
+                    </div>
+
+                    <!-- Modal for Stamp Count / Reward Quantity -->
+                    <div x-show="showModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50" style="display: none;">
+                        <div class="bg-white rounded-lg p-6 w-full max-w-sm shadow-xl">
+                            <h3 class="text-lg font-bold mb-4 text-stone-900">Action Required</h3>
+                                    
+                            <div x-show="isRedeem" class="mb-4">
+                                <div class="bg-accent-50 border-l-4 border-accent-500 text-accent-700 p-4 mb-4" role="alert">
+                                    <p class="font-bold">Redeem Reward?</p>
+                                    <p x-show="rewardBalance > 1" x-text="'Customer has ' + rewardBalance + ' rewards available.'"></p>
+                                    <p x-show="rewardBalance === 1">Customer has 1 reward available.</p>
+                                </div>
+                                
+                                <!-- Quantity selector for multiple rewards -->
+                                <div x-show="rewardBalance > 1">
+                                    <h4 class="text-md font-semibold mb-2 text-stone-700">How many rewards to redeem?</h4>
+                                    <div class="flex items-center justify-center space-x-4 mb-4">
+                                        <button @click="redeemQuantity = Math.max(1, redeemQuantity - 1)" class="w-10 h-10 rounded-full bg-stone-200 flex items-center justify-center text-xl font-bold text-stone-700 hover:bg-stone-300">-</button>
+                                        <span class="text-2xl font-bold text-stone-900" x-text="redeemQuantity"></span>
+                                        <button @click="redeemQuantity = Math.min(rewardBalance, redeemQuantity + 1)" class="w-10 h-10 rounded-full bg-stone-200 flex items-center justify-center text-xl font-bold text-stone-700 hover:bg-stone-300">+</button>
+                                    </div>
+                                    <div class="text-center mb-2">
+                                        <button @click="redeemQuantity = rewardBalance" class="text-sm text-brand-600 hover:text-brand-700 underline" x-text="'Redeem All (' + rewardBalance + ')'"></button>
+                                    </div>
+                                    <p class="text-xs text-stone-500 text-center">
+                                        <span x-text="'After redeeming ' + redeemQuantity + ', ' + (rewardBalance - redeemQuantity) + ' reward(s) will remain.'"></span>
+                                    </p>
+                                </div>
+                                
+                                <!-- Single reward message -->
+                                <div x-show="rewardBalance === 1" class="text-sm text-stone-600">
+                                    <p>This will redeem 1 reward.</p>
+                                </div>
+                            </div>
+
+                            <div x-show="!isRedeem">
+                                <h4 class="text-md font-semibold mb-2 text-stone-700">How many stamps?</h4>
+                                <div class="flex items-center justify-center space-x-4 mb-6">
+                                    <button @click="stampCount = Math.max(1, stampCount - 1)" class="w-10 h-10 rounded-full bg-stone-200 flex items-center justify-center text-xl font-bold text-stone-700 hover:bg-stone-300">-</button>
+                                    <span class="text-2xl font-bold text-stone-900" x-text="stampCount"></span>
+                                    <button @click="stampCount++" class="w-10 h-10 rounded-full bg-stone-200 flex items-center justify-center text-xl font-bold text-stone-700 hover:bg-stone-300">+</button>
+                                </div>
+                            </div>
+
+                            <div class="flex justify-end gap-2">
+                                <x-ui.button @click="cancelActionModal()" variant="secondary" size="sm">
+                                    Cancel
+                                </x-ui.button>
+                                <x-ui.button @click="confirmAction()" variant="primary" size="sm" x-text="isRedeem ? (rewardBalance > 1 ? 'Redeem ' + redeemQuantity : 'Redeem') : 'Add Stamps'">
+                                </x-ui.button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Cooldown Override Modal -->
+                    <div x-show="showCooldownModal" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+                        <div class="bg-white rounded-lg p-6 w-full max-w-sm shadow-xl">
+                            <h3 class="text-lg font-bold mb-4 text-stone-900">Cooldown Active</h3>
+                            <div class="mb-4">
+                                <p class="text-stone-700 mb-2" x-text="`Stamped ${cooldownData?.seconds_since_last || 0}s ago — add another stamp anyway?`"></p>
+                                <p class="text-sm text-stone-500">Cooldown: <span x-text="cooldownData?.cooldown_seconds || 30"></span> seconds</p>
+                            </div>
+                            <div class="flex justify-end gap-2">
+                                <x-ui.button @click="showCooldownModal = false; cooldownData = null" variant="secondary" size="sm">
+                                    Cancel
+                                </x-ui.button>
+                                <x-ui.button @click="confirmCooldownOverride()" variant="primary" size="sm">
+                                    Add Anyway
+                                </x-ui.button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Store Switched Banner -->
+                    <div x-show="storeSwitched" x-transition class="p-4 mb-4 text-sm rounded-lg text-brand-800 bg-brand-50" role="alert">
+                        <span class="font-medium">ℹ️ Store Switched</span>
+                        <p x-text="'Switched to ' + switchedStoreName + ' for this scan'"></p>
+                    </div>
+
+                    <!-- Feedback -->
+                    <div x-show="message" x-transition class="p-4 mb-4 text-sm rounded-lg" :class="success ? 'text-brand-800 bg-brand-50' : 'text-red-800 bg-red-50'" role="alert">
+                        <span class="font-medium" x-text="success ? 'Success!' : 'Error!'"></span> <span x-text="message"></span>
+                        <template x-if="success && resultData">
+                            <div class="mt-2">
+                                <p><strong>Customer:</strong> <span x-text="resultData.customerLabel"></span></p>
+                                <p><strong>Store:</strong> <span x-text="resultData.store_name_used || resultData.storeName"></span></p>
+                                <p><strong>Stamps:</strong> <span x-text="resultData.stampCount"></span> / <span x-text="resultData.rewardTarget"></span></p>
+                            </div>
+                        </template>
+                    </div>
                 </div>
-            </div>
-        </div>
+            </x-ui.card>
+        @endif
     </div>
 
     @push('scripts')
@@ -910,5 +912,5 @@
         });
     </script>
     @endpush
-</x-app-layout>
+</x-merchant-layout>
 
