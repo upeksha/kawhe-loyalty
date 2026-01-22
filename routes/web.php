@@ -101,6 +101,8 @@ Route::middleware(['auth', App\Http\Middleware\EnsureMerchantHasStore::class])->
     
     Route::get('/customers', [MerchantCustomersController::class, 'index'])->name('customers.index');
     Route::get('/customers/{loyaltyAccount}', [MerchantCustomersController::class, 'show'])->name('customers.show');
+    Route::get('/customers/{loyaltyAccount}/edit', [MerchantCustomersController::class, 'edit'])->name('customers.edit');
+    Route::put('/customers/{loyaltyAccount}', [MerchantCustomersController::class, 'update'])->name('customers.update');
 });
 
 // Scanner actions (keep outside merchant group to avoid double middleware)

@@ -79,5 +79,51 @@ class MerchantCustomersController extends Controller
             'events' => $events,
         ]);
     }
+    
+    public function edit(LoyaltyAccount $loyaltyAccount)
+    {
+        // Ensure loyalty account belongs to merchant
+        $storeIds = Auth::user()->stores()->pluck('id');
+        
+        // Check if the account's store belongs to the merchant
+        if (!$storeIds->contains($loyaltyAccount->store_id)) {
+            abort(404, 'Loyalty account not found or you do not have access to it.');
+        }
+        
+        // Load relationships
+        $account = $loyaltyAccount->load(['customer', 'store']);
+        
+        return view('merchant.customers.edit', [
+            'account' => $account,
+        ]);
+    }
+    
+    public function update(Request $request, LoyaltyAccount $loyaltyAccount)
+    {
+        // Ensure loyalty account belongs to merchant
+        $storeIds = Auth::user()->stores()->pluck('id');
+        
+        // Check if the account's store belongs to the merchant
+        if (!$storeIds->contains($loyaltyAccount->store_id)) {
+            abort(404, 'Loyalty account not found or you do not have access to it.');
+        }
+        
+        // Load customer
+        $customer = $loyaltyAccount->customer;
+        
+        // Validate input
+        $validated = $request->validate([
+            'name' => ['nullable', 'string', 'max:255'],
+            'email' => ['nullable', 'email', 'max:255'],
+            'phone' => ['nullable', 'string', 'max:255'],
+        ]);
+        
+        // Update customer data
+        $customer->update($validated);
+        
+        return redirect()
+            ->route('merchant.customers.show', $loyaltyAccount)
+            ->with('success', 'Customer information updated successfully.');
+    }
 }
 

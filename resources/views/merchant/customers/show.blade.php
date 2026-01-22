@@ -30,7 +30,15 @@
                 <!-- Customer Info Card -->
                 <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
                     <div class="p-6 text-gray-900">
-                        <h3 class="text-lg font-bold mb-4 text-black">Customer Information</h3>
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="text-lg font-bold text-black">Customer Information</h3>
+                            <a href="{{ route('merchant.customers.edit', $account) }}" class="inline-flex items-center px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-md transition-colors">
+                                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                                </svg>
+                                Edit
+                            </a>
+                        </div>
                         <p class="mb-2"><strong>Name:</strong> {{ $account->customer->name ?? '(No name)' }}</p>
                         <p class="mb-2"><strong>Email:</strong> {{ $account->customer->email ?? '-' }}</p>
                         <p class="mb-2"><strong>Phone:</strong> {{ $account->customer->phone ?? '-' }}</p>
