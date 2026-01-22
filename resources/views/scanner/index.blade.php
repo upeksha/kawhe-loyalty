@@ -29,65 +29,63 @@
                     <div class="flex items-center justify-between mb-2">
                         <p class="text-xs text-stone-600" x-text="cameraStatus"></p>
                         <div class="flex items-center gap-2">
-                            <x-ui.button
+                            <button
                                 type="button"
                                 x-show="!isScanning"
                                 @click="startScanner()"
-                                variant="primary"
-                                size="sm"
+                                class="px-3 py-1.5 text-xs font-medium rounded-lg bg-brand-600 hover:bg-brand-700 text-white transition"
                             >
                                 Start Camera
-                            </x-ui.button>
-                            <x-ui.button
+                            </button>
+                            <button
                                 type="button"
                                 @click="switchCamera()"
-                                :disabled="!canSwitchCamera || !isScanning"
-                                variant="secondary"
-                                size="sm"
+                                x-bind:disabled="!canSwitchCamera || !isScanning"
+                                class="px-3 py-1.5 text-xs font-medium rounded-lg border transition disabled:opacity-50 disabled:cursor-not-allowed bg-white hover:bg-stone-50 text-stone-800 border-stone-300"
                             >
                                 Switch camera
-                            </x-ui.button>
+                            </button>
                         </div>
                     </div>
-                            <!-- Scanner Container with Cooldown Overlay -->
-                            <div class="relative w-full mb-6 bg-black rounded-lg overflow-hidden" style="min-height: 300px; position: relative;">
-                                <div id="reader" class="w-full" style="min-height: 300px; width: 100%; position: relative; background: #000;"></div>
-                                
-                    <!-- Start Camera Button (shown when camera not started) -->
-                    <div 
-                        x-show="!isScanning && cameraStatus !== 'Scanning…'" 
-                        x-cloak
-                        class="absolute inset-0 flex items-center justify-center bg-stone-900 bg-opacity-90 z-40 rounded-lg"
-                    >
-                        <x-ui.button
-                            type="button"
-                            @click="startScanner()"
-                            variant="primary"
-                            size="lg"
+
+                    <!-- Scanner Container with Cooldown Overlay -->
+                    <div class="relative w-full mb-6 bg-black rounded-lg overflow-hidden" style="min-height: 300px; position: relative;">
+                        <div id="reader" class="w-full" style="min-height: 300px; width: 100%; position: relative; background: #000;"></div>
+                        
+                        <!-- Start Camera Button (shown when camera not started) -->
+                        <div 
+                            x-show="!isScanning && cameraStatus !== 'Scanning…'" 
+                            x-cloak
+                            class="absolute inset-0 flex items-center justify-center bg-stone-900 bg-opacity-90 z-40 rounded-lg"
                         >
-                            📷 Start Camera
-                        </x-ui.button>
-                    </div>
-                                
-                                <!-- Cooldown Overlay -->
-                                <div 
-                                    x-show="cooldownActive" 
-                                    x-cloak
-                                    class="absolute inset-0 bg-black bg-opacity-75 flex flex-col items-center justify-center z-50 rounded-lg"
-                                    x-transition:enter="transition ease-out duration-200"
-                                    x-transition:enter-start="opacity-0"
-                                    x-transition:enter-end="opacity-100"
-                                    x-transition:leave="transition ease-in duration-200"
-                                    x-transition:leave-start="opacity-100"
-                                    x-transition:leave-end="opacity-0"
-                                >
-                                    <div class="text-center">
-                                        <div class="text-6xl font-bold text-white mb-4" x-text="cooldownSeconds"></div>
-                                        <p class="text-white text-lg font-semibold">Please wait...</p>
-                                        <p class="text-gray-300 text-sm mt-2">Scanner will resume automatically</p>
-                                    </div>
-                                </div>
+                            <button
+                                type="button"
+                                @click="startScanner()"
+                                class="px-6 py-3 text-base font-medium rounded-lg bg-brand-600 hover:bg-brand-700 text-white transition shadow-lg"
+                            >
+                                📷 Start Camera
+                            </button>
+                        </div>
+                        
+                        <!-- Cooldown Overlay -->
+                        <div 
+                            x-show="cooldownActive" 
+                            x-cloak
+                            class="absolute inset-0 bg-black bg-opacity-75 flex flex-col items-center justify-center z-50 rounded-lg"
+                            x-transition:enter="transition ease-out duration-200"
+                            x-transition:enter-start="opacity-0"
+                            x-transition:enter-end="opacity-100"
+                            x-transition:leave="transition ease-in duration-200"
+                            x-transition:leave-start="opacity-100"
+                            x-transition:leave-end="opacity-0"
+                        >
+                            <div class="text-center">
+                                <div class="text-6xl font-bold text-white mb-4" x-text="cooldownSeconds"></div>
+                                <p class="text-white text-lg font-semibold">Please wait...</p>
+                                <p class="text-gray-300 text-sm mt-2">Scanner will resume automatically</p>
                             </div>
+                        </div>
+                    </div>
 
                     <!-- Hidden fallback: upload image -->
                     <div class="mb-6">
@@ -112,9 +110,9 @@
                         <label for="manual_token" class="block mb-2 text-sm font-medium text-stone-700">Or enter token manually</label>
                         <div class="flex gap-2">
                             <x-ui.input type="text" id="manual_token" x-model="manualToken" placeholder="e.g. LA:..." class="flex-1" />
-                            <x-ui.button @click="handleScan(manualToken)" type="button" variant="primary" size="md">
+                            <button @click="handleScan(manualToken)" type="button" class="px-4 py-2 text-sm font-medium rounded-lg bg-brand-600 hover:bg-brand-700 text-white transition focus:outline-none focus:ring-2 focus:ring-brand-500">
                                 Scan
-                            </x-ui.button>
+                            </button>
                         </div>
                     </div>
 
@@ -162,11 +160,11 @@
                             </div>
 
                             <div class="flex justify-end gap-2">
-                                <x-ui.button @click="cancelActionModal()" variant="secondary" size="sm">
+                                <button @click="cancelActionModal()" class="px-4 py-2 text-sm font-medium text-stone-700 bg-stone-100 rounded-lg hover:bg-stone-200 transition">
                                     Cancel
-                                </x-ui.button>
-                                <x-ui.button @click="confirmAction()" variant="primary" size="sm" x-text="isRedeem ? (rewardBalance > 1 ? 'Redeem ' + redeemQuantity : 'Redeem') : 'Add Stamps'">
-                                </x-ui.button>
+                                </button>
+                                <button @click="confirmAction()" class="px-4 py-2 text-sm font-medium text-white bg-brand-600 rounded-lg hover:bg-brand-700 transition focus:outline-none focus:ring-2 focus:ring-brand-500" x-text="isRedeem ? (rewardBalance > 1 ? 'Redeem ' + redeemQuantity : 'Redeem') : 'Add Stamps'">
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -180,12 +178,12 @@
                                 <p class="text-sm text-stone-500">Cooldown: <span x-text="cooldownData?.cooldown_seconds || 30"></span> seconds</p>
                             </div>
                             <div class="flex justify-end gap-2">
-                                <x-ui.button @click="showCooldownModal = false; cooldownData = null" variant="secondary" size="sm">
+                                <button @click="showCooldownModal = false; cooldownData = null" class="px-4 py-2 text-sm font-medium text-stone-700 bg-stone-100 rounded-lg hover:bg-stone-200 transition">
                                     Cancel
-                                </x-ui.button>
-                                <x-ui.button @click="confirmCooldownOverride()" variant="primary" size="sm">
+                                </button>
+                                <button @click="confirmCooldownOverride()" class="px-4 py-2 text-sm font-medium text-white bg-brand-600 rounded-lg hover:bg-brand-700 transition focus:outline-none focus:ring-2 focus:ring-brand-500">
                                     Add Anyway
-                                </x-ui.button>
+                                </button>
                             </div>
                         </div>
                     </div>
