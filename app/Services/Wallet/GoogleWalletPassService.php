@@ -108,10 +108,11 @@ class GoogleWalletPassService
             $loyaltyClass->setReviewStatus($reviewStatus);
             
             // Add text modules
+            $rewardTarget = $store->reward_target ?? 10;
             $textModulesData = [
                 [
                     'header' => 'Reward Target',
-                    'body' => "Collect {$store->reward_target} stamps to earn: {$store->reward_title}",
+                    'body' => "Collect {$rewardTarget} stamps to earn: {$store->reward_title}",
                 ],
             ];
             $loyaltyClass->setTextModulesData($textModulesData);
@@ -215,10 +216,8 @@ class GoogleWalletPassService
         );
         $loyaltyObject->setBarcode($barcode);
         
-        // Apply store colors to loyalty object if available
-        if ($store->background_color) {
-            $loyaltyObject->setHexBackgroundColor($store->background_color);
-        }
+        // Note: Background color is set on LoyaltyClass, not LoyaltyObject
+        // The object inherits styling from the class
         
         // Text modules with circle indicators
         $rewardTarget = $store->reward_target ?? 10;
