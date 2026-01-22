@@ -176,8 +176,8 @@
 
                 <!-- Add to Wallet Cards -->
                 <div class="space-y-4 mb-4">
-                    <!-- Add to Apple Wallet Card -->
-                    <div class="bg-gray-800 rounded-2xl shadow-xl overflow-hidden">
+                    <!-- Add to Apple Wallet Card (iOS only) -->
+                    <div class="bg-gray-800 rounded-2xl shadow-xl overflow-hidden" x-show="isIOS" x-cloak>
                         <div class="p-6">
                             <div class="flex items-center gap-4 mb-3">
                                 <div class="w-12 h-12 bg-black rounded-full flex items-center justify-center">
@@ -202,8 +202,8 @@
                         </div>
                     </div>
 
-                    <!-- Add to Google Wallet Card -->
-                    <div class="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-200">
+                    <!-- Add to Google Wallet Card (Android only) -->
+                    <div class="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-200" x-show="isAndroid" x-cloak>
                         <div class="p-6">
                             <div class="flex items-center gap-4 mb-3">
                                 <div class="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center">
@@ -378,6 +378,7 @@
                     deferredPrompt: null,
                     showInstallPrompt: false,
                     isIOS: /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream,
+                    isAndroid: /Android/.test(navigator.userAgent),
                     isStandalone: window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone || document.referrer.includes('android-app://'),
 
                     init() {
