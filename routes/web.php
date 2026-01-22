@@ -55,6 +55,7 @@ Route::get('/join/{slug}/existing', [JoinController::class, 'existing'])->name('
 Route::post('/join/{slug}/existing', [JoinController::class, 'lookup'])->name('join.lookup')->middleware('throttle:10,1');
 
 Route::get('/c/{public_token}', [CardController::class, 'show'])->name('card.show');
+Route::get('/c/{public_token}/manifest.webmanifest', [CardController::class, 'manifest'])->name('card.manifest');
 Route::get('/api/card/{public_token}', [CardController::class, 'api'])->name('card.api');
 Route::get('/api/card/{public_token}/transactions', [CardController::class, 'transactions'])->name('card.transactions');
 

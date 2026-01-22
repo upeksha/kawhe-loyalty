@@ -152,4 +152,42 @@ class CardController extends Controller
             'total_count' => $transactions->count(),
         ]);
     }
+
+    public function manifest(string $public_token)
+    {
+        $account = LoyaltyAccount::with(['store'])->where('public_token', $public_token)->firstOrFail();
+        
+        $cardUrl = route('card.show', ['public_token' => $public_token]);
+        $baseUrl = rtrim(config('app.url'), '/');
+        $backgroundColor = $account->store->background_color ?? '#1F2937';
+        $themeColor = $account->store->brand_color ?? $backgroundColor;
+        
+        $manifest = [
+            'name' => $account->store->name . ' - My Card',
+            'short_name' => $account->store->name,
+            'start_url' => $cardUrl,
+            'scope' => $baseUrl . '/c/' . $public_token,
+            'display' => 'standalone',
+            'background_color' => $backgroundColor,
+            'theme_color' => $themeColor,
+            'orientation' => 'portrait-primary',
+            'icons' => [
+                [
+                    'src' => asset('favicon.ico'),
+                    'sizes' => '192x192',
+                    'type' => 'image/x-icon',
+                    'purpose' => 'any maskable'
+                ],
+                [
+                    'src' => asset('favicon.ico'),
+                    'sizes' => '512x512',
+                    'type' => 'image/x-icon',
+                    'purpose' => 'any maskable'
+                ]
+            ]
+        ];
+
+        return response()->json($manifest)
+            ->header('Content-Type', 'application/manifest+json');
+    }
 }
