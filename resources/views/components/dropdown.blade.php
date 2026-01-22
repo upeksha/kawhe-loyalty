@@ -1,4 +1,4 @@
-@props(['align' => 'right', 'width' => '48', 'contentClasses' => 'py-1 bg-white border border-stone-200'])
+@props(['align' => 'right', 'width' => '48', 'contentClasses' => 'py-1 bg-white border border-stone-200', 'direction' => 'down'])
 
 @php
 $alignmentClasses = match ($align) {
@@ -10,6 +10,11 @@ $alignmentClasses = match ($align) {
 $width = match ($width) {
     '48' => 'w-48',
     default => $width,
+};
+
+$directionClasses = match ($direction) {
+    'up' => 'bottom-full mb-2 origin-bottom',
+    default => 'top-full mt-2 origin-top',
 };
 @endphp
 
@@ -25,7 +30,7 @@ $width = match ($width) {
             x-transition:leave="transition ease-in duration-75"
             x-transition:leave-start="opacity-100 scale-100"
             x-transition:leave-end="opacity-0 scale-95"
-            class="absolute z-50 mt-2 {{ $width }} rounded-md shadow-lg {{ $alignmentClasses }}"
+            class="absolute z-50 {{ $directionClasses }} {{ $width }} rounded-md shadow-lg {{ $alignmentClasses }}"
             style="display: none;"
             @click="open = false">
         <div class="rounded-md ring-1 ring-stone-200 ring-opacity-50 shadow-lg {{ $contentClasses }}">

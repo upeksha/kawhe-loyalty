@@ -98,7 +98,7 @@
 
                     <!-- User Menu -->
                     <div class="px-4 py-4 border-t border-stone-200">
-                        <x-dropdown align="left" width="48">
+                        <x-dropdown align="left" width="48" direction="up">
                             <x-slot name="trigger">
                                 <button class="flex items-center w-full px-3 py-2 text-sm font-medium text-stone-700 rounded-lg hover:bg-stone-100 transition-colors">
                                     <div class="flex items-center flex-1">
