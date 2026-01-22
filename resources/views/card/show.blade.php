@@ -235,7 +235,7 @@
                 </div>
 
                 <!-- Add to Home Screen Card -->
-                <div class="bg-gray-800 rounded-2xl shadow-xl overflow-hidden mb-4">
+                <div class="bg-gray-800 rounded-2xl shadow-xl overflow-hidden mb-4" x-show="showInstallPrompt" x-cloak>
                     <div class="p-6">
                         <div class="flex items-center gap-4 mb-3">
                             <div class="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center">
@@ -245,9 +245,29 @@
                             </div>
                             <p class="text-white font-semibold">Add to Home Screen</p>
                         </div>
-                        <p class="text-gray-400 text-xs">
+                        <p class="text-gray-400 text-xs mb-4">
                             <span class="font-semibold text-gray-300">Tip:</span> Add this page to your Home Screen to access your card easily!
                         </p>
+                        <button 
+                            @click="installPWA()" 
+                            x-show="deferredPrompt !== null"
+                            class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors">
+                            Install App
+                        </button>
+                        <div x-show="deferredPrompt === null && !isIOS && !isStandalone" class="text-gray-400 text-xs space-y-1">
+                            <p class="font-semibold text-gray-300 mb-1">Manual Instructions:</p>
+                            <p><strong>Chrome/Edge:</strong> Click menu (⋮) → "Install app"</p>
+                            <p><strong>Firefox:</strong> Click menu (☰) → "Install"</p>
+                            <p><strong>Safari:</strong> Share button (□↑) → "Add to Home Screen"</p>
+                        </div>
+                        <div x-show="isIOS && !isStandalone" class="text-gray-400 text-xs space-y-2">
+                            <p class="font-semibold text-gray-300">iOS Instructions:</p>
+                            <ol class="list-decimal list-inside space-y-1">
+                                <li>Tap the Share button <svg class="inline w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M15 8a3 3 0 10-2.977-2.63l-4.94 2.47a3 3 0 100 4.319l4.94 2.47a3 3 0 10.895-1.789l-4.94-2.47a3.027 3.027 0 000-.74l4.94-2.47C13.456 7.68 14.19 8 15 8z"></path></svg> at the bottom</li>
+                                <li>Scroll down and tap "Add to Home Screen"</li>
+                                <li>Tap "Add" to confirm</li>
+                            </ol>
+                        </div>
                     </div>
                 </div>
 
@@ -354,10 +374,16 @@
                     verifying: false,
                     verifyMessage: '',
                     cardForgotten: false,
+                    // PWA Install Prompt
+                    deferredPrompt: null,
+                    showInstallPrompt: false,
+                    isIOS: /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream,
+                    isStandalone: window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone || document.referrer.includes('android-app://'),
 
                     init() {
                         this.persistCard();
                         this.initialize();
+                        this.setupPWAInstall();
                     },
 
                     persistCard() {
@@ -614,6 +640,61 @@
                             notification.style.transition = 'opacity 0.3s';
                             setTimeout(() => notification.remove(), 300);
                         }, 2000);
+                    },
+
+                    setupPWAInstall() {
+                        // Don't show if already installed
+                        if (this.isStandalone) {
+                            this.showInstallPrompt = false;
+                            return;
+                        }
+
+                        // Listen for the beforeinstallprompt event (Chrome, Edge, etc.)
+                        window.addEventListener('beforeinstallprompt', (e) => {
+                            // Prevent the default mini-infobar from appearing
+                            e.preventDefault();
+                            // Stash the event so it can be triggered later
+                            this.deferredPrompt = e;
+                            // Show our install prompt
+                            this.showInstallPrompt = true;
+                        });
+
+                        // For iOS or if prompt isn't available, show manual instructions
+                        if (this.isIOS || (!this.deferredPrompt && !this.isStandalone)) {
+                            this.showInstallPrompt = true;
+                        }
+
+                        // Hide prompt if user dismissed it before
+                        const installDismissed = localStorage.getItem('pwa_install_dismissed');
+                        if (installDismissed === 'true') {
+                            this.showInstallPrompt = false;
+                        }
+                    },
+
+                    async installPWA() {
+                        if (!this.deferredPrompt) {
+                            // Manual instructions already shown in template
+                            return;
+                        }
+
+                        // Show the install prompt
+                        this.deferredPrompt.prompt();
+
+                        // Wait for the user to respond to the prompt
+                        const { outcome } = await this.deferredPrompt.userChoice;
+
+                        if (outcome === 'accepted') {
+                            console.log('User accepted the install prompt');
+                            this.showInstallPrompt = false;
+                        } else {
+                            console.log('User dismissed the install prompt');
+                            // Optionally hide the prompt if user dismissed it
+                            localStorage.setItem('pwa_install_dismissed', 'true');
+                            this.showInstallPrompt = false;
+                        }
+
+                        // Clear the deferredPrompt so it can only be used once
+                        this.deferredPrompt = null;
                     }
                 }));
             });
