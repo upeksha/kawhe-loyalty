@@ -1,57 +1,56 @@
-<x-app-layout>
+<x-merchant-layout>
     <x-slot name="header">
         <div class="flex justify-between items-center">
-            <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-                {{ __('My Stores') }}
-            </h2>
-            <a href="{{ route('merchant.stores.create') }}" class="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 dark:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none dark:focus:ring-blue-800">
+            <span>{{ __('My Stores') }}</span>
+            <x-ui.button href="{{ route('merchant.stores.create') }}" variant="primary" size="sm">
                 Add Store
-            </a>
+            </x-ui.button>
         </div>
     </x-slot>
 
-    <div class="py-12">
-        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-            <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
-                <div class="p-6 text-gray-900">
-                    @if($stores->isEmpty())
-                        <p class="text-gray-500 text-center py-4">You haven't created any stores yet.</p>
-                    @else
-                        <div class="relative overflow-x-auto shadow-md sm:rounded-lg">
-                            <table class="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400">
-                                <thead class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
-                                    <tr>
-                                        <th scope="col" class="px-6 py-3">Store Name</th>
-                                        <th scope="col" class="px-6 py-3">Address</th>
-                                        <th scope="col" class="px-6 py-3">Reward Target</th>
-                                        <th scope="col" class="px-6 py-3">Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach($stores as $store)
-                                        <tr class="bg-white border-b dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600">
-                                            <th scope="row" class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white">
-                                                {{ $store->name }}
-                                            </th>
-                                            <td class="px-6 py-4">
-                                                {{ $store->address ?? 'N/A' }}
-                                            </td>
-                                            <td class="px-6 py-4">
-                                                {{ $store->reward_target }} stamps for {{ $store->reward_title }}
-                                            </td>
-                                            <td class="px-6 py-4 flex space-x-2">
-                                                <a href="{{ route('merchant.stores.edit', $store) }}" class="font-medium text-blue-600 dark:text-blue-500 hover:underline">Edit</a>
-                                                <a href="{{ route('merchant.stores.qr', $store) }}" class="font-medium text-green-600 dark:text-green-500 hover:underline">QR Code</a>
-                                            </td>
-                                        </tr>
-                                    @endforeach
-                                </tbody>
-                            </table>
-                        </div>
-                    @endif
-                </div>
-            </div>
-        </div>
+    <div class="space-y-6">
+        @if($stores->isEmpty())
+            <x-ui.card class="p-12 text-center">
+                <p class="text-stone-500 mb-4">You haven't created any stores yet.</p>
+                <x-ui.button href="{{ route('merchant.stores.create') }}" variant="primary">
+                    Create Your First Store
+                </x-ui.button>
+            </x-ui.card>
+        @else
+            <x-ui.card class="p-0 overflow-hidden">
+                <x-ui.table>
+                    <x-ui.table-head>
+                        <tr>
+                            <x-ui.table-header-cell>Store Name</x-ui.table-header-cell>
+                            <x-ui.table-header-cell>Address</x-ui.table-header-cell>
+                            <x-ui.table-header-cell>Reward Target</x-ui.table-header-cell>
+                            <x-ui.table-header-cell class="text-right">Actions</x-ui.table-header-cell>
+                        </tr>
+                    </x-ui.table-head>
+                    <x-ui.table-body>
+                        @foreach($stores as $store)
+                            <tr class="hover:bg-stone-50 transition-colors">
+                                <x-ui.table-cell class="font-medium text-stone-900">
+                                    {{ $store->name }}
+                                </x-ui.table-cell>
+                                <x-ui.table-cell>
+                                    {{ $store->address ?? 'N/A' }}
+                                </x-ui.table-cell>
+                                <x-ui.table-cell>
+                                    {{ $store->reward_target }} stamps for {{ $store->reward_title }}
+                                </x-ui.table-cell>
+                                <x-ui.table-cell class="text-right">
+                                    <div class="flex justify-end gap-3">
+                                        <a href="{{ route('merchant.stores.edit', $store) }}" class="text-brand-600 hover:text-brand-700 font-medium text-sm">Edit</a>
+                                        <a href="{{ route('merchant.stores.qr', $store) }}" class="text-brand-600 hover:text-brand-700 font-medium text-sm">QR Code</a>
+                                    </div>
+                                </x-ui.table-cell>
+                            </tr>
+                        @endforeach
+                    </x-ui.table-body>
+                </x-ui.table>
+            </x-ui.card>
+        @endif
     </div>
-</x-app-layout>
+</x-merchant-layout>
 
