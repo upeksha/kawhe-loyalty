@@ -101,35 +101,76 @@ class AppleWalletPassService
         $pass->setPassDefinition($passDefinition);
 
         // Add assets (images) - addAsset() expects file paths, not file contents
+        // Apple Wallet requires specific filenames: logo.png, strip.png, icon.png, background.png
         $assetsPath = resource_path('wallet/apple/default');
+        
+        // Create unique temp directory for this pass generation to avoid filename conflicts
+        $tempDir = sys_get_temp_dir() . '/apple_wallet_' . uniqid();
+        if (!is_dir($tempDir)) {
+            mkdir($tempDir, 0755, true);
+        }
+        
+        $assetsAdded = [];
         
         // Use store pass logo if available, otherwise fallback to default
         if ($store->pass_logo_path && Storage::disk('public')->exists($store->pass_logo_path)) {
             $passLogoPath = Storage::disk('public')->path($store->pass_logo_path);
             if (file_exists($passLogoPath)) {
-                $pass->addAsset($passLogoPath);
+                // Copy to temp file with exact name (logo.png) so PassGenerator recognizes it
+                $tempLogoPath = $tempDir . '/logo.png';
+                if (copy($passLogoPath, $tempLogoPath)) {
+                    $pass->addAsset($tempLogoPath);
+                    $assetsAdded[] = 'logo (store)';
+                }
             }
         } elseif (file_exists($assetsPath . '/logo.png')) {
             $pass->addAsset($assetsPath . '/logo.png');
+            $assetsAdded[] = 'logo (default)';
         }
         
         // Use store pass hero image if available, otherwise fallback to default strip
         if ($store->pass_hero_image_path && Storage::disk('public')->exists($store->pass_hero_image_path)) {
             $passHeroPath = Storage::disk('public')->path($store->pass_hero_image_path);
             if (file_exists($passHeroPath)) {
-                $pass->addAsset($passHeroPath);
+                // Copy to temp file with exact name (strip.png) so PassGenerator recognizes it
+                $tempStripPath = $tempDir . '/strip.png';
+                if (copy($passHeroPath, $tempStripPath)) {
+                    $pass->addAsset($tempStripPath);
+                    $assetsAdded[] = 'strip (store)';
+                }
             }
         } elseif (file_exists($assetsPath . '/strip.png')) {
             $pass->addAsset($assetsPath . '/strip.png');
+            $assetsAdded[] = 'strip (default)';
         }
         
         // Always add icon and background (required by Apple Wallet)
         if (file_exists($assetsPath . '/icon.png')) {
             $pass->addAsset($assetsPath . '/icon.png');
+            $assetsAdded[] = 'icon';
         }
         if (file_exists($assetsPath . '/background.png')) {
             $pass->addAsset($assetsPath . '/background.png');
+            $assetsAdded[] = 'background';
         }
+        
+        // Log which assets were added for debugging
+        \Log::info('Apple Wallet: Assets added', [
+            'account_id' => $account->id,
+            'store_id' => $store->id,
+            'assets' => $assetsAdded,
+            'has_store_logo' => !empty($store->pass_logo_path),
+            'has_store_hero' => !empty($store->pass_hero_image_path),
+        ]);
+        
+        // Clean up temp directory after pass generation
+        // Note: We don't delete immediately as PassGenerator may still need the files during create()
+        register_shutdown_function(function() use ($tempDir) {
+            if (is_dir($tempDir)) {
+                array_map('unlink', glob("$tempDir/*"));
+                @rmdir($tempDir);
+            }
+        });
 
         // Generate and return pkpass binary
         return $pass->create();
