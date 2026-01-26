@@ -8,7 +8,7 @@ $width = match ($width) {
 
 // Build alignment and direction classes together
 if ($direction === 'up') {
-    // Opening upward
+    // Opening upward - position above the trigger
     $positionClasses = 'bottom-full mb-2';
     $alignmentClasses = match ($align) {
         'left' => 'ltr:origin-bottom-left rtl:origin-bottom-right start-0',
@@ -16,7 +16,7 @@ if ($direction === 'up') {
         default => 'ltr:origin-bottom-right rtl:origin-bottom-left end-0',
     };
 } else {
-    // Opening downward (default)
+    // Opening downward (default) - position below the trigger
     $positionClasses = 'top-full mt-2';
     $alignmentClasses = match ($align) {
         'left' => 'ltr:origin-top-left rtl:origin-top-right start-0',
