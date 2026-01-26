@@ -24,9 +24,9 @@
             <!-- Sidebar -->
             <aside 
                 :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'"
-                class="fixed lg:static inset-y-0 left-0 z-50 w-64 bg-white border-r border-stone-200 transform transition-transform duration-200 ease-in-out lg:translate-x-0"
+                class="fixed lg:static inset-y-0 left-0 z-50 w-64 bg-white border-r border-stone-200 transform transition-transform duration-200 ease-in-out lg:translate-x-0 overflow-visible"
             >
-                <div class="flex flex-col h-full">
+                <div class="flex flex-col h-full overflow-visible">
                     <!-- Logo -->
                     <div class="flex items-center justify-between h-16 px-6 border-b border-stone-200">
                         <a href="{{ route('merchant.dashboard') }}" class="flex items-center space-x-2">
@@ -99,8 +99,8 @@
                     </nav>
 
                     <!-- User Menu -->
-                    <div class="px-4 py-4 border-t border-stone-200">
-                        <x-dropdown align="left" width="48">
+                    <div class="px-4 py-4 border-t border-stone-200 relative" style="overflow: visible;">
+                        <x-dropdown align="left" width="48" direction="up">
                             <x-slot name="trigger">
                                 <button class="flex items-center w-full px-3 py-2 text-sm font-medium text-stone-700 rounded-lg hover:bg-stone-100 transition-colors">
                                     <div class="flex items-center flex-1">
