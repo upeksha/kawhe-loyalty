@@ -8,8 +8,8 @@ $width = match ($width) {
 
 // Build alignment and direction classes together
 if ($direction === 'up') {
-    // Opening upward - position above the trigger
-    $positionClasses = 'bottom-full mb-2';
+    // Opening upward - use negative top to position above the trigger
+    $positionClasses = ''; // We'll use inline style for negative top
     $alignmentClasses = match ($align) {
         'left' => 'ltr:origin-bottom-left rtl:origin-bottom-right start-0 left-0',
         'top' => 'origin-bottom',
@@ -39,7 +39,11 @@ if ($direction === 'up') {
             x-transition:leave-start="opacity-100 scale-100"
             x-transition:leave-end="opacity-0 scale-95"
             class="absolute {{ $positionClasses }} {{ $width }} rounded-md shadow-lg {{ $alignmentClasses }}"
+            @if($direction === 'up')
+            style="display: none; z-index: 10000; top: -110px;"
+            @else
             style="display: none; z-index: 10000;"
+            @endif
             @click="open = false">
         <div class="rounded-md ring-1 ring-stone-200 ring-opacity-50 shadow-lg {{ $contentClasses }}">
             {{ $content }}
