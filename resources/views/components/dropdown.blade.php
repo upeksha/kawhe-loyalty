@@ -6,8 +6,13 @@ $width = match ($width) {
     default => $width,
 };
 
+// Normalize direction to ensure string comparison works
+$direction = (string) $direction;
+
 // Build alignment and direction classes together
-if ($direction === 'up') {
+$isUp = ($direction === 'up' || $direction === 'UP' || strtolower($direction) === 'up');
+
+if ($isUp) {
     // Opening upward - position above the trigger using bottom-full
     $positionClasses = 'bottom-full mb-2';
     $alignmentClasses = match ($align) {
@@ -39,7 +44,11 @@ if ($direction === 'up') {
             x-transition:leave-start="opacity-100 scale-100"
             x-transition:leave-end="opacity-0 scale-95"
             class="absolute {{ $positionClasses }} {{ $width }} rounded-md shadow-lg {{ $alignmentClasses }}"
+            @if($isUp)
+            style="z-index: 10000 !important; bottom: 100% !important; margin-bottom: 0.5rem !important; top: auto !important;"
+            @else
             style="z-index: 10000;"
+            @endif
             @click="open = false">
         <div class="rounded-md ring-1 ring-stone-200 ring-opacity-50 shadow-lg {{ $contentClasses }}">
             {{ $content }}
