@@ -13,8 +13,8 @@ $direction = (string) $direction;
 $isUp = ($direction === 'up' || $direction === 'UP' || strtolower($direction) === 'up');
 
 if ($isUp) {
-    // Opening upward - position above the trigger using bottom-full
-    $positionClasses = 'bottom-full mb-2';
+    // Opening upward - NO position classes, we'll use inline styles only
+    $positionClasses = ''; // Empty - no top-full or bottom-full classes
     $alignmentClasses = match ($align) {
         'left' => 'ltr:origin-bottom-left rtl:origin-bottom-right start-0 left-0',
         'top' => 'origin-bottom',
@@ -45,7 +45,7 @@ if ($isUp) {
             x-transition:leave-end="opacity-0 scale-95"
             class="absolute {{ $positionClasses }} {{ $width }} rounded-md shadow-lg {{ $alignmentClasses }}"
             @if($isUp)
-            style="z-index: 10000 !important; bottom: 100% !important; margin-bottom: 0.5rem !important; top: auto !important;"
+            style="z-index: 10000 !important; bottom: 100% !important; margin-bottom: 0.5rem !important; top: auto !important; left: 0 !important;"
             @else
             style="z-index: 10000;"
             @endif
