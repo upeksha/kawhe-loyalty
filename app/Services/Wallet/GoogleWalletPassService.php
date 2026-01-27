@@ -235,6 +235,17 @@ class GoogleWalletPassService
                 'header' => 'Available Rewards',
                 'body' => (string) $account->reward_balance . ' ' . $store->reward_title,
             ];
+            // Add redeem mode indicator
+            $textModulesData[] = [
+                'header' => 'Status',
+                'body' => '🎁 READY TO REDEEM - Scan QR to redeem reward',
+            ];
+        } else {
+            // Show stamp mode when no rewards
+            $textModulesData[] = [
+                'header' => 'Status',
+                'body' => 'Scan QR to add stamps',
+            ];
         }
         
         $loyaltyObject->setTextModulesData($textModulesData);

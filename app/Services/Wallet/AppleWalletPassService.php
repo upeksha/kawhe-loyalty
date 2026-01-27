@@ -59,6 +59,12 @@ class AppleWalletPassService
                         'label' => 'Rewards',
                         'value' => (string) ($account->reward_balance ?? 0),
                     ],
+                    // Add redeem mode indicator when rewards are available
+                    ...(($account->reward_balance ?? 0) > 0 ? [[
+                        'key' => 'redeem_status',
+                        'label' => 'Status',
+                        'value' => '🎁 READY TO REDEEM',
+                    ]] : []),
                 ],
                 'auxiliaryFields' => [
                     [
@@ -66,6 +72,16 @@ class AppleWalletPassService
                         'label' => 'Customer',
                         'value' => $customer->name ?? $customer->email ?? 'Valued Customer',
                     ],
+                    // Add scan instruction based on mode
+                    ...(($account->reward_balance ?? 0) > 0 ? [[
+                        'key' => 'scan_instruction',
+                        'label' => 'Scan to',
+                        'value' => 'Redeem Reward',
+                    ]] : [[
+                        'key' => 'scan_instruction',
+                        'label' => 'Scan to',
+                        'value' => 'Add Stamps',
+                    ]]),
                 ],
                 'backFields' => [
                     [

@@ -25,6 +25,40 @@
                         </select>
                     </div>
 
+                    <!-- Scan Mode Selection -->
+                    <div class="mb-6">
+                        <label class="block mb-2 text-sm font-medium text-stone-700">Scan Mode</label>
+                        <div class="grid grid-cols-2 gap-3">
+                            <button
+                                type="button"
+                                @click="scanMode = 'stamp'"
+                                :class="scanMode === 'stamp' 
+                                    ? 'bg-brand-600 text-white border-2 border-brand-700 shadow-md' 
+                                    : 'bg-white text-stone-700 border-2 border-stone-300 hover:bg-stone-50'"
+                                class="px-4 py-3 rounded-lg font-medium transition-all flex items-center justify-center gap-2"
+                            >
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                                </svg>
+                                <span>Stamping Mode</span>
+                            </button>
+                            <button
+                                type="button"
+                                @click="scanMode = 'redeem'"
+                                :class="scanMode === 'redeem' 
+                                    ? 'bg-accent-600 text-white border-2 border-accent-700 shadow-md' 
+                                    : 'bg-white text-stone-700 border-2 border-stone-300 hover:bg-stone-50'"
+                                class="px-4 py-3 rounded-lg font-medium transition-all flex items-center justify-center gap-2"
+                            >
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
+                                </svg>
+                                <span>Redeeming Mode</span>
+                            </button>
+                        </div>
+                        <p class="mt-2 text-xs text-stone-500" x-text="scanMode === 'stamp' ? 'Scan QR codes starting with LA: to add stamps' : 'Scan QR codes starting with LR: to redeem rewards'"></p>
+                    </div>
+
                     <!-- Scanner Controls -->
                     <div class="flex items-center justify-between mb-2">
                         <p class="text-xs text-stone-600" x-text="cameraStatus"></p>
@@ -50,6 +84,14 @@
 
                     <!-- Scanner Container with Cooldown Overlay -->
                     <div class="relative w-full mb-6 bg-black rounded-lg overflow-hidden" style="min-height: 300px; position: relative;">
+                        <!-- Mode Indicator Badge -->
+                        <div 
+                            x-show="isScanning"
+                            class="absolute top-4 left-4 z-30 px-3 py-1.5 rounded-full text-xs font-bold shadow-lg"
+                            :class="scanMode === 'stamp' ? 'bg-brand-600 text-white' : 'bg-accent-600 text-white'"
+                        >
+                            <span x-text="scanMode === 'stamp' ? 'STAMP MODE' : 'REDEEM MODE'"></span>
+                        </div>
                         <div id="reader" class="w-full" style="min-height: 300px; width: 100%; position: relative; background: #000;"></div>
                         
                         <!-- Start Camera Button (shown when camera not started) -->
@@ -119,13 +161,27 @@
                     <!-- Modal for Stamp Count / Reward Quantity -->
                     <div x-show="showModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50" style="display: none;">
                         <div class="bg-white rounded-lg p-6 w-full max-w-sm shadow-xl">
-                            <h3 class="text-lg font-bold mb-4 text-stone-900">Action Required</h3>
+                            <!-- Header with mode indicator -->
+                            <div class="mb-4">
+                                <div 
+                                    class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold mb-3"
+                                    :class="isRedeem ? 'bg-accent-100 text-accent-800' : 'bg-brand-100 text-brand-800'"
+                                >
+                                    <span x-text="isRedeem ? '🎁 REDEEM' : '➕ STAMP'"></span>
+                                </div>
+                                <h3 class="text-lg font-bold text-stone-900" x-text="isRedeem ? 'Redeem Reward' : 'Add Stamps'"></h3>
+                            </div>
                                     
                             <div x-show="isRedeem" class="mb-4">
-                                <div class="bg-accent-50 border-l-4 border-accent-500 text-accent-700 p-4 mb-4" role="alert">
-                                    <p class="font-bold">Redeem Reward?</p>
-                                    <p x-show="rewardBalance > 1" x-text="'Customer has ' + rewardBalance + ' rewards available.'"></p>
-                                    <p x-show="rewardBalance === 1">Customer has 1 reward available.</p>
+                                <div class="bg-accent-50 border-l-4 border-accent-500 text-accent-700 p-4 mb-4 rounded-r" role="alert">
+                                    <p class="font-bold flex items-center gap-2">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
+                                        </svg>
+                                        Customer is Redeeming Reward
+                                    </p>
+                                    <p x-show="rewardBalance > 1" x-text="'Customer has ' + rewardBalance + ' rewards available.'" class="mt-2"></p>
+                                    <p x-show="rewardBalance === 1" class="mt-2">Customer has 1 reward available.</p>
                                 </div>
                                 
                                 <!-- Quantity selector for multiple rewards -->
@@ -151,6 +207,14 @@
                             </div>
 
                             <div x-show="!isRedeem">
+                                <div class="bg-brand-50 border-l-4 border-brand-500 text-brand-700 p-4 mb-4 rounded-r" role="alert">
+                                    <p class="font-bold flex items-center gap-2">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                                        </svg>
+                                        Customer is Adding Stamps
+                                    </p>
+                                </div>
                                 <h4 class="text-md font-semibold mb-2 text-stone-700">How many stamps?</h4>
                                 <div class="flex items-center justify-center space-x-4 mb-6">
                                     <button @click="stampCount = Math.max(1, stampCount - 1)" class="w-10 h-10 rounded-full bg-stone-200 flex items-center justify-center text-xl font-bold text-stone-700 hover:bg-stone-300">-</button>
@@ -163,7 +227,14 @@
                                 <button @click="cancelActionModal()" class="px-4 py-2 text-sm font-medium text-stone-700 bg-stone-100 rounded-lg hover:bg-stone-200 transition">
                                     Cancel
                                 </button>
-                                <button @click="confirmAction()" class="px-4 py-2 text-sm font-medium text-white bg-brand-600 rounded-lg hover:bg-brand-700 transition focus:outline-none focus:ring-2 focus:ring-brand-500" x-text="isRedeem ? (rewardBalance > 1 ? 'Redeem ' + redeemQuantity : 'Redeem') : 'Add Stamps'">
+                                <button 
+                                    @click="confirmAction()" 
+                                    :class="isRedeem 
+                                        ? 'bg-accent-600 hover:bg-accent-700 focus:ring-accent-500' 
+                                        : 'bg-brand-600 hover:bg-brand-700 focus:ring-brand-500'"
+                                    class="px-4 py-2 text-sm font-medium text-white rounded-lg transition focus:outline-none focus:ring-2" 
+                                    x-text="isRedeem ? (rewardBalance > 1 ? 'Redeem ' + redeemQuantity : 'Redeem') : 'Add Stamps'"
+                                >
                                 </button>
                             </div>
                         </div>
@@ -266,6 +337,7 @@
                 isRedeem: false,
                 rewardBalance: 1, // Default to 1 for single reward
                 redeemQuantity: 1, // Quantity to redeem (default 1)
+                scanMode: 'stamp', // 'stamp' or 'redeem' - pre-scan mode selection
                 storeSwitched: false,
                 switchedStoreName: '',
                 showCooldownModal: false,
@@ -652,9 +724,35 @@
                 async handleScan(token) {
                     if (!token) return;
                     
+                    // Determine if this is a redeem or stamp QR based on prefix
+                    const isRedeemQR = token.startsWith('LR:') || token.startsWith('REDEEM:');
+                    const isStampQR = token.startsWith('LA:');
+                    
+                    // Check if QR code matches selected scan mode
+                    if (this.scanMode === 'redeem' && !isRedeemQR) {
+                        this.success = false;
+                        this.message = '⚠️ Wrong QR code! This is a stamp QR code. Please switch to "Stamping Mode" or scan a redeem QR code.';
+                        this.resumeScanner();
+                        return;
+                    }
+                    
+                    if (this.scanMode === 'stamp' && !isStampQR && !isRedeemQR) {
+                        // If no prefix, assume it's a stamp token (backward compatibility)
+                        this.isRedeem = false;
+                        this.showStampModal(token);
+                        return;
+                    }
+                    
+                    if (this.scanMode === 'stamp' && isRedeemQR) {
+                        this.success = false;
+                        this.message = '⚠️ Wrong QR code! This is a redeem QR code. Please switch to "Redeeming Mode" or scan a stamp QR code.';
+                        this.resumeScanner();
+                        return;
+                    }
+                    
                     // Note: store_id is now optional - backend will auto-detect from token
                     // But we still require it for redeem operations
-                    if (token.startsWith('REDEEM:')) {
+                    if (isRedeemQR) {
                         if (!this.activeStoreId) {
                             this.success = false;
                             this.message = 'Please select a store first for redemption.';
