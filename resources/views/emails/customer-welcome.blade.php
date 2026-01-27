@@ -20,24 +20,17 @@
             <li>Add your card to Apple Wallet or Google Wallet for easy access</li>
         </ul>
         
-        <p style="margin: 30px 0;">
-            <a href="{{ $cardUrl }}" 
-               style="display: inline-block; background-color: #16A34A; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; margin-right: 10px;">
-                View Your Card
-            </a>
-        </p>
-        
         <div style="background-color: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 30px 0; border-radius: 4px;">
             <p style="margin: 0; font-weight: bold; color: #856404;">📧 Verify Your Email Address</p>
             <p style="margin: 10px 0 0 0; color: #856404;">
-                To redeem rewards, please verify your email address by clicking the button below. This helps us keep your account secure.
+                To redeem rewards, please verify your email address by clicking the button below. This will verify your email and take you to your loyalty card.
             </p>
         </div>
         
         <p style="margin: 30px 0;">
             <a href="{{ $verificationUrl }}" 
-               style="display: inline-block; background-color: #2563eb; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">
-                Verify Email Address
+               style="display: inline-block; background-color: #16A34A; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">
+                Verify Email & View Your Card
             </a>
         </p>
         
