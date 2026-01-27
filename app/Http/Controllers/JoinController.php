@@ -2,11 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use App\Mail\CustomerWelcomeEmail;
 use App\Models\Customer;
 use App\Models\LoyaltyAccount;
 use App\Models\Store;
 use App\Services\Billing\UsageService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class JoinController extends Controller
@@ -179,10 +182,44 @@ class JoinController extends Controller
         $loyaltyAccount = LoyaltyAccount::create([
             'store_id' => $store->id,
             'customer_id' => $customer->id,
-            'public_token' => \Illuminate\Support\Str::random(40),
+            'public_token' => Str::random(40),
             'stamp_count' => 0,
             'version' => 1,
         ]);
+
+        // Send welcome email with verification if customer has email
+        if ($customer->email) {
+            // Generate verification token
+            $verificationToken = Str::random(40);
+            
+            // Save verification data
+            $customer->update([
+                'email_verification_token_hash' => hash('sha256', $verificationToken),
+                'email_verification_expires_at' => now()->addMinutes(60),
+                'email_verification_sent_at' => now(),
+            ]);
+
+            // Send welcome email with verification link
+            try {
+                Mail::to($customer->email)->queue(new CustomerWelcomeEmail($customer, $loyaltyAccount, $verificationToken));
+                
+                \Log::info('Customer welcome email queued successfully', [
+                    'customer_id' => $customer->id,
+                    'loyalty_account_id' => $loyaltyAccount->id,
+                    'store_id' => $store->id,
+                    'email' => $customer->email,
+                ]);
+            } catch (\Exception $e) {
+                // Log the error but don't fail the registration
+                \Log::error('Failed to queue customer welcome email', [
+                    'customer_id' => $customer->id,
+                    'loyalty_account_id' => $loyaltyAccount->id,
+                    'store_id' => $store->id,
+                    'email' => $customer->email,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
 
         return redirect()->route('card.show', ['public_token' => $loyaltyAccount->public_token])
             ->with('registered', true);
