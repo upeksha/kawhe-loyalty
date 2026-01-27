@@ -284,13 +284,24 @@ class ScannerController extends Controller
             ], 404);
         }
 
-        // Verify user has access to this store (if store_id provided, verify ownership)
+        // Verify user has access to this store
+        // If store_id provided, verify ownership; otherwise verify the account's store belongs to user
+        $userStore = null;
         if ($requestedStoreId) {
-            $store = Auth::user()->stores()->where('id', $requestedStoreId)->first();
-            if (!$store) {
+            $userStore = Auth::user()->stores()->where('id', $requestedStoreId)->first();
+            if (!$userStore) {
                 return response()->json([
                     'success' => false,
                     'message' => 'You do not have access to this store.',
+                ], 403);
+            }
+        } else {
+            // Auto-detect: verify the account's store belongs to the user
+            $userStore = Auth::user()->stores()->where('id', $store->id)->first();
+            if (!$userStore) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'You do not have access to this customer\'s store.',
                 ], 403);
             }
         }
