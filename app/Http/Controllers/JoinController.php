@@ -189,11 +189,11 @@ class JoinController extends Controller
 
         // Send welcome email with verification if customer has email
         if ($customer->email) {
-            // Generate verification token
+            // Generate verification token (store-specific)
             $verificationToken = Str::random(40);
             
-            // Save verification data
-            $customer->update([
+            // Save verification data on the loyalty account (store-specific verification)
+            $loyaltyAccount->update([
                 'email_verification_token_hash' => hash('sha256', $verificationToken),
                 'email_verification_expires_at' => now()->addMinutes(60),
                 'email_verification_sent_at' => now(),

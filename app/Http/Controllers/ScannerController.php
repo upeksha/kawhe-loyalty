@@ -374,9 +374,11 @@ class ScannerController extends Controller
         $customer = $account->customer;
         $accountStore = $account->store;
         
-        // Check verification status
+        // Check verification status (store-specific)
+        // Customer is verified if:
+        // 1. loyaltyAccount.verified_at is not null (store-specific verification)
+        // 2. customer.email is null (no email provided = auto-verified)
         $isVerified = !is_null($account->verified_at) 
-            || ($customer && !is_null($customer->email_verified_at))
             || ($customer && is_null($customer->email));
         
         // Check if store requires verification
@@ -435,11 +437,10 @@ class ScannerController extends Controller
             $accountStore = $preAccount->store;
             
             // Customer is considered verified if ANY of these are true:
-            // 1. loyaltyAccount.verified_at is not null
-            // 2. customer.email_verified_at is not null
-            // 3. customer.email is null (no email provided)
+            // 1. loyaltyAccount.verified_at is not null (store-specific verification)
+            // 2. customer.email is null (no email provided = auto-verified)
+            // NOTE: We no longer check customer.email_verified_at (removed global verification)
             $isVerified = !is_null($preAccount->verified_at) 
-                || ($customer && !is_null($customer->email_verified_at))
                 || ($customer && is_null($customer->email));
             
             // Check if store requires verification for redemption (default: true for security)
@@ -561,8 +562,8 @@ class ScannerController extends Controller
             // Log unverified redemption if it occurred (store setting allows it)
             $account->load('customer');
             $customer = $account->customer;
+            // Check store-specific verification
             $isVerified = !is_null($account->verified_at) 
-                || ($customer && !is_null($customer->email_verified_at))
                 || ($customer && is_null($customer->email));
             
             if (!$store->require_verification_for_redemption && $customer && !is_null($customer->email) && !$isVerified) {

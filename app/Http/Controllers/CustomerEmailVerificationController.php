@@ -27,17 +27,21 @@ class CustomerEmailVerificationController extends Controller
             return back()->withErrors(['email' => 'No email on this card.']);
         }
 
-        // Check if already verified
-        if ($customer->email_verified_at) {
+        // Check if already verified (store-specific verification)
+        if ($account->verified_at) {
             if ($request->expectsJson() || $request->wantsJson()) {
-                return response()->json(['message' => 'Email already verified.']);
+                return response()->json(['message' => 'Email already verified for this store.']);
             }
-            return back()->with('message', 'Email already verified.');
+            return back()->with('message', 'Email already verified for this store.');
         }
 
-        // Enforce resend cooldown (60 seconds)
-        if ($customer->email_verification_sent_at && $customer->email_verification_sent_at->diffInSeconds(now()) < 60) {
-            $secondsRemaining = 60 - $customer->email_verification_sent_at->diffInSeconds(now());
+        // Check if this is a merchant-initiated request (bypass cooldown for merchants)
+        $isMerchantRequest = $request->user() && $request->user()->stores()->where('id', $account->store_id)->exists();
+        
+        // Enforce resend cooldown (60 seconds for customers, 10 seconds for merchants)
+        $cooldownSeconds = $isMerchantRequest ? 10 : 60;
+        if ($account->email_verification_sent_at && $account->email_verification_sent_at->diffInSeconds(now()) < $cooldownSeconds) {
+            $secondsRemaining = $cooldownSeconds - $account->email_verification_sent_at->diffInSeconds(now());
             $errorMessage = "Please wait {$secondsRemaining} more second(s) before requesting another verification email.";
             if ($request->expectsJson() || $request->wantsJson()) {
                 return response()->json(['message' => $errorMessage, 'errors' => ['email' => [$errorMessage]]], 422);
@@ -48,8 +52,8 @@ class CustomerEmailVerificationController extends Controller
         // Generate raw token
         $rawToken = Str::random(40);
 
-        // Save verification data
-        $customer->update([
+        // Save verification data on the loyalty account (store-specific)
+        $account->update([
             'email_verification_token_hash' => hash('sha256', $rawToken),
             'email_verification_expires_at' => now()->addMinutes(60),
             'email_verification_sent_at' => now(),
@@ -63,10 +67,12 @@ class CustomerEmailVerificationController extends Controller
             Mail::to($customer->email)->queue($mailable);
             
             \Log::info('Verification email queued successfully', [
+                'loyalty_account_id' => $account->id,
                 'customer_id' => $customer->id,
                 'store_id' => $account->store_id,
                 'public_token' => $public_token,
                 'email' => $customer->email,
+                'initiated_by' => $isMerchantRequest ? 'merchant' : 'customer',
             ]);
         } catch (\Exception $e) {
             // Log the error but don't fail the request
@@ -95,11 +101,13 @@ class CustomerEmailVerificationController extends Controller
     {
         $tokenHash = hash('sha256', $token);
 
-        $customer = Customer::where('email_verification_token_hash', $tokenHash)
+        // Find loyalty account by verification token (store-specific verification)
+        $account = LoyaltyAccount::where('email_verification_token_hash', $tokenHash)
             ->where('email_verification_expires_at', '>=', now())
+            ->with('customer')
             ->first();
 
-        if (!$customer) {
+        if (!$account) {
             // Try to get public_token from query to redirect back to card
             $publicToken = $request->query('card');
             if ($publicToken) {
@@ -109,26 +117,15 @@ class CustomerEmailVerificationController extends Controller
             return redirect('/')->withErrors(['email' => 'Invalid or expired verification token.']);
         }
 
-        // Verify the email
-        $customer->update([
-            'email_verified_at' => now(),
+        // Verify the email for this specific loyalty account (store-specific)
+        $account->update([
+            'verified_at' => now(),
             'email_verification_token_hash' => null,
             'email_verification_expires_at' => null,
         ]);
 
-        // Get public_token from query or find first loyalty account
-        $publicToken = $request->query('card');
-        
-        if (!$publicToken) {
-            $loyaltyAccount = $customer->loyaltyAccounts()->first();
-            $publicToken = $loyaltyAccount ? $loyaltyAccount->public_token : null;
-        }
-
-        if ($publicToken) {
-            return redirect()->route('card.show', ['public_token' => $publicToken])
-                ->with('message', 'Email verified successfully!');
-        }
-
-        return redirect('/')->with('message', 'Email verified successfully!');
+        // Redirect to the specific card
+        return redirect()->route('card.show', ['public_token' => $account->public_token])
+            ->with('message', 'Email verified successfully for ' . $account->store->name . '!');
     }
 }

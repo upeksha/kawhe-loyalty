@@ -33,6 +33,9 @@ class LoyaltyAccount extends Model
         'reward_available_at',
         'reward_redeemed_at',
         'verified_at',
+        'email_verification_token_hash',
+        'email_verification_expires_at',
+        'email_verification_sent_at',
         'version',
     ];
 
@@ -40,6 +43,9 @@ class LoyaltyAccount extends Model
         'last_stamped_at' => 'datetime',
         'reward_available_at' => 'datetime',
         'reward_redeemed_at' => 'datetime',
+        'verified_at' => 'datetime',
+        'email_verification_expires_at' => 'datetime',
+        'email_verification_sent_at' => 'datetime',
         'version' => 'integer',
         'reward_balance' => 'integer',
     ];
