@@ -239,6 +239,83 @@ class ScannerController extends Controller
     }
 
     /**
+     * Preview account information from any token (stamp or redeem).
+     * Used to check if customer has rewards available before showing action choice.
+     */
+    public function preview(Request $request)
+    {
+        $request->validate([
+            'token' => 'required|string',
+            'store_id' => 'nullable|exists:stores,id',
+        ]);
+
+        $token = $request->token;
+        $isRedeemQR = false;
+        
+        // Handle LR: (redeem) vs LA: (stamp) prefixes
+        if (Str::startsWith($token, 'LR:')) {
+            $token = Str::substr($token, 3);
+            $isRedeemQR = true;
+        } elseif (Str::startsWith($token, 'LA:')) {
+            $token = Str::substr($token, 3);
+            $isRedeemQR = false;
+        }
+        
+        $token = trim($token);
+        $requestedStoreId = $request->store_id;
+
+        // Try to find account by public_token first (stamp QR)
+        $account = LoyaltyAccount::where('public_token', $token)
+            ->with(['customer', 'store'])
+            ->first();
+
+        // If not found and it's a redeem QR, try redeem_token
+        if (!$account && $isRedeemQR && $requestedStoreId) {
+            $account = LoyaltyAccount::where('redeem_token', $token)
+                ->where('store_id', $requestedStoreId)
+                ->with(['customer', 'store'])
+                ->first();
+        }
+
+        if (!$account) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid QR code. Please check and try again.',
+            ], 404);
+        }
+
+        // Verify user has access to this store (if store_id provided, verify ownership)
+        if ($requestedStoreId) {
+            $store = Auth::user()->stores()->where('id', $requestedStoreId)->first();
+            if (!$store) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'You do not have access to this store.',
+                ], 403);
+            }
+        }
+
+        $rewardBalance = $account->reward_balance ?? 0;
+        $store = $account->store;
+
+        return response()->json([
+            'success' => true,
+            'has_rewards' => $rewardBalance > 0,
+            'reward_balance' => $rewardBalance,
+            'reward_title' => $store->reward_title,
+            'stamp_count' => $account->stamp_count,
+            'reward_target' => $store->reward_target ?? 10,
+            'customer_name' => $account->customer->name ?? 'Customer',
+            'store_name' => $store->name,
+            'store_id' => $store->id,
+            'is_redeem_qr' => $isRedeemQR,
+            'token' => $request->token, // Return original token for processing
+            'redeem_token' => $account->redeem_token, // Include redeem token if available (for stamp QR -> redeem flow)
+            'public_token' => $account->public_token, // Include public token (for redeem QR -> stamp flow)
+        ]);
+    }
+
+    /**
      * Get reward balance information from a redeem token.
      * Used by frontend to show quantity selector.
      */

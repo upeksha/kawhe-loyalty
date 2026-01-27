@@ -107,6 +107,7 @@ Route::middleware(['auth', App\Http\Middleware\EnsureMerchantHasStore::class])->
 
 // Scanner actions (keep outside merchant group to avoid double middleware)
 Route::middleware(['auth', 'verified'])->group(function () {
+    Route::post('/scanner/preview', [ScannerController::class, 'preview'])->name('scanner.preview');
     Route::post('/stamp', [ScannerController::class, 'store'])->middleware('rate.limit.stamps')->name('stamp.store');
     Route::post('/redeem/info', [ScannerController::class, 'getRedeemInfo'])->name('redeem.info');
     Route::post('/redeem', [ScannerController::class, 'redeem'])->middleware('rate.limit.stamps')->name('redeem.store');

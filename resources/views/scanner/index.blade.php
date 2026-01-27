@@ -25,40 +25,6 @@
                         </select>
                     </div>
 
-                    <!-- Scan Mode Selection -->
-                    <div class="mb-6">
-                        <label class="block mb-2 text-sm font-medium text-stone-700">Scan Mode</label>
-                        <div class="grid grid-cols-2 gap-3">
-                            <button
-                                type="button"
-                                @click="scanMode = 'stamp'"
-                                :class="scanMode === 'stamp' 
-                                    ? 'bg-brand-600 text-white border-2 border-brand-700 shadow-md' 
-                                    : 'bg-white text-stone-700 border-2 border-stone-300 hover:bg-stone-50'"
-                                class="px-4 py-3 rounded-lg font-medium transition-all flex items-center justify-center gap-2"
-                            >
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                                </svg>
-                                <span>Stamping Mode</span>
-                            </button>
-                            <button
-                                type="button"
-                                @click="scanMode = 'redeem'"
-                                :class="scanMode === 'redeem' 
-                                    ? 'bg-accent-600 text-white border-2 border-accent-700 shadow-md' 
-                                    : 'bg-white text-stone-700 border-2 border-stone-300 hover:bg-stone-50'"
-                                class="px-4 py-3 rounded-lg font-medium transition-all flex items-center justify-center gap-2"
-                            >
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
-                                </svg>
-                                <span>Redeeming Mode</span>
-                            </button>
-                        </div>
-                        <p class="mt-2 text-xs text-stone-500" x-text="scanMode === 'stamp' ? 'Scan QR codes starting with LA: to add stamps' : 'Scan QR codes starting with LR: to redeem rewards'"></p>
-                    </div>
-
                     <!-- Scanner Controls -->
                     <div class="flex items-center justify-between mb-2">
                         <p class="text-xs text-stone-600" x-text="cameraStatus"></p>
@@ -84,14 +50,6 @@
 
                     <!-- Scanner Container with Cooldown Overlay -->
                     <div class="relative w-full mb-6 bg-black rounded-lg overflow-hidden" style="min-height: 300px; position: relative;">
-                        <!-- Mode Indicator Badge -->
-                        <div 
-                            x-show="isScanning"
-                            class="absolute top-4 left-4 z-30 px-3 py-1.5 rounded-full text-xs font-bold shadow-lg"
-                            :class="scanMode === 'stamp' ? 'bg-brand-600 text-white' : 'bg-accent-600 text-white'"
-                        >
-                            <span x-text="scanMode === 'stamp' ? 'STAMP MODE' : 'REDEEM MODE'"></span>
-                        </div>
                         <div id="reader" class="w-full" style="min-height: 300px; width: 100%; position: relative; background: #000;"></div>
                         
                         <!-- Start Camera Button (shown when camera not started) -->
@@ -154,6 +112,50 @@
                             <x-ui.input type="text" id="manual_token" x-model="manualToken" placeholder="e.g. LA:..." class="flex-1" />
                             <button @click="handleScan(manualToken)" type="button" class="px-4 py-2 text-sm font-medium rounded-lg bg-brand-600 hover:bg-brand-700 text-white transition focus:outline-none focus:ring-2 focus:ring-brand-500">
                                 Scan
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Choice Modal: When customer has rewards available -->
+                    <div x-show="showChoiceModal" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+                        <div class="bg-white rounded-lg p-6 w-full max-w-sm shadow-xl">
+                            <div class="text-center mb-6">
+                                <div class="text-5xl mb-3">🎁</div>
+                                <h3 class="text-xl font-bold text-stone-900 mb-2">Customer Has Rewards Available!</h3>
+                                <div class="bg-accent-50 border-l-4 border-accent-500 text-accent-700 p-4 rounded-r mb-4 text-left">
+                                    <p class="font-bold mb-1" x-text="previewData.customer_name || 'Customer'"></p>
+                                    <p class="text-sm" x-text="'Has ' + previewData.reward_balance + ' ' + (previewData.reward_balance > 1 ? 'rewards' : 'reward') + ' available'"></p>
+                                    <p class="text-xs mt-2 text-stone-600" x-text="'Current stamps: ' + previewData.stamp_count + ' / ' + previewData.reward_target"></p>
+                                </div>
+                                <p class="text-sm text-stone-600 mb-6">What would you like to do?</p>
+                            </div>
+                            
+                            <div class="space-y-3">
+                                <button 
+                                    @click="chooseRedeem()"
+                                    class="w-full px-4 py-3 text-base font-medium text-white bg-accent-600 rounded-lg hover:bg-accent-700 transition focus:outline-none focus:ring-2 focus:ring-accent-500 flex items-center justify-center gap-2"
+                                >
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
+                                    </svg>
+                                    <span>Redeem Reward</span>
+                                </button>
+                                <button 
+                                    @click="chooseStamp()"
+                                    class="w-full px-4 py-3 text-base font-medium text-white bg-brand-600 rounded-lg hover:bg-brand-700 transition focus:outline-none focus:ring-2 focus:ring-brand-500 flex items-center justify-center gap-2"
+                                >
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                                    </svg>
+                                    <span>Add Stamp Instead</span>
+                                </button>
+                            </div>
+                            
+                            <button 
+                                @click="cancelChoiceModal()"
+                                class="w-full mt-4 px-4 py-2 text-sm font-medium text-stone-700 bg-stone-100 rounded-lg hover:bg-stone-200 transition"
+                            >
+                                Cancel
                             </button>
                         </div>
                     </div>
@@ -730,51 +732,128 @@
                 async handleScan(token) {
                     if (!token) return;
                     
-                    // Determine if this is a redeem or stamp QR based on prefix
-                    const isRedeemQR = token.startsWith('LR:') || token.startsWith('REDEEM:');
-                    const isStampQR = token.startsWith('LA:');
+                    this.pendingToken = token;
                     
-                    // Check if QR code matches selected scan mode
-                    if (this.scanMode === 'redeem' && !isRedeemQR) {
-                        this.success = false;
-                        this.message = '⚠️ Wrong QR code! This is a stamp QR code. Please switch to "Stamping Mode" or scan a redeem QR code.';
-                        this.resumeScanner();
-                        return;
-                    }
-                    
-                    if (this.scanMode === 'stamp' && !isStampQR && !isRedeemQR) {
-                        // If no prefix, assume it's a stamp token (backward compatibility)
-                        this.isRedeem = false;
-                        this.showStampModal(token);
-                        return;
-                    }
-                    
-                    if (this.scanMode === 'stamp' && isRedeemQR) {
-                        this.success = false;
-                        this.message = '⚠️ Wrong QR code! This is a redeem QR code. Please switch to "Redeeming Mode" or scan a stamp QR code.';
-                        this.resumeScanner();
-                        return;
-                    }
-                    
-                    // Note: store_id is now optional - backend will auto-detect from token
-                    // But we still require it for redeem operations
-                    if (isRedeemQR) {
-                        if (!this.activeStoreId) {
+                    // Always preview first to check if customer has rewards
+                    try {
+                        const previewResponse = await fetch('{{ route("scanner.preview") }}', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/json',
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                            },
+                            body: JSON.stringify({
+                                token: token,
+                                store_id: this.activeStoreId || null
+                            })
+                        });
+
+                        const previewResult = await previewResponse.json();
+                        
+                        if (!previewResult.success) {
                             this.success = false;
-                            this.message = 'Please select a store first for redemption.';
+                            this.message = previewResult.message || 'Could not process QR code. Please try again.';
+                            this.resumeScanner();
                             return;
                         }
-                        this.isRedeem = true;
-                        this.pendingToken = token;
                         
-                        // Fetch reward balance to show quantity selector if needed
-                        await this.fetchRedeemInfo(token);
+                        // Store preview data
+                        this.previewData = previewResult;
                         
-                        this.showModal = true;
-                    } else {
-                        this.isRedeem = false;
-                        this.showStampModal(token);
+                        // If customer has rewards available, show choice modal
+                        if (previewResult.has_rewards && previewResult.reward_balance > 0) {
+                            this.showChoiceModal = true;
+                        } else {
+                            // No rewards available, go straight to stamp modal
+                            this.isRedeem = false;
+                            this.showStampModal(token);
+                        }
+                    } catch (error) {
+                        console.error('Error previewing scan:', error);
+                        this.success = false;
+                        this.message = 'Network error. Please try again.';
+                        this.resumeScanner();
                     }
+                },
+                
+                chooseRedeem() {
+                    // User chose to redeem
+                    this.showChoiceModal = false;
+                    this.isRedeem = true;
+                    this.rewardBalance = this.previewData.reward_balance;
+                    this.redeemQuantity = Math.min(this.rewardBalance, 1);
+                    
+                    // Determine the redeem token to use
+                    let redeemToken = null;
+                    if (this.previewData.is_redeem_qr) {
+                        // Already scanned a redeem QR - extract token
+                        const originalToken = this.pendingToken;
+                        if (originalToken.startsWith('LR:')) {
+                            redeemToken = originalToken.substring(3).trim();
+                        } else if (originalToken.startsWith('REDEEM:')) {
+                            redeemToken = originalToken.substring(7).trim();
+                        } else {
+                            redeemToken = originalToken;
+                        }
+                    } else if (this.previewData.redeem_token) {
+                        // Scanned a stamp QR but customer has rewards - use their redeem token
+                        redeemToken = this.previewData.redeem_token;
+                    }
+                    
+                    if (!redeemToken) {
+                        this.success = false;
+                        this.message = 'Unable to process redemption. Please scan the redeem QR code from the customer\'s card.';
+                        this.resumeScanner();
+                        return;
+                    }
+                    
+                    // Update pending token to use redeem token format
+                    this.pendingToken = 'LR:' + redeemToken;
+                    
+                    // Ensure store is set (required for redeem)
+                    if (!this.activeStoreId && this.previewData.store_id) {
+                        this.activeStoreId = this.previewData.store_id.toString();
+                    }
+                    
+                    if (!this.activeStoreId) {
+                        this.success = false;
+                        this.message = 'Please select a store first for redemption.';
+                        this.resumeScanner();
+                        return;
+                    }
+                    
+                    // Fetch reward balance to show quantity selector if needed
+                    this.fetchRedeemInfo(this.pendingToken).then(() => {
+                        this.showModal = true;
+                    }).catch(() => {
+                        // If fetch fails, still show modal with default values
+                        this.showModal = true;
+                    });
+                },
+                
+                chooseStamp() {
+                    // User chose to stamp instead
+                    this.showChoiceModal = false;
+                    this.isRedeem = false;
+                    
+                    // Use public_token for stamping (even if they scanned a redeem QR)
+                    let stampToken = null;
+                    if (this.previewData.is_redeem_qr && this.previewData.public_token) {
+                        // They scanned a redeem QR but want to stamp - use public token
+                        stampToken = 'LA:' + this.previewData.public_token;
+                    } else {
+                        // Use original token (should be a stamp QR)
+                        stampToken = this.pendingToken;
+                    }
+                    
+                    this.showStampModal(stampToken);
+                },
+                
+                cancelChoiceModal() {
+                    this.showChoiceModal = false;
+                    this.previewData = null;
+                    this.resumeScanner();
                 },
                 
                 async fetchRedeemInfo(token) {
@@ -820,6 +899,7 @@
                     if (!token) return;
                     this.pendingToken = token;
                     this.stampCount = 1;
+                    this.isRedeem = false;
                     this.showModal = true;
                 },
 
