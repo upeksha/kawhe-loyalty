@@ -299,6 +299,9 @@ LoyaltyAccount
 **Route:** `/merchant/onboarding/store`
 
 1. User registers → `RegisteredUserController`
+   - **Welcome Email**: Upon registration, a welcome email is automatically sent via SendGrid
+   - Email includes dashboard link and onboarding instructions
+   - Email is queued (non-blocking) using `MerchantWelcomeEmail` mailable
 2. If no stores exist → Redirect to onboarding
 3. User creates first store → `OnboardingController::storeStore()`
 4. Store created with:
@@ -311,6 +314,7 @@ LoyaltyAccount
 - `OnboardingController` validates store data
 - `Store` model boot() hook generates `slug` and `join_token`
 - Middleware `EnsureMerchantHasStore` checks if user has stores
+- `RegisteredUserController` sends `MerchantWelcomeEmail` after user creation
 
 ### 4.2 Customer Enrollment Flow
 
@@ -449,6 +453,25 @@ if ($account->reward_balance > 0 && $account->redeem_token) {
 - `CustomerEmailVerificationController` handles verification
 - Tokens are hashed and expire after 24 hours
 - Rate limited: 3 emails per 10 minutes
+
+### 4.7 Merchant Customer Management
+
+**Routes:**
+- `GET /merchant/customers` - List all customers across stores
+- `GET /merchant/customers/{loyaltyAccount}` - View customer details
+- `GET /merchant/customers/{loyaltyAccount}/edit` - Edit customer form
+- `PUT /merchant/customers/{loyaltyAccount}` - Update customer data
+
+**Features:**
+- Merchants can view all customers who have loyalty accounts at their stores
+- View customer details: name, email, phone, stamp count, reward balance
+- **Edit customer data**: Merchants can update customer name, email, and phone
+- Authorization checks ensure merchants can only edit customers from their own stores
+
+**Implementation:**
+- `MerchantCustomersController` handles customer listing and editing
+- `edit()` and `update()` methods with authorization checks
+- Updates customer record directly (not loyalty account)
 
 ---
 
