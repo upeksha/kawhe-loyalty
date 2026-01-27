@@ -362,6 +362,7 @@
                                         <p class="text-red-500">Error: Redeem token not available. Please refresh the page.</p>
                                     @endif
                                 </div>
+                                <p class="mt-3 text-xs font-semibold text-accent-700">Scan to redeem reward</p>
                             </div>
 
                             <p class="text-gray-300 text-sm mb-4">
