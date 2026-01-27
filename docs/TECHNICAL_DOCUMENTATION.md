@@ -168,6 +168,8 @@ Physical or virtual locations where loyalty programs run.
 - `brand_color` (hex color for branding)
 - `logo_path` (path to uploaded logo)
 - `background_color` (hex color for card page)
+- `pass_logo_path` (path to pass logo for wallet passes)
+- `pass_hero_image_path` (path to hero image for wallet passes)
 - Timestamps
 
 **Relationships:**
@@ -624,6 +626,65 @@ Sends push to all registered devices for a pass.
 - Production: `https://api.push.apple.com`
 - Sandbox: `https://api.sandbox.push.apple.com`
 - Selected via `APPLE_APNS_USE_SANDBOX` config
+
+---
+
+## 6.5 Frontend Components & UI System
+
+### Merchant Control Panel UI
+
+**Layout:** `resources/views/components/merchant-layout.blade.php`
+
+**Design System:**
+- **Color Palette**: Earthy tones (forest green, warm amber, stone neutrals)
+- **Typography**: Figtree font family
+- **Components**: Reusable Blade UI components
+
+**Key Components:**
+
+#### Application Logo Component
+**Location:** `resources/views/components/application-logo.blade.php`
+
+**Features:**
+- Automatically detects logo files in order:
+  1. `public/images/logo.png` or `public/logo.png`
+  2. `public/images/logo.svg` or `public/logo.svg`
+  3. Falls back to text "K" if no logo found
+- Used in merchant sidebar and throughout admin panel
+- Supports SVG and PNG/JPG formats
+
+#### UI Component Library
+**Location:** `resources/views/components/ui/`
+
+**Components:**
+- `card.blade.php` - Card container with shadow and rounded corners
+- `button.blade.php` - Button with variants (primary, secondary, danger, ghost)
+- `badge.blade.php` - Badge with variants (info, success, warning, danger)
+- `input.blade.php` - Form input with error states
+- `table.blade.php` - Table components (head, body, cells)
+
+**Dropdown Component:**
+**Location:** `resources/views/components/dropdown.blade.php`
+
+**Features:**
+- Supports `direction="up"` for upward-opening dropdowns
+- Used in merchant sidebar for user menu
+- Alpine.js integration for open/close state
+- Responsive positioning
+
+**Merchant Pages Using New UI:**
+- Dashboard (`/merchant/dashboard`)
+- Stores (list, create, edit, QR)
+- Customers (list, detail, edit)
+- Scanner (`/merchant/scanner`)
+- Onboarding (`/merchant/onboarding/store`)
+- Profile (`/profile`)
+- Billing (`/billing`, `/billing/cancel`, `/billing/success`)
+
+**Responsive Design:**
+- Desktop: Sidebar navigation (fixed left)
+- Mobile: Collapsible sidebar with overlay
+- All components fully responsive
 
 ---
 
