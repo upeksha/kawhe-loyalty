@@ -37,6 +37,7 @@ class Store extends Model
         'background_color',
         'pass_logo_path',
         'pass_hero_image_path',
+        'require_verification_for_redemption',
     ];
 
     protected static function boot()

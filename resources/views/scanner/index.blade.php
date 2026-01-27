@@ -116,6 +116,53 @@
                         </div>
                     </div>
 
+                    <!-- Verification Required Modal -->
+                    <div x-show="showVerificationModal" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+                        <div class="bg-white rounded-lg p-6 w-full max-w-sm shadow-xl">
+                            <div class="text-center mb-6">
+                                <div class="text-5xl mb-3">⚠️</div>
+                                <h3 class="text-xl font-bold text-stone-900 mb-2">Verification Required</h3>
+                                <div class="bg-accent-50 border-l-4 border-accent-500 text-accent-700 p-4 rounded-r mb-4 text-left">
+                                    <p class="font-bold mb-1" x-text="verificationData.customer_name || 'Customer'"></p>
+                                    <p class="text-sm" x-text="'Email: ' + (verificationData.customer_email || 'Not provided')"></p>
+                                    <p class="text-xs mt-2 text-stone-600">
+                                        This customer must verify their email address before redeeming rewards.
+                                    </p>
+                                </div>
+                                <p class="text-sm text-stone-600 mb-6">What would you like to do?</p>
+                            </div>
+                            
+                            <div class="space-y-3">
+                                <button 
+                                    @click="sendVerificationEmail()"
+                                    :disabled="sendingVerification"
+                                    class="w-full px-4 py-3 text-base font-medium text-white bg-accent-600 rounded-lg hover:bg-accent-700 transition focus:outline-none focus:ring-2 focus:ring-accent-500 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                                    </svg>
+                                    <span x-text="sendingVerification ? 'Sending...' : 'Send Verification Email'"></span>
+                                </button>
+                                <button 
+                                    @click="chooseStampFromVerification()"
+                                    class="w-full px-4 py-3 text-base font-medium text-white bg-brand-600 rounded-lg hover:bg-brand-700 transition focus:outline-none focus:ring-2 focus:ring-brand-500 flex items-center justify-center gap-2"
+                                >
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                                    </svg>
+                                    <span>Add Stamp Instead</span>
+                                </button>
+                            </div>
+                            
+                            <button 
+                                @click="cancelVerificationModal()"
+                                class="w-full mt-4 px-4 py-2 text-sm font-medium text-stone-700 bg-stone-100 rounded-lg hover:bg-stone-200 transition"
+                            >
+                                Cancel
+                            </button>
+                        </div>
+                    </div>
+
                     <!-- Choice Modal: When customer has rewards available -->
                     <div x-show="showChoiceModal" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
                         <div class="bg-white rounded-lg p-6 w-full max-w-sm shadow-xl">

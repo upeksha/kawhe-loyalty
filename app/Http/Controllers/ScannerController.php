@@ -371,6 +371,17 @@ class ScannerController extends Controller
             ], 404);
         }
 
+        $customer = $account->customer;
+        $accountStore = $account->store;
+        
+        // Check verification status
+        $isVerified = !is_null($account->verified_at) 
+            || ($customer && !is_null($customer->email_verified_at))
+            || ($customer && is_null($customer->email));
+        
+        // Check if store requires verification
+        $requiresVerification = $accountStore->require_verification_for_redemption ?? true;
+        
         $rewardBalance = $account->reward_balance ?? 0;
 
         return response()->json([
@@ -378,6 +389,12 @@ class ScannerController extends Controller
             'reward_balance' => $rewardBalance,
             'reward_title' => $store->reward_title,
             'customer_name' => $account->customer->name ?? 'Customer',
+            'customer_email' => $customer->email ?? null,
+            'is_verified' => $isVerified,
+            'requires_verification' => $requiresVerification,
+            'verification_required' => $requiresVerification && $customer && !is_null($customer->email) && !$isVerified,
+            'public_token' => $account->public_token,
+            'loyalty_account_id' => $account->id,
         ]);
     }
 
@@ -410,11 +427,13 @@ class ScannerController extends Controller
         // Find account first to check verification status
         $preAccount = LoyaltyAccount::where('redeem_token', $token)
             ->where('store_id', $storeId)
-            ->with('customer')
+            ->with(['customer', 'store'])
             ->first();
         
         if ($preAccount) {
             $customer = $preAccount->customer;
+            $accountStore = $preAccount->store;
+            
             // Customer is considered verified if ANY of these are true:
             // 1. loyaltyAccount.verified_at is not null
             // 2. customer.email_verified_at is not null
@@ -423,14 +442,34 @@ class ScannerController extends Controller
                 || ($customer && !is_null($customer->email_verified_at))
                 || ($customer && is_null($customer->email));
             
-            // Only block if customer has email AND is not verified
-            if ($customer && !is_null($customer->email) && !$isVerified) {
+            // Check if store requires verification for redemption (default: true for security)
+            $requiresVerification = $accountStore->require_verification_for_redemption ?? true;
+            
+            // Only block if store requires verification AND customer has email AND is not verified
+            if ($requiresVerification && $customer && !is_null($customer->email) && !$isVerified) {
                 return response()->json([
-                    'message' => 'You must verify your email address before you can redeem rewards. Please check your loyalty card page for verification options.',
-                    'errors' => [
-                        'token' => ['You must verify your email address before you can redeem rewards. Please check your loyalty card page for verification options.'],
-                    ],
+                    'status' => 'verification_required',
+                    'success' => false,
+                    'message' => 'Customer must verify their email address before redeeming rewards.',
+                    'customer_name' => $customer->name ?? 'Customer',
+                    'customer_email' => $customer->email,
+                    'public_token' => $preAccount->public_token,
+                    'loyalty_account_id' => $preAccount->id,
                 ], 422);
+            }
+            
+            // Log unverified redemption if it's allowed (store setting disabled verification requirement)
+            if (!$requiresVerification && $customer && !is_null($customer->email) && !$isVerified) {
+                \Log::warning('Unverified redemption allowed', [
+                    'loyalty_account_id' => $preAccount->id,
+                    'store_id' => $storeId,
+                    'customer_id' => $customer->id,
+                    'customer_email' => $customer->email,
+                    'merchant_id' => Auth::id(),
+                    'ip_address' => $request->ip(),
+                    'user_agent' => $request->userAgent(),
+                    'reason' => 'Store setting allows unverified redemption',
+                ]);
             }
         }
 
@@ -518,6 +557,28 @@ class ScannerController extends Controller
             
             // Do NOT deduct stamp_count - it represents progress toward next reward
             $account->save();
+            
+            // Log unverified redemption if it occurred (store setting allows it)
+            $account->load('customer');
+            $customer = $account->customer;
+            $isVerified = !is_null($account->verified_at) 
+                || ($customer && !is_null($customer->email_verified_at))
+                || ($customer && is_null($customer->email));
+            
+            if (!$store->require_verification_for_redemption && $customer && !is_null($customer->email) && !$isVerified) {
+                \Log::warning('Unverified redemption processed', [
+                    'loyalty_account_id' => $account->id,
+                    'store_id' => $storeId,
+                    'customer_id' => $customer->id,
+                    'customer_email' => $customer->email,
+                    'customer_name' => $customer->name,
+                    'merchant_id' => Auth::id(),
+                    'quantity' => $quantity,
+                    'ip_address' => $ipAddress,
+                    'user_agent' => $userAgent,
+                    'reason' => 'Store setting allows unverified redemption',
+                ]);
+            }
             
             // Create ledger entry for redemption
             // Using Option A: points = -reward_target * quantity (for historical consistency)

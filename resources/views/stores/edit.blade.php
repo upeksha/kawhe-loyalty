@@ -37,6 +37,46 @@
                             <x-input-error :messages="$errors->get('reward_title')" class="mt-2" />
                         </div>
 
+                        <!-- Require Verification for Redemption -->
+                        <div class="mb-5" x-data="{ requireVerification: {{ old('require_verification_for_redemption', $store->require_verification_for_redemption ?? true) ? 'true' : 'false' }} }">
+                            <div class="flex items-start gap-3">
+                                <div class="flex items-center h-5">
+                                    <input 
+                                        type="checkbox" 
+                                        id="require_verification_for_redemption" 
+                                        name="require_verification_for_redemption" 
+                                        value="1"
+                                        x-model="requireVerification"
+                                        class="w-4 h-4 text-brand-600 border-stone-300 rounded focus:ring-brand-500"
+                                        {{ old('require_verification_for_redemption', $store->require_verification_for_redemption ?? true) ? 'checked' : '' }}
+                                    />
+                                </div>
+                                <div class="flex-1">
+                                    <label for="require_verification_for_redemption" class="block text-sm font-medium text-stone-700 cursor-pointer">
+                                        Require Email Verification for Redemption
+                                    </label>
+                                    <p class="mt-1 text-xs text-stone-500">
+                                        If enabled, customers must verify their email address before redeeming rewards. This helps prevent fraud and ensures rewards go to the correct customer.
+                                    </p>
+                                    <!-- Warning when disabled -->
+                                    <div x-show="!requireVerification" x-cloak class="mt-2 p-3 bg-accent-50 border-l-4 border-accent-500 rounded-r">
+                                        <div class="flex items-start gap-2">
+                                            <svg class="w-5 h-5 text-accent-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                            </svg>
+                                            <div>
+                                                <p class="text-sm font-semibold text-accent-800">Security Warning</p>
+                                                <p class="text-xs text-accent-700 mt-1">
+                                                    Allowing unverified redemption may increase fraud risk. Only disable this if you verify customers in person at your store.
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <x-input-error :messages="$errors->get('require_verification_for_redemption')" class="mt-2" />
+                        </div>
+
                         <!-- Brand Color -->
                         <div class="mb-5">
                             <label for="brand_color" class="block mb-2 text-sm font-medium text-stone-700">Brand Color</label>
