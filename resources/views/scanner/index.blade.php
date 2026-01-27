@@ -266,13 +266,19 @@
                     </div>
 
                     <!-- Feedback -->
-                    <div x-show="message" x-transition class="p-4 mb-4 text-sm rounded-lg" :class="success ? 'text-brand-800 bg-brand-50' : 'text-red-800 bg-red-50'" role="alert">
-                        <span class="font-medium" x-text="success ? 'Success!' : 'Error!'"></span> <span x-text="message"></span>
+                    <div x-show="message" x-transition class="p-4 mb-4 text-sm rounded-lg border-l-4" :class="success ? (isRedeem ? 'text-accent-800 bg-accent-50 border-accent-500' : 'text-brand-800 bg-brand-50 border-brand-500') : 'text-red-800 bg-red-50 border-red-500'" role="alert">
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="font-medium" x-text="success ? (isRedeem ? '🎁 Reward Redeemed!' : '✅ Stamped!') : '❌ Error!'"></span>
+                            <span x-show="success && isRedeem" class="text-xs font-semibold px-2 py-0.5 rounded bg-accent-200 text-accent-900">REDEEM</span>
+                            <span x-show="success && !isRedeem" class="text-xs font-semibold px-2 py-0.5 rounded bg-brand-200 text-brand-900">STAMP</span>
+                        </div>
+                        <span x-text="message"></span>
                         <template x-if="success && resultData">
                             <div class="mt-2">
                                 <p><strong>Customer:</strong> <span x-text="resultData.customerLabel"></span></p>
                                 <p><strong>Store:</strong> <span x-text="resultData.store_name_used || resultData.storeName"></span></p>
-                                <p><strong>Stamps:</strong> <span x-text="resultData.stampCount"></span> / <span x-text="resultData.rewardTarget"></span></p>
+                                <p x-show="!isRedeem"><strong>Stamps:</strong> <span x-text="resultData.stampCount"></span> / <span x-text="resultData.rewardTarget"></span></p>
+                                <p x-show="isRedeem && resultData.remaining_rewards !== undefined"><strong>Remaining Rewards:</strong> <span x-text="resultData.remaining_rewards"></span></p>
                             </div>
                         </template>
                     </div>
