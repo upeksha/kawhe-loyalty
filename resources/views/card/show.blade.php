@@ -103,12 +103,17 @@
                         @endif
                         
                         <!-- Always Visible QR Code for Stamping -->
-                        <div class="flex justify-center mb-6">
-                            <div class="bg-white rounded-xl p-3 shadow-lg">
+                        <div class="flex flex-col items-center justify-center mb-6">
+                            <!-- Mode Badge -->
+                            <div class="mb-2 px-3 py-1 rounded-full text-xs font-bold bg-brand-600 text-white shadow-md">
+                                STAMP MODE
+                            </div>
+                            <div class="bg-white rounded-xl p-3 shadow-lg border-2 border-brand-500">
                                 <div id="stamp-qr-container">
                                     {!! SimpleSoftwareIO\QrCode\Facades\QrCode::size(200)->generate('LA:' . $account->public_token) !!}
                                 </div>
                             </div>
+                            <p class="mt-2 text-xs text-gray-300 text-center">Scan to add stamps</p>
                         </div>
                         
                         <!-- Redeem Reward Button (when reward available and not redeemed) -->
@@ -336,13 +341,20 @@
                         <!-- Modal Content -->
                         <div class="text-center">
                             <div class="mb-4">
-                                <div class="text-4xl mb-2">🎉</div>
+                                <!-- Redeem Mode Badge -->
+                                <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold bg-accent-600 text-white shadow-lg mb-3">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
+                                    </svg>
+                                    <span>REDEEM MODE</span>
+                                </div>
+                                <div class="text-4xl mb-2">🎁</div>
                                 <h2 class="text-2xl font-bold text-white mb-2">Redeem Your Reward!</h2>
-                                <p class="text-gray-300 text-sm">Show this QR code to the merchant</p>
+                                <p class="text-gray-300 text-sm">Show this QR code to the merchant to redeem</p>
                             </div>
 
                             <!-- QR Code -->
-                            <div class="bg-white rounded-xl p-6 shadow-lg border-4 border-yellow-400 mb-4 flex justify-center">
+                            <div class="bg-white rounded-xl p-6 shadow-lg border-4 border-accent-500 mb-4 flex flex-col items-center">
                                 <div id="redeem-qr-container">
                                     @if($account->redeem_token)
                                         {!! SimpleSoftwareIO\QrCode\Facades\QrCode::size(250)->generate('LR:' . $account->redeem_token) !!}
