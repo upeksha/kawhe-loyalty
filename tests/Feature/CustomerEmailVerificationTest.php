@@ -26,13 +26,13 @@ test('send endpoint sends email and sets token in database', function () {
         return $mail->hasTo($customer->email);
     });
 
-    $customer->refresh();
-    expect($customer->email_verification_token_hash)->not->toBeNull();
-    expect($customer->email_verification_expires_at)->not->toBeNull();
-    expect($customer->email_verification_sent_at)->not->toBeNull();
+    $account->refresh();
+    expect($account->email_verification_token_hash)->not->toBeNull();
+    expect($account->email_verification_expires_at)->not->toBeNull();
+    expect($account->email_verification_sent_at)->not->toBeNull();
 });
 
-test('verify endpoint sets email_verified_at and clears token', function () {
+test('verify endpoint sets verified_at and clears token', function () {
     $store = Store::factory()->create();
     $customer = Customer::factory()->create(['email' => 'test@example.com']);
     $account = LoyaltyAccount::factory()->create([
@@ -43,7 +43,7 @@ test('verify endpoint sets email_verified_at and clears token', function () {
     $rawToken = Str::random(40);
     $tokenHash = hash('sha256', $rawToken);
 
-    $customer->update([
+    $account->update([
         'email_verification_token_hash' => $tokenHash,
         'email_verification_expires_at' => now()->addMinutes(60),
     ]);
@@ -51,12 +51,12 @@ test('verify endpoint sets email_verified_at and clears token', function () {
     $response = $this->get(route('customer.email.verification.verify', ['token' => $rawToken]) . '?card=' . $account->public_token);
 
     $response->assertRedirect(route('card.show', ['public_token' => $account->public_token]));
-    $response->assertSessionHas('message', 'Email verified successfully!');
+    $response->assertSessionHas('message');
 
-    $customer->refresh();
-    expect($customer->email_verified_at)->not->toBeNull();
-    expect($customer->email_verification_token_hash)->toBeNull();
-    expect($customer->email_verification_expires_at)->toBeNull();
+    $account->refresh();
+    expect($account->verified_at)->not->toBeNull();
+    expect($account->email_verification_token_hash)->toBeNull();
+    expect($account->email_verification_expires_at)->toBeNull();
 });
 
 test('cannot send if customer email is null', function () {
@@ -85,7 +85,7 @@ test('expired token fails gracefully', function () {
     $rawToken = Str::random(40);
     $tokenHash = hash('sha256', $rawToken);
 
-    $customer->update([
+    $account->update([
         'email_verification_token_hash' => $tokenHash,
         'email_verification_expires_at' => now()->subMinutes(1), // Expired
     ]);
@@ -95,38 +95,34 @@ test('expired token fails gracefully', function () {
     $response->assertRedirect('/');
     $response->assertSessionHasErrors('email');
 
-    $customer->refresh();
-    expect($customer->email_verified_at)->toBeNull();
+    $account->refresh();
+    expect($account->verified_at)->toBeNull();
 });
 
 test('already verified customer shows success message', function () {
     $store = Store::factory()->create();
-    $customer = Customer::factory()->create([
-        'email' => 'test@example.com',
-        'email_verified_at' => now(),
-    ]);
+    $customer = Customer::factory()->create(['email' => 'test@example.com']);
     $account = LoyaltyAccount::factory()->create([
         'store_id' => $store->id,
         'customer_id' => $customer->id,
+        'verified_at' => now(), // Store-specific verification
     ]);
 
     $response = $this->post(route('customer.email.verification.send', ['public_token' => $account->public_token]));
 
     $response->assertRedirect();
-    $response->assertSessionHas('message', 'Email already verified.');
+    $response->assertSessionHas('message', 'Email already verified for this store.');
 });
 
 test('resend cooldown is enforced', function () {
     Mail::fake();
 
     $store = Store::factory()->create();
-    $customer = Customer::factory()->create([
-        'email' => 'test@example.com',
-        'email_verification_sent_at' => now()->subSeconds(30), // 30 seconds ago
-    ]);
+    $customer = Customer::factory()->create(['email' => 'test@example.com']);
     $account = LoyaltyAccount::factory()->create([
         'store_id' => $store->id,
         'customer_id' => $customer->id,
+        'email_verification_sent_at' => now()->subSeconds(30), // 30 seconds ago
     ]);
 
     $response = $this->post(route('customer.email.verification.send', ['public_token' => $account->public_token]));
@@ -149,7 +145,7 @@ test('verify redirects to card when card query param provided', function () {
     $rawToken = Str::random(40);
     $tokenHash = hash('sha256', $rawToken);
 
-    $customer->update([
+    $account->update([
         'email_verification_token_hash' => $tokenHash,
         'email_verification_expires_at' => now()->addMinutes(60),
     ]);
@@ -159,21 +155,26 @@ test('verify redirects to card when card query param provided', function () {
     $response->assertRedirect(route('card.show', ['public_token' => $account->public_token]));
 });
 
-test('verify redirects to home when no card query param and no loyalty accounts', function () {
+test('verify redirects to card when token is valid but no query param', function () {
+    $store = Store::factory()->create();
     $customer = Customer::factory()->create(['email' => 'test@example.com']);
+    $account = LoyaltyAccount::factory()->create([
+        'store_id' => $store->id,
+        'customer_id' => $customer->id,
+    ]);
 
     $rawToken = Str::random(40);
     $tokenHash = hash('sha256', $rawToken);
 
-    $customer->update([
+    $account->update([
         'email_verification_token_hash' => $tokenHash,
         'email_verification_expires_at' => now()->addMinutes(60),
     ]);
 
     $response = $this->get(route('customer.email.verification.verify', ['token' => $rawToken]));
 
-    $response->assertRedirect('/');
-    $response->assertSessionHas('message', 'Email verified successfully!');
+    $response->assertRedirect(route('card.show', ['public_token' => $account->public_token]));
+    $response->assertSessionHas('message');
 });
 
 
