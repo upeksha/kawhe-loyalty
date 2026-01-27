@@ -387,12 +387,16 @@
                 resultData: null,
                 isScanning: true,
                 showModal: false,
+                showChoiceModal: false, // New modal for choosing redeem vs stamp
+                showVerificationModal: false, // Modal for verification required
+                verificationData: null, // Data for verification modal
+                sendingVerification: false, // Loading state for sending verification email
+                previewData: null, // Data from preview endpoint
                 stampCount: 1,
                 pendingToken: null,
                 isRedeem: false,
                 rewardBalance: 1, // Default to 1 for single reward
                 redeemQuantity: 1, // Quantity to redeem (default 1)
-                scanMode: 'stamp', // 'stamp' or 'redeem' - pre-scan mode selection
                 storeSwitched: false,
                 switchedStoreName: '',
                 showCooldownModal: false,
@@ -871,8 +875,21 @@
                     }
                     
                     // Fetch reward balance to show quantity selector if needed
-                    this.fetchRedeemInfo(this.pendingToken).then(() => {
-                        this.showModal = true;
+                    this.fetchRedeemInfo(this.pendingToken).then((data) => {
+                        // Check if verification is required
+                        if (data.verification_required) {
+                            // Show verification modal instead
+                            this.verificationData = {
+                                customer_name: data.customer_name,
+                                customer_email: data.customer_email,
+                                public_token: data.public_token,
+                                loyalty_account_id: data.loyalty_account_id,
+                            };
+                            this.showVerificationModal = true;
+                        } else {
+                            // Show quantity selector modal
+                            this.showModal = true;
+                        }
                     }).catch(() => {
                         // If fetch fails, still show modal with default values
                         this.showModal = true;
@@ -923,23 +940,92 @@
                         if (data.success) {
                             this.rewardBalance = data.reward_balance || 1;
                             this.redeemQuantity = Math.min(this.rewardBalance, 1); // Default to 1, but can't exceed balance
+                            
+                            // Return data for verification check
+                            return data;
                         } else {
-                                            // Fallback to 1 if fetch fails
+                            // Fallback to 1 if fetch fails
                             this.rewardBalance = 1;
                             this.redeemQuantity = 1;
-                                            // Close modal on error and resume scanning
-                                            this.showModal = false;
-                                            this.resumeScanner();
+                            // Close modal on error and resume scanning
+                            this.showModal = false;
+                            this.resumeScanner();
+                            throw new Error(data.message || 'Failed to fetch redeem info');
                         }
                     } catch (error) {
                         console.error('Error fetching redeem info:', error);
                         // Fallback to 1 if fetch fails
                         this.rewardBalance = 1;
                         this.redeemQuantity = 1;
-                                        // Close modal on error and resume scanning
-                                        this.showModal = false;
-                                        this.resumeScanner();
+                        // Close modal on error and resume scanning
+                        this.showModal = false;
+                        this.resumeScanner();
+                        throw error;
                     }
+                },
+                
+                async sendVerificationEmail() {
+                    if (!this.verificationData || !this.verificationData.public_token) {
+                        this.success = false;
+                        this.message = 'Unable to send verification email. Please try again.';
+                        return;
+                    }
+                    
+                    this.sendingVerification = true;
+                    
+                    try {
+                        const response = await fetch(`/c/${this.verificationData.public_token}/verify-email/send`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/json',
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                            }
+                        });
+                        
+                        const data = await response.json();
+                        
+                        if (response.ok) {
+                            this.success = true;
+                            this.message = 'Verification email sent successfully! The customer will receive an email to verify their address.';
+                            this.showVerificationModal = false;
+                            this.verificationData = null;
+                            // Resume scanner after a short delay
+                            setTimeout(() => {
+                                this.resumeScanner();
+                            }, 2000);
+                        } else {
+                            this.success = false;
+                            this.message = data.message || 'Failed to send verification email. Please try again.';
+                        }
+                    } catch (error) {
+                        console.error('Error sending verification email:', error);
+                        this.success = false;
+                        this.message = 'Network error. Please try again.';
+                    } finally {
+                        this.sendingVerification = false;
+                    }
+                },
+                
+                chooseStampFromVerification() {
+                    // User chose to stamp instead of waiting for verification
+                    this.showVerificationModal = false;
+                    this.verificationData = null;
+                    this.isRedeem = false;
+                    
+                    // Use public_token from verification data
+                    if (this.previewData && this.previewData.public_token) {
+                        this.showStampModal('LA:' + this.previewData.public_token);
+                    } else {
+                        // Fallback: use original pending token (should be a stamp QR)
+                        this.showStampModal(this.pendingToken);
+                    }
+                },
+                
+                cancelVerificationModal() {
+                    this.showVerificationModal = false;
+                    this.verificationData = null;
+                    this.resumeScanner();
                 },
 
                 showStampModal(token) {
