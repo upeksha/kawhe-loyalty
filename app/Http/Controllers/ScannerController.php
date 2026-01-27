@@ -284,6 +284,9 @@ class ScannerController extends Controller
             ], 404);
         }
 
+        $rewardBalance = $account->reward_balance ?? 0;
+        $store = $account->store;
+
         // Verify user has access to this store
         // If store_id provided, verify ownership; otherwise verify the account's store belongs to user
         $userStore = null;
@@ -293,6 +296,13 @@ class ScannerController extends Controller
                 return response()->json([
                     'success' => false,
                     'message' => 'You do not have access to this store.',
+                ], 403);
+            }
+            // Also verify the account's store matches the requested store
+            if ($store->id != $requestedStoreId) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'QR code does not match the selected store.',
                 ], 403);
             }
         } else {
@@ -305,9 +315,6 @@ class ScannerController extends Controller
                 ], 403);
             }
         }
-
-        $rewardBalance = $account->reward_balance ?? 0;
-        $store = $account->store;
 
         return response()->json([
             'success' => true,
