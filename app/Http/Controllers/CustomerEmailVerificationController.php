@@ -104,7 +104,7 @@ class CustomerEmailVerificationController extends Controller
         // Find loyalty account by verification token (store-specific verification)
         $account = LoyaltyAccount::where('email_verification_token_hash', $tokenHash)
             ->where('email_verification_expires_at', '>=', now())
-            ->with('customer')
+            ->with(['customer', 'store'])
             ->first();
 
         if (!$account) {
@@ -124,8 +124,19 @@ class CustomerEmailVerificationController extends Controller
             'email_verification_expires_at' => null,
         ]);
 
-        // Redirect to the specific card
+        // Reload the account with store relationship to ensure we have the store name
+        $account->load('store');
+        
+        // Log successful verification
+        \Log::info('Email verified successfully', [
+            'loyalty_account_id' => $account->id,
+            'store_id' => $account->store_id,
+            'customer_id' => $account->customer_id,
+            'customer_email' => $account->customer->email,
+        ]);
+
+        // Redirect to the specific card with success message
         return redirect()->route('card.show', ['public_token' => $account->public_token])
-            ->with('message', 'Email verified successfully for ' . $account->store->name . '!');
+            ->with('message', '✅ Email verified successfully for ' . $account->store->name . '! You can now redeem rewards.');
     }
 }

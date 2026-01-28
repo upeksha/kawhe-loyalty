@@ -49,6 +49,35 @@
     <body class="font-sans antialiased" style="background-color: {{ $account->store->background_color ?? '#1F2937' }}; min-height: 100vh;">
         <div class="min-h-screen pb-8" x-data="cardApp()" x-init="init()">
             <div class="w-full max-w-md mx-auto px-4 pt-6">
+                <!-- Success Message (e.g., from email verification) -->
+                @if(session('message'))
+                    <div class="bg-green-500 text-white rounded-lg p-4 mb-4 shadow-lg">
+                        <div class="flex items-center gap-2">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                            </svg>
+                            <p class="font-semibold">{{ session('message') }}</p>
+                        </div>
+                    </div>
+                @endif
+                
+                <!-- Error Messages -->
+                @if($errors->any())
+                    <div class="bg-red-500 text-white rounded-lg p-4 mb-4 shadow-lg">
+                        <div class="flex items-center gap-2 mb-2">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                            </svg>
+                            <p class="font-semibold">Error</p>
+                        </div>
+                        <ul class="list-disc list-inside text-sm">
+                            @foreach($errors->all() as $error)
+                                <li>{{ $error }}</li>
+                            @endforeach
+                        </ul>
+                    </div>
+                @endif
+                
                 <!-- Reward Unlocked Card (Top) -->
                 @if(($account->reward_balance ?? 0) > 0)
                     <div x-show="rewardBalance > 0" class="bg-gradient-to-r from-yellow-400 via-yellow-500 to-yellow-600 rounded-2xl shadow-xl overflow-hidden mb-4">
@@ -67,7 +96,7 @@
                                 </div>
                             </div>
                             
-                            @if(!$account->customer->email_verified_at)
+                            @if(!$account->verified_at && $account->customer->email)
                                 <div class="bg-white/20 backdrop-blur-sm rounded-xl p-4 mt-4">
                                     <div class="flex gap-2">
                                         <button @click="sendVerification()" :disabled="verifying" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-4 py-2.5 rounded-lg disabled:opacity-50 transition">
@@ -399,7 +428,7 @@
                     rewardRedeemed: {{ ($account->reward_redeemed_at && (($account->reward_balance ?? 0) <= 0)) ? 'true' : 'false' }},
                     rewardBalance: {{ $account->reward_balance ?? 0 }},
                     hasRedeemToken: {{ $account->redeem_token ? 'true' : 'false' }},
-                    emailVerified: {{ $account->customer->email_verified_at ? 'true' : 'false' }},
+                    emailVerified: {{ $account->verified_at ? 'true' : 'false' }},
                     verifying: false,
                     verifyMessage: '',
                     cardForgotten: false,
