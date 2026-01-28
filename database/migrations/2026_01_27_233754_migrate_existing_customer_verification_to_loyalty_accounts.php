@@ -13,12 +13,19 @@ return new class extends Migration
     {
         // Migrate existing customer-level verification to all their loyalty accounts
         // This ensures existing verified customers don't break when we switch to store-specific verification
+        // Use SQLite-compatible syntax (works with MySQL too)
         \DB::statement("
-            UPDATE loyalty_accounts la
-            INNER JOIN customers c ON la.customer_id = c.id
-            SET la.verified_at = c.email_verified_at
-            WHERE c.email_verified_at IS NOT NULL 
-            AND la.verified_at IS NULL
+            UPDATE loyalty_accounts
+            SET verified_at = (
+                SELECT email_verified_at 
+                FROM customers 
+                WHERE customers.id = loyalty_accounts.customer_id
+                AND customers.email_verified_at IS NOT NULL
+            )
+            WHERE customer_id IN (
+                SELECT id FROM customers WHERE email_verified_at IS NOT NULL
+            )
+            AND verified_at IS NULL
         ");
     }
 
