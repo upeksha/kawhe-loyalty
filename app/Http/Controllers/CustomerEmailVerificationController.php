@@ -101,20 +101,49 @@ class CustomerEmailVerificationController extends Controller
     {
         $tokenHash = hash('sha256', $token);
 
-        // Find loyalty account by verification token (store-specific verification)
+        // Try to get public_token from query for better error handling
+        $publicToken = $request->query('card');
+
+        // First check if account exists with this token (even if expired)
+        $accountWithToken = LoyaltyAccount::where('email_verification_token_hash', $tokenHash)
+            ->with(['customer', 'store'])
+            ->first();
+
+        // Check if token exists but is expired
+        if ($accountWithToken && $accountWithToken->email_verification_expires_at && $accountWithToken->email_verification_expires_at < now()) {
+            $errorMessage = 'This verification link has expired. Please request a new verification email.';
+            if ($publicToken) {
+                return redirect()->route('card.show', ['public_token' => $publicToken])
+                    ->withErrors(['email' => $errorMessage]);
+            }
+            return redirect('/')->withErrors(['email' => $errorMessage]);
+        }
+
+        // Check if account is already verified
+        if ($accountWithToken && $accountWithToken->verified_at) {
+            $successMessage = 'Your email is already verified for ' . $accountWithToken->store->name . '.';
+            if ($publicToken) {
+                return redirect()->route('card.show', ['public_token' => $publicToken])
+                    ->with('message', $successMessage);
+            }
+            return redirect('/')->with('message', $successMessage);
+        }
+
+        // Find loyalty account by verification token (store-specific verification) - valid and not expired
         $account = LoyaltyAccount::where('email_verification_token_hash', $tokenHash)
             ->where('email_verification_expires_at', '>=', now())
+            ->whereNull('verified_at') // Ensure not already verified
             ->with(['customer', 'store'])
             ->first();
 
         if (!$account) {
-            // Try to get public_token from query to redirect back to card
-            $publicToken = $request->query('card');
+            // Token doesn't exist or is invalid
+            $errorMessage = 'Invalid verification token. Please check the link or request a new verification email.';
             if ($publicToken) {
                 return redirect()->route('card.show', ['public_token' => $publicToken])
-                    ->withErrors(['email' => 'Invalid or expired verification token.']);
+                    ->withErrors(['email' => $errorMessage]);
             }
-            return redirect('/')->withErrors(['email' => 'Invalid or expired verification token.']);
+            return redirect('/')->withErrors(['email' => $errorMessage]);
         }
 
         // Verify the email for this specific loyalty account (store-specific)
