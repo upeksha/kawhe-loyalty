@@ -455,6 +455,9 @@ class ScannerController extends Controller
         // Also handle whitespace and case-insensitive matching
         $raw = trim($token);
         $token = preg_replace('/^(LR:|REDEEM:)\s*/i', '', $raw);
+        
+        // Remove dashes/spaces from manual entry (formatted tokens from wallet pass)
+        $token = str_replace(['-', ' '], '', $token);
 
         $storeId = $request->store_id;
         $quantity = $request->input('quantity', 1); // Default to 1 for backward compatibility
