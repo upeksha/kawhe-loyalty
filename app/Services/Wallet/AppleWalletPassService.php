@@ -72,6 +72,16 @@ class AppleWalletPassService
                         'label' => 'Customer',
                         'value' => $customer->name ?? $customer->email ?? 'Valued Customer',
                     ],
+                    // Add manual entry code (visible on front of pass)
+                    [
+                        'key' => 'manual_code',
+                        'label' => ($account->reward_balance ?? 0) > 0 && $account->redeem_token ? 'Redeem Code' : 'Stamp Code',
+                        'value' => $this->formatTokenForManualEntry(
+                            ($account->reward_balance ?? 0) > 0 && $account->redeem_token
+                                ? $account->redeem_token
+                                : $account->public_token
+                        ),
+                    ],
                     // Add scan instruction based on mode
                     ...(($account->reward_balance ?? 0) > 0 ? [[
                         'key' => 'scan_instruction',
@@ -84,6 +94,27 @@ class AppleWalletPassService
                     ]]),
                 ],
                 'backFields' => [
+                    [
+                        'key' => 'manual_entry_title',
+                        'label' => 'Manual Entry',
+                        'value' => 'If QR code cannot be scanned, enter this code manually:',
+                    ],
+                    [
+                        'key' => 'manual_entry_code',
+                        'label' => ($account->reward_balance ?? 0) > 0 && $account->redeem_token ? 'Redeem Code' : 'Stamp Code',
+                        'value' => $this->formatTokenForManualEntry(
+                            ($account->reward_balance ?? 0) > 0 && $account->redeem_token
+                                ? $account->redeem_token
+                                : $account->public_token
+                        ),
+                    ],
+                    [
+                        'key' => 'manual_entry_instruction',
+                        'label' => 'How to Use',
+                        'value' => ($account->reward_balance ?? 0) > 0 && $account->redeem_token
+                            ? 'Enter this code in the scanner if QR code cannot be read.'
+                            : 'Enter this code in the scanner if QR code cannot be read.',
+                    ],
                     [
                         'key' => 'support',
                         'label' => 'Support',
@@ -227,5 +258,18 @@ class AppleWalletPassService
         
         // Unicode circles: filled = ● (U+25CF), empty = ○ (U+25CB)
         return str_repeat('●', $filled) . str_repeat('○', $empty);
+    }
+
+    /**
+     * Format token for manual entry (adds dashes for readability)
+     * Example: "abcd1234efgh5678ijkl9012mnop3456qrst7890" -> "abcd-1234-efgh-5678-ijkl-9012-mnop-3456-qrst-7890"
+     *
+     * @param string $token The token to format
+     * @return string Formatted token with dashes every 4 characters
+     */
+    protected function formatTokenForManualEntry(string $token): string
+    {
+        // Split token into chunks of 4 characters and join with dashes
+        return implode('-', str_split($token, 4));
     }
 }

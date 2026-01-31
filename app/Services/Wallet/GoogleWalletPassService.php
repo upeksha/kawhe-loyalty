@@ -248,6 +248,15 @@ class GoogleWalletPassService
             ];
         }
         
+        // Add manual entry code (fallback if QR scan fails)
+        $manualEntryToken = ($account->reward_balance ?? 0) > 0 && $account->redeem_token
+            ? $account->redeem_token
+            : $account->public_token;
+        $textModulesData[] = [
+            'header' => ($account->reward_balance ?? 0) > 0 && $account->redeem_token ? 'Redeem Code' : 'Stamp Code',
+            'body' => $this->formatTokenForManualEntry($manualEntryToken) . ' (Enter manually if QR scan fails)',
+        ];
+        
         $loyaltyObject->setTextModulesData($textModulesData);
         
         try {
@@ -619,5 +628,18 @@ class GoogleWalletPassService
         
         // Unicode circles: filled = ● (U+25CF), empty = ○ (U+25CB)
         return str_repeat('●', $filled) . str_repeat('○', $empty);
+    }
+
+    /**
+     * Format token for manual entry (adds dashes for readability)
+     * Example: "abcd1234efgh5678ijkl9012mnop3456qrst7890" -> "abcd-1234-efgh-5678-ijkl-9012-mnop-3456-qrst-7890"
+     *
+     * @param string $token The token to format
+     * @return string Formatted token with dashes every 4 characters
+     */
+    protected function formatTokenForManualEntry(string $token): string
+    {
+        // Split token into chunks of 4 characters and join with dashes
+        return implode('-', str_split($token, 4));
     }
 }
