@@ -596,7 +596,7 @@ class ScannerController extends Controller
             // This ensures old QR codes cannot be scanned again
             if ($account->reward_balance > 0) {
                 // Still have rewards, rotate token for security
-                $account->redeem_token = Str::random(40);
+                $account->redeem_token = Str::random(LoyaltyAccount::REDEEM_TOKEN_LENGTH);
             } else {
                 // No rewards left
                 $account->reward_available_at = null;

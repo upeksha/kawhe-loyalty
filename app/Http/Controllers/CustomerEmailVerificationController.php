@@ -59,21 +59,30 @@ class CustomerEmailVerificationController extends Controller
             'email_verification_sent_at' => now(),
         ]);
 
-        // Always queue emails - never block the UI flow
+        // Send verification email (sync = immediate, else high-priority queue)
         $mailable = new VerifyCustomerEmail($rawToken, $public_token);
-        
-        // Attempt to queue the email, but never fail the request if queue fails
+
         try {
-            Mail::to($customer->email)->queue($mailable);
-            
-            \Log::info('Verification email queued successfully', [
-                'loyalty_account_id' => $account->id,
-                'customer_id' => $customer->id,
-                'store_id' => $account->store_id,
-                'public_token' => $public_token,
-                'email' => $customer->email,
-                'initiated_by' => $isMerchantRequest ? 'merchant' : 'customer',
-            ]);
+            if (config('mail.welcome_sync', false)) {
+                Mail::to($customer->email)->send($mailable);
+                \Log::info('Verification email sent synchronously', [
+                    'loyalty_account_id' => $account->id,
+                    'customer_id' => $customer->id,
+                    'store_id' => $account->store_id,
+                    'public_token' => $public_token,
+                    'email' => $customer->email,
+                ]);
+            } else {
+                Mail::to($customer->email)->queue($mailable);
+                \Log::info('Verification email queued successfully', [
+                    'loyalty_account_id' => $account->id,
+                    'customer_id' => $customer->id,
+                    'store_id' => $account->store_id,
+                    'public_token' => $public_token,
+                    'email' => $customer->email,
+                    'initiated_by' => $isMerchantRequest ? 'merchant' : 'customer',
+                ]);
+            }
         } catch (\Exception $e) {
             // Log the error but don't fail the request
             \Log::error('Failed to queue verification email', [

@@ -70,7 +70,7 @@ class CreateStoreAndCards extends Command
                 'customer_id' => $customer->id,
                 'stamp_count' => $remainingStamps,
                 'reward_balance' => $rewardBalance,
-                'public_token' => Str::random(40),
+                'public_token' => Str::random(\App\Models\LoyaltyAccount::PUBLIC_TOKEN_LENGTH),
                 'version' => 1,
                 'last_stamped_at' => $stampCount > 0 ? now()->subDays(rand(1, 30)) : null,
                 'reward_available_at' => $rewardBalance > 0 ? now()->subDays(rand(1, 10)) : null,

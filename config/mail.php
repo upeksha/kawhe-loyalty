@@ -115,4 +115,17 @@ return [
         'name' => env('MAIL_FROM_NAME', 'Example'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Welcome / verification email delivery
+    |--------------------------------------------------------------------------
+    |
+    | When true, welcome and verification emails are sent synchronously during
+    | the request so they reach SendGrid immediately (no queue delay). The
+    | tradeoff is the HTTP response may take 1–3 seconds longer. When false,
+    | emails are queued to the "emails" queue for processing by a worker.
+    |
+    */
+    'welcome_sync' => env('MAIL_WELCOME_SYNC', false),
+
 ];

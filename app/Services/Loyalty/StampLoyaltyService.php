@@ -109,7 +109,7 @@ class StampLoyaltyService
                 }
                 // Ensure redeem_token exists
                 if (is_null($account->redeem_token)) {
-                    $account->redeem_token = \Illuminate\Support\Str::random(40);
+                    $account->redeem_token = \Illuminate\Support\Str::random(\App\Models\LoyaltyAccount::REDEEM_TOKEN_LENGTH);
                 }
             } else {
                 // No rewards available

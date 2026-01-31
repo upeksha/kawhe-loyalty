@@ -36,7 +36,7 @@ class CardController extends Controller
                     }
                     // Only generate token if it doesn't exist - never regenerate existing tokens
                     if (is_null($account->redeem_token)) {
-                        $account->redeem_token = Str::random(40);
+                        $account->redeem_token = Str::random(\App\Models\LoyaltyAccount::REDEEM_TOKEN_LENGTH);
                         $account->save();
                     }
                 } catch (\Exception $e) {
@@ -92,7 +92,7 @@ class CardController extends Controller
             }
             // Only generate token if it doesn't exist - never regenerate existing tokens
             if (is_null($account->redeem_token)) {
-                $account->redeem_token = Str::random(40);
+                $account->redeem_token = Str::random(\App\Models\LoyaltyAccount::REDEEM_TOKEN_LENGTH);
                 $account->save();
             }
         }

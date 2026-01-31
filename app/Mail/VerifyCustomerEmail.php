@@ -34,7 +34,7 @@ class VerifyCustomerEmail extends Mailable implements ShouldQueue
         public string $token,
         public string $publicToken
     ) {
-        //
+        $this->onQueue('emails');
     }
 
     /**

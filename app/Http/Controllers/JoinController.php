@@ -182,7 +182,7 @@ class JoinController extends Controller
         $loyaltyAccount = LoyaltyAccount::create([
             'store_id' => $store->id,
             'customer_id' => $customer->id,
-            'public_token' => Str::random(40),
+            'public_token' => Str::random(\App\Models\LoyaltyAccount::PUBLIC_TOKEN_LENGTH),
             'stamp_count' => 0,
             'version' => 1,
         ]);
@@ -199,16 +199,26 @@ class JoinController extends Controller
                 'email_verification_sent_at' => now(),
             ]);
 
-            // Send welcome email with verification link
+            // Send welcome email with verification link (sync = immediate, else high-priority queue)
+            $mailable = new CustomerWelcomeEmail($customer, $loyaltyAccount, $verificationToken);
             try {
-                Mail::to($customer->email)->queue(new CustomerWelcomeEmail($customer, $loyaltyAccount, $verificationToken));
-                
-                \Log::info('Customer welcome email queued successfully', [
-                    'customer_id' => $customer->id,
-                    'loyalty_account_id' => $loyaltyAccount->id,
-                    'store_id' => $store->id,
-                    'email' => $customer->email,
-                ]);
+                if (config('mail.welcome_sync', false)) {
+                    Mail::to($customer->email)->send($mailable);
+                    \Log::info('Customer welcome email sent synchronously', [
+                        'customer_id' => $customer->id,
+                        'loyalty_account_id' => $loyaltyAccount->id,
+                        'store_id' => $store->id,
+                        'email' => $customer->email,
+                    ]);
+                } else {
+                    Mail::to($customer->email)->queue($mailable);
+                    \Log::info('Customer welcome email queued successfully', [
+                        'customer_id' => $customer->id,
+                        'loyalty_account_id' => $loyaltyAccount->id,
+                        'store_id' => $store->id,
+                        'email' => $customer->email,
+                    ]);
+                }
             } catch (\Exception $e) {
                 // Log the error but don't fail the registration
                 \Log::error('Failed to queue customer welcome email', [

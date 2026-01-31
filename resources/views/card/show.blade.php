@@ -139,7 +139,7 @@
                             </div>
                             <div class="bg-white rounded-xl p-3 shadow-lg border-2 border-brand-500">
                                 <div id="stamp-qr-container">
-                                    {!! SimpleSoftwareIO\QrCode\Facades\QrCode::size(200)->generate('LA:' . $account->public_token) !!}
+                                    {!! SimpleSoftwareIO\QrCode\Facades\QrCode::size(200)->errorCorrection('L')->margin(1)->generate('LA:' . $account->public_token) !!}
                                 </div>
                             </div>
                             <p class="mt-2 text-xs text-gray-300 text-center">Scan to add stamps</p>
@@ -386,7 +386,7 @@
                             <div class="bg-white rounded-xl p-6 shadow-lg border-4 border-accent-500 mb-4 flex flex-col items-center">
                                 <div id="redeem-qr-container">
                                     @if($account->redeem_token)
-                                        {!! SimpleSoftwareIO\QrCode\Facades\QrCode::size(250)->generate('LR:' . $account->redeem_token) !!}
+                                        {!! SimpleSoftwareIO\QrCode\Facades\QrCode::size(250)->errorCorrection('L')->margin(1)->generate('LR:' . $account->redeem_token) !!}
                                     @else
                                         <p class="text-red-500">Error: Redeem token not available. Please refresh the page.</p>
                                     @endif

@@ -37,7 +37,7 @@ class CustomerWelcomeEmail extends Mailable implements ShouldQueue
         public LoyaltyAccount $loyaltyAccount,
         public string $verificationToken
     ) {
-        //
+        $this->onQueue('emails');
     }
 
     /**

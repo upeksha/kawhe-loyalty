@@ -13,6 +13,13 @@ class LoyaltyAccount extends Model
     use HasFactory, Notifiable;
 
     /**
+     * Token length for public_token and redeem_token (shorter = simpler QR and manual code).
+     * Existing 40-char tokens remain valid; new accounts use this length for faster scanning.
+     */
+    public const PUBLIC_TOKEN_LENGTH = 16;
+    public const REDEEM_TOKEN_LENGTH = 16;
+
+    /**
      * Route notifications for the mail channel.
      *
      * @return string
@@ -60,10 +67,10 @@ class LoyaltyAccount extends Model
 
         static::creating(function ($account) {
             if (empty($account->public_token)) {
-                $account->public_token = Str::random(40);
+                $account->public_token = Str::random(self::PUBLIC_TOKEN_LENGTH);
             }
             if (empty($account->wallet_auth_token)) {
-                $account->wallet_auth_token = Str::random(40);
+                $account->wallet_auth_token = Str::random(40); // Keep 40 for auth security
             }
         });
     }

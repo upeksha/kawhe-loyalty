@@ -26,6 +26,11 @@ MAIL_FROM_NAME="Kawhe Loyalty"
 # Queue Configuration
 QUEUE_CONNECTION=database
 
+# Optional: send welcome/verification emails immediately (no queue delay).
+# When true, emails are sent during the request (1–3 sec slower response).
+# When false (default), emails go to the "emails" queue for a worker to process.
+# MAIL_WELCOME_SYNC=false
+
 # App URL (must be correct for verification links)
 APP_URL=https://testing.kawhe.shop
 APP_ENV=production
@@ -51,6 +56,8 @@ This creates:
 
 ## Step 3: Queue Worker Setup
 
+Welcome and verification emails are sent to a dedicated **`emails`** queue so they can be processed before other jobs. Run the worker with **`--queue=emails,default`** so the `emails` queue is processed first. Use **`--sleep=0`** or **`--sleep=1`** so new email jobs are picked up quickly (avoid long delays).
+
 ### Option A: Using Supervisor (Recommended for Production)
 
 Create supervisor config file at `/etc/supervisor/conf.d/kawhe-queue-worker.conf`:
@@ -58,7 +65,7 @@ Create supervisor config file at `/etc/supervisor/conf.d/kawhe-queue-worker.conf
 ```ini
 [program:kawhe-queue-worker]
 process_name=%(program_name)s_%(process_num)02d
-command=php /path/to/your/app/artisan queue:work database --sleep=3 --tries=3 --max-time=3600
+command=php /path/to/your/app/artisan queue:work database --queue=emails,default --sleep=1 --tries=3 --max-time=3600
 autostart=true
 autorestart=true
 stopasgroup=true
@@ -69,6 +76,8 @@ redirect_stderr=true
 stdout_logfile=/path/to/your/app/storage/logs/queue-worker.log
 stopwaitsecs=3600
 ```
+
+**Why `--queue=emails,default`:** Welcome and verification mailables use the `emails` queue. Processing `emails` first ensures they are sent without waiting behind other jobs. **Why `--sleep=1`:** A lower sleep (or 0) means the worker checks for new jobs more often, so queued emails are sent within seconds instead of after a long poll.
 
 Then:
 
@@ -91,7 +100,7 @@ After=network.target
 User=www-data
 Group=www-data
 Restart=always
-ExecStart=/usr/bin/php /path/to/your/app/artisan queue:work database --sleep=3 --tries=3 --max-time=3600
+ExecStart=/usr/bin/php /path/to/your/app/artisan queue:work database --queue=emails,default --sleep=1 --tries=3 --max-time=3600
 
 [Install]
 WantedBy=multi-user.target
@@ -111,10 +120,23 @@ sudo systemctl status kawhe-queue-worker
 For testing or development, you can run the queue worker manually:
 
 ```bash
-php artisan queue:work database --sleep=3 --tries=3
+php artisan queue:work database --queue=emails,default --sleep=1 --tries=3
 ```
 
 **Note:** This runs in the foreground. Use Ctrl+C to stop.
+
+## Improving welcome email delivery time
+
+**What you control (app side):**
+
+1. **Queue priority** – Welcome and verification emails use the `emails` queue. Run the worker with `--queue=emails,default` so these are processed first and not delayed by other jobs.
+2. **Worker sleep** – Use `--sleep=0` or `--sleep=1` so the worker picks up new email jobs quickly. A sleep of 3+ seconds can add noticeable delay.
+3. **Optional: send synchronously** – Set `MAIL_WELCOME_SYNC=true` in `.env` to send welcome and verification emails during the HTTP request (no queue). Emails reach SendGrid immediately; the tradeoff is the request may take 1–3 seconds longer. Use this if you want the fastest “leave our server” time and can accept slightly slower page loads.
+
+**What SendGrid and recipients control:**
+
+- **SendGrid handoff** – Once your app (or queue worker) sends the message to SendGrid over SMTP, delivery to SendGrid’s systems is usually within seconds. You cannot speed this up from the app.
+- **Inbox delivery** – After SendGrid accepts the message, delivery to the recipient’s inbox (Gmail, Outlook, etc.) is determined by the recipient’s mail provider. Delays of a few seconds up to several minutes are normal and cannot be fixed in your code. You can monitor delivery in the SendGrid Activity feed.
 
 ## Step 4: Testing Email Configuration
 

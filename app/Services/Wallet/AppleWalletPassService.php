@@ -261,15 +261,14 @@ class AppleWalletPassService
     }
 
     /**
-     * Format token for manual entry (adds dashes for readability)
-     * Example: "abcd1234efgh5678ijkl9012mnop3456qrst7890" -> "abcd-1234-efgh-5678-ijkl-9012-mnop-3456-qrst-7890"
+     * Format token for manual entry (adds dashes for readability).
+     * Works for any length; 16-char example: "abcd1234efgh5678" -> "abcd-1234-efgh-5678".
      *
      * @param string $token The token to format
      * @return string Formatted token with dashes every 4 characters
      */
     protected function formatTokenForManualEntry(string $token): string
     {
-        // Split token into chunks of 4 characters and join with dashes
         return implode('-', str_split($token, 4));
     }
 }

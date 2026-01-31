@@ -45,17 +45,25 @@ class RegisteredUserController extends Controller
 
         event(new Registered($user));
 
-        // Send welcome email to merchant
+        // Send welcome email to merchant (sync = immediate, else high-priority queue)
+        $mailable = new MerchantWelcomeEmail($user);
         try {
-            Mail::to($user->email)->queue(new MerchantWelcomeEmail($user));
-            
-            \Log::info('Merchant welcome email queued successfully', [
-                'user_id' => $user->id,
-                'email' => $user->email,
-            ]);
+            if (config('mail.welcome_sync', false)) {
+                Mail::to($user->email)->send($mailable);
+                \Log::info('Merchant welcome email sent synchronously', [
+                    'user_id' => $user->id,
+                    'email' => $user->email,
+                ]);
+            } else {
+                Mail::to($user->email)->queue($mailable);
+                \Log::info('Merchant welcome email queued successfully', [
+                    'user_id' => $user->id,
+                    'email' => $user->email,
+                ]);
+            }
         } catch (\Exception $e) {
             // Log the error but don't fail the registration
-            \Log::error('Failed to queue merchant welcome email', [
+            \Log::error('Failed to send/queue merchant welcome email', [
                 'user_id' => $user->id,
                 'email' => $user->email,
                 'error' => $e->getMessage(),
