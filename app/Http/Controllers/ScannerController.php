@@ -38,13 +38,16 @@ class ScannerController extends Controller
         if (Str::startsWith($token, 'LR:')) {
             $token = Str::substr($token, 3);
             $isRedeem = true;
+        } elseif (Str::startsWith($token, 'REDEEM:')) {
+            $token = Str::substr($token, 7);
+            $isRedeem = true;
         } elseif (Str::startsWith($token, 'LA:')) {
             $token = Str::substr($token, 3);
             $isRedeem = false;
         }
 
-        // Trim token to prevent whitespace issues
-        $token = trim($token);
+        // Remove dashes/spaces from manual entry (formatted tokens from wallet pass)
+        $token = str_replace(['-', ' '], '', trim($token));
         
         // If this is a redeem request, route to redeem method
         if ($isRedeem) {
@@ -251,17 +254,25 @@ class ScannerController extends Controller
 
         $token = $request->token;
         $isRedeemQR = false;
+        $hasPrefix = false;
         
         // Handle LR: (redeem) vs LA: (stamp) prefixes
         if (Str::startsWith($token, 'LR:')) {
             $token = Str::substr($token, 3);
             $isRedeemQR = true;
+            $hasPrefix = true;
+        } elseif (Str::startsWith($token, 'REDEEM:')) {
+            $token = Str::substr($token, 7);
+            $isRedeemQR = true;
+            $hasPrefix = true;
         } elseif (Str::startsWith($token, 'LA:')) {
             $token = Str::substr($token, 3);
             $isRedeemQR = false;
+            $hasPrefix = true;
         }
         
-        $token = trim($token);
+        // Remove dashes/spaces from manual entry (formatted tokens from wallet pass)
+        $token = str_replace(['-', ' '], '', trim($token));
         $requestedStoreId = $request->store_id;
 
         // Try to find account by public_token first (stamp QR)
@@ -275,6 +286,36 @@ class ScannerController extends Controller
                 ->where('store_id', $requestedStoreId)
                 ->with(['customer', 'store'])
                 ->first();
+        }
+        
+        // If no prefix provided (manual entry from wallet pass), try both token types
+        if (!$account && !$hasPrefix) {
+            // First try public_token (stamp mode)
+            $account = LoyaltyAccount::where('public_token', $token)
+                ->with(['customer', 'store'])
+                ->first();
+            
+            // If not found and store_id provided, try redeem_token
+            if (!$account && $requestedStoreId) {
+                $account = LoyaltyAccount::where('redeem_token', $token)
+                    ->where('store_id', $requestedStoreId)
+                    ->with(['customer', 'store'])
+                    ->first();
+                if ($account) {
+                    $isRedeemQR = true; // Auto-detect it's a redeem token
+                }
+            }
+            
+            // If still not found and no store_id, try redeem_token without store filter
+            // (less secure but allows manual entry to work)
+            if (!$account) {
+                $account = LoyaltyAccount::where('redeem_token', $token)
+                    ->with(['customer', 'store'])
+                    ->first();
+                if ($account) {
+                    $isRedeemQR = true; // Auto-detect it's a redeem token
+                }
+            }
         }
 
         if (!$account) {
