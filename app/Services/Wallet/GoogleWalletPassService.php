@@ -79,77 +79,66 @@ class GoogleWalletPassService
     public function createLoyaltyClass($store)
     {
         $classId = $this->getClassIdForStore($store);
-        
+        $resourceId = "{$this->issuerId}.{$classId}";
+
+        // Build logo, hero/logo image, and color (always use fallback so pass shows color and image)
+        $logoUri = $this->getPassLogoUri($store);
+        if (!$logoUri) {
+            $logoUri = $this->getLogoUri($store);
+        }
+        if (!$logoUri) {
+            $logoUri = $this->getDefaultLogoUri();
+        }
+
+        $heroImage = $this->getPassHeroImageUri($store);
+        if (!$heroImage) {
+            $heroImage = $this->getPassLogoUri($store);
+        }
+        if (!$heroImage) {
+            $heroImage = $this->getLogoUri($store);
+        }
+        if (!$heroImage) {
+            $heroImage = $this->getDefaultLogoUri();
+        }
+        $imageModulesData = [['mainImage' => $heroImage]];
+
+        // Always set background color (Google requires it for pass to show color)
+        $backgroundColor = $store->background_color ?? '#1F2937';
+        // Ensure hex format for Google
+        $backgroundColor = ltrim($backgroundColor, '#');
+        if (strlen($backgroundColor) === 3) {
+            $backgroundColor = $backgroundColor[0].$backgroundColor[0].$backgroundColor[1].$backgroundColor[1].$backgroundColor[2].$backgroundColor[2];
+        }
+        $backgroundColor = '#' . $backgroundColor;
+
         try {
-            // Try to get existing class
-            return $this->service->loyaltyclass->get("{$this->issuerId}.{$classId}");
+            $existing = $this->service->loyaltyclass->get($resourceId);
+            // Class exists: patch so image and color show (they may have been missing or updated)
+            $update = new \Google_Service_Walletobjects_LoyaltyClass();
+            $update->setProgramLogo($logoUri);
+            $update->setImageModulesData($imageModulesData);
+            $update->setHexBackgroundColor($backgroundColor);
+            $update->setProgramName($store->name);
+            $rewardTarget = $store->reward_target ?? 10;
+            $update->setTextModulesData([
+                ['header' => 'Reward Target', 'body' => "Collect {$rewardTarget} stamps to earn: " . ($store->reward_title ?? 'rewards')],
+            ]);
+            $this->service->loyaltyclass->patch($resourceId, $update);
+            return $this->service->loyaltyclass->get($resourceId);
         } catch (\Exception $e) {
-            // Class doesn't exist, create it
-            $loyaltyClass = new Google_Service_Walletobjects_LoyaltyClass();
-            $loyaltyClass->setId("{$this->issuerId}.{$classId}");
+            // Class doesn't exist: create it
+            $loyaltyClass = new \Google_Service_Walletobjects_LoyaltyClass();
+            $loyaltyClass->setId($resourceId);
             $loyaltyClass->setIssuerName(config('app.name', 'Kawhe'));
             $loyaltyClass->setProgramName($store->name);
-            
-            // Google Wallet requires a program logo - use pass logo, then store logo, then default
-            $logoUri = $this->getPassLogoUri($store);
-            if (!$logoUri) {
-                $logoUri = $this->getLogoUri($store);
-            }
-            if (!$logoUri) {
-                // Use default logo if store doesn't have one
-                $logoUri = $this->getDefaultLogoUri();
-            }
             $loyaltyClass->setProgramLogo($logoUri);
-            
-            // Set review status based on environment
-            // For production, this should be 'APPROVED' after Google reviews your account
-            // For testing, use 'UNDER_REVIEW' and add test users in Google Wallet Console
-            $reviewStatus = config('services.google_wallet.review_status', 'UNDER_REVIEW');
-            $loyaltyClass->setReviewStatus($reviewStatus);
-            
-            // Add text modules
+            $loyaltyClass->setReviewStatus(config('services.google_wallet.review_status', 'UNDER_REVIEW'));
             $rewardTarget = $store->reward_target ?? 10;
-            $textModulesData = [
-                [
-                    'header' => 'Reward Target',
-                    'body' => "Collect {$rewardTarget} stamps to earn: {$store->reward_title}",
-                ],
-            ];
-            $loyaltyClass->setTextModulesData($textModulesData);
-            
-            // Add image modules (use pass hero image if available, otherwise pass logo)
-            $heroImage = $this->getPassHeroImageUri($store);
-            if ($heroImage) {
-                $imageModulesData = [
-                    [
-                        'mainImage' => $heroImage,
-                    ],
-                ];
-                $loyaltyClass->setImageModulesData($imageModulesData);
-            } else {
-                // Fallback to pass logo or store logo
-                $logoImage = $this->getPassLogoUri($store);
-                if (!$logoImage) {
-                    $logoImage = $this->getLogoUri($store);
-                }
-                if ($logoImage) {
-                    $imageModulesData = [
-                        [
-                            'mainImage' => $logoImage,
-                        ],
-                    ];
-                    $loyaltyClass->setImageModulesData($imageModulesData);
-                }
-            }
-            
-            // Apply store colors if available
-            if ($store->background_color) {
-                $loyaltyClass->setHexBackgroundColor($store->background_color);
-            }
-            
-            // Note: Barcode is set on LoyaltyObject, not LoyaltyClass
-            // The class is just a template, barcodes are per-object
-            
+            $loyaltyClass->setTextModulesData([
+                ['header' => 'Reward Target', 'body' => "Collect {$rewardTarget} stamps to earn: " . ($store->reward_title ?? 'rewards')],
+            ]);
+            $loyaltyClass->setImageModulesData($imageModulesData);
+            $loyaltyClass->setHexBackgroundColor($backgroundColor);
             return $this->service->loyaltyclass->insert($loyaltyClass);
         }
     }
@@ -505,17 +494,23 @@ class GoogleWalletPassService
      * @param \App\Models\Store $store
      * @return \Google_Service_Walletobjects_Image|null
      */
+    /**
+     * Ensure URL is HTTPS (Google Wallet requires HTTPS for images).
+     */
+    protected function ensureHttps(string $url): string
+    {
+        return str_starts_with($url, 'http://') ? 'https://' . substr($url, 7) : $url;
+    }
+
     protected function getLogoUri($store)
     {
         if (!$store->logo_path) {
             return null;
         }
         
-        // Google Wallet requires absolute HTTPS URL
         $appUrl = rtrim(config('app.url'), '/');
-        $logoUrl = $appUrl . '/storage/' . $store->logo_path;
+        $logoUrl = $this->ensureHttps($appUrl . '/storage/' . $store->logo_path);
         
-        // Create Image object (not ImageUri)
         $image = new \Google_Service_Walletobjects_Image();
         $imageUri = new \Google_Service_Walletobjects_ImageUri();
         $imageUri->setUri($logoUrl);
@@ -531,14 +526,10 @@ class GoogleWalletPassService
      */
     protected function getDefaultLogoUri()
     {
-        // Use default logo - Google Wallet requires absolute HTTPS URL
         $defaultLogoPath = 'wallet/google/program-logo.png';
-        
-        // Ensure we use absolute URL (Google Wallet requirement)
         $appUrl = rtrim(config('app.url'), '/');
-        $defaultLogoUrl = $appUrl . '/' . $defaultLogoPath;
+        $defaultLogoUrl = $this->ensureHttps($appUrl . '/' . $defaultLogoPath);
         
-        // Verify file exists, if not log warning but still use the URL
         if (!file_exists(public_path($defaultLogoPath))) {
             \Log::warning('Google Wallet: Default logo file not found', [
                 'path' => public_path($defaultLogoPath),
@@ -566,11 +557,9 @@ class GoogleWalletPassService
             return null;
         }
         
-        // Google Wallet requires absolute HTTPS URL
         $appUrl = rtrim(config('app.url'), '/');
-        $logoUrl = $appUrl . '/storage/' . $store->pass_logo_path;
+        $logoUrl = $this->ensureHttps($appUrl . '/storage/' . $store->pass_logo_path);
         
-        // Create Image object
         $image = new \Google_Service_Walletobjects_Image();
         $imageUri = new \Google_Service_Walletobjects_ImageUri();
         $imageUri->setUri($logoUrl);
@@ -591,11 +580,9 @@ class GoogleWalletPassService
             return null;
         }
         
-        // Google Wallet requires absolute HTTPS URL
         $appUrl = rtrim(config('app.url'), '/');
-        $heroUrl = $appUrl . '/storage/' . $store->pass_hero_image_path;
+        $heroUrl = $this->ensureHttps($appUrl . '/storage/' . $store->pass_hero_image_path);
         
-        // Create Image object
         $image = new \Google_Service_Walletobjects_Image();
         $imageUri = new \Google_Service_Walletobjects_ImageUri();
         $imageUri->setUri($heroUrl);
