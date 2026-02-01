@@ -48,6 +48,12 @@ class AppleWalletPassService
                 'message' => ($account->reward_balance ?? 0) > 0 && $account->redeem_token
                     ? 'LR:' . $account->redeem_token
                     : 'LA:' . $account->public_token,
+                // Show the manual entry code directly under the QR code
+                'altText' => 'Manual Code: ' . ($account->manual_entry_code ?? $this->formatTokenForManualEntry(
+                    ($account->reward_balance ?? 0) > 0 && $account->redeem_token
+                        ? $account->redeem_token
+                        : $account->public_token
+                )),
                 'format' => 'PKBarcodeFormatQR',
                 'messageEncoding' => 'utf-8',
             ],
@@ -77,7 +83,7 @@ class AppleWalletPassService
                     // Add manual entry code (4-char e.g. A3CX when set, else long token formatted)
                     [
                         'key' => 'manual_code',
-                        'label' => ($account->reward_balance ?? 0) > 0 && $account->redeem_token ? 'Redeem Code' : 'Stamp Code',
+                        'label' => 'Manual Code',
                         'value' => $account->manual_entry_code ?? $this->formatTokenForManualEntry(
                             ($account->reward_balance ?? 0) > 0 && $account->redeem_token
                                 ? $account->redeem_token
@@ -103,7 +109,7 @@ class AppleWalletPassService
                     ],
                     [
                         'key' => 'manual_entry_code',
-                        'label' => ($account->reward_balance ?? 0) > 0 && $account->redeem_token ? 'Redeem Code' : 'Stamp Code',
+                        'label' => 'Manual Code',
                         'value' => $account->manual_entry_code ?? $this->formatTokenForManualEntry(
                             ($account->reward_balance ?? 0) > 0 && $account->redeem_token
                                 ? $account->redeem_token

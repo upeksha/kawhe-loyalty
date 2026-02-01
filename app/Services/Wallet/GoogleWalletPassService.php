@@ -216,11 +216,12 @@ class GoogleWalletPassService
         $barcode = new \Google_Service_Walletobjects_Barcode();
         $barcode->setType('QR_CODE');
         $barcode->setValue($barcodeValue);
-        $barcode->setAlternateText(
+        // Show the manual code directly under the QR code
+        $barcode->setAlternateText('Manual Code: ' . ($account->manual_entry_code ?? $this->formatTokenForManualEntry(
             ($account->reward_balance ?? 0) > 0 && $account->redeem_token
-                ? 'Scan to redeem'
-                : 'Scan to stamp'
-        );
+                ? $account->redeem_token
+                : $account->public_token
+        )));
         $loyaltyObject->setBarcode($barcode);
         
         // Note: Background color is set on LoyaltyClass, not LoyaltyObject
@@ -253,8 +254,8 @@ class GoogleWalletPassService
                 : $account->public_token
         );
         $textModulesData[] = [
-            'header' => ($account->reward_balance ?? 0) > 0 && $account->redeem_token ? 'Redeem Code' : 'Stamp Code',
-            'body' => $manualDisplay . ' (Enter manually if QR scan fails)',
+            'header' => 'Manual Code',
+            'body' => $manualDisplay . ' (shown under the QR code)',
         ];
         
         $loyaltyObject->setTextModulesData($textModulesData);
