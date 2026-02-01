@@ -231,15 +231,17 @@ class GoogleWalletPassService
         $rewardTarget = $store->reward_target ?? 10;
         $circleIndicators = $this->generateCircleIndicators($account->stamp_count, $rewardTarget);
         
+        // Customer first (left), then Rewards (right) when available.
         $textModulesData = [
             [
                 'header' => 'Progress',
                 'body' => $circleIndicators . ' ' . sprintf('(%d/%d)', $account->stamp_count, $rewardTarget),
             ],
+            [
+                'header' => 'Customer',
+                'body' => $customer->name ?? $customer->email ?? 'Valued Customer',
+            ],
         ];
-        
-        // No separate "Status" or "Available Rewards" modules.
-        // Only show a compact gift indicator when rewards exist.
         if (($account->reward_balance ?? 0) > 0) {
             $textModulesData[] = [
                 'header' => 'Rewards',

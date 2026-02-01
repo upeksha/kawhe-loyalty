@@ -65,22 +65,20 @@ class AppleWalletPassService
                         'value' => $this->generateCircleIndicators($account->stamp_count, $store->reward_target ?? 10),
                     ],
                 ],
+                // Left column: Customer. Right column: Rewards (when available).
                 'secondaryFields' => [
-                    // Show a compact gift indicator only when rewards are available (no separate Rewards/Status columns)
-                    ...(($account->reward_balance ?? 0) > 0 ? [[
-                        'key' => 'reward_indicator',
-                        // Keep label visually minimal; Apple requires a label but allows empty-ish text.
-                        'label' => ' ',
-                        'value' => '🎁 ' . (string) ($account->reward_balance ?? 0),
-                    ]] : []),
-                ],
-                'auxiliaryFields' => [
                     [
                         'key' => 'customer',
                         'label' => 'Customer',
                         'value' => $customer->name ?? $customer->email ?? 'Valued Customer',
                     ],
+                    ...(($account->reward_balance ?? 0) > 0 ? [[
+                        'key' => 'reward_indicator',
+                        'label' => ' ',
+                        'value' => '🎁 ' . (string) ($account->reward_balance ?? 0),
+                    ]] : []),
                 ],
+                'auxiliaryFields' => [],
                 'backFields' => [
                     [
                         'key' => 'manual_entry_title',
