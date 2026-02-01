@@ -112,21 +112,10 @@ class GoogleWalletPassService
         $backgroundColor = '#' . $backgroundColor;
 
         try {
-            $existing = $this->service->loyaltyclass->get($resourceId);
-            // Class exists: patch so image and color show (they may have been missing or updated)
-            $update = new \Google_Service_Walletobjects_LoyaltyClass();
-            $update->setProgramLogo($logoUri);
-            $update->setImageModulesData($imageModulesData);
-            $update->setHexBackgroundColor($backgroundColor);
-            $update->setProgramName($store->name);
-            $rewardTarget = $store->reward_target ?? 10;
-            $update->setTextModulesData([
-                ['header' => 'Reward Target', 'body' => "Collect {$rewardTarget} stamps to earn: " . ($store->reward_title ?? 'rewards')],
-            ]);
-            $this->service->loyaltyclass->patch($resourceId, $update);
+            // Class exists: return it (do not patch - patch can fail with image/color payload and cause 500)
             return $this->service->loyaltyclass->get($resourceId);
         } catch (\Exception $e) {
-            // Class doesn't exist: create it
+            // Class doesn't exist: create it with image and color
             $loyaltyClass = new \Google_Service_Walletobjects_LoyaltyClass();
             $loyaltyClass->setId($resourceId);
             $loyaltyClass->setIssuerName(config('app.name', 'Kawhe'));
