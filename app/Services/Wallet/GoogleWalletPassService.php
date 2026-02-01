@@ -247,17 +247,6 @@ class GoogleWalletPassService
             ];
         }
         
-        // Add manual entry code (4-char e.g. A3CX when set, else long token formatted)
-        $manualDisplay = $account->manual_entry_code ?? $this->formatTokenForManualEntry(
-            ($account->reward_balance ?? 0) > 0 && $account->redeem_token
-                ? $account->redeem_token
-                : $account->public_token
-        );
-        $textModulesData[] = [
-            'header' => 'Manual Code',
-            'body' => $manualDisplay . ' (shown under the QR code)',
-        ];
-        
         $loyaltyObject->setTextModulesData($textModulesData);
         
         try {

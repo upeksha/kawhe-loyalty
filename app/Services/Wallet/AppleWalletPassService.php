@@ -80,26 +80,6 @@ class AppleWalletPassService
                         'label' => 'Customer',
                         'value' => $customer->name ?? $customer->email ?? 'Valued Customer',
                     ],
-                    // Add manual entry code (4-char e.g. A3CX when set, else long token formatted)
-                    [
-                        'key' => 'manual_code',
-                        'label' => 'Manual Code',
-                        'value' => $account->manual_entry_code ?? $this->formatTokenForManualEntry(
-                            ($account->reward_balance ?? 0) > 0 && $account->redeem_token
-                                ? $account->redeem_token
-                                : $account->public_token
-                        ),
-                    ],
-                    // Add scan instruction based on mode
-                    ...(($account->reward_balance ?? 0) > 0 ? [[
-                        'key' => 'scan_instruction',
-                        'label' => 'Scan to',
-                        'value' => 'Redeem Reward',
-                    ]] : [[
-                        'key' => 'scan_instruction',
-                        'label' => 'Scan to',
-                        'value' => 'Add Stamps',
-                    ]]),
                 ],
                 'backFields' => [
                     [
