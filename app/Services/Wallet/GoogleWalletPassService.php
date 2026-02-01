@@ -198,11 +198,12 @@ class GoogleWalletPassService
         $loyaltyObject->setLoyaltyPoints($loyaltyPoints);
         
         // Secondary points (rewards)
-        // Google API requires a LoyaltyPoints object (cannot pass null). Use 0 when no rewards.
+        // Google API requires a LoyaltyPoints object (cannot pass null).
+        // We intentionally keep this minimal to avoid showing a separate "Rewards" column.
         $secondaryPoints = new \Google_Service_Walletobjects_LoyaltyPoints();
-        $secondaryPoints->setLabel('Rewards');
+        $secondaryPoints->setLabel(' ');
         $secondaryPoints->setBalance(new \Google_Service_Walletobjects_LoyaltyPointsBalance([
-            'int' => max(0, $account->reward_balance ?? 0),
+            'int' => 0,
         ]));
         $loyaltyObject->setSecondaryLoyaltyPoints($secondaryPoints);
         
@@ -236,21 +237,12 @@ class GoogleWalletPassService
             ],
         ];
         
+        // No separate "Status" or "Available Rewards" modules.
+        // Only show a compact gift indicator when rewards exist.
         if (($account->reward_balance ?? 0) > 0) {
             $textModulesData[] = [
-                'header' => 'Available Rewards',
-                'body' => (string) $account->reward_balance . ' ' . $store->reward_title,
-            ];
-            // Add redeem mode indicator
-            $textModulesData[] = [
-                'header' => 'Status',
-                'body' => '🎁 READY TO REDEEM - Scan QR to redeem reward',
-            ];
-        } else {
-            // Show stamp mode when no rewards
-            $textModulesData[] = [
-                'header' => 'Status',
-                'body' => 'Scan QR to add stamps',
+                'header' => 'Rewards',
+                'body' => '🎁 ' . (string) ($account->reward_balance ?? 0),
             ];
         }
         

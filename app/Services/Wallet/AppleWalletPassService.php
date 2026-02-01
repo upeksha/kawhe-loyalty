@@ -60,16 +60,12 @@ class AppleWalletPassService
                     ],
                 ],
                 'secondaryFields' => [
-                    [
-                        'key' => 'rewards',
-                        'label' => 'Rewards',
-                        'value' => (string) ($account->reward_balance ?? 0),
-                    ],
-                    // Add redeem mode indicator when rewards are available
+                    // Show a compact gift indicator only when rewards are available (no separate Rewards/Status columns)
                     ...(($account->reward_balance ?? 0) > 0 ? [[
-                        'key' => 'redeem_status',
-                        'label' => 'Status',
-                        'value' => '🎁 READY TO REDEEM',
+                        'key' => 'reward_indicator',
+                        // Keep label visually minimal; Apple requires a label but allows empty-ish text.
+                        'label' => ' ',
+                        'value' => '🎁 ' . (string) ($account->reward_balance ?? 0),
                     ]] : []),
                 ],
                 'auxiliaryFields' => [
