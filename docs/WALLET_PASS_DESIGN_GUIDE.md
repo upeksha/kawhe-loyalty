@@ -25,10 +25,10 @@ Edits are in PHP (labels, text, colors) and image files (logos, strip, icon). No
 
 - **Default assets:** `resources/wallet/apple/default/`
   - `logo.png` – 160×50 (logo on pass)
-  - `strip.png` – 375×98 (strip behind content)
+  - `strip.png` – 375×98 (strip behind content). **Safe zone:** keep important content above the bottom ~40px so Customer/Rewards row aligns with the card.
   - `icon.png` – 29×29 (notifications / lock screen)
   - `background.png` – 180×220 (optional)
-- **Per-store (merchant uploads):** Store model `pass_logo_path`, `pass_hero_image_path` (used in same service).
+- **Per-store (merchant uploads):** Store model `pass_logo_path`, `pass_hero_image_path` (same strip size and bottom safe zone).
 
 Change design by editing the `'label'` and `'value'` strings in `AppleWalletPassService.php` and/or replacing the PNGs above.
 

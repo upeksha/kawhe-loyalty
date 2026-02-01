@@ -24,11 +24,12 @@ This directory should contain the following PNG images for Apple Wallet passes:
 - **Format**: PNG with transparency
 - **Note**: Optional - pass will use solid colors if not provided
 
-### strip.png
-- **Size**: 375x98 pixels
-- **Purpose**: Strip image shown behind pass content
+### strip.png (hero / strip image)
+- **Size**: 375×98 pixels (width × height)
+- **Purpose**: Strip image shown behind pass content. Customer and Rewards text appears **below** this image.
 - **Format**: PNG with transparency
-- **Note**: Optional - pass will use solid colors if not provided
+- **Safe zone (bottom)**: Keep important design (logo, graphics, text) **above the bottom ~40px**. The bottom portion of the strip sits next to the pass fields; leave it as solid color or gradient so the Customer/Rewards row aligns cleanly with the card. Avoid placing critical content in the bottom 40px.
+- **Note**: Optional - pass will use solid colors if not provided. Same dimensions/safe zone apply to store-uploaded pass hero images.
 
 ## Creating Placeholder Images
 
@@ -45,8 +46,10 @@ convert -size 160x50 xc:#0EA5E9 -pointsize 24 -fill white -gravity center -annot
 # Background (optional)
 convert -size 180x220 xc:#1F2937 background.png
 
-# Strip (optional)
+# Strip (optional) – with bottom safe zone (~40px) for pass content alignment
 convert -size 375x98 xc:#0EA5E9 strip.png
+# Or: add transparent bottom padding so your design stays in the safe area (top ~58px)
+# convert -size 375x58 xc:#0EA5E9 -gravity South -background none -extent 375x98 strip.png
 ```
 
 ### Using Online Tools:
@@ -59,6 +62,16 @@ convert -size 375x98 xc:#0EA5E9 strip.png
 - GIMP (free)
 - Sketch
 - Figma
+
+## Strip / hero image – bottom safe zone
+
+So that **Customer** and **Rewards** text aligns cleanly with the card:
+
+- **Keep important content in the top ~58px** of the 375×98 strip (i.e. above the bottom 40px).
+- Use the **bottom ~40px** as padding: solid color, gradient, or simple pattern. Do not put logos or critical text there.
+- Same rule for **store-uploaded pass hero images**: use 375×98 and reserve the bottom 40px as safe zone.
+
+This avoids the strip graphic overlapping the pass content and keeps the layout looking aligned.
 
 ## Current Status
 

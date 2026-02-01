@@ -61,7 +61,7 @@ class AppleWalletPassService
                 'primaryFields' => [
                     [
                         'key' => 'stamps',
-                        'label' => 'Stamps',
+                        'label' => ' ',
                         'value' => $this->generateCircleIndicators($account->stamp_count, $store->reward_target ?? 10),
                     ],
                 ],

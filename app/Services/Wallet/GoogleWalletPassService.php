@@ -191,7 +191,7 @@ class GoogleWalletPassService
         
         // Loyalty points (stamp count)
         $loyaltyPoints = new \Google_Service_Walletobjects_LoyaltyPoints();
-        $loyaltyPoints->setLabel('Stamps');
+        $loyaltyPoints->setLabel(' ');
         $loyaltyPoints->setBalance(new \Google_Service_Walletobjects_LoyaltyPointsBalance([
             'int' => $account->stamp_count,
         ]));
