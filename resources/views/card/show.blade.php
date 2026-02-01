@@ -119,11 +119,11 @@
                 @endif
 
                 <!-- Main Loyalty Card -->
-                <div class="bg-gray-800 rounded-2xl shadow-2xl overflow-hidden mb-4 qr-pattern flex flex-col" style="position: relative; border: 3px solid {{ $account->store->brand_color ?? '#0EA5E9' }}; min-height: 420px;">
+                <div class="bg-gray-800 rounded-2xl shadow-2xl overflow-hidden mb-4 qr-pattern" style="position: relative; border: 3px solid {{ $account->store->brand_color ?? '#0EA5E9' }};">
                     <!-- QR Glow Effect -->
                     <div class="qr-glow"></div>
                     
-                    <div class="p-6 relative z-10 flex flex-col flex-1 min-h-0">
+                    <div class="p-6 relative z-10">
                         <!-- Store Logo (if available) -->
                         @if($account->store->logo_path)
                             <div class="flex justify-center mb-4">
@@ -172,8 +172,8 @@
                             <p id="reward-title" class="text-gray-400 text-xs text-center mb-4">{{ $account->store->reward_title }} at {{ $account->store->reward_target }} stamps</p>
                         @endif
 
-                        <!-- Progress Section: aligned to bottom of card -->
-                        <div class="mt-auto pt-4">
+                        <!-- Progress Section -->
+                        <div class="mb-6">
                             <div class="flex justify-between items-center mb-3">
                                 <span class="text-gray-300 text-sm font-medium">Progress</span>
                                 <span id="stamp-count" class="text-white text-sm font-bold">{{ $account->stamp_count }} / {{ $account->store->reward_target }}</span>
@@ -203,7 +203,7 @@
                         </div>
 
                         <!-- Recent Activity Section -->
-                        <div class="border-t border-gray-700 pt-4 mt-4">
+                        <div class="border-t border-gray-700 pt-4">
                             <h3 class="text-gray-300 text-sm font-semibold mb-3">Recent Activity</h3>
                             <div id="transaction-history" class="space-y-2">
                                 <p class="text-sm text-gray-500 text-center py-2">Loading transaction history...</p>
