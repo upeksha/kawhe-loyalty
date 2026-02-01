@@ -58,15 +58,8 @@ class AppleWalletPassService
                 'messageEncoding' => 'utf-8',
             ],
             'storeCard' => [
+                // Top: Customer (left), Rewards (right). Bottom: stamp circles (above QR).
                 'primaryFields' => [
-                    [
-                        'key' => 'stamps',
-                        'label' => ' ',
-                        'value' => $this->generateCircleIndicators($account->stamp_count, $store->reward_target ?? 10),
-                    ],
-                ],
-                // Left column: Customer. Right column: Rewards (when available).
-                'secondaryFields' => [
                     [
                         'key' => 'customer',
                         'label' => 'Customer',
@@ -78,7 +71,15 @@ class AppleWalletPassService
                         'value' => '🎁 ' . (string) ($account->reward_balance ?? 0),
                     ]] : []),
                 ],
-                'auxiliaryFields' => [],
+                'secondaryFields' => [],
+                // Stamp circles at bottom of card content (above barcode).
+                'auxiliaryFields' => [
+                    [
+                        'key' => 'stamps',
+                        'label' => ' ',
+                        'value' => $this->generateCircleIndicators($account->stamp_count, $store->reward_target ?? 10),
+                    ],
+                ],
                 'backFields' => [
                     [
                         'key' => 'manual_entry_title',
