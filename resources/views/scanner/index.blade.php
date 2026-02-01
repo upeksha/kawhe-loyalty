@@ -107,9 +107,9 @@
 
                     <!-- Manual Input -->
                     <div class="mb-6">
-                        <label for="manual_token" class="block mb-2 text-sm font-medium text-stone-700">Or enter token manually</label>
+                        <label for="manual_token" class="block mb-2 text-sm font-medium text-stone-700">Or enter code manually</label>
                         <div class="flex gap-2">
-                            <x-ui.input type="text" id="manual_token" x-model="manualToken" placeholder="e.g. LA:..." class="flex-1" />
+                            <x-ui.input type="text" id="manual_token" x-model="manualToken" placeholder="e.g. A3CX or LA:..." class="flex-1" maxlength="50" />
                             <button @click="handleScan(manualToken)" type="button" class="px-4 py-2 text-sm font-medium rounded-lg bg-brand-600 hover:bg-brand-700 text-white transition focus:outline-none focus:ring-2 focus:ring-brand-500">
                                 Scan
                             </button>

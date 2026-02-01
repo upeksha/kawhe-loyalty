@@ -165,6 +165,12 @@ class GoogleWalletPassService
         $account->load(['store', 'customer']);
         $store = $account->store;
         $customer = $account->customer;
+
+        // Ensure 4-char manual entry code exists (e.g. for accounts created before migration or pass never updated)
+        if (empty($account->manual_entry_code) && $account->store_id) {
+            $account->manual_entry_code = LoyaltyAccount::generateManualEntryCode($account->store_id);
+            $account->saveQuietly();
+        }
         
         $objectId = $this->getObjectIdForAccount($account);
         
@@ -248,13 +254,15 @@ class GoogleWalletPassService
             ];
         }
         
-        // Add manual entry code (fallback if QR scan fails)
-        $manualEntryToken = ($account->reward_balance ?? 0) > 0 && $account->redeem_token
-            ? $account->redeem_token
-            : $account->public_token;
+        // Add manual entry code (4-char e.g. A3CX when set, else long token formatted)
+        $manualDisplay = $account->manual_entry_code ?? $this->formatTokenForManualEntry(
+            ($account->reward_balance ?? 0) > 0 && $account->redeem_token
+                ? $account->redeem_token
+                : $account->public_token
+        );
         $textModulesData[] = [
             'header' => ($account->reward_balance ?? 0) > 0 && $account->redeem_token ? 'Redeem Code' : 'Stamp Code',
-            'body' => $this->formatTokenForManualEntry($manualEntryToken) . ' (Enter manually if QR scan fails)',
+            'body' => $manualDisplay . ' (Enter manually if QR scan fails)',
         ];
         
         $loyaltyObject->setTextModulesData($textModulesData);

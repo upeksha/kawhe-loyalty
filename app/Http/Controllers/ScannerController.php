@@ -64,10 +64,19 @@ class ScannerController extends Controller
         $userAgent = $request->userAgent();
         $ipAddress = $request->ip();
 
-        // STEP 1: Lookup loyalty account by public_token (no store filter for auto-detection)
-        $account = LoyaltyAccount::where('public_token', $token)
-            ->with(['customer', 'store'])
-            ->first();
+        // STEP 1: Lookup loyalty account (4-char manual code when store selected, else public_token)
+        $account = null;
+        if (strlen($token) === 4 && $requestedStoreId) {
+            $account = LoyaltyAccount::where('store_id', $requestedStoreId)
+                ->where('manual_entry_code', strtoupper($token))
+                ->with(['customer', 'store'])
+                ->first();
+        }
+        if (!$account) {
+            $account = LoyaltyAccount::where('public_token', $token)
+                ->with(['customer', 'store'])
+                ->first();
+        }
 
         if (!$account) {
             throw ValidationException::withMessages([
@@ -275,10 +284,21 @@ class ScannerController extends Controller
         $token = str_replace(['-', ' '], '', trim($token));
         $requestedStoreId = $request->store_id;
 
-        // Try to find account by public_token first (stamp QR)
-        $account = LoyaltyAccount::where('public_token', $token)
-            ->with(['customer', 'store'])
-            ->first();
+        // 4-char manual entry code (e.g. A3CX): look up by store + manual_entry_code first
+        $account = null;
+        if (strlen($token) === 4 && $requestedStoreId) {
+            $account = LoyaltyAccount::where('store_id', $requestedStoreId)
+                ->where('manual_entry_code', strtoupper($token))
+                ->with(['customer', 'store'])
+                ->first();
+        }
+
+        // Try to find account by public_token (stamp QR)
+        if (!$account) {
+            $account = LoyaltyAccount::where('public_token', $token)
+                ->with(['customer', 'store'])
+                ->first();
+        }
 
         // If not found and it's a redeem QR, try redeem_token
         if (!$account && $isRedeemQR && $requestedStoreId) {
@@ -463,6 +483,17 @@ class ScannerController extends Controller
         $token = str_replace(['-', ' '], '', $token);
 
         $storeId = $request->store_id;
+
+        // 4-char manual entry code: resolve to account's redeem_token
+        if (strlen($token) === 4) {
+            $byManualCode = LoyaltyAccount::where('store_id', $storeId)
+                ->where('manual_entry_code', strtoupper($token))
+                ->first();
+            if ($byManualCode && $byManualCode->redeem_token) {
+                $token = $byManualCode->redeem_token;
+            }
+        }
+
         $quantity = $request->input('quantity', 1); // Default to 1 for backward compatibility
         $idempotencyKey = $request->input('idempotency_key', Str::uuid()->toString());
 

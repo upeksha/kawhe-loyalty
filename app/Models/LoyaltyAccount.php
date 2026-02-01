@@ -19,6 +19,12 @@ class LoyaltyAccount extends Model
     public const PUBLIC_TOKEN_LENGTH = 16;
     public const REDEEM_TOKEN_LENGTH = 16;
 
+    /** 4-char manual entry code (e.g. A3CX), unique per store. */
+    public const MANUAL_ENTRY_CODE_LENGTH = 4;
+
+    /** Character set for manual entry code (excludes ambiguous I,O,0,1). */
+    private const MANUAL_ENTRY_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+
     /**
      * Route notifications for the mail channel.
      *
@@ -36,6 +42,7 @@ class LoyaltyAccount extends Model
         'public_token',
         'wallet_auth_token',
         'redeem_token',
+        'manual_entry_code',
         'last_stamped_at',
         'reward_available_at',
         'reward_redeemed_at',
@@ -72,6 +79,9 @@ class LoyaltyAccount extends Model
             if (empty($account->wallet_auth_token)) {
                 $account->wallet_auth_token = Str::random(40); // Keep 40 for auth security
             }
+            if (empty($account->manual_entry_code) && $account->store_id) {
+                $account->manual_entry_code = self::generateManualEntryCode($account->store_id);
+            }
         });
     }
 
@@ -98,5 +108,25 @@ class LoyaltyAccount extends Model
     {
         return $this->pointsTransactions()
             ->sum('points');
+    }
+
+    /**
+     * Generate a 4-char manual entry code unique for the given store.
+     */
+    public static function generateManualEntryCode(int $storeId): string
+    {
+        $chars = self::MANUAL_ENTRY_CHARS;
+        $max = 50;
+        for ($i = 0; $i < $max; $i++) {
+            $code = '';
+            for ($j = 0; $j < self::MANUAL_ENTRY_CODE_LENGTH; $j++) {
+                $code .= $chars[random_int(0, strlen($chars) - 1)];
+            }
+            $exists = static::where('store_id', $storeId)->where('manual_entry_code', $code)->exists();
+            if (!$exists) {
+                return $code;
+            }
+        }
+        return strtoupper(Str::random(self::MANUAL_ENTRY_CODE_LENGTH));
     }
 }

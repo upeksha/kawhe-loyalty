@@ -143,6 +143,10 @@
                                 </div>
                             </div>
                             <p class="mt-2 text-xs text-gray-300 text-center">Scan to add stamps</p>
+                            @if($account->manual_entry_code ?? null)
+                                <p class="mt-1 text-sm font-mono font-bold text-white tracking-widest">{{ $account->manual_entry_code }}</p>
+                                <p class="text-xs text-gray-400">If scan fails, tell staff this code</p>
+                            @endif
                         </div>
                         
                         <!-- Redeem Reward Button (when reward available and not redeemed) -->
@@ -392,6 +396,10 @@
                                     @endif
                                 </div>
                                 <p class="mt-3 text-xs font-semibold text-accent-700">Scan to redeem reward</p>
+                                @if($account->manual_entry_code ?? null)
+                                    <p class="mt-2 text-sm font-mono font-bold text-accent-800 tracking-widest">{{ $account->manual_entry_code }}</p>
+                                    <p class="text-xs text-accent-600">If scan fails, tell staff this code</p>
+                                @endif
                             </div>
 
                             <p class="text-gray-300 text-sm mb-4">

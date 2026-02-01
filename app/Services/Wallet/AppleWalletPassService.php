@@ -22,6 +22,12 @@ class AppleWalletPassService
         $store = $account->store;
         $customer = $account->customer;
 
+        // Ensure 4-char manual entry code exists (e.g. for accounts created before migration or pass never updated)
+        if (empty($account->manual_entry_code) && $account->store_id) {
+            $account->manual_entry_code = LoyaltyAccount::generateManualEntryCode($account->store_id);
+            $account->saveQuietly();
+        }
+
         // Build pass definition
         $passDefinition = [
             'formatVersion' => 1,
@@ -72,11 +78,11 @@ class AppleWalletPassService
                         'label' => 'Customer',
                         'value' => $customer->name ?? $customer->email ?? 'Valued Customer',
                     ],
-                    // Add manual entry code (visible on front of pass)
+                    // Add manual entry code (4-char e.g. A3CX when set, else long token formatted)
                     [
                         'key' => 'manual_code',
                         'label' => ($account->reward_balance ?? 0) > 0 && $account->redeem_token ? 'Redeem Code' : 'Stamp Code',
-                        'value' => $this->formatTokenForManualEntry(
+                        'value' => $account->manual_entry_code ?? $this->formatTokenForManualEntry(
                             ($account->reward_balance ?? 0) > 0 && $account->redeem_token
                                 ? $account->redeem_token
                                 : $account->public_token
@@ -102,7 +108,7 @@ class AppleWalletPassService
                     [
                         'key' => 'manual_entry_code',
                         'label' => ($account->reward_balance ?? 0) > 0 && $account->redeem_token ? 'Redeem Code' : 'Stamp Code',
-                        'value' => $this->formatTokenForManualEntry(
+                        'value' => $account->manual_entry_code ?? $this->formatTokenForManualEntry(
                             ($account->reward_balance ?? 0) > 0 && $account->redeem_token
                                 ? $account->redeem_token
                                 : $account->public_token

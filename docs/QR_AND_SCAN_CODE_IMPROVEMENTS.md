@@ -2,7 +2,16 @@
 
 This doc describes how QR codes and manual scan codes were simplified for **faster scanning** and **shorter manual codes**, without breaking existing behaviour.
 
-## What changed
+## 4-character manual entry code (e.g. A3CX)
+
+Each loyalty account has a **4-character manual entry code** (letters and numbers, e.g. `A3CX`), unique **per store**. When the merchant selects the store and enters this code in the scanner, the account is found without scanning the QR.
+
+- **Display:** Shown on the card page under the stamp QR and under the redeem QR, and on Apple/Google wallet passes (when set).
+- **Scanner:** Select store, then enter the 4-char code (e.g. `A3CX`) in “Or enter code manually”. Works for both stamp and redeem (merchant chooses action after lookup).
+- **Uniqueness:** Code is unique per store (same code can exist at different stores). Characters exclude ambiguous ones (I, O, 0, 1).
+- **Existing accounts:** Migration backfills a unique 4-char code for all existing rows. New accounts get one in the model `creating` event.
+
+## What changed (earlier)
 
 ### 1. Shorter tokens (new accounts only)
 
