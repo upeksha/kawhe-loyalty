@@ -13,6 +13,9 @@ export default defineConfig({
         hmr: {
             host: process.env.VITE_HMR_HOST || 'localhost',
         },
-        allowedHosts: ['.ngrok-free.app']
-    }
+        allowedHosts: ['.ngrok-free.app'],
+        watch: {
+            ignored: ['**/vendor/**', '**/node_modules/**', '**/storage/**', '**/.git/**'],
+        },
+    },
 });
