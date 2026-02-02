@@ -192,7 +192,7 @@ class StoreController extends Controller
             abort(403);
         }
         
-        $joinUrl = route('join.index', ['slug' => $store->slug, 't' => $store->join_token]);
+        $joinUrl = $store->join_url; // short URL /j/{code} when join_short_code is set
         return view('stores.qr', compact('store', 'joinUrl'));
     }
 }

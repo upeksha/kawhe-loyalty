@@ -48,6 +48,9 @@ Route::middleware(['auth'])->group(function () {
     });
 });
 
+// Short join URL: /j/{code} -> redirect to full join flow
+Route::get('/j/{code}', [JoinController::class, 'shortRedirect'])->name('join.short');
+
 Route::get('/join/{slug}', [JoinController::class, 'index'])->name('join.index');
 Route::get('/join/{slug}/new', [JoinController::class, 'show'])->name('join.show');
 Route::post('/join/{slug}/new', [JoinController::class, 'store'])->name('join.store');

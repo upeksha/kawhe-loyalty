@@ -14,6 +14,18 @@ use Illuminate\Validation\ValidationException;
 
 class JoinController extends Controller
 {
+    /**
+     * Redirect short join URL (/j/{code}) to full join flow.
+     */
+    public function shortRedirect(string $code)
+    {
+        $store = Store::where('join_short_code', strtoupper($code))->firstOrFail();
+        return redirect()->route('join.index', [
+            'slug' => $store->slug,
+            't' => $store->join_token,
+        ]);
+    }
+
     public function index(Request $request, string $slug)
     {
         $token = $request->query('t');

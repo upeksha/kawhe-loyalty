@@ -8,6 +8,18 @@ use Illuminate\Support\Facades\Notification;
 use App\Notifications\VerifyLoyaltyAccount;
 use Illuminate\Support\Facades\URL;
 
+test('short join URL /j/{code} redirects to join flow', function () {
+    $store = Store::factory()->create();
+    $response = $this->get(route('join.short', ['code' => $store->join_short_code]));
+    $response->assertRedirect(route('join.index', ['slug' => $store->slug, 't' => $store->join_token]));
+});
+
+test('short join URL is case-insensitive', function () {
+    $store = Store::factory()->create(['join_short_code' => 'ABC12X']);
+    $response = $this->get(route('join.short', ['code' => 'abc12x']));
+    $response->assertRedirect(route('join.index', ['slug' => $store->slug, 't' => $store->join_token]));
+});
+
 test('landing page validates slug and token', function () {
     $merchant = User::factory()->create();
     $store = Store::factory()->create(['user_id' => $merchant->id]);
