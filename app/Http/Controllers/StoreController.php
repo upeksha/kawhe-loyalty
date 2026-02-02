@@ -213,19 +213,24 @@ class StoreController extends Controller
         }
 
         $joinUrl = $store->join_url;
-        $baseUrl = request()->getSchemeAndHttpHost();
 
-        // QR as SVG for PDF (dompdf renders SVG)
-        $qrCodeSvg = (string) QrCode::format('svg')->size(320)->margin(1)->errorCorrection('L')->generate($joinUrl);
-
-        $logoUrl = null;
-        if (! empty($store->logo_path) && Storage::disk('public')->exists($store->logo_path)) {
-            $logoUrl = $baseUrl . Storage::url($store->logo_path);
+        $qrCodeDataUrl = null;
+        try {
+            $qrPng = QrCode::format('png')->size(320)->margin(1)->errorCorrection('L')->generate($joinUrl);
+            $qrCodeDataUrl = 'data:image/png;base64,' . base64_encode($qrPng);
+        } catch (\Throwable $e) {
+            $qrSvg = (string) QrCode::format('svg')->size(320)->margin(1)->errorCorrection('L')->generate($joinUrl);
+            $qrCodeDataUrl = 'data:image/svg+xml;base64,' . base64_encode($qrSvg);
         }
 
-        // Full URLs required for dompdf remote content
-        $appleWalletBadgeUrl = url('wallet-badges/add-to-apple-wallet.svg');
-        $googleWalletBadgeUrl = url('wallet-badges/add-to-google-wallet.svg');
+        $logoDataUrl = null;
+        if (! empty($store->logo_path) && Storage::disk('public')->exists($store->logo_path)) {
+            $logoPath = public_path('storage/' . $store->logo_path);
+            $logoDataUrl = $this->fileToDataUri($logoPath);
+        }
+
+        $appleWalletBadgeDataUrl = $this->fileToDataUri(public_path('wallet-badges/add-to-apple-wallet.svg'));
+        $googleWalletBadgeDataUrl = $this->fileToDataUri(public_path('wallet-badges/add-to-google-wallet.svg'));
 
         $rewardWord = $store->reward_title ?: 'stamp';
         $promoHtml = 'Get 1 free <u>' . e($rewardWord) . '</u> instantly when you join!';
@@ -233,16 +238,42 @@ class StoreController extends Controller
         $pdf = Pdf::loadView('stores.qr-poster', [
             'store' => $store,
             'joinUrl' => $joinUrl,
-            'qrCodeSvg' => $qrCodeSvg,
-            'qrCodeDataUrl' => null,
-            'logoUrl' => $logoUrl,
-            'appleWalletBadgeUrl' => $appleWalletBadgeUrl,
-            'googleWalletBadgeUrl' => $googleWalletBadgeUrl,
+            'qrCodeDataUrl' => $qrCodeDataUrl,
+            'logoDataUrl' => $logoDataUrl,
+            'appleWalletBadgeDataUrl' => $appleWalletBadgeDataUrl,
+            'googleWalletBadgeDataUrl' => $googleWalletBadgeDataUrl,
             'promoHtml' => $promoHtml,
         ])->setPaper('a4', 'portrait');
 
         $filename = Str::slug($store->name) . '-join-poster.pdf';
 
         return $pdf->download($filename);
+    }
+
+    private function fileToDataUri(?string $path): ?string
+    {
+        if (! $path || ! file_exists($path)) {
+            return null;
+        }
+
+        $extension = strtolower(pathinfo($path, PATHINFO_EXTENSION));
+        $mime = match ($extension) {
+            'svg' => 'image/svg+xml',
+            'png' => 'image/png',
+            'jpg', 'jpeg' => 'image/jpeg',
+            'webp' => 'image/webp',
+            default => null,
+        };
+
+        if (! $mime) {
+            return null;
+        }
+
+        $contents = file_get_contents($path);
+        if ($contents === false) {
+            return null;
+        }
+
+        return 'data:' . $mime . ';base64,' . base64_encode($contents);
     }
 }
