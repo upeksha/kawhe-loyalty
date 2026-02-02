@@ -82,6 +82,33 @@ Change design by editing the strings passed to `setLabel`, `setProgramName`, `se
 
 ---
 
+## Why Google Wallet passes might not show the correct styles
+
+Two things can prevent your custom look (colors, hero image, logo) from showing on Google Wallet passes:
+
+### 1. **Review status (not yet production)**
+
+Google Wallet has a **review status** for your issuer account:
+
+- **`UNDER_REVIEW`** (default for testing): Passes may show limited or generic styling. Google may apply watermarks or a simplified look until your account is approved.
+- **`APPROVED`** (production): Full branding, colors, and images are applied.
+
+**What to do:** After Google approves your issuer in [Google Pay & Wallet Console](https://pay.google.com/business/console), set in `.env`:
+
+```env
+GOOGLE_WALLET_REVIEW_STATUS=APPROVED
+```
+
+Until then, the API is effectively in test mode and the pass look may not match your design.
+
+### 2. **Existing loyalty class (created before image/color was added)**
+
+We only apply image and background color when **creating a new** loyalty class. If the class for a store already existed (e.g. from before we added colors/hero image), we do **not** patch it (to avoid 500 errors), so that class keeps the old look.
+
+**What to do:** For **new stores**, passes will get the correct styles. For **existing stores** whose class was created earlier, the pass will only get the new look if the class is recreated (e.g. by deleting the class in Google’s API and letting the app create it again on the next pass add/update—advanced) or after you have a safe class-update path.
+
+---
+
 ## Quick checklist
 
 1. **Text / labels** → Edit `AppleWalletPassService.php` (pass definition) and `GoogleWalletPassService.php` (class + object text).

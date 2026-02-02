@@ -267,22 +267,15 @@
                             </p>
                             <a 
                                 href="{{ URL::signedRoute('wallet.google.save', ['public_token' => $account->public_token]) }}"
-                                class="block w-full flex justify-center hover:opacity-90 transition-opacity">
-                                <!-- Official Google Wallet Badge SVG (matches Google's design guidelines) -->
-                                <svg width="200" height="60" viewBox="0 0 200 60" xmlns="http://www.w3.org/2000/svg" class="mx-auto" style="max-width: 200px;">
-                                    <defs>
-                                        <linearGradient id="googleGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                                            <stop offset="0%" style="stop-color:#4285F4;stop-opacity:1" />
-                                            <stop offset="100%" style="stop-color:#34A853;stop-opacity:1" />
-                                        </linearGradient>
-                                    </defs>
-                                    <rect width="200" height="60" rx="4" fill="url(#googleGradient)"/>
-                                    <g transform="translate(100, 30)">
-                                        <!-- Google Wallet icon (simplified) -->
-                                        <circle cx="-50" cy="0" r="8" fill="#fff" opacity="0.9"/>
-                                        <text x="0" y="8" font-family="Roboto, 'Google Sans', sans-serif" font-size="14" font-weight="500" fill="#fff" text-anchor="middle" letter-spacing="0.2px">Add to Google Wallet</text>
-                                    </g>
-                                </svg>
+                                class="block w-full flex justify-center hover:opacity-90 transition-opacity"
+                                aria-label="Add to Google Wallet">
+                                <img 
+                                    src="{{ asset('wallet-badges/add-to-google-wallet.svg') }}" 
+                                    alt="Add to Google Wallet" 
+                                    width="199" 
+                                    height="55"
+                                    class="mx-auto h-12 w-auto max-w-[199px]"
+                                    loading="lazy">
                             </a>
                         </div>
                     </div>

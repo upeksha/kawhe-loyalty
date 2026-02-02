@@ -84,7 +84,7 @@
                     <x-ui.button href="{{ route('merchant.stores.index') }}" variant="primary" size="sm">
                         Manage Stores
                     </x-ui.button>
-                    <x-ui.button href="{{ route('merchant.stores.create') }}" variant="secondary" size="sm">
+                    <x-ui.button href="{{ route('merchant.stores.create') }}" variant="secondary" size="sm" class="ml-5">
                         Add Store
                     </x-ui.button>
                 </div>

@@ -2,7 +2,7 @@
     <x-slot name="header">
         <div class="flex justify-between items-center">
             <span>{{ __('My Stores') }}</span>
-            <x-ui.button href="{{ route('merchant.stores.create') }}" variant="primary" size="sm">
+            <x-ui.button href="{{ route('merchant.stores.create') }}" variant="primary" size="sm" class="ml-5">
                 Add Store
             </x-ui.button>
         </div>
