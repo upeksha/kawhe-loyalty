@@ -3,11 +3,14 @@
 namespace App\Http\Controllers;
 
 use App\Models\Store;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use SimpleSoftwareIO\QrCode\Facades\QrCode;
 
 class StoreController extends Controller
 {
@@ -194,5 +197,52 @@ class StoreController extends Controller
         
         $joinUrl = $store->join_url; // short URL /j/{code} when join_short_code is set
         return view('stores.qr', compact('store', 'joinUrl'));
+    }
+
+    /**
+     * Download A4 PDF poster with QR code for the store (print/email).
+     */
+    public function qrPdf(Store $store)
+    {
+        $store = Store::find($store->id);
+        if (! $store) {
+            abort(404);
+        }
+        if ($store->user_id !== Auth::id() && ! Auth::user()->is_super_admin) {
+            abort(403);
+        }
+
+        $joinUrl = $store->join_url;
+        $baseUrl = request()->getSchemeAndHttpHost();
+
+        // QR as SVG for PDF (dompdf renders SVG)
+        $qrCodeSvg = (string) QrCode::format('svg')->size(320)->margin(1)->errorCorrection('L')->generate($joinUrl);
+
+        $logoUrl = null;
+        if (! empty($store->logo_path) && Storage::disk('public')->exists($store->logo_path)) {
+            $logoUrl = $baseUrl . Storage::url($store->logo_path);
+        }
+
+        // Full URLs required for dompdf remote content
+        $appleWalletBadgeUrl = url('wallet-badges/add-to-apple-wallet.svg');
+        $googleWalletBadgeUrl = url('wallet-badges/add-to-google-wallet.svg');
+
+        $rewardWord = $store->reward_title ?: 'stamp';
+        $promoHtml = 'Get 1 free <u>' . e($rewardWord) . '</u> instantly when you join!';
+
+        $pdf = Pdf::loadView('stores.qr-poster', [
+            'store' => $store,
+            'joinUrl' => $joinUrl,
+            'qrCodeSvg' => $qrCodeSvg,
+            'qrCodeDataUrl' => null,
+            'logoUrl' => $logoUrl,
+            'appleWalletBadgeUrl' => $appleWalletBadgeUrl,
+            'googleWalletBadgeUrl' => $googleWalletBadgeUrl,
+            'promoHtml' => $promoHtml,
+        ])->setPaper('a4', 'portrait');
+
+        $filename = Str::slug($store->name) . '-join-poster.pdf';
+
+        return $pdf->download($filename);
     }
 }

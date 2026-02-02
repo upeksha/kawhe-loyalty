@@ -11,6 +11,14 @@
 
             <p class="text-sm text-stone-600">Scan to join {{ $store->name }}</p>
 
+            <x-ui.button href="{{ route('merchant.stores.qr.pdf', $store) }}" variant="primary" size="md" target="_blank" class="inline-flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                {{ __('Download PDF (A4 poster)') }}
+            </x-ui.button>
+            <p class="text-xs text-stone-500">Print or email this poster for your customers to scan and join.</p>
+
             <div class="w-full max-w-md">
                 <label for="join-link" class="mb-2 text-sm font-medium text-stone-700 sr-only">Join Link</label>
                 <div class="flex gap-2">

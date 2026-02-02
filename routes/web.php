@@ -99,7 +99,8 @@ Route::middleware(['auth', App\Http\Middleware\EnsureMerchantHasStore::class])->
     Route::put('/stores/{store}', [StoreController::class, 'update'])->name('stores.update');
     Route::delete('/stores/{store}', [StoreController::class, 'destroy'])->name('stores.destroy');
     Route::get('/stores/{store}/qr', [StoreController::class, 'qr'])->name('stores.qr');
-    
+    Route::get('/stores/{store}/qr/pdf', [StoreController::class, 'qrPdf'])->name('stores.qr.pdf');
+
     Route::get('/scanner', [ScannerController::class, 'index'])->name('scanner');
     
     Route::get('/customers', [MerchantCustomersController::class, 'index'])->name('customers.index');
