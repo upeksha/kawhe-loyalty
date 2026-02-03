@@ -231,7 +231,7 @@
                             <a 
                                 href="{{ URL::signedRoute('wallet.apple.download', ['public_token' => $account->public_token]) }}"
                                 class="block w-full flex justify-center hover:opacity-90 transition-opacity"
-                                download="kawhe-wallet.pkpass">
+                                onclick="downloadAppleWalletPass(this.href); return false;">
                                 <img 
                                     src="{{ asset('wallet-badges/add-to-apple-wallet.svg') }}" 
                                     alt="Add to Apple Wallet" 
@@ -765,10 +765,15 @@
                 
                 // Try multiple methods for Safari compatibility
                 try {
-                    // Method 1: Open in new window (Safari on iPhone prefers this)
+                    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+                    if (isIOS) {
+                        // iOS Safari handles pkpass best with direct navigation
+                        window.location.href = url;
+                        return;
+                    }
+
+                    // Non-iOS: open in a new window/tab first
                     const newWindow = window.open(url, '_blank');
-                    
-                    // If popup blocked, try Method 2: Direct navigation
                     if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
                         console.log('Popup blocked, trying direct navigation');
                         window.location.href = url;
