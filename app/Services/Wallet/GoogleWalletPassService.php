@@ -114,24 +114,39 @@ class GoogleWalletPassService
         try {
             // Class exists: patch to keep branding in sync
             $existing = $this->service->loyaltyclass->get($resourceId);
-            $patch = new \Google_Service_Walletobjects_LoyaltyClass();
-            $patch->setId($resourceId);
-            $patch->setIssuerName(config('app.name', 'Kawhe'));
-            $patch->setProgramName($store->name);
-            $patch->setProgramLogo($logoUri);
-            $patch->setReviewStatus(config('services.google_wallet.review_status', 'UNDER_REVIEW'));
             $rewardTarget = $store->reward_target ?? 10;
-            $patch->setTextModulesData([
+
+            // Patch core fields first (name/color/text) so store name is always correct.
+            $basePatch = new \Google_Service_Walletobjects_LoyaltyClass();
+            $basePatch->setId($resourceId);
+            $basePatch->setIssuerName(config('app.name', 'Kawhe'));
+            $basePatch->setProgramName($store->name);
+            $basePatch->setReviewStatus(config('services.google_wallet.review_status', 'UNDER_REVIEW'));
+            $basePatch->setTextModulesData([
                 ['header' => 'Reward Target', 'body' => "Collect {$rewardTarget} stamps to earn: " . ($store->reward_title ?? 'rewards')],
             ]);
-            $patch->setImageModulesData($imageModulesData);
-            $patch->setHexBackgroundColor($backgroundColor);
+            $basePatch->setHexBackgroundColor($backgroundColor);
+
             try {
-                return $this->service->loyaltyclass->patch($resourceId, $patch);
-            } catch (\Throwable $patchError) {
-                Log::warning('Google Wallet: Failed to patch loyalty class, using existing', [
+                $this->service->loyaltyclass->patch($resourceId, $basePatch);
+            } catch (\Throwable $basePatchError) {
+                Log::warning('Google Wallet: Failed to patch base loyalty class fields', [
                     'class_id' => $resourceId,
-                    'error' => $patchError->getMessage(),
+                    'error' => $basePatchError->getMessage(),
+                ]);
+            }
+
+            // Patch image branding separately so image issues don't block name/color updates.
+            $imagePatch = new \Google_Service_Walletobjects_LoyaltyClass();
+            $imagePatch->setId($resourceId);
+            $imagePatch->setProgramLogo($logoUri);
+            $imagePatch->setImageModulesData($imageModulesData);
+            try {
+                return $this->service->loyaltyclass->patch($resourceId, $imagePatch);
+            } catch (\Throwable $imagePatchError) {
+                Log::warning('Google Wallet: Failed to patch loyalty class images, using existing', [
+                    'class_id' => $resourceId,
+                    'error' => $imagePatchError->getMessage(),
                 ]);
                 return $existing;
             }
