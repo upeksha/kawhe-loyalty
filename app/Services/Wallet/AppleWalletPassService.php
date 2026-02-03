@@ -136,6 +136,8 @@ class AppleWalletPassService
         // Add assets (images) - addAsset() expects file paths, not file contents
         // Apple Wallet requires specific filenames: logo.png, strip.png, icon.png, background.png
         $assetsPath = resource_path('wallet/apple/default');
+        $brandColor = $store->brand_color ?? '#8B4513';
+        $backgroundColor = $store->background_color ?? '#FBF8F4';
         
         // Create unique temp directory for this pass generation to avoid filename conflicts
         $tempDir = sys_get_temp_dir() . '/apple_wallet_' . uniqid();
@@ -159,6 +161,12 @@ class AppleWalletPassService
         } elseif (file_exists($assetsPath . '/logo.png')) {
             $pass->addAsset($assetsPath . '/logo.png');
             $assetsAdded[] = 'logo (default)';
+        } else {
+            $tempLogoPath = $tempDir . '/logo.png';
+            if ($this->createFallbackPng($tempLogoPath, 320, 100, $brandColor, $backgroundColor)) {
+                $pass->addAsset($tempLogoPath);
+                $assetsAdded[] = 'logo (fallback)';
+            }
         }
         
         // Use store pass hero image if available, otherwise fallback to default strip
@@ -175,16 +183,34 @@ class AppleWalletPassService
         } elseif (file_exists($assetsPath . '/strip.png')) {
             $pass->addAsset($assetsPath . '/strip.png');
             $assetsAdded[] = 'strip (default)';
+        } else {
+            $tempStripPath = $tempDir . '/strip.png';
+            if ($this->createFallbackPng($tempStripPath, 750, 246, $brandColor, $backgroundColor)) {
+                $pass->addAsset($tempStripPath);
+                $assetsAdded[] = 'strip (fallback)';
+            }
         }
         
         // Always add icon and background (required by Apple Wallet)
         if (file_exists($assetsPath . '/icon.png')) {
             $pass->addAsset($assetsPath . '/icon.png');
             $assetsAdded[] = 'icon';
+        } else {
+            $tempIconPath = $tempDir . '/icon.png';
+            if ($this->createFallbackPng($tempIconPath, 87, 87, $brandColor, $backgroundColor)) {
+                $pass->addAsset($tempIconPath);
+                $assetsAdded[] = 'icon (fallback)';
+            }
         }
         if (file_exists($assetsPath . '/background.png')) {
             $pass->addAsset($assetsPath . '/background.png');
             $assetsAdded[] = 'background';
+        } else {
+            $tempBgPath = $tempDir . '/background.png';
+            if ($this->createFallbackPng($tempBgPath, 360, 440, $brandColor, $backgroundColor)) {
+                $pass->addAsset($tempBgPath);
+                $assetsAdded[] = 'background (fallback)';
+            }
         }
         
         // Log which assets were added for debugging
@@ -256,5 +282,56 @@ class AppleWalletPassService
     protected function formatTokenForManualEntry(string $token): string
     {
         return implode('-', str_split($token, 4));
+    }
+
+    /**
+     * Create a simple fallback PNG asset if defaults are missing.
+     * This prevents invalid pkpass files when required images aren't present.
+     */
+    protected function createFallbackPng(string $path, int $width, int $height, string $badgeHex, string $bgHex): bool
+    {
+        if (!function_exists('imagecreatetruecolor')) {
+            \Log::warning('Apple Wallet: GD not available for fallback images', [
+                'path' => $path,
+            ]);
+            return false;
+        }
+
+        $img = imagecreatetruecolor($width, $height);
+        if (! $img) {
+            return false;
+        }
+
+        [$bgR, $bgG, $bgB] = $this->hexToRgbArray($bgHex);
+        [$badgeR, $badgeG, $badgeB] = $this->hexToRgbArray($badgeHex);
+
+        $bgColor = imagecolorallocate($img, $bgR, $bgG, $bgB);
+        $badgeColor = imagecolorallocate($img, $badgeR, $badgeG, $badgeB);
+
+        imagefilledrectangle($img, 0, 0, $width, $height, $bgColor);
+        $diameter = (int) (min($width, $height) * 0.7);
+        imagefilledellipse($img, (int) ($width / 2), (int) ($height / 2), $diameter, $diameter, $badgeColor);
+
+        $saved = imagepng($img, $path);
+        imagedestroy($img);
+
+        return $saved && file_exists($path);
+    }
+
+    /**
+     * Convert hex color to RGB array for GD.
+     */
+    protected function hexToRgbArray(string $hex): array
+    {
+        $hex = ltrim($hex, '#');
+        if (strlen($hex) === 3) {
+            $hex = $hex[0] . $hex[0] . $hex[1] . $hex[1] . $hex[2] . $hex[2];
+        }
+
+        return [
+            hexdec(substr($hex, 0, 2)),
+            hexdec(substr($hex, 2, 2)),
+            hexdec(substr($hex, 4, 2)),
+        ];
     }
 }
