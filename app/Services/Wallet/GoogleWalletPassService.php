@@ -112,8 +112,29 @@ class GoogleWalletPassService
         $backgroundColor = '#' . $backgroundColor;
 
         try {
-            // Class exists: return it (do not patch - patch can fail with image/color payload and cause 500)
-            return $this->service->loyaltyclass->get($resourceId);
+            // Class exists: patch to keep branding in sync
+            $existing = $this->service->loyaltyclass->get($resourceId);
+            $patch = new \Google_Service_Walletobjects_LoyaltyClass();
+            $patch->setId($resourceId);
+            $patch->setIssuerName(config('app.name', 'Kawhe'));
+            $patch->setProgramName($store->name);
+            $patch->setProgramLogo($logoUri);
+            $patch->setReviewStatus(config('services.google_wallet.review_status', 'UNDER_REVIEW'));
+            $rewardTarget = $store->reward_target ?? 10;
+            $patch->setTextModulesData([
+                ['header' => 'Reward Target', 'body' => "Collect {$rewardTarget} stamps to earn: " . ($store->reward_title ?? 'rewards')],
+            ]);
+            $patch->setImageModulesData($imageModulesData);
+            $patch->setHexBackgroundColor($backgroundColor);
+            try {
+                return $this->service->loyaltyclass->patch($resourceId, $patch);
+            } catch (\Throwable $patchError) {
+                Log::warning('Google Wallet: Failed to patch loyalty class, using existing', [
+                    'class_id' => $resourceId,
+                    'error' => $patchError->getMessage(),
+                ]);
+                return $existing;
+            }
         } catch (\Exception $e) {
             // Class doesn't exist: create it with image and color
             $loyaltyClass = new \Google_Service_Walletobjects_LoyaltyClass();
@@ -212,7 +233,7 @@ class GoogleWalletPassService
         // Customer first (left), then Rewards (right) when available.
         $textModulesData = [
             [
-                'header' => 'Progress',
+                'header' => 'Stamps',
                 'body' => $circleIndicators . ' ' . sprintf('(%d/%d)', $account->stamp_count, $rewardTarget),
             ],
             [
