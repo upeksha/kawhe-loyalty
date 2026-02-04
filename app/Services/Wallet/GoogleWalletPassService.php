@@ -125,9 +125,13 @@ class GoogleWalletPassService
                 ['header' => 'Reward Target', 'body' => "Collect {$rewardTarget} stamps to earn: " . ($store->reward_title ?? 'rewards')],
             ]);
             $basePatch->setHexBackgroundColor($backgroundColor);
+            // Ensure reviewStatus is never sent on patch (Google rejects it)
+            $basePatch->setReviewStatus(null);
 
             try {
-                $this->service->loyaltyclass->patch($resourceId, $basePatch);
+                $this->service->loyaltyclass->patch($resourceId, $basePatch, [
+                    'updateMask' => 'issuerName,programName,textModulesData,hexBackgroundColor',
+                ]);
             } catch (\Throwable $basePatchError) {
                 Log::warning('Google Wallet: Failed to patch base loyalty class fields', [
                     'class_id' => $resourceId,
@@ -140,8 +144,11 @@ class GoogleWalletPassService
             $imagePatch->setId($resourceId);
             $imagePatch->setProgramLogo($logoUri);
             $imagePatch->setImageModulesData($imageModulesData);
+            $imagePatch->setReviewStatus(null);
             try {
-                return $this->service->loyaltyclass->patch($resourceId, $imagePatch);
+                return $this->service->loyaltyclass->patch($resourceId, $imagePatch, [
+                    'updateMask' => 'programLogo,imageModulesData',
+                ]);
             } catch (\Throwable $imagePatchError) {
                 Log::warning('Google Wallet: Failed to patch loyalty class images, using existing', [
                     'class_id' => $resourceId,
