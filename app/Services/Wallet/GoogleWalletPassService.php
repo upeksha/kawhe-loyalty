@@ -129,9 +129,7 @@ class GoogleWalletPassService
             $basePatch->setReviewStatus(null);
 
             try {
-                $this->service->loyaltyclass->patch($resourceId, $basePatch, [
-                    'updateMask' => 'issuerName,programName,textModulesData,hexBackgroundColor',
-                ]);
+                $this->service->loyaltyclass->patch($resourceId, $basePatch);
             } catch (\Throwable $basePatchError) {
                 Log::warning('Google Wallet: Failed to patch base loyalty class fields', [
                     'class_id' => $resourceId,
@@ -146,9 +144,7 @@ class GoogleWalletPassService
             $imagePatch->setImageModulesData($imageModulesData);
             $imagePatch->setReviewStatus(null);
             try {
-                return $this->service->loyaltyclass->patch($resourceId, $imagePatch, [
-                    'updateMask' => 'programLogo,imageModulesData',
-                ]);
+                return $this->service->loyaltyclass->patch($resourceId, $imagePatch);
             } catch (\Throwable $imagePatchError) {
                 Log::warning('Google Wallet: Failed to patch loyalty class images, using existing', [
                     'class_id' => $resourceId,
