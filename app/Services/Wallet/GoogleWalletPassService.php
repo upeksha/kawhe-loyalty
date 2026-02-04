@@ -7,6 +7,7 @@ use Google_Client;
 use Google_Service_Walletobjects;
 use Google_Service_Walletobjects_LoyaltyClass;
 use Google_Service_Walletobjects_LoyaltyObject;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 
 class GoogleWalletPassService
@@ -100,7 +101,7 @@ class GoogleWalletPassService
         if (!$heroImage) {
             $heroImage = $this->getDefaultLogoUri();
         }
-        $imageModulesData = [['mainImage' => $heroImage]];
+        $imageModulesData = $this->buildImageModulesData($heroImage);
 
         // Always set background color (Google requires it for pass to show color)
         $backgroundColor = $store->background_color ?? '#1F2937';
@@ -115,6 +116,21 @@ class GoogleWalletPassService
             // Class exists: patch to keep branding in sync
             $existing = $this->service->loyaltyclass->get($resourceId);
             $rewardTarget = $store->reward_target ?? 10;
+            $reviewStatus = $this->normalizeReviewStatusForPatch();
+
+            if (! $this->shouldPatchLoyaltyClass($store, $existing, $logoUri, $heroImage, $backgroundColor, $rewardTarget)) {
+                Log::info('Google Wallet: Skipping loyalty class patch (no changes)', [
+                    'store_id' => $store->id,
+                    'class_id' => $resourceId,
+                ]);
+                return $existing;
+            }
+
+            Log::info('Google Wallet: Patching loyalty class', [
+                'store_id' => $store->id,
+                'class_id' => $resourceId,
+                'review_status' => $reviewStatus,
+            ]);
 
             // Patch core fields first (name/color/text) so store name is always correct.
             $basePatch = new \Google_Service_Walletobjects_LoyaltyClass();
@@ -125,8 +141,7 @@ class GoogleWalletPassService
                 ['header' => 'Reward Target', 'body' => "Collect {$rewardTarget} stamps to earn: " . ($store->reward_title ?? 'rewards')],
             ]);
             $basePatch->setHexBackgroundColor($backgroundColor);
-            // Ensure reviewStatus is never sent on patch (Google rejects it)
-            $basePatch->setReviewStatus(null);
+            $basePatch->setReviewStatus($reviewStatus);
 
             try {
                 $this->service->loyaltyclass->patch($resourceId, $basePatch);
@@ -142,9 +157,11 @@ class GoogleWalletPassService
             $imagePatch->setId($resourceId);
             $imagePatch->setProgramLogo($logoUri);
             $imagePatch->setImageModulesData($imageModulesData);
-            $imagePatch->setReviewStatus(null);
+            $imagePatch->setReviewStatus($reviewStatus);
             try {
-                return $this->service->loyaltyclass->patch($resourceId, $imagePatch);
+                $result = $this->service->loyaltyclass->patch($resourceId, $imagePatch);
+                $this->cacheClassSync($store);
+                return $result;
             } catch (\Throwable $imagePatchError) {
                 Log::warning('Google Wallet: Failed to patch loyalty class images, using existing', [
                     'class_id' => $resourceId,
@@ -159,14 +176,16 @@ class GoogleWalletPassService
             $loyaltyClass->setIssuerName(config('app.name', 'Kawhe'));
             $loyaltyClass->setProgramName($store->name);
             $loyaltyClass->setProgramLogo($logoUri);
-            $loyaltyClass->setReviewStatus(config('services.google_wallet.review_status', 'UNDER_REVIEW'));
+            $loyaltyClass->setReviewStatus($this->normalizeReviewStatusForCreate());
             $rewardTarget = $store->reward_target ?? 10;
             $loyaltyClass->setTextModulesData([
                 ['header' => 'Reward Target', 'body' => "Collect {$rewardTarget} stamps to earn: " . ($store->reward_title ?? 'rewards')],
             ]);
             $loyaltyClass->setImageModulesData($imageModulesData);
             $loyaltyClass->setHexBackgroundColor($backgroundColor);
-            return $this->service->loyaltyclass->insert($loyaltyClass);
+            $result = $this->service->loyaltyclass->insert($loyaltyClass);
+            $this->cacheClassSync($store);
+            return $result;
         }
     }
 
@@ -266,6 +285,16 @@ class GoogleWalletPassService
         }
         
         $loyaltyObject->setTextModulesData($textModulesData);
+
+        Log::info('Google Wallet: Preparing loyalty object', [
+            'store_id' => $store->id,
+            'customer_id' => $customer?->id,
+            'account_id' => $account->id,
+            'class_id' => "{$this->issuerId}.{$this->getClassIdForStore($store)}",
+            'object_id' => $objectId,
+            'account_name' => $accountNameValue,
+            'public_token' => $account->public_token,
+        ]);
         
         try {
             // First, try to get existing object to check if it exists
@@ -491,6 +520,138 @@ class GoogleWalletPassService
     protected function base64UrlEncode(string $data): string
     {
         return rtrim(strtr(base64_encode($data), '+/', '-_'), '=');
+    }
+
+    /**
+     * Normalize reviewStatus for patch requests.
+     */
+    protected function normalizeReviewStatusForPatch(): string
+    {
+        $raw = config('services.google_wallet.review_status', 'UNDER_REVIEW');
+        $normalized = $this->sanitizeReviewStatus($raw);
+
+        return $normalized === 'DRAFT' ? 'DRAFT' : 'UNDER_REVIEW';
+    }
+
+    /**
+     * Normalize reviewStatus for create requests.
+     */
+    protected function normalizeReviewStatusForCreate(): string
+    {
+        $raw = config('services.google_wallet.review_status', 'UNDER_REVIEW');
+        $normalized = $this->sanitizeReviewStatus($raw);
+        $allowed = ['UNDER_REVIEW', 'APPROVED', 'DRAFT'];
+
+        return in_array($normalized, $allowed, true) ? $normalized : 'UNDER_REVIEW';
+    }
+
+    /**
+     * Remove Optional[...] wrapper and normalize casing.
+     */
+    protected function sanitizeReviewStatus(?string $value): string
+    {
+        if (! $value) {
+            return '';
+        }
+
+        $value = strtoupper(trim($value));
+        if (preg_match('/OPTIONAL\[(.*?)\]/', $value, $matches)) {
+            return strtoupper($matches[1]);
+        }
+
+        return $value;
+    }
+
+    /**
+     * Build image modules using proper API objects.
+     *
+     * @param \Google_Service_Walletobjects_Image|null $heroImage
+     * @return array
+     */
+    protected function buildImageModulesData($heroImage): array
+    {
+        if (! $heroImage) {
+            return [];
+        }
+
+        $imageModule = new \Google_Service_Walletobjects_ImageModuleData();
+        $imageModule->setMainImage($heroImage);
+        return [$imageModule];
+    }
+
+    /**
+     * Determine if we should patch the loyalty class.
+     */
+    protected function shouldPatchLoyaltyClass($store, $existing, $logoUri, $heroImage, string $backgroundColor, int $rewardTarget): bool
+    {
+        $cacheKey = $this->classSyncCacheKey($store->id);
+        $lastSync = Cache::get($cacheKey);
+        if ($lastSync && $store->updated_at && $store->updated_at->timestamp <= $lastSync) {
+            if (! $this->existingClassDiffers($existing, $store, $logoUri, $heroImage, $backgroundColor, $rewardTarget)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * Compare existing class fields to desired values.
+     */
+    protected function existingClassDiffers($existing, $store, $logoUri, $heroImage, string $backgroundColor, int $rewardTarget): bool
+    {
+        $desiredProgramName = $store->name;
+        $desiredTextHeader = 'Reward Target';
+        $desiredTextBody = "Collect {$rewardTarget} stamps to earn: " . ($store->reward_title ?? 'rewards');
+
+        $existingProgramName = $existing->getProgramName();
+        $existingColor = $existing->getHexBackgroundColor();
+        $textModules = $existing->getTextModulesData() ?? [];
+        $existingTextHeader = $textModules[0]?->getHeader();
+        $existingTextBody = $textModules[0]?->getBody();
+
+        $existingLogoUri = $this->extractImageUri($existing->getProgramLogo());
+        $existingHeroUri = null;
+        $existingImageModules = $existing->getImageModulesData() ?? [];
+        if (!empty($existingImageModules)) {
+            $existingHeroUri = $this->extractImageUri($existingImageModules[0]?->getMainImage());
+        }
+
+        $desiredLogoUri = $this->extractImageUri($logoUri);
+        $desiredHeroUri = $this->extractImageUri($heroImage);
+
+        return $existingProgramName !== $desiredProgramName
+            || $existingColor !== $backgroundColor
+            || $existingTextHeader !== $desiredTextHeader
+            || $existingTextBody !== $desiredTextBody
+            || $existingLogoUri !== $desiredLogoUri
+            || $existingHeroUri !== $desiredHeroUri;
+    }
+
+    /**
+     * Cache successful class sync time.
+     */
+    protected function cacheClassSync($store): void
+    {
+        Cache::put($this->classSyncCacheKey($store->id), time(), 60 * 60 * 24);
+    }
+
+    protected function classSyncCacheKey(int $storeId): string
+    {
+        return "google_wallet_class_sync_at:{$storeId}";
+    }
+
+    /**
+     * Extract URL from a Google Wallet Image object.
+     */
+    protected function extractImageUri($image): ?string
+    {
+        if (! $image) {
+            return null;
+        }
+
+        $source = $image->getSourceUri();
+        return $source ? $source->getUri() : null;
     }
 
     /**
