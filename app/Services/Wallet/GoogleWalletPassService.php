@@ -121,7 +121,6 @@ class GoogleWalletPassService
             $basePatch->setId($resourceId);
             $basePatch->setIssuerName(config('app.name', 'Kawhe'));
             $basePatch->setProgramName($store->name);
-            $basePatch->setReviewStatus(config('services.google_wallet.review_status', 'UNDER_REVIEW'));
             $basePatch->setTextModulesData([
                 ['header' => 'Reward Target', 'body' => "Collect {$rewardTarget} stamps to earn: " . ($store->reward_title ?? 'rewards')],
             ]);
