@@ -13,15 +13,15 @@
             width: 210mm;
             height: 297mm;
             font-family: 'Helvetica', 'Arial', sans-serif;
-            background: #FBF8F4;
-            color: #5C3D2E;
+            background: {{ $store->background_color ?? '#FBF8F4' }};
+            color: {{ $store->brand_color ?? '#5C3D2E' }};
             overflow: hidden;
         }
         .page {
             width: 210mm;
             height: 297mm;
             padding: 0;
-            background: #FBF8F4;
+            background: {{ $store->background_color ?? '#FBF8F4' }};
             text-align: center;
             overflow: hidden;
         }
@@ -60,7 +60,7 @@
             font-family: Georgia, 'Times New Roman', serif;
             font-size: 23pt;
             font-weight: normal;
-            color: #5C3D2E;
+            color: {{ $store->brand_color ?? '#5C3D2E' }};
             margin: 0 0 7mm 0;
         }
         .qr-wrap {
@@ -78,7 +78,7 @@
         }
         .instruction {
             font-size: 11.5pt;
-            color: #5C3D2E;
+            color: {{ $store->brand_color ?? '#5C3D2E' }};
             margin: 0 0 5mm 0;
         }
         .wallet-buttons {
@@ -95,14 +95,14 @@
             width: auto;
         }
         .promo {
-            background: #6A3A1F;
+            background: {{ $store->brand_color ?? '#6A3A1F' }};
             color: #F5F5DC;
             padding: 5mm 8mm;
             margin: 0;
             font-family: Georgia, 'Times New Roman', serif;
             font-size: 12pt;
             font-style: italic;
-            border-top: 0.6mm solid #5A2D16;
+            border-top: 0.6mm solid {{ $store->brand_color ?? '#5A2D16' }};
         }
         .promo u { text-decoration: underline; }
         .disclaimer {
