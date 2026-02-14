@@ -235,7 +235,7 @@ class StoreController extends Controller
         $rewardWord = $store->reward_title ?: 'stamp';
         $promoHtml = 'Get 1 free <u>' . e($rewardWord) . '</u> instantly when you join!';
 
-        $pdf = Pdf::loadView('stores.qr-poster', [
+        $viewData = [
             'store' => $store,
             'joinUrl' => $joinUrl,
             'qrCodeDataUrl' => $qrCodeDataUrl,
@@ -243,7 +243,13 @@ class StoreController extends Controller
             'appleWalletBadgeDataUrl' => $appleWalletBadgeDataUrl,
             'googleWalletBadgeDataUrl' => $googleWalletBadgeDataUrl,
             'promoHtml' => $promoHtml,
-        ])->setPaper('a4', 'portrait');
+        ];
+
+        if (request()->boolean('preview')) {
+            return response()->view('stores.qr-poster', $viewData);
+        }
+
+        $pdf = Pdf::loadView('stores.qr-poster', $viewData)->setPaper('a4', 'portrait');
 
         $filename = Str::slug($store->name) . '-join-poster.pdf';
 

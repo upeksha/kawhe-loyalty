@@ -82,17 +82,19 @@
             margin: 0 0 5mm 0;
         }
         .wallet-buttons {
-            text-align: center;
-            margin-bottom: 8mm;
+            display: table;
+            margin: 0 auto 6mm;
+            border-collapse: collapse;
         }
         .wallet-btn {
-            display: inline-block;
-            height: 14mm;
-            margin: 0 3mm;
+            display: table-cell;
+            padding: 0 4mm;
+            vertical-align: middle;
         }
         .wallet-btn img {
-            height: 100%;
+            height: 12mm;
             width: auto;
+            display: block;
         }
         .promo {
             background: {{ $store->brand_color ?? '#6A3A1F' }};
