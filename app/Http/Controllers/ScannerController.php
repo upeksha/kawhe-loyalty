@@ -117,15 +117,15 @@ class ScannerController extends Controller
             ], 200);
         }
 
-        // STEP 4c: UX cooldown (30s) - can be overridden
-        if ($secondsSinceLastStamp !== null && $secondsSinceLastStamp < 30) {
+        // STEP 4c: UX cooldown (5s) - can be overridden
+        if ($secondsSinceLastStamp !== null && $secondsSinceLastStamp < 5) {
             if (!$overrideCooldown) {
                 return response()->json([
                     'status' => 'cooldown',
                     'success' => false,
                     'message' => "Stamped {$secondsSinceLastStamp}s ago",
                     'seconds_since_last' => $secondsSinceLastStamp,
-                    'cooldown_seconds' => 30,
+                    'cooldown_seconds' => 5,
                     'allow_override' => true,
                     'next_action' => 'confirm_override',
                     'stampCount' => $account->stamp_count,
