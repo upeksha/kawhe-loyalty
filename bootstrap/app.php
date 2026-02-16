@@ -24,6 +24,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->validateCsrfTokens(except: [
             'stripe/webhook',
             'wallet/v1/*',
+            'c/*/verify-email/send',
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
