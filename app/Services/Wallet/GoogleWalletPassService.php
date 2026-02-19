@@ -788,16 +788,13 @@ class GoogleWalletPassService
         $barcode->setValue($barcodeValue);
         $barcode->setAlternateText('Manual: ' . ($account->manual_entry_code ?? $this->formatTokenForManualEntry($account->public_token)));
 
+        $customerName = $customer->name ?? $customer->email ?? 'Valued Customer';
         $rewardTarget = $store->reward_target ?? 10;
         $circleIndicators = $this->generateCircleIndicators($account->stamp_count, $rewardTarget);
         $textModules = [
             new \Google_Service_Walletobjects_TextModuleData([
                 'header' => 'Progress',
                 'body' => $circleIndicators . '  ' . sprintf('%d / %d stamps', $account->stamp_count, $rewardTarget),
-            ]),
-            new \Google_Service_Walletobjects_TextModuleData([
-                'header' => 'Customer',
-                'body' => $customer->name ?? $customer->email ?? 'Valued Customer',
             ]),
         ];
         if (($account->reward_balance ?? 0) > 0) {
@@ -812,7 +809,8 @@ class GoogleWalletPassService
         $genericObject->setClassId($classId);
         $genericObject->setState('ACTIVE');
         $genericObject->setCardTitle($this->makeLocalizedString($store->name));
-        $genericObject->setHeader($this->makeLocalizedString($store->reward_title ?? 'Loyalty card'));
+        // Greeting when card is opened: show customer name instead of reward title
+        $genericObject->setHeader($this->makeLocalizedString('Hi, ' . $customerName));
         $genericObject->setHexBackgroundColor($backgroundColor);
         $genericObject->setBarcode($barcode);
         $genericObject->setTextModulesData($textModules);
