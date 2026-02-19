@@ -809,8 +809,8 @@ class GoogleWalletPassService
         $genericObject->setClassId($classId);
         $genericObject->setState('ACTIVE');
         $genericObject->setCardTitle($this->makeLocalizedString($store->name));
-        // Greeting when card is opened: show customer name instead of reward title
-        $genericObject->setHeader($this->makeLocalizedString('Hi, ' . $customerName));
+        // When card is opened: show customer name (no "Hi") to match card design
+        $genericObject->setHeader($this->makeLocalizedString($customerName));
         $genericObject->setHexBackgroundColor($backgroundColor);
         $genericObject->setBarcode($barcode);
         $genericObject->setTextModulesData($textModules);
