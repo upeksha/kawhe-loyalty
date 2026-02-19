@@ -413,19 +413,31 @@ class GoogleWalletPassService
      */
     public function generateSaveLink(LoyaltyAccount $account): string
     {
-        // First ensure the object exists
-        try {
-            $this->createOrUpdateLoyaltyObject($account);
-        } catch (\Exception $e) {
-            Log::error('Failed to create/update Google Wallet object', [
-                'account_id' => $account->id,
-                'error' => $e->getMessage(),
-            ]);
-            throw $e;
+        $useGeneric = config('services.google_wallet.pass_type', 'loyalty') === 'generic';
+
+        if ($useGeneric) {
+            try {
+                $this->createOrUpdateGenericObject($account);
+            } catch (\Exception $e) {
+                Log::error('Failed to create/update Google Wallet generic object', [
+                    'account_id' => $account->id,
+                    'error' => $e->getMessage(),
+                ]);
+                throw $e;
+            }
+            $objectId = $this->getGenericObjectIdForAccount($account);
+        } else {
+            try {
+                $this->createOrUpdateLoyaltyObject($account);
+            } catch (\Exception $e) {
+                Log::error('Failed to create/update Google Wallet object', [
+                    'account_id' => $account->id,
+                    'error' => $e->getMessage(),
+                ]);
+                throw $e;
+            }
+            $objectId = $this->getObjectIdForAccount($account);
         }
-        
-        $objectId = $this->getObjectIdForAccount($account);
-        $classId = "{$this->issuerId}.{$this->getClassIdForStore($account->store)}";
         
         // Get service account email from credentials
         $serviceAccountPath = config('services.google_wallet.service_account_key');
@@ -460,8 +472,9 @@ class GoogleWalletPassService
             throw new \Exception('Service account email not found in credentials');
         }
         
-        // Create JWT payload for Google Wallet
+        // Create JWT payload for Google Wallet (generic or loyalty)
         $now = time();
+        $payloadKey = $useGeneric ? 'genericObjects' : 'loyaltyObjects';
         $payload = [
             'iss' => $serviceAccountEmail,
             'aud' => 'google',
@@ -469,10 +482,8 @@ class GoogleWalletPassService
             'typ' => 'savetowallet',
             'iat' => $now,
             'payload' => [
-                'loyaltyObjects' => [
-                    [
-                        'id' => $objectId,
-                    ],
+                $payloadKey => [
+                    ['id' => $objectId],
                 ],
             ],
         ];
@@ -689,6 +700,142 @@ class GoogleWalletPassService
     }
 
     /**
+     * Generic pass: class ID for a store (pass-builder style).
+     */
+    protected function getGenericClassIdForStore($store): string
+    {
+        return sprintf('generic_class_%d', $store->id);
+    }
+
+    /**
+     * Generic pass: object ID for a loyalty account.
+     */
+    protected function getGenericObjectIdForAccount(LoyaltyAccount $account): string
+    {
+        return sprintf('%s.generic_object_%d', $this->issuerId, $account->id);
+    }
+
+    /**
+     * Create a LocalizedString for Generic pass (cardTitle, header, etc.).
+     */
+    protected function makeLocalizedString(string $value): \Google_Service_Walletobjects_LocalizedString
+    {
+        $translated = new \Google_Service_Walletobjects_TranslatedString();
+        $translated->setLanguage('en-US');
+        $translated->setValue($value);
+        $localized = new \Google_Service_Walletobjects_LocalizedString();
+        $localized->setDefaultValue($translated);
+        return $localized;
+    }
+
+    /**
+     * Create or update Generic class (template) for pass-builder style cards.
+     * See: https://developers.google.com/wallet/generic/resources/pass-builder
+     */
+    public function createOrUpdateGenericClass($store): \Google_Service_Walletobjects_GenericClass
+    {
+        $classId = $this->getGenericClassIdForStore($store);
+        $resourceId = "{$this->issuerId}.{$classId}";
+
+        // GenericClass in the API only supports id and template/text/image modules; logo/color live on the Object.
+        try {
+            return $this->service->genericclass->get($resourceId);
+        } catch (\Google\Service\Exception $e) {
+            if ($e->getCode() !== 404) {
+                throw $e;
+            }
+        }
+
+        $newClass = new \Google_Service_Walletobjects_GenericClass();
+        $newClass->setId($resourceId);
+        return $this->service->genericclass->insert($newClass);
+    }
+
+    /**
+     * Create or update Generic object (pass-builder style card) for a loyalty account.
+     * Matches the layout from https://developers.google.com/wallet/generic/resources/pass-builder
+     */
+    public function createOrUpdateGenericObject(LoyaltyAccount $account): \Google_Service_Walletobjects_GenericObject
+    {
+        $account->load(['store', 'customer']);
+        $store = $account->store;
+        $customer = $account->customer;
+
+        if (empty($account->manual_entry_code) && $account->store_id) {
+            $account->manual_entry_code = LoyaltyAccount::generateManualEntryCode($account->store_id);
+            $account->saveQuietly();
+        }
+
+        $objectId = $this->getGenericObjectIdForAccount($account);
+        $classId = "{$this->issuerId}.{$this->getGenericClassIdForStore($store)}";
+
+        $this->createOrUpdateGenericClass($store);
+
+        $heroImage = $this->getPassHeroImageUri($store) ?: $this->getPassLogoUri($store) ?: $this->getLogoUri($store) ?: $this->getDefaultLogoUri();
+        $logoUri = $this->getPassLogoUri($store) ?: $this->getLogoUri($store) ?: $this->getDefaultLogoUri();
+        $backgroundColor = $store->background_color ?? '#1F2937';
+        $backgroundColor = ltrim($backgroundColor, '#');
+        if (strlen($backgroundColor) === 3) {
+            $backgroundColor = $backgroundColor[0].$backgroundColor[0].$backgroundColor[1].$backgroundColor[1].$backgroundColor[2].$backgroundColor[2];
+        }
+        $backgroundColor = '#' . $backgroundColor;
+
+        $barcodeValue = ($account->reward_balance ?? 0) > 0 && $account->redeem_token
+            ? 'LR:' . $account->redeem_token
+            : 'LA:' . $account->public_token;
+        $barcode = new \Google_Service_Walletobjects_Barcode();
+        $barcode->setType('QR_CODE');
+        $barcode->setValue($barcodeValue);
+        $barcode->setAlternateText('Manual: ' . ($account->manual_entry_code ?? $this->formatTokenForManualEntry($account->public_token)));
+
+        $rewardTarget = $store->reward_target ?? 10;
+        $circleIndicators = $this->generateCircleIndicators($account->stamp_count, $rewardTarget);
+        $textModules = [
+            new \Google_Service_Walletobjects_TextModuleData([
+                'header' => 'Progress',
+                'body' => $circleIndicators . '  ' . sprintf('%d / %d stamps', $account->stamp_count, $rewardTarget),
+            ]),
+            new \Google_Service_Walletobjects_TextModuleData([
+                'header' => 'Customer',
+                'body' => $customer->name ?? $customer->email ?? 'Valued Customer',
+            ]),
+        ];
+        if (($account->reward_balance ?? 0) > 0) {
+            $textModules[] = new \Google_Service_Walletobjects_TextModuleData([
+                'header' => 'Rewards',
+                'body' => '🎁 ' . (string) ($account->reward_balance ?? 0) . ' available to redeem',
+            ]);
+        }
+
+        $genericObject = new \Google_Service_Walletobjects_GenericObject();
+        $genericObject->setId($objectId);
+        $genericObject->setClassId($classId);
+        $genericObject->setState('ACTIVE');
+        $genericObject->setCardTitle($this->makeLocalizedString($store->name));
+        $genericObject->setHeader($this->makeLocalizedString($store->reward_title ?? 'Loyalty card'));
+        $genericObject->setHexBackgroundColor($backgroundColor);
+        $genericObject->setBarcode($barcode);
+        $genericObject->setTextModulesData($textModules);
+        if ($heroImage) {
+            $genericObject->setHeroImage($heroImage);
+        }
+        if ($logoUri) {
+            $genericObject->setLogo($logoUri);
+        }
+        $genericObject->setGenericType(\Google_Service_Walletobjects_GenericObject::GENERIC_TYPE_GENERIC_LOYALTY_CARD);
+
+        try {
+            $existing = $this->service->genericobject->get($objectId);
+            return $this->service->genericobject->patch($objectId, $genericObject);
+        } catch (\Google\Service\Exception $e) {
+            if ($e->getCode() !== 404) {
+                throw $e;
+            }
+        }
+        return $this->service->genericobject->insert($genericObject);
+    }
+
+    /**
      * Get logo Image object for store
      *
      * @param \App\Models\Store $store
@@ -731,7 +878,7 @@ class GoogleWalletPassService
         $defaultLogoUrl = $this->ensureHttps($appUrl . '/' . $defaultLogoPath);
         
         if (!file_exists(public_path($defaultLogoPath))) {
-            \Log::warning('Google Wallet: Default logo file not found', [
+            Log::warning('Google Wallet: Default logo file not found', [
                 'path' => public_path($defaultLogoPath),
                 'url' => $defaultLogoUrl,
             ]);

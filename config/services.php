@@ -46,6 +46,8 @@ return [
         'class_id' => env('GOOGLE_WALLET_CLASS_ID', 'loyalty_class_kawhe'),
         'service_account_key' => env('GOOGLE_WALLET_SERVICE_ACCOUNT_KEY'),
         'review_status' => env('GOOGLE_WALLET_REVIEW_STATUS', 'UNDER_REVIEW'), // 'UNDER_REVIEW' for testing, 'APPROVED' for production
+        // Pass type: "loyalty" = LoyaltyClass/LoyaltyObject (default); "generic" = GenericClass/GenericObject (pass-builder style)
+        'pass_type' => env('GOOGLE_WALLET_PASS_TYPE', 'loyalty'),
     ],
 
 ];
