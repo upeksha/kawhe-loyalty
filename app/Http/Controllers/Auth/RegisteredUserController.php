@@ -72,8 +72,7 @@ class RegisteredUserController extends Controller
 
         Auth::login($user);
 
-        // Redirect to /dashboard by default (Breeze-style)
-        // The /dashboard route will handle onboarding logic
-        return redirect('/dashboard');
+        // New merchants have no stores yet: send them straight to onboarding
+        return redirect()->route('merchant.onboarding.store');
     }
 }

@@ -102,29 +102,31 @@ test('redemption requires verified account', function () {
     $merchant = User::factory()->create();
     $store = Store::factory()->create(['user_id' => $merchant->id]);
     $account = LoyaltyAccount::factory()->create([
-        'store_id' => $store->id, 
+        'store_id' => $store->id,
         'verified_at' => null,
         'stamp_count' => 10, // Assuming 10 is target
+        'reward_balance' => 1,
         'reward_available_at' => now(),
-        'redeem_token' => 'redeem-123'
+        'redeem_token' => 'redeem123',
     ]);
 
     $this->actingAs($merchant);
 
-    // Try redeem unverified
+    // Try redeem unverified (token normalized: REDEEM:redeem123 -> redeem123)
     $response = $this->postJson(route('redeem.store'), [
-        'token' => 'REDEEM:redeem-123',
+        'token' => 'REDEEM:redeem123',
         'store_id' => $store->id,
     ]);
     $response->assertStatus(422);
-    $response->assertJsonValidationErrors(['token']);
+    $response->assertJsonPath('status', 'verification_required');
+    $response->assertJsonPath('public_token', $account->public_token);
     $response->assertJsonFragment(['message' => 'You must verify your email address before you can redeem rewards. Please check your loyalty card page for verification options.']);
 
     // Verify and try again
     $account->update(['verified_at' => now()]);
-    
+
     $response = $this->postJson(route('redeem.store'), [
-        'token' => 'REDEEM:redeem-123',
+        'token' => 'REDEEM:redeem123',
         'store_id' => $store->id,
     ]);
     $response->assertOk();

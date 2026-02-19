@@ -41,12 +41,13 @@ test('merchant can redeem a reward', function () {
         'stamp_count' => 0,
         'reward_balance' => 1,
         'reward_available_at' => now(),
-        'redeem_token' => 'test-redeem-token',
+        'redeem_token' => 'testredeemtoken',
+        'verified_at' => now(),
     ]);
 
     $response = $this->actingAs($user)->postJson('/redeem', [
         'store_id' => $store->id,
-        'token' => 'test-redeem-token',
+        'token' => 'testredeemtoken',
     ]);
 
     $response->assertOk();
@@ -149,12 +150,13 @@ test('multi-reward: redeem one reward decrements balance but keeps stamp_count',
         'stamp_count' => 2,
         'reward_balance' => 2,
         'reward_available_at' => now(),
-        'redeem_token' => 'test-redeem-token',
+        'redeem_token' => 'testredeemtoken',
+        'verified_at' => now(),
     ]);
 
     $response = $this->actingAs($user)->postJson('/redeem', [
         'store_id' => $store->id,
-        'token' => 'REDEEM:test-redeem-token',
+        'token' => 'REDEEM:testredeemtoken',
     ]);
 
     $response->assertOk();
@@ -176,12 +178,13 @@ test('multi-reward: redeem second reward clears availability when balance reache
         'stamp_count' => 2,
         'reward_balance' => 1, // Last reward
         'reward_available_at' => now(),
-        'redeem_token' => 'test-redeem-token',
+        'redeem_token' => 'testredeemtoken',
+        'verified_at' => now(),
     ]);
 
     $response = $this->actingAs($user)->postJson('/redeem', [
         'store_id' => $store->id,
-        'token' => 'REDEEM:test-redeem-token',
+        'token' => 'REDEEM:testredeemtoken',
     ]);
 
     $response->assertOk();

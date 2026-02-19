@@ -104,35 +104,35 @@ class ScannerController extends Controller
             }
         }
 
-        // STEP 4b: Hard server-side duplicate window (5s), regardless of override_cooldown
+        // STEP 4b: UX cooldown (30s) - can be overridden; checked first so client gets 409 with allow_override
         $secondsSinceLastStamp = $account->last_stamped_at
             ? $account->last_stamped_at->diffInSeconds(now())
             : null;
 
-        if ($secondsSinceLastStamp !== null && $secondsSinceLastStamp < 5) {
-            return response()->json([
-                'status' => 'duplicate',
-                'success' => false,
-                'message' => 'Duplicate scan ignored',
-            ], 200);
-        }
-
-        // STEP 4c: UX cooldown (5s) - can be overridden
-        if ($secondsSinceLastStamp !== null && $secondsSinceLastStamp < 5) {
+        $cooldownSeconds = 30;
+        if ($secondsSinceLastStamp !== null && $secondsSinceLastStamp < $cooldownSeconds) {
             if (!$overrideCooldown) {
                 return response()->json([
                     'status' => 'cooldown',
                     'success' => false,
                     'message' => "Stamped {$secondsSinceLastStamp}s ago",
                     'seconds_since_last' => $secondsSinceLastStamp,
-                    'cooldown_seconds' => 5,
+                    'cooldown_seconds' => $cooldownSeconds,
                     'allow_override' => true,
                     'next_action' => 'confirm_override',
                     'stampCount' => $account->stamp_count,
                     'rewardBalance' => $account->reward_balance ?? 0,
                 ], 409);
             }
-            // override_cooldown = true: allow if past 5-second hard window
+        }
+
+        // STEP 4c: Hard server-side duplicate window (5s), regardless of override_cooldown
+        if ($secondsSinceLastStamp !== null && $secondsSinceLastStamp < 5) {
+            return response()->json([
+                'status' => 'duplicate',
+                'success' => false,
+                'message' => 'Duplicate scan ignored',
+            ], 200);
         }
 
         // STEP 5: Call the service to perform the actual stamping
@@ -224,6 +224,7 @@ class ScannerController extends Controller
             'rewardAvailable' => $result->rewardBalance > 0,
             'rewardEarned' => $result->rewardEarned,
             'stampsRemaining' => max(0, $result->rewardTarget - $result->stampCount),
+            'cooldown_seconds' => 30, // For Flutter app: show countdown overlay on camera after stamp
             'receipt' => [
                 'transaction_id' => $transaction->id ?? null,
                 'timestamp' => now()->toIso8601String(),
@@ -525,11 +526,12 @@ class ScannerController extends Controller
             $requiresVerification = $accountStore->require_verification_for_redemption ?? true;
             
             // Only block if store requires verification AND customer has email AND is not verified
+            // Return 422 with status + public_token so Flutter app can show verification modal and call verify-email / stamp instead
             if ($requiresVerification && $customer && !is_null($customer->email) && !$isVerified) {
                 return response()->json([
                     'status' => 'verification_required',
                     'success' => false,
-                    'message' => 'Customer must verify their email address before redeeming rewards.',
+                    'message' => 'You must verify your email address before you can redeem rewards. Please check your loyalty card page for verification options.',
                     'customer_name' => $customer->name ?? 'Customer',
                     'customer_email' => $customer->email,
                     'public_token' => $preAccount->public_token,

@@ -114,16 +114,16 @@ test('cooldown prevents double stamping', function () {
         'token' => $account->public_token,
     ])->assertOk();
 
-    // Immediate second stamp (within 5 seconds - should be blocked by idempotency window)
+    // Immediate second stamp (within cooldown - should be blocked with 409 cooldown)
     $response = $this->actingAs($user)->postJson('/stamp', [
         'store_id' => $store->id,
         'token' => $account->public_token,
     ]);
 
-    // Should be blocked by server-side idempotency window (5 seconds)
-    $response->assertOk();
-    $response->assertJson(['status' => 'duplicate']);
-    
+    // Blocked by cooldown (30s); returns 409 so double stamp is prevented
+    $response->assertStatus(409);
+    $response->assertJson(['status' => 'cooldown', 'success' => false]);
+
     $account->refresh();
     $this->assertEquals(1, $account->stamp_count); // Should still be 1
 });
@@ -249,19 +249,19 @@ test('server-side idempotency window prevents duplicate stamps within 5 seconds'
     $response2 = $this->actingAs($user)->postJson('/stamp', [
         'store_id' => $store->id,
         'token' => $account->public_token,
-        'idempotency_key' => 'key-2', // Different key - should still be blocked
+        'idempotency_key' => 'key-2', // Different key - still blocked by cooldown
     ]);
 
-    $response2->assertOk();
+    // Blocked by cooldown (30s) so duplicate stamp is prevented
+    $response2->assertStatus(409);
     $response2->assertJson([
-        'status' => 'duplicate',
+        'status' => 'cooldown',
         'success' => false,
-        'message' => 'Duplicate scan ignored',
     ]);
-    
+
     $account->refresh();
     $this->assertEquals($stampCountAfterFirst, $account->stamp_count); // Should not have incremented
-    
+
     // Should only have ONE stamp event
     $eventCount = \App\Models\StampEvent::where('loyalty_account_id', $account->id)->count();
     $this->assertEquals(1, $eventCount);

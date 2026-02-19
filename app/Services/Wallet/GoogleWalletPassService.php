@@ -224,21 +224,20 @@ class GoogleWalletPassService
         // Account ID (stable identifier)
         $loyaltyObject->setAccountId((string) $account->id);
         
-        // Loyalty points (stamp count)
+        // Loyalty points (stamp count) – label so Google Wallet shows "Stamps" clearly
         $loyaltyPoints = new \Google_Service_Walletobjects_LoyaltyPoints();
-        $loyaltyPoints->setLabel(' ');
+        $loyaltyPoints->setLabel('Stamps');
         $loyaltyPoints->setBalance(new \Google_Service_Walletobjects_LoyaltyPointsBalance([
             'int' => $account->stamp_count,
         ]));
         $loyaltyObject->setLoyaltyPoints($loyaltyPoints);
         
-        // Secondary points (rewards)
-        // Google API requires a LoyaltyPoints object (cannot pass null).
-        // We intentionally keep this minimal to avoid showing a separate "Rewards" column.
+        // Secondary points (rewards) – must show actual reward balance so the card displays it
+        $rewardBalance = (int) ($account->reward_balance ?? 0);
         $secondaryPoints = new \Google_Service_Walletobjects_LoyaltyPoints();
-        $secondaryPoints->setLabel(' ');
+        $secondaryPoints->setLabel('Rewards');
         $secondaryPoints->setBalance(new \Google_Service_Walletobjects_LoyaltyPointsBalance([
-            'int' => 0,
+            'int' => $rewardBalance,
         ]));
         $loyaltyObject->setSecondaryLoyaltyPoints($secondaryPoints);
         
@@ -259,18 +258,32 @@ class GoogleWalletPassService
         )));
         $loyaltyObject->setBarcode($barcode);
         
+        // Hero image on the card (Pass Hero Image) – same as class so card shows it
+        $heroImage = $this->getPassHeroImageUri($store);
+        if (!$heroImage) {
+            $heroImage = $this->getPassLogoUri($store);
+        }
+        if (!$heroImage) {
+            $heroImage = $this->getLogoUri($store);
+        }
+        if (!$heroImage) {
+            $heroImage = $this->getDefaultLogoUri();
+        }
+        $objectImageModules = $this->buildImageModulesData($heroImage);
+        if (!empty($objectImageModules)) {
+            $loyaltyObject->setImageModulesData($objectImageModules);
+        }
+        
         // Note: Background color is set on LoyaltyClass, not LoyaltyObject
         // The object inherits styling from the class
         
-        // Text modules with circle indicators
+        // Text modules: stamp progress circles first (like Apple Wallet), then customer, then rewards
         $rewardTarget = $store->reward_target ?? 10;
         $circleIndicators = $this->generateCircleIndicators($account->stamp_count, $rewardTarget);
-        
-        // Customer first (left), then Rewards (right) when available.
         $textModulesData = [
             [
-                'header' => 'Stamps',
-                'body' => $circleIndicators . ' ' . sprintf('(%d/%d)', $account->stamp_count, $rewardTarget),
+                'header' => 'Progress',
+                'body' => $circleIndicators . '  ' . sprintf('%d / %d stamps', $account->stamp_count, $rewardTarget),
             ],
             [
                 'header' => 'Customer',
@@ -280,10 +293,9 @@ class GoogleWalletPassService
         if (($account->reward_balance ?? 0) > 0) {
             $textModulesData[] = [
                 'header' => 'Rewards',
-                'body' => '🎁 ' . (string) ($account->reward_balance ?? 0),
+                'body' => '🎁 ' . (string) ($account->reward_balance ?? 0) . ' available to redeem',
             ];
         }
-        
         $loyaltyObject->setTextModulesData($textModulesData);
 
         Log::info('Google Wallet: Preparing loyalty object', [
