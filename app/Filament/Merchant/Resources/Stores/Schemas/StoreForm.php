@@ -14,38 +14,28 @@ class StoreForm
     {
         return $schema
             ->components([
+                Select::make('user_id')
+                    ->relationship('user', 'name')
+                    ->required(),
                 TextInput::make('name')
-                    ->required()
-                    ->maxLength(255),
-                TextInput::make('address')
-                    ->maxLength(255),
+                    ->required(),
+                TextInput::make('slug')
+                    ->required(),
+                TextInput::make('address'),
                 TextInput::make('reward_target')
-                    ->numeric()
-                    ->required()
-                    ->minValue(1)
-                    ->default(10),
+                    ->numeric(),
                 TextInput::make('reward_title')
                     ->required()
-                    ->maxLength(255)
                     ->default('Free coffee'),
-                TextInput::make('brand_color')
-                    ->regex('/^#[0-9A-Fa-f]{6}$/'),
-                TextInput::make('background_color')
-                    ->regex('/^#[0-9A-Fa-f]{6}$/'),
-                FileUpload::make('logo_path')
-                    ->image()
-                    ->directory('logos')
-                    ->disk('public'),
-                FileUpload::make('pass_logo_path')
-                    ->image()
-                    ->directory('pass-logos')
-                    ->disk('public'),
+                TextInput::make('brand_color'),
+                TextInput::make('logo_path'),
+                TextInput::make('background_color'),
+                TextInput::make('pass_logo_path'),
                 FileUpload::make('pass_hero_image_path')
-                    ->image()
-                    ->directory('pass-heroes')
-                    ->disk('public'),
+                    ->image(),
                 Toggle::make('require_verification_for_redemption')
-                    ->default(false),
+                    ->required(),
+                TextInput::make('join_short_code'),
             ]);
     }
 }

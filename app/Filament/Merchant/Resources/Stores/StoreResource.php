@@ -13,20 +13,10 @@ use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
-use Illuminate\Database\Eloquent\Builder;
 
 class StoreResource extends Resource
 {
     protected static ?string $model = Store::class;
-
-    public static function getEloquentQuery(): Builder
-    {
-        $user = auth()->user();
-        if ($user->isSuperAdmin()) {
-            return parent::getEloquentQuery();
-        }
-        return parent::getEloquentQuery()->whereIn('id', $user->stores()->pluck('id'));
-    }
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
 

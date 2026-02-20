@@ -30,9 +30,11 @@ test('merchant sees customers across all their stores', function () {
         'customer_id' => $customer3->id,
     ]);
     
-    $response = $this->actingAs($userA)->followingRedirects()->get(route('merchant.customers.index'));
+    $response = $this->actingAs($userA)->get(route('merchant.customers.index'));
     
     $response->assertOk();
+    $response->assertSee('Store A1');
+    $response->assertSee('Store A2');
     $response->assertSee('customer1@example.com');
     $response->assertSee('customer2@example.com');
     $response->assertSee('customer3@example.com');
@@ -57,31 +59,31 @@ test('store filter works', function () {
         'customer_id' => $customer2->id,
     ]);
     
-    // Legacy route redirects to Filament; query params may be dropped - list shows all merchant's customers
-    $response = $this->actingAs($userA)->followingRedirects()->get(route('merchant.customers.index', ['store_id' => $storeA1->id]));
+    $response = $this->actingAs($userA)->get(route('merchant.customers.index', ['store_id' => $storeA1->id]));
     
     $response->assertOk();
     $response->assertSee('customer1@example.com');
+    $response->assertDontSee('customer2@example.com');
 });
 
 test('merchant cannot filter to another merchant store', function () {
     $userA = User::factory()->create();
     $userB = User::factory()->create();
     
-    Store::factory()->create(['user_id' => $userA->id]);
+    $storeA1 = Store::factory()->create(['user_id' => $userA->id]);
     $storeB1 = Store::factory()->create(['user_id' => $userB->id]);
     
-    // Redirect goes to Filament list (scoped to user's stores); other merchant data not visible
-    $response = $this->actingAs($userA)->followingRedirects()->get(route('merchant.customers.index', ['store_id' => $storeB1->id]));
+    $response = $this->actingAs($userA)->get(route('merchant.customers.index', ['store_id' => $storeB1->id]));
     
-    $response->assertOk();
+    $response->assertNotFound();
 });
 
 test('merchant cannot view other merchant loyalty account detail', function () {
     $userA = User::factory()->create();
     $userB = User::factory()->create();
     
-    Store::factory()->create(['user_id' => $userA->id]);
+    // Give userA a store so they can access the route
+    $storeA1 = Store::factory()->create(['user_id' => $userA->id]);
     $storeB1 = Store::factory()->create(['user_id' => $userB->id]);
     
     $customer = Customer::factory()->create();
@@ -91,8 +93,7 @@ test('merchant cannot view other merchant loyalty account detail', function () {
     ]);
     
     $response = $this->actingAs($userA)->get(route('merchant.customers.show', $account));
-    $response->assertRedirect();
-    $response = $this->get($response->headers->get('Location'));
+    
     $response->assertNotFound();
 });
 
@@ -114,10 +115,11 @@ test('search works by email', function () {
         'customer_id' => $customer2->id,
     ]);
     
-    $response = $this->actingAs($userA)->followingRedirects()->get(route('merchant.customers.index', ['q' => 'john']));
+    $response = $this->actingAs($userA)->get(route('merchant.customers.index', ['q' => 'john']));
     
     $response->assertOk();
     $response->assertSee('john@example.com');
+    $response->assertDontSee('jane@example.com');
 });
 
 test('search works by name', function () {
@@ -138,10 +140,11 @@ test('search works by name', function () {
         'customer_id' => $customer2->id,
     ]);
     
-    $response = $this->actingAs($userA)->followingRedirects()->get(route('merchant.customers.index', ['q' => 'John']));
+    $response = $this->actingAs($userA)->get(route('merchant.customers.index', ['q' => 'John']));
     
     $response->assertOk();
     $response->assertSee('John Smith');
+    $response->assertDontSee('Jane Smith');
 });
 
 test('search works by phone', function () {
@@ -162,11 +165,11 @@ test('search works by phone', function () {
         'customer_id' => $customer2->id,
     ]);
     
-    $response = $this->actingAs($userA)->followingRedirects()->get(route('merchant.customers.index', ['q' => '123456']));
+    $response = $this->actingAs($userA)->get(route('merchant.customers.index', ['q' => '123456']));
     
     $response->assertOk();
-    // Filament table may not display phone; search still scopes the list
-    $response->assertSee('john@example.com');
+    $response->assertSee('1234567890');
+    $response->assertDontSee('0987654321');
 });
 
 test('merchant can view their own loyalty account detail', function () {
@@ -181,7 +184,7 @@ test('merchant can view their own loyalty account detail', function () {
         'stamp_count' => 5,
     ]);
     
-    $response = $this->actingAs($userA)->followingRedirects()->get(route('merchant.customers.show', $account));
+    $response = $this->actingAs($userA)->get(route('merchant.customers.show', $account));
     
     $response->assertOk();
     $response->assertSee('Test Customer');

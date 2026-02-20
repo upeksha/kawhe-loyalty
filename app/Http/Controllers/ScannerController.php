@@ -18,9 +18,6 @@ class ScannerController extends Controller
     public function index()
     {
         $stores = Auth::user()->stores()->get();
-        if (request()->boolean('embed')) {
-            return view('scanner.embed', compact('stores'));
-        }
         return view('scanner.index', compact('stores'));
     }
 

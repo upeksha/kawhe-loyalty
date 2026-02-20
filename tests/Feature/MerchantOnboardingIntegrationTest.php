@@ -38,13 +38,11 @@ test('merchant can complete onboarding and create first store', function () {
 
 test('merchant with store can access merchant dashboard', function () {
     $user = User::factory()->create();
-    Store::factory()->create(['user_id' => $user->id]);
+    $store = Store::factory()->create(['user_id' => $user->id]);
     
     $this->actingAs($user);
     
     $response = $this->get(route('merchant.dashboard'));
-    $response->assertRedirect('/merchant');
-    $response = $this->get('/merchant');
     $response->assertOk();
 });
 
@@ -63,8 +61,6 @@ test('super admin can access admin dashboard', function () {
     $this->actingAs($admin);
     
     $response = $this->get(route('admin.dashboard'));
-    $response->assertRedirect('/admin');
-    $response = $this->get('/admin');
     $response->assertOk();
 });
 
@@ -73,7 +69,7 @@ test('regular user cannot access admin dashboard', function () {
     
     $this->actingAs($user);
     
-    $response = $this->get('/admin');
+    $response = $this->get(route('admin.dashboard'));
     $response->assertStatus(403);
 });
 
@@ -88,10 +84,9 @@ test('super admin can view all stores', function () {
     $this->actingAs($admin);
     
     $response = $this->get(route('merchant.stores.index'));
-    $response->assertRedirect('/merchant/stores');
-    $response = $this->get('/merchant/stores');
     $response->assertOk();
     
+    // Admin should see all 5 stores
     expect(Store::queryForUser($admin)->count())->toBe(5);
 });
 
@@ -112,14 +107,14 @@ test('merchant cannot access another merchants store', function () {
     $user1 = User::factory()->create();
     $user2 = User::factory()->create();
     
-    Store::factory()->create(['user_id' => $user1->id]);
+    $store1 = Store::factory()->create(['user_id' => $user1->id]);
     $store2 = Store::factory()->create(['user_id' => $user2->id]);
     
     $this->actingAs($user1);
     
-    $response = $this->get('/merchant/stores/'.$store2->id.'/edit');
-    // Filament resolves record from scoped query; other user's store not found (404 or 403)
-    expect([403, 404])->toContain($response->status());
+    // Try to access user2's store
+    $response = $this->get(route('merchant.stores.edit', $store2));
+    $response->assertStatus(404); // Should not find it via queryForUser
 });
 
 test('old routes redirect to new merchant routes', function () {
@@ -129,7 +124,7 @@ test('old routes redirect to new merchant routes', function () {
     $this->actingAs($user);
     
     $response = $this->get('/dashboard');
-    $response->assertRedirect('/merchant');
+    $response->assertRedirect(route('merchant.dashboard'));
     
     $response = $this->get('/stores');
     $response->assertRedirect(route('merchant.stores.index'));

@@ -14,25 +14,32 @@ class CustomersTable
     {
         return $table
             ->columns([
-                TextColumn::make('customer.name')
-                    ->label('Name')
+                TextColumn::make('name')
                     ->searchable(),
-                TextColumn::make('customer.email')
-                    ->label('Email')
+                TextColumn::make('email')
+                    ->label('Email address')
                     ->searchable(),
-                TextColumn::make('store.name')
-                    ->label('Store')
+                TextColumn::make('phone')
                     ->searchable(),
-                TextColumn::make('stamp_count')
-                    ->label('Stamps')
-                    ->sortable(),
-                TextColumn::make('reward_balance')
-                    ->label('Rewards')
-                    ->sortable(),
                 TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
+                TextColumn::make('updated_at')
+                    ->dateTime()
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+                TextColumn::make('email_verified_at')
+                    ->dateTime()
+                    ->sortable(),
+                TextColumn::make('email_verification_token_hash')
+                    ->searchable(),
+                TextColumn::make('email_verification_expires_at')
+                    ->dateTime()
+                    ->sortable(),
+                TextColumn::make('email_verification_sent_at')
+                    ->dateTime()
+                    ->sortable(),
             ])
             ->filters([
                 //
