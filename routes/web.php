@@ -1,6 +1,5 @@
 <?php
 
-use App\Http\Controllers\AdminDashboardController;
 use App\Http\Controllers\CardController;
 use App\Http\Controllers\JoinController;
 use App\Http\Controllers\MerchantCustomersController;
@@ -19,33 +18,22 @@ Route::get('/', function () {
     return view('welcome');
 });
 
-// Dashboard route - conditional redirect for merchants with stores
+// Dashboard route - conditional redirect (Filament panels)
 Route::middleware(['auth'])->get('/dashboard', function (Request $request) {
     $user = $request->user();
-    
-    // Super admin goes to admin dashboard
     if ($user->is_super_admin) {
-        return redirect()->route('admin.dashboard');
+        return redirect('/admin');
     }
-    
-    // Merchants with stores go to merchant dashboard
     if ($user->stores()->count() > 0) {
-        return redirect()->route('merchant.dashboard');
+        return redirect('/merchant');
     }
-    
-    // Others (new merchants without stores) see the dashboard view
     return view('dashboard');
 })->name('dashboard');
 
-// Legacy route redirects for merchant onboarding test
+// Legacy redirects (no store: send to onboarding)
 Route::middleware(['auth'])->group(function () {
-    Route::get('/stores', function () {
-        return redirect()->route('merchant.stores.index');
-    });
-    
-    Route::get('/scanner', function () {
-        return redirect()->route('merchant.scanner');
-    });
+    Route::get('/stores', fn () => redirect()->route('merchant.stores.index'));
+    Route::get('/scanner', fn () => redirect()->route('merchant.scanner'));
 });
 
 // Short join URL: /j/{code} -> redirect to full join flow
@@ -84,29 +72,26 @@ Route::middleware(['auth'])->prefix('merchant/onboarding')->name('merchant.onboa
     Route::post('/store', [OnboardingController::class, 'storeStore'])->name('store.store');
 });
 
-// Merchant area routes (requires store)
+// Merchant: named routes for backwards compatibility (redirect to Filament) + QR/PDF + legacy scanner (same backend)
+// Use /merchant/legacy/* so Filament can own /merchant, /merchant/stores, etc.
+Route::middleware(['auth', App\Http\Middleware\EnsureMerchantHasStore::class])->prefix('merchant/legacy')->name('merchant.')->group(function () {
+    Route::get('/dashboard', fn () => redirect('/merchant'))->name('dashboard');
+    Route::get('/stores', fn () => redirect('/merchant/stores'))->name('stores.index');
+    Route::get('/stores/create', fn () => redirect('/merchant/stores/create'))->name('stores.create');
+    Route::get('/stores/{store}/edit', fn (App\Models\Store $store) => redirect('/merchant/stores/'.$store->id.'/edit'))->name('stores.edit');
+    Route::get('/customers', function () {
+    $query = request()->getQueryString();
+    return redirect('/merchant/customers'.($query ? '?'.$query : ''));
+})->name('customers.index');
+    Route::get('/customers/{loyaltyAccount}', fn (App\Models\LoyaltyAccount $loyaltyAccount) => redirect('/merchant/customers/'.$loyaltyAccount->id.'/edit'))->name('customers.show');
+    Route::get('/customers/{loyaltyAccount}/edit', fn (App\Models\LoyaltyAccount $loyaltyAccount) => redirect('/merchant/customers/'.$loyaltyAccount->id.'/edit'))->name('customers.edit');
+    Route::get('/scanner', fn () => redirect('/merchant/scanner'))->name('scanner');
+});
+// Legacy scanner UI (reused by Filament Scanner page iframe; path distinct from redirect)
+Route::middleware(['auth', App\Http\Middleware\EnsureMerchantHasStore::class])->get('/merchant/legacy/scanner-ui', [ScannerController::class, 'index']);
 Route::middleware(['auth', App\Http\Middleware\EnsureMerchantHasStore::class])->prefix('merchant')->name('merchant.')->group(function () {
-    Route::get('/dashboard', function (Request $request) {
-        $usageService = app(\App\Services\Billing\UsageService::class);
-        $stats = $usageService->getUsageStats($request->user());
-        return view('dashboard', ['usageStats' => $stats]);
-    })->name('dashboard');
-    
-    Route::get('/stores', [StoreController::class, 'index'])->name('stores.index');
-    Route::get('/stores/create', [StoreController::class, 'create'])->name('stores.create');
-    Route::post('/stores', [StoreController::class, 'store'])->name('stores.store');
-    Route::get('/stores/{store}/edit', [StoreController::class, 'edit'])->name('stores.edit');
-    Route::put('/stores/{store}', [StoreController::class, 'update'])->name('stores.update');
-    Route::delete('/stores/{store}', [StoreController::class, 'destroy'])->name('stores.destroy');
     Route::get('/stores/{store}/qr', [StoreController::class, 'qr'])->name('stores.qr');
     Route::get('/stores/{store}/qr/pdf', [StoreController::class, 'qrPdf'])->name('stores.qr.pdf');
-
-    Route::get('/scanner', [ScannerController::class, 'index'])->name('scanner');
-    
-    Route::get('/customers', [MerchantCustomersController::class, 'index'])->name('customers.index');
-    Route::get('/customers/{loyaltyAccount}', [MerchantCustomersController::class, 'show'])->name('customers.show');
-    Route::get('/customers/{loyaltyAccount}/edit', [MerchantCustomersController::class, 'edit'])->name('customers.edit');
-    Route::put('/customers/{loyaltyAccount}', [MerchantCustomersController::class, 'update'])->name('customers.update');
 });
 
 // Scanner actions (keep outside merchant group to avoid double middleware)
@@ -117,9 +102,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/redeem', [ScannerController::class, 'redeem'])->middleware('rate.limit.stamps')->name('redeem.store');
 });
 
-// Admin area routes (super admin only)
+// Admin: backwards-compatible named route (redirect to Filament)
 Route::middleware(['auth', App\Http\Middleware\SuperAdmin::class])->prefix('admin')->name('admin.')->group(function () {
-    Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
+    Route::get('/dashboard', fn () => redirect('/admin'))->name('dashboard');
 });
 
 Route::middleware('auth')->group(function () {

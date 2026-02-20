@@ -8,7 +8,7 @@ use Illuminate\Support\Carbon;
 
 test('scanner page is auth protected', function () {
     $response = $this->get('/merchant/scanner');
-    $response->assertRedirect('/login');
+    $response->assertRedirect('/merchant/login');
 });
 
 test('scanner page loads for authenticated user', function () {

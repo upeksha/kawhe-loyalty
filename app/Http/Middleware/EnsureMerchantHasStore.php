@@ -22,6 +22,10 @@ class EnsureMerchantHasStore
         if ($routeName && (str_starts_with($routeName, 'merchant.stores.') || $routeName === 'merchant.stores.qr')) {
             return $next($request);
         }
+        // Filament merchant panel: allow /merchant/stores* (create/edit stores)
+        if ($request->is('merchant/stores', 'merchant/stores/*')) {
+            return $next($request);
+        }
 
         // Super admins bypass this check
         if ($user && $user->isSuperAdmin()) {

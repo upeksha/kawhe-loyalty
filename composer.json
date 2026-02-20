@@ -9,6 +9,7 @@
         "php": "^8.2",
         "barryvdh/laravel-dompdf": "^3.1",
         "byte5/laravel-passgenerator": "*",
+        "filament/filament": "^4.0",
         "google/apiclient": "^2.15",
         "laravel/cashier": "^16.2",
         "laravel/framework": "^12.0",
@@ -61,7 +62,8 @@
         ],
         "post-autoload-dump": [
             "Illuminate\\Foundation\\ComposerScripts::postAutoloadDump",
-            "@php artisan package:discover --ansi"
+            "@php artisan package:discover --ansi",
+            "@php artisan filament:upgrade"
         ],
         "post-update-cmd": [
             "@php artisan vendor:publish --tag=laravel-assets --ansi --force"

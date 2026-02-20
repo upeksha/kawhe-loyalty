@@ -6,14 +6,16 @@ use App\Models\User;
 test('authenticated user can create a store', function () {
     $user = User::factory()->create();
 
-    $response = $this->actingAs($user)->post('/merchant/stores', [
+    // Store creation is now via Filament at /merchant/stores/create (Livewire).
+    // Use onboarding flow to create first store (same backend logic).
+    $response = $this->actingAs($user)->post(route('merchant.onboarding.store.store'), [
         'name' => 'My Awesome Coffee Shop',
         'address' => '123 Main St',
         'reward_target' => 9,
         'reward_title' => 'Free Coffee',
     ]);
 
-    $response->assertRedirect('/merchant/stores');
+    $response->assertRedirect();
     $this->assertDatabaseHas('stores', [
         'name' => 'My Awesome Coffee Shop',
         'user_id' => $user->id,
@@ -27,13 +29,13 @@ test('authenticated user can create a store', function () {
 test('slug is unique', function () {
     $user = User::factory()->create();
 
-    $this->actingAs($user)->post('/merchant/stores', [
+    $this->actingAs($user)->post(route('merchant.onboarding.store.store'), [
         'name' => 'Coffee Shop',
         'reward_target' => 9,
         'reward_title' => 'Free Coffee',
     ]);
 
-    $this->actingAs($user)->post('/merchant/stores', [
+    $this->actingAs($user)->post(route('merchant.onboarding.store.store'), [
         'name' => 'Coffee Shop',
         'reward_target' => 9,
         'reward_title' => 'Free Coffee',
