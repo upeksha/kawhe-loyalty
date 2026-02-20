@@ -37,6 +37,7 @@ class MerchantPanelProvider extends ServiceProvider
             ->path('merchant')
             ->login()
             ->emailVerification(false)
+            ->spaUrlExceptions(['*scanner*'])
             ->userMenuItems([
                 'profile' => Action::make('profile')
                     ->label(__('Profile'))
