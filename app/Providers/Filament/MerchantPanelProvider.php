@@ -3,6 +3,7 @@
 namespace App\Providers\Filament;
 
 use App\Http\Middleware\EnsureMerchantHasStore;
+use Filament\Actions\Action;
 use Filament\Facades\Filament;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
@@ -11,6 +12,7 @@ use Filament\Http\Middleware\DispatchServingFilamentEvent;
 use Filament\Pages\Dashboard;
 use Filament\Panel;
 use Filament\Support\Colors\Color;
+use Filament\Support\Icons\Heroicon;
 use Filament\Widgets\AccountWidget;
 use Filament\Widgets\FilamentInfoWidget;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
@@ -35,6 +37,18 @@ class MerchantPanelProvider extends ServiceProvider
             ->path('merchant')
             ->login()
             ->emailVerification(false)
+            ->userMenuItems([
+                'profile' => Action::make('profile')
+                    ->label(__('Profile'))
+                    ->url(fn () => route('profile.edit'))
+                    ->icon(Heroicon::OutlinedUserCircle)
+                    ->sort(0),
+                Action::make('billing')
+                    ->label('Billing')
+                    ->url(fn () => route('billing.index'))
+                    ->icon(Heroicon::OutlinedCreditCard)
+                    ->sort(1),
+            ])
             ->colors([
                 'primary' => Color::Amber,
             ])
