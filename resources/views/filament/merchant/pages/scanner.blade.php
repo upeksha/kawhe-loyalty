@@ -3,7 +3,7 @@
         <div class="p-6">
             <p class="mb-4 text-sm text-gray-500 dark:text-gray-400">Use the scanner below to stamp or redeem loyalty cards. Same backend as before &mdash; stamp and redeem work as usual.</p>
             <iframe
-                src="{{ url('/merchant/legacy/scanner-ui') }}"
+                src="{{ url('/merchant/legacy/scanner-ui?embed=1') }}"
                 title="Scanner"
                 class="w-full rounded-lg border border-gray-200 dark:border-gray-700"
                 style="min-height: 700px;"
