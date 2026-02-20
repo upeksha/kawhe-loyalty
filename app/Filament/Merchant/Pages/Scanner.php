@@ -14,14 +14,4 @@ class Scanner extends Page
     {
         return 'Scanner';
     }
-
-    /**
-     * @return array<string, mixed>
-     */
-    protected function getViewData(): array
-    {
-        return [
-            'stores' => auth()->user()->stores()->get(),
-        ];
-    }
 }

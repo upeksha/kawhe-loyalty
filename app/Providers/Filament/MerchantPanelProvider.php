@@ -41,11 +41,13 @@ class MerchantPanelProvider extends ServiceProvider
                 'profile' => Action::make('profile')
                     ->label(__('Profile'))
                     ->url(fn () => route('profile.edit'))
+                    ->openUrlInNewTab()
                     ->icon(Heroicon::OutlinedUserCircle)
                     ->sort(0),
                 Action::make('billing')
                     ->label('Billing')
                     ->url(fn () => route('billing.index'))
+                    ->openUrlInNewTab()
                     ->icon(Heroicon::OutlinedCreditCard)
                     ->sort(1),
             ])
