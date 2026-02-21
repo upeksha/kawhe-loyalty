@@ -29,7 +29,7 @@ This will:
 
 1. **Open the card page URL** in Safari on your iPhone:
    ```
-   https://testing.kawhe.shop/c/{public_token}
+   https://app.kawhe.shop/c/{public_token}
    ```
    (Replace `{public_token}` with the one from the test script output)
 
@@ -41,7 +41,7 @@ This will:
 ### Option B: Direct Download URL
 
 1. **Copy the signed download URL** from test script output
-   - It will look like: `https://testing.kawhe.shop/wallet/apple/.../download?signature=...`
+   - It will look like: `https://app.kawhe.shop/wallet/apple/.../download?signature=...`
 
 2. **Open it in Safari on iPhone**
    - The pass should download and prompt to add to Wallet

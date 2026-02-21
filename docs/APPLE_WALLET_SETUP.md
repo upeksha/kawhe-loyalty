@@ -137,7 +137,7 @@ When a merchant scans the pass:
 
 2. **Update .env** with production values:
    ```env
-   APP_URL=https://testing.kawhe.shop
+   APP_URL=https://app.kawhe.shop
    APPLE_PASS_TYPE_IDENTIFIER=pass.com.kawhe.loyalty
    APPLE_TEAM_IDENTIFIER=YOUR_PRODUCTION_TEAM_ID
    ```

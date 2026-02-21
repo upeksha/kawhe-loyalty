@@ -60,7 +60,7 @@ Then test with curl:
 
 ```bash
 # Replace URL with the one from above
-curl -I "https://testing.kawhe.shop/wallet/apple/Y6S1PZh6WRL2cukm5BozjqmyGG2HHUzuWsAwzOZI/download?expires=...&signature=..."
+curl -I "https://app.kawhe.shop/wallet/apple/Y6S1PZh6WRL2cukm5BozjqmyGG2HHUzuWsAwzOZI/download?expires=...&signature=..."
 ```
 
 Check the headers:

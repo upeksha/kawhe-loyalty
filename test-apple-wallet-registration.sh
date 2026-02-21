@@ -9,12 +9,12 @@ RED='\033[0;31m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
-BASE_URL="${1:-https://testing.kawhe.shop}"
+BASE_URL="${1:-https://app.kawhe.shop}"
 AUTH_TOKEN="${2:-}"
 
 if [ -z "$AUTH_TOKEN" ]; then
     echo -e "${YELLOW}Usage: $0 [BASE_URL] [AUTH_TOKEN]${NC}"
-    echo "Example: $0 https://testing.kawhe.shop rpLceO5ApZPgVRXhDLRUH5fEaE85flvu0tXbvKoE"
+    echo "Example: $0 https://app.kawhe.shop rpLceO5ApZPgVRXhDLRUH5fEaE85flvu0tXbvKoE"
     echo ""
     echo "Getting auth token from first loyalty account..."
     AUTH_TOKEN=$(php artisan tinker --execute="

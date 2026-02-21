@@ -71,7 +71,7 @@ exit
 ```
 
 **Expected:**
-- `webServiceURL`: `https://testing.kawhe.shop/wallet` (NOT `/wallet/v1`)
+- `webServiceURL`: `https://app.kawhe.shop/wallet` (NOT `/wallet/v1`)
 - `authenticationToken`: The account's `public_token`
 
 ### 2. Verify Routes
@@ -99,7 +99,7 @@ echo 'Token: ' . \$account->public_token . PHP_EOL;
 "
 
 # Test registration
-curl -X POST https://testing.kawhe.shop/wallet/v1/devices/test-device-123/registrations/pass.com.kawhe.loyalty/kawhe-2-1 \
+curl -X POST https://app.kawhe.shop/wallet/v1/devices/test-device-123/registrations/pass.com.kawhe.loyalty/kawhe-2-1 \
   -H "Content-Type: application/json" \
   -H "Authorization: ApplePass <PUBLIC_TOKEN>" \
   -d '{"pushToken":"test-push-token"}' \

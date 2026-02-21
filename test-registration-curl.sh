@@ -2,7 +2,7 @@
 
 # Quick test script for Apple Wallet registration endpoint
 
-BASE_URL="${1:-https://testing.kawhe.shop}"
+BASE_URL="${1:-https://app.kawhe.shop}"
 
 echo "=== Testing Apple Wallet Registration Endpoint ==="
 echo ""

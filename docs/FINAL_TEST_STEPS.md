@@ -21,7 +21,7 @@ php artisan cache:clear
 3. Should work without 500 error now
 
 ### 3. Test Card Viewing
-1. Open an existing card URL: `https://testing.kawhe.shop/c/{public_token}`
+1. Open an existing card URL: `https://app.kawhe.shop/c/{public_token}`
 2. Should load without 500 error
 
 ### 4. Test Apple Wallet Download

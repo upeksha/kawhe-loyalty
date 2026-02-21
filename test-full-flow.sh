@@ -6,7 +6,7 @@ echo "=== Full Real-World Test Flow ==="
 echo ""
 
 echo "Step 1: Create Merchant Account"
-echo "  1. Go to: https://testing.kawhe.shop/register"
+echo "  1. Go to: https://app.kawhe.shop/register"
 echo "  2. Create account and store"
 echo "  3. Note your store ID from dashboard"
 echo ""
@@ -29,7 +29,7 @@ if [ -n "$STORE_ID" ] && [ "$STORE_ID" != "No" ]; then
     if (\$store) echo \$store->name;
     " 2>/dev/null | tail -1)
     echo "  Store: $STORE_NAME (ID: $STORE_ID)"
-    echo "  2. Join URL: https://testing.kawhe.shop/join/$STORE_ID"
+    echo "  2. Join URL: https://app.kawhe.shop/join/$STORE_ID"
     echo "  3. Open on iPhone and create card"
 else
     echo "  ⚠️  No stores found. Create one first via web app."
@@ -42,7 +42,7 @@ echo "  2. Wait 10-20 seconds for registration"
 echo ""
 
 echo "Step 4: Test Stamping"
-echo "  Option A: Use merchant scanner at https://testing.kawhe.shop/scanner"
+echo "  Option A: Use merchant scanner at https://app.kawhe.shop/scanner"
 echo "  Option B: Manual stamp via tinker (see FULL_REAL_WORLD_TEST.md)"
 echo ""
 

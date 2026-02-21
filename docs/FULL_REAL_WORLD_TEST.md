@@ -7,13 +7,13 @@ Test the complete flow: Create Merchant → Create Card → Add to Wallet → Te
 ### Via Web App
 
 1. **Register/Login:**
-   - Go to: `https://testing.kawhe.shop/register`
+   - Go to: `https://app.kawhe.shop/register`
    - Create a new account or login
    - Complete onboarding if needed
 
 2. **Create a Store:**
    - After login, you'll be prompted to create a store
-   - Or go to: `https://testing.kawhe.shop/stores/create`
+   - Or go to: `https://app.kawhe.shop/stores/create`
    - Fill in:
      - Store Name
      - Brand Color (optional)
@@ -22,7 +22,7 @@ Test the complete flow: Create Merchant → Create Card → Add to Wallet → Te
    - Click "Create Store"
 
 3. **Get Store QR Code:**
-   - Go to your dashboard: `https://testing.kawhe.shop/dashboard`
+   - Go to your dashboard: `https://app.kawhe.shop/dashboard`
    - You'll see your store's QR code
    - This is what customers will scan to join
 
@@ -33,7 +33,7 @@ Test the complete flow: Create Merchant → Create Card → Add to Wallet → Te
 1. **On Your iPhone:**
    - Open Camera app
    - Scan the store QR code from the merchant dashboard
-   - This will take you to: `https://testing.kawhe.shop/join/{store_id}`
+   - This will take you to: `https://app.kawhe.shop/join/{store_id}`
 
 2. **Join as Customer:**
    - Enter your name (e.g., "Test Customer")
@@ -42,7 +42,7 @@ Test the complete flow: Create Merchant → Create Card → Add to Wallet → Te
 
 3. **Card Created:**
    - You'll be redirected to your loyalty card page
-   - URL will be: `https://testing.kawhe.shop/c/{public_token}`
+   - URL will be: `https://app.kawhe.shop/c/{public_token}`
    - **Save this URL!**
 
 ### Option B: Via Direct URL
@@ -61,7 +61,7 @@ Test the complete flow: Create Merchant → Create Card → Add to Wallet → Te
    ```
 
 2. **Open Join URL on iPhone:**
-   - Go to: `https://testing.kawhe.shop/join/{store_id}`
+   - Go to: `https://app.kawhe.shop/join/{store_id}`
    - Enter customer name
    - Click "Join"
 
@@ -98,7 +98,7 @@ Test the complete flow: Create Merchant → Create Card → Add to Wallet → Te
 ### Option A: Use Merchant Scanner (Recommended)
 
 1. **Open Merchant Scanner:**
-   - Go to: `https://testing.kawhe.shop/scanner`
+   - Go to: `https://app.kawhe.shop/scanner`
    - Make sure you're logged in as the merchant
 
 2. **Scan QR from Wallet:**
@@ -226,7 +226,7 @@ exit
    - Show the QR code (should be `LR:{redeem_token}`)
 
 2. **Scan with Merchant Scanner:**
-   - Go to `https://testing.kawhe.shop/scanner`
+   - Go to `https://app.kawhe.shop/scanner`
    - Scan the QR code
    - It should detect `LR:` prefix and redeem
 
@@ -348,7 +348,7 @@ echo "=== Full Real-World Test Flow ==="
 echo ""
 
 echo "Step 1: Create Merchant Account"
-echo "  1. Go to: https://testing.kawhe.shop/register"
+echo "  1. Go to: https://app.kawhe.shop/register"
 echo "  2. Create account and store"
 echo "  3. Note your store ID from dashboard"
 echo ""
@@ -367,7 +367,7 @@ if (\$store) {
 
 if [ -n "$STORE_ID" ] && [ "$STORE_ID" != "No" ]; then
     echo "  Store ID: $STORE_ID"
-    echo "  2. Join URL: https://testing.kawhe.shop/join/$STORE_ID"
+    echo "  2. Join URL: https://app.kawhe.shop/join/$STORE_ID"
     echo "  3. Open on iPhone and create card"
 else
     echo "  ⚠️  No stores found. Create one first via web app."
@@ -380,7 +380,7 @@ echo "  2. Wait 10-20 seconds for registration"
 echo ""
 
 echo "Step 4: Test Stamping"
-echo "  Option A: Use merchant scanner at https://testing.kawhe.shop/scanner"
+echo "  Option A: Use merchant scanner at https://app.kawhe.shop/scanner"
 echo "  Option B: Manual stamp via tinker (see FULL_REAL_WORLD_TEST.md)"
 echo ""
 

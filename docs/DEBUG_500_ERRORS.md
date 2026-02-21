@@ -138,7 +138,7 @@ php artisan tinker
 $account = \App\Models\LoyaltyAccount::first();
 if ($account) {
     echo "Account public_token: " . $account->public_token . "\n";
-    echo "Test URL: https://testing.kawhe.shop/c/" . $account->public_token . "\n";
+    echo "Test URL: https://app.kawhe.shop/c/" . $account->public_token . "\n";
     
     // Try loading the account with relationships
     $account->load(['store', 'customer']);

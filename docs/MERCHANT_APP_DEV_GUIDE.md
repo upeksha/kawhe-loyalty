@@ -70,6 +70,6 @@ If all of the above still work, your changes didn’t break the app.
 ## 5. Backend reference
 
 - **API behaviour and routes:** See **`FLUTTER_MERCHANT_APP_INTEGRATION.md`** in this repo (or ask for the latest version).
-- **Base URL:** Use the same domain as the web app (e.g. `https://testing.kawhe.shop`); API prefix is `/api/v1`, verify-email is at root `/c/.../verify-email/send`.
+- **Base URL:** Use the same domain as the web app (e.g. `https://app.kawhe.shop`); API prefix is `/api/v1`, verify-email is at root `/c/.../verify-email/send`.
 
 If you need new API fields or endpoints, coordinate with the backend team so both sides stay in sync.

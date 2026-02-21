@@ -32,7 +32,7 @@ QUEUE_CONNECTION=database
 # MAIL_WELCOME_SYNC=false
 
 # App URL (must be correct for verification links)
-APP_URL=https://testing.kawhe.shop
+APP_URL=https://app.kawhe.shop
 APP_ENV=production
 ```
 

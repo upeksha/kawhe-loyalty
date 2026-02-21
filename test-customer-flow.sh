@@ -44,7 +44,7 @@ echo "Serial: $SERIAL"
 echo ""
 
 # Card URL
-CARD_URL="https://testing.kawhe.shop/c/${PUBLIC_TOKEN}"
+CARD_URL="https://app.kawhe.shop/c/${PUBLIC_TOKEN}"
 echo "2. Card URL:"
 echo "   $CARD_URL"
 echo "   👆 Open this on your iPhone to add to Wallet"

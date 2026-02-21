@@ -8,7 +8,7 @@ This document confirms how the Laravel API is aligned with the **Flutter merchan
 
 | Item | Laravel |
 |------|--------|
-| **API prefix** | `/api/v1` (see `routes/api.php`). Full base URL: e.g. `https://testing.kawhe.shop/api/v1`. |
+| **API prefix** | `/api/v1` (see `routes/api.php`). Full base URL: e.g. `https://app.kawhe.shop/api/v1`. |
 | **Verify-email (public)** | Site root, **no** `/api/v1`: `POST /c/{public_token}/verify-email/send`. |
 | **Auth** | Laravel Sanctum. App sends `Authorization: Bearer <token>`. |
 | **401** | App should clear token and redirect to login. |

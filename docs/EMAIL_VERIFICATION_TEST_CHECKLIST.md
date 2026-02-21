@@ -95,7 +95,7 @@ This document provides step-by-step test procedures to verify email verification
    MAIL_FROM_ADDRESS=noreply@yourdomain.com
    MAIL_FROM_NAME="Kawhe Loyalty"
    QUEUE_CONNECTION=database
-   APP_URL=https://testing.kawhe.shop
+   APP_URL=https://app.kawhe.shop
    APP_ENV=production
    ```
 

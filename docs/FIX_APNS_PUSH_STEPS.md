@@ -160,13 +160,13 @@ exit
 ```
 
 **Expected:**
-- `webServiceURL`: `https://testing.kawhe.shop/wallet`
+- `webServiceURL`: `https://app.kawhe.shop/wallet`
 - `authenticationToken`: The account's `wallet_auth_token`
 
 ## Step 8: Test Full Flow
 
 1. **Add pass to iPhone Wallet**
-   - Visit card page: `https://testing.kawhe.shop/c/{public_token}`
+   - Visit card page: `https://app.kawhe.shop/c/{public_token}`
    - Click "Add to Apple Wallet"
    - Verify pass appears in Wallet
 

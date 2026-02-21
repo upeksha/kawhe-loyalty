@@ -24,7 +24,7 @@ if ($isUp) {
     // Opening downward (default) - position below the trigger
     $positionClasses = 'top-full mt-2';
     $alignmentClasses = match ($align) {
-        'left' => 'ltr:origin-top-left rtl:origin-top-right start-0 left-0',
+        'left' => 'ltr:origin-top-left rtl:origin-top-right start-0 left-0', 
         'top' => 'origin-top',
         default => 'ltr:origin-top-right rtl:origin-top-left end-0 right-0',
     };

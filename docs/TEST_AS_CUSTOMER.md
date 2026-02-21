@@ -28,13 +28,13 @@ This will:
 - Generate the card page URL
 - Show you the download link
 
-**Copy the card page URL** (looks like: `https://testing.kawhe.shop/c/{public_token}`)
+**Copy the card page URL** (looks like: `https://app.kawhe.shop/c/{public_token}`)
 
 ## Step 2: Add Pass to iPhone Wallet
 
 1. **Open the card URL on your iPhone:**
    - Open Safari on your iPhone
-   - Go to: `https://testing.kawhe.shop/c/{public_token}`
+   - Go to: `https://app.kawhe.shop/c/{public_token}`
    - (Replace `{public_token}` with the one from Step 1)
 
 2. **Add to Wallet:**
@@ -86,7 +86,7 @@ exit
 ### Option A: Use Merchant Scanner (Recommended)
 
 1. **Open Merchant Scanner:**
-   - Go to: `https://testing.kawhe.shop/scanner`
+   - Go to: `https://app.kawhe.shop/scanner`
    - Log in as a merchant
 
 2. **Scan QR Code from Wallet:**
@@ -329,7 +329,7 @@ echo "Serial: $SERIAL"
 echo ""
 
 # Card URL
-CARD_URL="https://testing.kawhe.shop/c/${PUBLIC_TOKEN}"
+CARD_URL="https://app.kawhe.shop/c/${PUBLIC_TOKEN}"
 echo "2. Card URL:"
 echo "   $CARD_URL"
 echo "   Open this on your iPhone to add to Wallet"

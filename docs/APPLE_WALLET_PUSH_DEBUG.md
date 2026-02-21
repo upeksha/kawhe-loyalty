@@ -57,7 +57,7 @@ echo 'Public Token: ' . \$account->public_token . PHP_EOL;
 "
 
 # Then test registration (replace with your values)
-curl -X POST https://testing.kawhe.shop/wallet/v1/devices/test-device-123/registrations/pass.com.kawhe.loyalty/kawhe-2-1 \
+curl -X POST https://app.kawhe.shop/wallet/v1/devices/test-device-123/registrations/pass.com.kawhe.loyalty/kawhe-2-1 \
   -H "Authorization: ApplePass 658b39f8f3f73f0de6ac8bdb2643b09b3e85cc8a0ff04304d9911b8b26e7b45a" \
   -H "Content-Type: application/json" \
   -d '{"pushToken": "test-token-12345"}' \
@@ -83,7 +83,7 @@ tail -f storage/logs/laravel.log | grep -i "wallet\|registration"
 ```php
 // In pass.json, you need:
 {
-  "webServiceURL": "https://testing.kawhe.shop/wallet/v1",
+  "webServiceURL": "https://app.kawhe.shop/wallet/v1",
   "authenticationToken": "658b39f8f3f73f0de6ac8bdb2643b09b3e85cc8a0ff04304d9911b8b26e7b45a",
   // ... other pass fields
 }
