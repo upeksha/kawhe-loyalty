@@ -33,20 +33,58 @@ APPLE_ORGANIZATION_NAME=Kawhe
 
 ## Step 3: Store Certificates
 
+Certificates are read from the **local** disk, whose root is `storage/app/private/`. Paths in `.env` are relative to that root.
+
 1. Create the certificates directory:
    ```bash
-   mkdir -p storage/app/passgenerator/certs
+   mkdir -p storage/app/private/passgenerator/certs
    ```
 
 2. Place your certificates:
-   - `storage/app/passgenerator/certs/certificate.p12` - Your pass certificate
-   - `storage/app/passgenerator/certs/AppleWWDRCA.pem` - WWDR certificate (download from Apple)
+   - `storage/app/private/passgenerator/certs/certificate.p12` - Your pass certificate
+   - `storage/app/private/passgenerator/certs/AppleWWDRCA.pem` - WWDR certificate (download from Apple)
 
 3. Set proper permissions:
    ```bash
-   chmod 600 storage/app/passgenerator/certs/*.p12
-   chmod 644 storage/app/passgenerator/certs/*.pem
+   chmod 600 storage/app/private/passgenerator/certs/*.p12
+   chmod 644 storage/app/private/passgenerator/certs/*.pem
    ```
+
+## Server deployment (testing / production)
+
+On each server, the Apple Wallet certificate and WWDR file are **not in git** and must be uploaded manually.
+
+1. **Create the directory** (from the Laravel project root, e.g. `/var/www/kawhe-testing`):
+   ```bash
+   mkdir -p storage/app/private/passgenerator/certs
+   ```
+
+2. **Upload these files** (from your Apple Developer setup):
+   - `storage/app/private/passgenerator/certs/certificate.p12` - Pass Type ID certificate (PKCS#12) from Apple Developer
+   - `storage/app/private/passgenerator/certs/AppleWWDRCA.pem` - WWDR intermediate (PEM); get the [DER from Apple](https://www.apple.com/certificateauthority/) and convert to PEM if needed
+
+3. **Set permissions** so the web server can read them:
+   ```bash
+   chmod 600 storage/app/private/passgenerator/certs/certificate.p12
+   chmod 644 storage/app/private/passgenerator/certs/AppleWWDRCA.pem
+   ```
+
+4. **Configure `.env`** on the server. Use **relative** paths (same values on testing and production); the passgenerator disk root is `storage/app/private/`. Do **not** use absolute paths from another server (e.g. `/var/www/kawhe/...` on **kawhe-testing**).
+   ```env
+   CERTIFICATE_PATH=passgenerator/certs/certificate.p12
+   WWDR_CERTIFICATE=passgenerator/certs/AppleWWDRCA.pem
+   CERTIFICATE_PASS=your_certificate_password
+   APPLE_PASS_TYPE_IDENTIFIER=pass.com.kawhe.loyalty
+   APPLE_TEAM_IDENTIFIER=YOUR_TEAM_ID
+   APPLE_ORGANIZATION_NAME=Kawhe
+   ```
+
+5. **Clear config cache** after changing `.env`:
+   ```bash
+   php artisan config:clear
+   ```
+
+If you see **"No certificate found on passgenerator/certs/certificate.p12"**, the file is missing at `storage/app/private/passgenerator/certs/certificate.p12` on that server—follow the steps above.
 
 ## Step 4: Add Pass Images
 
@@ -107,6 +145,11 @@ When a merchant scans the pass:
 **Current Implementation**: Pass barcode contains `public_token` only. Scanner already handles both formats (with/without `LA:` prefix).
 
 ## Troubleshooting
+
+### "No certificate found on passgenerator/certs/certificate.p12"
+- The certificate file is not on the server. Certs are not in git. See **Server deployment** above.
+- Ensure `certificate.p12` and `AppleWWDRCA.pem` exist at `storage/app/private/passgenerator/certs/` on the server.
+- If you use a custom disk for certs (`PASSGENERATOR_CONFIG_DISK`), ensure that disk’s root contains `passgenerator/certs/certificate.p12`.
 
 ### "Invalid pass" error
 - Check certificate path and password are correct

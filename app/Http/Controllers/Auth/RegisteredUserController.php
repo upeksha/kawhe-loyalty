@@ -72,7 +72,7 @@ class RegisteredUserController extends Controller
 
         Auth::login($user);
 
-        // New merchants have no stores yet: send them straight to onboarding
-        return redirect()->route('merchant.onboarding.store');
+        // New merchants have no stores yet: send them to onboarding v2 wizard
+        return redirect()->route('merchant.onboarding.wizard.store-basics');
     }
 }

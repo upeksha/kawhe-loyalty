@@ -295,7 +295,7 @@
                             <h3 class="text-lg font-bold mb-4 text-stone-900">Cooldown Active</h3>
                             <div class="mb-4">
                                 <p class="text-stone-700 mb-2" x-text="`Stamped ${cooldownData?.seconds_since_last || 0}s ago — add another stamp anyway?`"></p>
-                                <p class="text-sm text-stone-500">Cooldown: <span x-text="cooldownData?.cooldown_seconds || 30"></span> seconds</p>
+                                <p class="text-sm text-stone-500">Cooldown: <span x-text="cooldownData?.cooldown_seconds || 5"></span> seconds</p>
                             </div>
                             <div class="flex justify-end gap-2">
                                 <button @click="showCooldownModal = false; cooldownData = null" class="px-4 py-2 text-sm font-medium text-stone-700 bg-stone-100 rounded-lg hover:bg-stone-200 transition">
@@ -404,7 +404,7 @@
                 pendingCooldownToken: null,
                 pendingCooldownCount: 1,
                 cooldownActive: false,
-                cooldownSeconds: 3,
+                cooldownSeconds: 5,
                 cooldownInterval: null,
 
                 init() {
@@ -711,7 +711,7 @@
                                     }
                                 },
 
-                                startCooldown(seconds = 3) {
+                                startCooldown(seconds = 5) {
                                     // Clear any existing cooldown
                                     if (this.cooldownInterval) {
                                         clearInterval(this.cooldownInterval);
@@ -733,7 +733,7 @@
                                             clearInterval(this.cooldownInterval);
                                             this.cooldownInterval = null;
                                             this.cooldownActive = false;
-                                            this.cooldownSeconds = 3;
+                                            this.cooldownSeconds = 5;
                                             
                                             // Resume scanner
                                             this.resumeScanner();
@@ -1099,7 +1099,7 @@
                             }
                             
                             // Start cooldown after successful redemption
-                            this.startCooldown(3);
+                            this.startCooldown(data.cooldown_seconds ?? 5);
                         } else {
                             this.success = false;
                             // Use improved error messages from server
@@ -1200,8 +1200,8 @@
                                 this.message += ' 🎉 Reward unlocked!';
                             }
                             
-                            // Start cooldown after successful stamp
-                            this.startCooldown(3);
+                            // Start cooldown after successful stamp (server sends cooldown_seconds, default 5)
+                            this.startCooldown(data.cooldown_seconds ?? 5);
                         } else {
                             this.success = false;
                             this.storeSwitched = false;

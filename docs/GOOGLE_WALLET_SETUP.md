@@ -50,14 +50,13 @@ Add these to your `.env` file:
 # Google Wallet Configuration
 GOOGLE_WALLET_ISSUER_ID=your_issuer_id_here
 GOOGLE_WALLET_CLASS_ID=loyalty_class_kawhe
-GOOGLE_WALLET_SERVICE_ACCOUNT_KEY=storage/app/private/google-wallet/service-account.json
+GOOGLE_WALLET_SERVICE_ACCOUNT_KEY=google-wallet/service-account.json
 GOOGLE_WALLET_REVIEW_STATUS=UNDER_REVIEW  # Use 'UNDER_REVIEW' for testing, 'APPROVED' for production (after Google approval)
 ```
 
 **Important**: 
 - Replace `your_issuer_id_here` with your actual Issuer ID
-- Place the service account JSON file at the path specified in `GOOGLE_WALLET_SERVICE_ACCOUNT_KEY`
-- The path is relative to your Laravel project root
+- The app looks for the key file under `storage/app/private/`; use the short path `google-wallet/service-account.json` (recommended) or the full path `storage/app/private/google-wallet/service-account.json`
 
 ## Step 6: Store Service Account Key
 
@@ -76,6 +75,36 @@ GOOGLE_WALLET_REVIEW_STATUS=UNDER_REVIEW  # Use 'UNDER_REVIEW' for testing, 'APP
    chmod 600 storage/app/private/google-wallet/service-account.json
    ```
 
+## Server deployment (testing / production)
+
+On each server (e.g. testing.kawhe.shop, app.kawhe.shop) the service account JSON must be present; it is not in git.
+
+1. **Create the directory** (from the Laravel project root, e.g. `/var/www/kawhe-testing`):
+   ```bash
+   mkdir -p storage/app/private/google-wallet
+   ```
+
+2. **Upload the key file** to `storage/app/private/google-wallet/service-account.json` (e.g. copy from a secure location or upload the JSON you downloaded from Google Cloud).
+
+3. **Set permissions** so the web server can read it:
+   ```bash
+   chmod 600 storage/app/private/google-wallet/service-account.json
+   ```
+
+4. **Configure `.env`** on the server:
+   ```env
+   GOOGLE_WALLET_SERVICE_ACCOUNT_KEY=google-wallet/service-account.json
+   ```
+   (Other Google Wallet vars like `GOOGLE_WALLET_ISSUER_ID` must also be set.)
+
+5. **Clear config cache** after changing `.env`:
+   ```bash
+   php artisan config:clear
+   # optional: php artisan config:cache
+   ```
+
+If you see "Google Wallet service account key not found", the file is missing at `storage/app/private/google-wallet/service-account.json` or the path in `.env` is wrong; repeat the steps above.
+
 ## Step 7: Install Dependencies
 
 ```bash
@@ -93,8 +122,9 @@ composer require google/apiclient
 ## Troubleshooting
 
 ### "Service account key not found"
-- Verify the path in `GOOGLE_WALLET_SERVICE_ACCOUNT_KEY` is correct
-- Ensure the file exists and has proper permissions (600)
+- On the server, ensure the JSON file exists at `storage/app/private/google-wallet/service-account.json` (see **Server deployment** above).
+- Set `GOOGLE_WALLET_SERVICE_ACCOUNT_KEY=google-wallet/service-account.json` in `.env` and run `php artisan config:clear`.
+- Ensure the file has permissions `600` and is readable by the web server user.
 
 ### "Invalid issuer ID"
 - Verify `GOOGLE_WALLET_ISSUER_ID` matches your Google Wallet API console

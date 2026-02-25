@@ -29,26 +29,31 @@ class GoogleWalletPassService
         $this->client->setScopes('https://www.googleapis.com/auth/wallet_object.issuer');
         
         // Load service account credentials
-        $serviceAccountPath = config('services.google_wallet.service_account_key');
-        if (!$serviceAccountPath) {
-            throw new \Exception('Google Wallet service account key path not configured. Please set GOOGLE_WALLET_SERVICE_ACCOUNT_KEY in .env');
+        $configuredPath = config('services.google_wallet.service_account_key');
+        if (! $configuredPath) {
+            throw new \Exception('Google Wallet service account key path not configured. Please set GOOGLE_WALLET_SERVICE_ACCOUNT_KEY in .env (e.g. google-wallet/service-account.json). Then place the JSON file in storage/app/private/google-wallet/ on the server.');
         }
-        
-        // Resolve path (handle both relative and absolute paths)
-        if (!file_exists($serviceAccountPath)) {
-            // Try relative to storage/app/private
-            $relativePath = storage_path('app/private/' . $serviceAccountPath);
-            if (file_exists($relativePath)) {
-                $serviceAccountPath = $relativePath;
-            } else {
-                // Try absolute path from project root
-                $absolutePath = base_path($serviceAccountPath);
-                if (file_exists($absolutePath)) {
-                    $serviceAccountPath = $absolutePath;
-                } else {
-                    throw new \Exception('Google Wallet service account key not found at: ' . $serviceAccountPath . '. Also tried: ' . $relativePath . ' and ' . $absolutePath);
-                }
+
+        // Resolve path: try multiple locations (avoid double storage/app/private prefix)
+        $pathInPrivate = preg_replace('#^storage/app/private/?#', '', $configuredPath);
+        $candidates = [
+            $configuredPath,
+            base_path($configuredPath),
+            storage_path('app/private/' . $pathInPrivate),
+        ];
+        if (($configuredPath !== $pathInPrivate) && $pathInPrivate !== '') {
+            $candidates[] = base_path('storage/app/private/' . $pathInPrivate);
+        }
+        $serviceAccountPath = null;
+        foreach ($candidates as $candidate) {
+            if ($candidate && file_exists($candidate)) {
+                $serviceAccountPath = $candidate;
+                break;
             }
+        }
+        if (! $serviceAccountPath) {
+            $tried = implode(', ', array_filter($candidates));
+            throw new \Exception('Google Wallet service account key not found. Tried: ' . $tried . '. Place the JSON file in storage/app/private/google-wallet/service-account.json on the server and set GOOGLE_WALLET_SERVICE_ACCOUNT_KEY=google-wallet/service-account.json in .env');
         }
         
         if (!is_readable($serviceAccountPath)) {

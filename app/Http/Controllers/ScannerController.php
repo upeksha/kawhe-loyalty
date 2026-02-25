@@ -104,13 +104,13 @@ class ScannerController extends Controller
             }
         }
 
-        // STEP 4b: UX cooldown (30s) - can be overridden; checked first so client gets 409 with allow_override
+        // STEP 4b: UX cooldown (configurable) - can be overridden; checked first so client gets 409 with allow_override
         $secondsSinceLastStamp = $account->last_stamped_at
             ? $account->last_stamped_at->diffInSeconds(now())
             : null;
 
-        $cooldownSeconds = 30;
-        if ($secondsSinceLastStamp !== null && $secondsSinceLastStamp < $cooldownSeconds) {
+        $cooldownSeconds = config('loyalty.stamp_cooldown_seconds', 0);
+        if ($cooldownSeconds > 0 && $secondsSinceLastStamp !== null && $secondsSinceLastStamp < $cooldownSeconds) {
             if (!$overrideCooldown) {
                 return response()->json([
                     'status' => 'cooldown',
@@ -224,7 +224,7 @@ class ScannerController extends Controller
             'rewardAvailable' => $result->rewardBalance > 0,
             'rewardEarned' => $result->rewardEarned,
             'stampsRemaining' => max(0, $result->rewardTarget - $result->stampCount),
-            'cooldown_seconds' => 30, // For Flutter app: show countdown overlay on camera after stamp
+            'cooldown_seconds' => config('loyalty.stamp_client_cooldown_seconds', 5), // For scanner/Flutter: countdown before next scan
             'receipt' => [
                 'transaction_id' => $transaction->id ?? null,
                 'timestamp' => now()->toIso8601String(),
@@ -767,6 +767,7 @@ class ScannerController extends Controller
                     'success' => true,
                     'message' => $message,
                     'customerLabel' => $account->customer->name ?? 'Customer',
+                    'cooldown_seconds' => config('loyalty.stamp_client_cooldown_seconds', 5),
                     'receipt' => [
                         'transaction_id' => $transaction->id ?? null,
                         'timestamp' => now()->toIso8601String(),

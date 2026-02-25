@@ -113,11 +113,18 @@ class MerchantCustomersController extends Controller
         
         // Validate input
         $validated = $request->validate([
-            'name' => ['nullable', 'string', 'max:255'],
-            'email' => ['nullable', 'email', 'max:255'],
-            'phone' => ['nullable', 'string', 'max:255'],
+            'first_name' => ['nullable', 'string', 'max:255'],
+            'last_name'  => ['nullable', 'string', 'max:255'],
+            'email'      => ['nullable', 'email', 'max:255'],
+            'phone'      => ['nullable', 'string', 'max:255'],
+            'birthday'   => ['nullable', 'date'],
         ]);
-        
+
+        // Keep the denormalised `name` column in sync
+        $firstName = trim($validated['first_name'] ?? $customer->first_name ?? '');
+        $lastName  = trim($validated['last_name']  ?? $customer->last_name  ?? '');
+        $validated['name'] = trim("$firstName $lastName") ?: $customer->name;
+
         // Update customer data
         $customer->update($validated);
         

@@ -99,10 +99,13 @@ class StoreController extends Controller
             'reward_title' => ['required', 'string', 'max:255'],
             'brand_color' => ['nullable', 'string', 'regex:/^#[0-9A-Fa-f]{6}$/'],
             'background_color' => ['nullable', 'string', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            'require_verification_for_redemption' => ['nullable', 'boolean'],
             'logo' => ['nullable', 'image', 'mimes:png,jpg,jpeg,webp', 'max:2048'],
             'pass_logo' => ['nullable', 'image', 'mimes:png,jpg,jpeg,webp', 'max:2048'],
             'pass_hero_image' => ['nullable', 'image', 'mimes:png,jpg,jpeg,webp', 'max:2048'],
         ]);
+
+        $validated['require_verification_for_redemption'] = $request->boolean('require_verification_for_redemption');
 
         // Handle logo upload
         if ($request->hasFile('logo')) {
@@ -153,6 +156,17 @@ class StoreController extends Controller
         if (!isset($validated['pass_hero_image_path'])) {
             unset($validated['pass_hero_image_path']);
         }
+
+        // Build registration_form_config from checkbox inputs
+        $registrationFields = ['first_name', 'last_name', 'phone', 'birthday'];
+        $formConfig = ['email' => ['enabled' => true, 'required' => true]];
+        foreach ($registrationFields as $field) {
+            $formConfig[$field] = [
+                'enabled'  => $request->boolean("{$field}_enabled"),
+                'required' => $request->boolean("{$field}_required"),
+            ];
+        }
+        $validated['registration_form_config'] = $formConfig;
 
         $store->update($validated);
 

@@ -1,67 +1,108 @@
-<x-guest-layout>
-    <div class="min-h-screen flex flex-col justify-center py-12 px-6 lg:px-8 bg-gray-50 dark:bg-gray-900" x-data="joinLanding()">
-        <div class="sm:mx-auto sm:w-full sm:max-w-md">
-            <h2 class="text-center text-3xl font-extrabold text-gray-900 dark:text-white">
-                {{ $store->name }}
-            </h2>
-            <p class="mt-2 text-center text-sm text-gray-600 dark:text-gray-400">
-                Join our loyalty program and start earning rewards!
-            </p>
-        </div>
+@php
+    $bg = $store->background_color ?? '#1F2937';
+    $brand = $store->brand_color ?? '#0EA5E9';
+    $hex = ltrim($bg, '#');
+    if (strlen($hex) === 6) {
+        $r = hexdec(substr($hex, 0, 2));
+        $g = hexdec(substr($hex, 2, 2));
+        $b = hexdec(substr($hex, 4, 2));
+        $lum = (0.299 * $r + 0.587 * $g + 0.114 * $b) / 255;
+        $textOnBg = $lum < 0.5 ? '#ffffff' : '#111827';
+        $mutedOnBg = $lum < 0.5 ? 'rgba(255,255,255,0.85)' : 'rgba(17,24,39,0.75)';
+    } else {
+        $textOnBg = '#ffffff';
+        $mutedOnBg = 'rgba(255,255,255,0.85)';
+    }
+@endphp
+<!DOCTYPE html>
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+        <meta name="csrf-token" content="{{ csrf_token() }}">
+        <meta name="theme-color" content="{{ $bg }}">
+        <meta name="apple-mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+        <meta name="apple-mobile-web-app-title" content="{{ $store->name }}">
+        <link rel="manifest" href="{{ asset('manifest.webmanifest') }}">
+        <link rel="apple-touch-icon" href="{{ asset('favicon.ico') }}">
+        <title>Join {{ $store->name }} – {{ config('app.name', 'Kawhe') }}</title>
+        <link rel="preconnect" href="https://fonts.bunny.net">
+        <link href="https://fonts.bunny.net/css?family=figtree:400,500,600,700&display=swap" rel="stylesheet" />
+        @vite(['resources/css/app.css', 'resources/js/app.js'])
+        <style>
+            .join-page { background-color: {{ $bg }}; color: {{ $textOnBg }}; }
+            .join-muted { color: {{ $mutedOnBg }}; }
+            .join-card { background: rgba(255,255,255,0.97); color: #111827; }
+            .join-btn-primary { background-color: {{ $brand }}; }
+            .join-btn-primary:hover { filter: brightness(1.1); }
+            .join-btn-secondary { border-color: {{ $brand }}; color: {{ $brand }}; }
+            .join-btn-secondary:hover { background: {{ $brand }}; color: #fff; }
+        </style>
+    </head>
+    <body class="font-sans antialiased join-page min-h-screen min-h-[100dvh] flex flex-col" x-data="joinLanding()">
+        <div class="flex flex-col flex-1 justify-center w-full max-w-md mx-auto px-4 py-8 sm:px-6 sm:py-10 lg:py-12">
+            <div class="text-center mb-6 sm:mb-8">
+                @if($store->logo_path)
+                    <img src="{{ asset('storage/' . $store->logo_path) }}" alt="{{ $store->name }}" class="h-16 w-auto mx-auto object-contain sm:h-20" style="max-height: 5rem;">
+                @else
+                    <h1 class="text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight">{{ $store->name }}</h1>
+                @endif
+                <p class="mt-2 sm:mt-3 text-sm sm:text-base join-muted">
+                    Join our loyalty program and start earning rewards!
+                </p>
+            </div>
 
-        <div class="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-            <div class="bg-white dark:bg-gray-800 py-8 px-4 shadow sm:rounded-lg sm:px-10">
-                <div class="space-y-6">
-                    <!-- Fast Path: Open My Card -->
+            <div class="join-card rounded-2xl shadow-xl p-6 sm:p-8 w-full">
+                <div class="space-y-4 sm:space-y-5">
                     <template x-if="lastToken">
                         <div>
-                            <a :href="'/c/' + lastToken" class="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition duration-150 ease-in-out">
+                            <a :href="'/c/' + lastToken" class="join-btn-primary w-full flex justify-center items-center py-3.5 px-4 rounded-xl text-sm sm:text-base font-semibold text-white transition focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white" style="--tw-ring-color: {{ $brand }};">
                                 Open My Card
                             </a>
-                            <p class="mt-2 text-center text-xs text-gray-500 dark:text-gray-400">
+                            <p class="mt-2 text-center text-xs sm:text-sm text-stone-500">
                                 Found a card saved on this device.
                             </p>
                         </div>
                     </template>
 
-                    <!-- Returning: I already have a card -->
                     <div>
-                        <a href="{{ route('join.existing', ['slug' => $store->slug, 't' => $token]) }}" class="w-full flex justify-center py-3 px-4 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition duration-150 ease-in-out">
+                        <a href="{{ route('join.existing', ['slug' => $store->slug, 't' => $token]) }}" class="join-btn-secondary w-full flex justify-center items-center py-3.5 px-4 rounded-xl border-2 text-sm sm:text-base font-semibold bg-transparent transition focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white" style="--tw-ring-color: {{ $brand }};">
                             I already have a card
                         </a>
                     </div>
 
-                    <!-- New: Create a new card -->
                     <div>
-                        <a href="{{ route('join.show', ['slug' => $store->slug, 't' => $token]) }}" class="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition duration-150 ease-in-out">
+                        <a href="{{ route('join.show', ['slug' => $store->slug, 't' => $token]) }}" class="join-btn-primary w-full flex justify-center items-center py-3.5 px-4 rounded-xl text-sm sm:text-base font-semibold text-white transition focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white" style="--tw-ring-color: {{ $brand }};">
                             Create a new card
                         </a>
                     </div>
-                    
+
                     <template x-if="lastToken">
-                        <div class="text-center">
-                            <button @click="clearLastCard()" class="text-xs text-gray-400 hover:text-gray-500 dark:hover:text-gray-300 underline">
+                        <div class="text-center pt-1">
+                            <button type="button" @click="clearLastCard()" class="text-xs sm:text-sm text-stone-400 hover:text-stone-600 underline">
                                 Use a different card/email
                             </button>
                         </div>
                     </template>
                 </div>
             </div>
-        </div>
-    </div>
 
-    @push('scripts')
-    <script>
-        document.addEventListener('alpine:init', () => {
-            Alpine.data('joinLanding', () => ({
-                lastToken: localStorage.getItem('kawhe_last_card_{{ $store->id }}'),
-                
-                clearLastCard() {
-                    localStorage.removeItem('kawhe_last_card_{{ $store->id }}');
-                    this.lastToken = null;
-                }
-            }));
-        });
-    </script>
-    @endpush
-</x-guest-layout>
+            <p class="mt-6 text-center join-muted text-xs sm:text-sm">
+                <a href="/" class="underline hover:no-underline">Back to home</a>
+            </p>
+        </div>
+
+        <script>
+            document.addEventListener('alpine:init', () => {
+                Alpine.data('joinLanding', () => ({
+                    lastToken: localStorage.getItem('kawhe_last_card_{{ $store->id }}'),
+                    clearLastCard() {
+                        localStorage.removeItem('kawhe_last_card_{{ $store->id }}');
+                        this.lastToken = null;
+                    }
+                }));
+            });
+        </script>
+    </body>
+</html>

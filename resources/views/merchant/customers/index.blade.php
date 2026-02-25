@@ -69,6 +69,7 @@
                             <x-ui.table-header-cell>Customer</x-ui.table-header-cell>
                             <x-ui.table-header-cell>Email</x-ui.table-header-cell>
                             <x-ui.table-header-cell>Phone</x-ui.table-header-cell>
+                            <x-ui.table-header-cell>Birthday</x-ui.table-header-cell>
                             <x-ui.table-header-cell>Stamps</x-ui.table-header-cell>
                             <x-ui.table-header-cell>Reward</x-ui.table-header-cell>
                             <x-ui.table-header-cell>Last Stamped</x-ui.table-header-cell>
@@ -83,13 +84,19 @@
                                     {{ $account->store->name }}
                                 </x-ui.table-cell>
                                 <x-ui.table-cell>
-                                    {{ $account->customer->name ?? '(No name)' }}
+                                    <div class="font-medium text-stone-900">{{ $account->customer->name ?? '(No name)' }}</div>
+                                    @if($account->customer->first_name || $account->customer->last_name)
+                                        <div class="text-xs text-stone-400">{{ trim(($account->customer->first_name ?? '') . ' ' . ($account->customer->last_name ?? '')) }}</div>
+                                    @endif
                                 </x-ui.table-cell>
                                 <x-ui.table-cell>
                                     {{ $account->customer->email ?? '-' }}
                                 </x-ui.table-cell>
                                 <x-ui.table-cell>
                                     {{ $account->customer->phone ?? '-' }}
+                                </x-ui.table-cell>
+                                <x-ui.table-cell>
+                                    {{ $account->customer->birthday ? \Carbon\Carbon::parse($account->customer->birthday)->format('M d, Y') : '-' }}
                                 </x-ui.table-cell>
                                 <x-ui.table-cell>
                                     {{ $account->stamp_count }} / {{ $account->store->reward_target }}

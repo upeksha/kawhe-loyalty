@@ -31,6 +31,12 @@ class Store extends Model
     /** Alphabet for join short code (no I,O,0,1 for readability). */
     private const JOIN_SHORT_CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 
+    /** Onboarding wizard step: card_design | customer_form | card_ready | continue_trial. Null = completed or legacy. */
+    public const ONBOARDING_STEP_CARD_DESIGN = 'card_design';
+    public const ONBOARDING_STEP_CUSTOMER_FORM = 'customer_form';
+    public const ONBOARDING_STEP_CARD_READY = 'card_ready';
+    public const ONBOARDING_STEP_CONTINUE_TRIAL = 'continue_trial';
+
     protected $fillable = [
         'name',
         'slug',
@@ -45,6 +51,14 @@ class Store extends Model
         'pass_logo_path',
         'pass_hero_image_path',
         'require_verification_for_redemption',
+        'onboarding_step',
+        'onboarding_completed_at',
+        'registration_form_config',
+    ];
+
+    protected $casts = [
+        'onboarding_completed_at' => 'datetime',
+        'registration_form_config' => 'array',
     ];
 
     protected static function boot()
@@ -89,6 +103,29 @@ class Store extends Model
             return route('join.short', ['code' => $this->join_short_code]);
         }
         return route('join.index', ['slug' => $this->slug, 't' => $this->join_token]);
+    }
+
+    /**
+     * Default registration form config for customer join (MVP).
+     */
+    public static function defaultRegistrationFormConfig(): array
+    {
+        return [
+            'email' => ['enabled' => true, 'required' => true],
+            'first_name' => ['enabled' => true, 'required' => false],
+            'last_name' => ['enabled' => false, 'required' => false],
+            'phone' => ['enabled' => false, 'required' => false],
+            'birthday' => ['enabled' => false, 'required' => false],
+        ];
+    }
+
+    /**
+     * Get effective registration form config (merge with defaults).
+     */
+    public function getRegistrationFormConfigAttribute($value): array
+    {
+        $decoded = is_array($value) ? $value : (is_string($value) ? json_decode($value, true) : []);
+        return array_merge(self::defaultRegistrationFormConfig(), $decoded ?: []);
     }
 
     public function user(): BelongsTo

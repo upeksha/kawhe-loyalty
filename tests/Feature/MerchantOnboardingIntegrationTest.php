@@ -11,7 +11,7 @@ test('new merchant registration redirects to onboarding', function () {
         'password_confirmation' => 'password123',
     ]);
 
-    $response->assertRedirect(route('merchant.onboarding.store'));
+    $response->assertRedirect(route('merchant.onboarding.wizard.store-basics'));
     
     $user = User::where('email', 'merchant@test.com')->first();
     expect($user)->not->toBeNull();
@@ -52,7 +52,7 @@ test('merchant without store is redirected to onboarding from dashboard', functi
     $this->actingAs($user);
     
     $response = $this->get(route('merchant.dashboard'));
-    $response->assertRedirect(route('merchant.onboarding.store'));
+    $response->assertRedirect(route('merchant.onboarding.wizard.store-basics'));
 });
 
 test('super admin can access admin dashboard', function () {

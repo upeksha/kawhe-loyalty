@@ -68,7 +68,8 @@ class JoinController extends Controller
                 ->first();
 
             if ($loyaltyAccount) {
-                return redirect()->route('card.show', ['public_token' => $loyaltyAccount->public_token]);
+                return redirect()->route('card.show', ['public_token' => $loyaltyAccount->public_token])
+                    ->with('show_wallet_nudge', true);
             }
         }
 
@@ -96,36 +97,57 @@ class JoinController extends Controller
             ->where('join_token', $token)
             ->firstOrFail();
 
-        $validated = $request->validate([
-            'name' => ['nullable', 'string', 'max:255'],
-            'email' => ['nullable', 'email', 'max:255'],
-            'phone' => ['nullable', 'string', 'max:20'],
-        ]);
+        $config = $store->registration_form_config;
 
-        if (empty($validated['email']) && empty($validated['phone'])) {
+        $rules = [
+            'email' => ['required', 'email', 'max:255'],
+        ];
+        if (! empty($config['first_name']['enabled'])) {
+            $rules['first_name'] = $config['first_name']['required'] ? ['required', 'string', 'max:255'] : ['nullable', 'string', 'max:255'];
+        }
+        if (! empty($config['last_name']['enabled'])) {
+            $rules['last_name'] = $config['last_name']['required'] ? ['required', 'string', 'max:255'] : ['nullable', 'string', 'max:255'];
+        }
+        if (! empty($config['phone']['enabled'])) {
+            $rules['phone'] = $config['phone']['required'] ? ['required', 'string', 'max:20'] : ['nullable', 'string', 'max:20'];
+        }
+        if (! empty($config['birthday']['enabled'])) {
+            $rules['birthday'] = $config['birthday']['required'] ? ['required', 'date'] : ['nullable', 'date'];
+        }
+
+        $validated = $request->validate($rules);
+
+        if (empty($validated['email']) && empty($validated['phone'] ?? null)) {
             throw ValidationException::withMessages([
                 'email' => 'Please provide either an email address or a phone number.',
             ]);
         }
 
+        $customerData = [
+            'email' => $validated['email'] ?? null,
+            'phone' => $validated['phone'] ?? null,
+            'first_name' => $validated['first_name'] ?? null,
+            'last_name' => $validated['last_name'] ?? null,
+            'birthday' => isset($validated['birthday']) ? $validated['birthday'] : null,
+        ];
+        $nameParts = array_filter([$customerData['first_name'] ?? '', $customerData['last_name'] ?? '']);
+        $customerData['name'] = $nameParts ? implode(' ', $nameParts) : null;
+
         // Find existing customer or create new one
         $customer = null;
 
-        if (!empty($validated['email'])) {
-            $customer = Customer::where('email', $validated['email'])->first();
+        if (! empty($customerData['email'])) {
+            $customer = Customer::where('email', $customerData['email'])->first();
         }
 
-        if (!$customer && !empty($validated['phone'])) {
-            $customer = Customer::where('phone', $validated['phone'])->first();
+        if (! $customer && ! empty($customerData['phone'])) {
+            $customer = Customer::where('phone', $customerData['phone'])->first();
         }
 
-        if (!$customer) {
-            $customer = Customer::create($validated);
+        if (! $customer) {
+            $customer = Customer::create($customerData);
         } else {
-            // Update name if provided (even if previously set, update it to the latest)
-            if (!empty($validated['name'])) {
-                $customer->update(['name' => $validated['name']]);
-            }
+            $customer->update(array_filter($customerData, fn ($v) => $v !== null));
         }
 
         // Check if loyalty account already exists for this store and customer
@@ -136,7 +158,8 @@ class JoinController extends Controller
         // If account exists, redirect to it (no limit check needed)
         if ($existingAccount) {
             return redirect()->route('card.show', ['public_token' => $existingAccount->public_token])
-                ->with('registered', true);
+                ->with('registered', true)
+                ->with('show_wallet_nudge', true);
         }
 
         // Check if merchant can create a new card (limit enforcement)
@@ -244,6 +267,7 @@ class JoinController extends Controller
         }
 
         return redirect()->route('card.show', ['public_token' => $loyaltyAccount->public_token])
-            ->with('registered', true);
+            ->with('registered', true)
+            ->with('show_wallet_nudge', true);
     }
 }

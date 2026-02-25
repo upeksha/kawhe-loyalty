@@ -1,144 +1,173 @@
+@php
+    $bg    = $store->background_color ?? '#7B3F1E';
+    $brand = $store->brand_color ?? '#ffffff';
+
+    $hex = ltrim($bg, '#');
+    if (strlen($hex) === 6) {
+        $r = hexdec(substr($hex, 0, 2));
+        $g = hexdec(substr($hex, 2, 2));
+        $b = hexdec(substr($hex, 4, 2));
+        $lum = (0.299 * $r + 0.587 * $g + 0.114 * $b) / 255;
+        $textColor  = $lum < 0.5 ? '#ffffff' : '#111111';
+        $mutedColor = $lum < 0.5 ? '#cccccc' : '#666666';
+    } else {
+        $textColor  = '#ffffff';
+        $mutedColor = '#cccccc';
+    }
+@endphp
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Scan & Collect Rewards - {{ $store->name }}</title>
+    <title>{{ $store->name }} – Join Poster</title>
     <style>
-        @page { margin: 0; size: A4 portrait; }
-        * { box-sizing: border-box; }
-        html, body {
+        @page {
             margin: 0;
-            padding: 0;
-            width: 210mm;
-            height: 297mm;
-            font-family: 'Helvetica', 'Arial', sans-serif;
-            background: {{ $store->background_color ?? '#FBF8F4' }};
-            color: {{ $store->brand_color ?? '#5C3D2E' }};
-            overflow: hidden;
+            size: 210mm 297mm;
         }
-        .page {
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        html, body {
             width: 210mm;
             height: 297mm;
-            padding: 0;
-            background: {{ $store->background_color ?? '#FBF8F4' }};
+            overflow: hidden;
+            background: {{ $bg }};
+        }
+
+        /* DomPDF-safe full-page vertical centering via display:table */
+        .outer {
+            display: table;
+            width: 210mm;
+            height: 297mm;
+            background: {{ $bg }};
+        }
+        .middle {
+            display: table-cell;
+            vertical-align: middle;
             text-align: center;
-            overflow: hidden;
+            padding: 10mm 18mm;
         }
-        .card {
-            background: #FFF9F4;
-            border: 1px solid #E5DBD3;
-            margin: 10mm;
-            padding: 12mm 10mm 10mm;
-        }
-        .logo-wrap {
-            margin-bottom: 6mm;
-        }
+
+        /* Logo */
         .logo {
-            width: 28mm;
-            height: 28mm;
+            width: 20mm;
+            height: 20mm;
             border-radius: 50%;
             object-fit: cover;
-            background: #8B4513;
-        }
-        .logo-placeholder {
-            width: 28mm;
-            height: 28mm;
-            border-radius: 50%;
-            background: #8B4513;
-            margin: 0 auto;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #fff;
-            font-size: 10px;
-            font-weight: bold;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-        .headline {
-            font-family: Georgia, 'Times New Roman', serif;
-            font-size: 23pt;
-            font-weight: normal;
-            color: {{ $store->brand_color ?? '#5C3D2E' }};
-            margin: 0 0 7mm 0;
-        }
-        .qr-wrap {
-            margin: 0 auto 5mm;
-            padding: 4mm;
-            background: #fff;
-            display: inline-block;
-            border: 1px solid #e0e0e0;
-        }
-        .qr-wrap img,
-        .qr-wrap svg {
-            display: block;
-            width: 55mm;
-            height: 55mm;
-        }
-        .instruction {
-            font-size: 11.5pt;
-            color: {{ $store->brand_color ?? '#5C3D2E' }};
-            margin: 0 0 5mm 0;
-        }
-        .wallet-buttons {
-            display: table;
             margin: 0 auto 6mm;
+            display: block;
+        }
+
+        /* Reward title */
+        .reward-title {
+            font-family: Helvetica, Arial, sans-serif;
+            font-size: 32pt;
+            font-weight: bold;
+            color: {{ $textColor }};
+            line-height: 1.1;
+            margin-bottom: 3mm;
+        }
+
+        /* Store name */
+        .store-name {
+            font-family: Helvetica, Arial, sans-serif;
+            font-size: 14pt;
+            font-weight: bold;
+            color: {{ $textColor }};
+            margin-bottom: 2mm;
+        }
+
+        /* Tagline */
+        .tagline {
+            font-family: Helvetica, Arial, sans-serif;
+            font-size: 11pt;
+            color: {{ $mutedColor }};
+            margin-bottom: 8mm;
+        }
+
+        /* QR */
+        .qr-wrap {
+            display: inline-block;
+            background: #ffffff;
+            padding: 4mm;
+            margin-bottom: 8mm;
+        }
+        .qr-wrap img {
+            display: block;
+            width: 62mm;
+            height: 62mm;
+        }
+
+        /* Instructions */
+        .instruction {
+            font-family: Helvetica, Arial, sans-serif;
+            font-size: 10pt;
+            color: {{ $mutedColor }};
+            line-height: 1.6;
+        }
+
+        /* Wallet badges — use table so DomPDF renders side-by-side */
+        .wallet-table {
+            display: table;
+            margin: 6mm auto 0;
             border-collapse: collapse;
         }
-        .wallet-btn {
+        .wallet-cell {
             display: table-cell;
-            padding: 0 4mm;
+            padding: 0 3mm;
             vertical-align: middle;
         }
-        .wallet-btn img {
-            height: 12mm;
+        .wallet-cell img {
+            height: 10mm;
             width: auto;
             display: block;
         }
-        .promo {
-            background: {{ $store->brand_color ?? '#6A3A1F' }};
-            color: #F5F5DC;
-            padding: 5mm 8mm;
-            margin: 0;
-            font-family: Georgia, 'Times New Roman', serif;
-            font-size: 12pt;
-            font-style: italic;
-            border-top: 0.6mm solid {{ $store->brand_color ?? '#5A2D16' }};
-        }
-        .promo u { text-decoration: underline; }
-        .disclaimer {
+
+        /* Footer */
+        .footer {
+            font-family: Helvetica, Arial, sans-serif;
             font-size: 8pt;
-            color: #A0A0A0;
-            margin: 4mm 0 0 0;
+            color: {{ $mutedColor }};
+            margin-top: 8mm;
         }
     </style>
 </head>
 <body>
-    <div class="page">
-        <div class="card">
-            <div class="logo-wrap">
-                @if(!empty($logoDataUrl))
-                    <img src="{{ $logoDataUrl }}" alt="{{ $store->name }}" class="logo">
-                @else
-                    <div class="logo-placeholder">{{ \Illuminate\Support\Str::limit($store->name, 12) }}</div>
-                @endif
-            </div>
-            <h1 class="headline">Scan & Collect Rewards</h1>
+    <div class="outer">
+        <div class="middle">
+
+            @if(!empty($logoDataUrl))
+                <img src="{{ $logoDataUrl }}" alt="{{ $store->name }}" class="logo">
+            @endif
+
+            <div class="reward-title">{{ $store->reward_title ?: 'Loyalty Rewards' }}</div>
+            <div class="store-name">{{ $store->name }}</div>
+            <div class="tagline">Scan to join our loyalty program</div>
+
             <div class="qr-wrap">
                 <img src="{{ $qrCodeDataUrl }}" alt="QR Code">
             </div>
-            <p class="instruction">Scan the code & Add to your Wallet</p>
-            <div class="wallet-buttons">
-                @if(!empty($appleWalletBadgeDataUrl))
-                    <a href="{{ $joinUrl }}" class="wallet-btn"><img src="{{ $appleWalletBadgeDataUrl }}" alt="Add to Apple Wallet"></a>
-                @endif
-                @if(!empty($googleWalletBadgeDataUrl))
-                    <a href="{{ $joinUrl }}" class="wallet-btn"><img src="{{ $googleWalletBadgeDataUrl }}" alt="Add to Google Wallet"></a>
-                @endif
-            </div>
-            <div class="promo">{!! $promoHtml !!}</div>
-            <p class="disclaimer">No spam. Unsubscribe anytime. iPhone & Android supported.</p>
+
+            <div class="instruction">Point your camera at the QR code</div>
+            <div class="instruction">Add to Apple Wallet or Google Wallet</div>
+
+            @if(!empty($appleWalletBadgeDataUrl) || !empty($googleWalletBadgeDataUrl))
+                <div class="wallet-table">
+                    @if(!empty($appleWalletBadgeDataUrl))
+                        <div class="wallet-cell">
+                            <img src="{{ $appleWalletBadgeDataUrl }}" alt="Add to Apple Wallet">
+                        </div>
+                    @endif
+                    @if(!empty($googleWalletBadgeDataUrl))
+                        <div class="wallet-cell">
+                            <img src="{{ $googleWalletBadgeDataUrl }}" alt="Add to Google Wallet">
+                        </div>
+                    @endif
+                </div>
+            @endif
+
+            <div class="footer">Powered by Rewardly</div>
+
         </div>
     </div>
 </body>

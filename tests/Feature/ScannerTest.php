@@ -99,7 +99,7 @@ test('merchant cannot stamp loyalty account from another store', function () {
     $this->assertStringContainsString('do not have access', $response->json('errors.token.0'));
 });
 
-test('cooldown prevents double stamping', function () {
+test('duplicate window prevents double stamping within 5 seconds', function () {
     $user = User::factory()->create();
     $store = Store::factory()->create(['user_id' => $user->id]);
     $customer = Customer::factory()->create();
@@ -114,28 +114,28 @@ test('cooldown prevents double stamping', function () {
         'token' => $account->public_token,
     ])->assertOk();
 
-    // Immediate second stamp (within cooldown - should be blocked with 409 cooldown)
+    // Immediate second stamp (within 5s - blocked by hard duplicate window)
     $response = $this->actingAs($user)->postJson('/stamp', [
         'store_id' => $store->id,
         'token' => $account->public_token,
     ]);
 
-    // Blocked by cooldown (30s); returns 409 so double stamp is prevented
-    $response->assertStatus(409);
-    $response->assertJson(['status' => 'cooldown', 'success' => false]);
+    // Blocked by 5s duplicate window; returns 200 with status duplicate
+    $response->assertStatus(200);
+    $response->assertJson(['status' => 'duplicate', 'success' => false]);
 
     $account->refresh();
     $this->assertEquals(1, $account->stamp_count); // Should still be 1
 });
 
-test('can stamp again after cooldown', function () {
+test('can stamp again after 5 second duplicate window', function () {
     $user = User::factory()->create();
     $store = Store::factory()->create(['user_id' => $user->id]);
     $customer = Customer::factory()->create();
     $account = LoyaltyAccount::create([
         'store_id' => $store->id,
         'customer_id' => $customer->id,
-        'last_stamped_at' => Carbon::now()->subSeconds(31),
+        'last_stamped_at' => Carbon::now()->subSeconds(6), // Past 5s duplicate window
         'stamp_count' => 1,
     ]);
 
@@ -149,16 +149,19 @@ test('can stamp again after cooldown', function () {
     $this->assertEquals(2, $account->stamp_count);
 });
 
-test('cooldown returns structured response allowing override', function () {
+test('when stamp cooldown is enabled, returns 409 with override', function () {
     $user = User::factory()->create();
     $store = Store::factory()->create(['user_id' => $user->id]);
     $customer = Customer::factory()->create();
     $account = LoyaltyAccount::create([
         'store_id' => $store->id,
         'customer_id' => $customer->id,
-        'last_stamped_at' => Carbon::now()->subSeconds(12), // 12 seconds ago
+        'last_stamped_at' => Carbon::now()->subSeconds(12), // 12 seconds ago (within 30s cooldown)
         'stamp_count' => 1,
     ]);
+
+    // Enable UX cooldown for this test
+    config(['loyalty.stamp_cooldown_seconds' => 30]);
 
     $response = $this->actingAs($user)->postJson('/stamp', [
         'store_id' => $store->id,
@@ -178,11 +181,11 @@ test('cooldown returns structured response allowing override', function () {
         'stampCount',
         'rewardBalance',
     ]);
-    
+
     // Should NOT have incremented stamp count
     $account->refresh();
     $this->assertEquals(1, $account->stamp_count);
-    
+
     // Should NOT have created new events/transactions
     $eventCount = \App\Models\StampEvent::where('loyalty_account_id', $account->id)->count();
     $this->assertEquals(0, $eventCount); // No events created yet
@@ -249,13 +252,13 @@ test('server-side idempotency window prevents duplicate stamps within 5 seconds'
     $response2 = $this->actingAs($user)->postJson('/stamp', [
         'store_id' => $store->id,
         'token' => $account->public_token,
-        'idempotency_key' => 'key-2', // Different key - still blocked by cooldown
+        'idempotency_key' => 'key-2', // Different key - still blocked by 5s duplicate window
     ]);
 
-    // Blocked by cooldown (30s) so duplicate stamp is prevented
-    $response2->assertStatus(409);
+    // Blocked by 5s duplicate window; returns 200 with status duplicate
+    $response2->assertStatus(200);
     $response2->assertJson([
-        'status' => 'cooldown',
+        'status' => 'duplicate',
         'success' => false,
     ]);
 

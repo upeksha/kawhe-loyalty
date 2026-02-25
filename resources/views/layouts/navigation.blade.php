@@ -21,9 +21,11 @@
                     <x-nav-link :href="route('merchant.customers.index')" :active="request()->routeIs('merchant.customers.*')">
                         {{ __('Customers') }}
                     </x-nav-link>
+                    @unless(auth()->user()->isSuperAdmin())
                     <x-nav-link :href="route('merchant.scanner')" :active="request()->routeIs('merchant.scanner')">
                         {{ __('Scanner') }}
                     </x-nav-link>
+                    @endunless
                 </div>
             </div>
 
@@ -85,9 +87,11 @@
             <x-responsive-nav-link :href="route('merchant.customers.index')" :active="request()->routeIs('merchant.customers.*')">
                 {{ __('Customers') }}
             </x-responsive-nav-link>
+            @unless(auth()->user()->isSuperAdmin())
             <x-responsive-nav-link :href="route('merchant.scanner')" :active="request()->routeIs('merchant.scanner')">
                 {{ __('Scanner') }}
             </x-responsive-nav-link>
+            @endunless
         </div>
 
         <!-- Responsive Settings Options -->

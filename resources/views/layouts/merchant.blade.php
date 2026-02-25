@@ -27,9 +27,8 @@
                 <div class="flex flex-col h-full overflow-visible">
                     <!-- Logo -->
                     <div class="flex items-center justify-between h-16 px-6 border-b border-stone-200">
-                        <a href="{{ route('merchant.dashboard') }}" class="flex items-center space-x-2">
+                        <a href="{{ route('merchant.dashboard') }}" class="flex items-center">
                             <x-application-logo class="block h-8 w-auto fill-current text-brand-600" />
-                            <span class="text-lg font-semibold text-stone-900">Kawhe</span>
                         </a>
                         <button 
                             @click="sidebarOpen = false"
@@ -73,6 +72,7 @@
                             Customers
                         </a>
                         
+                        @unless(auth()->user()->isSuperAdmin())
                         <a 
                             href="{{ route('merchant.scanner') }}" 
                             class="flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors {{ request()->routeIs('merchant.scanner') ? 'bg-brand-50 text-brand-700' : 'text-stone-700 hover:bg-stone-100' }}"
@@ -82,6 +82,7 @@
                             </svg>
                             Scanner
                         </a>
+                        @endunless
                         
                         @if(Route::has('billing.index'))
                         <a 

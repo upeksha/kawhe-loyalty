@@ -29,9 +29,8 @@
                 <div class="flex flex-col h-full overflow-visible">
                     <!-- Logo -->
                     <div class="flex items-center justify-between h-16 px-6 border-b border-stone-200">
-                        <a href="{{ route('merchant.dashboard') }}" class="flex items-center space-x-2">
+                        <a href="{{ route('merchant.dashboard') }}" class="flex items-center">
                             <x-application-logo class="block h-8 w-auto fill-current text-brand-600" />
-                            <span class="text-lg font-semibold text-stone-900">Kawhe</span>
                         </a>
                         <button 
                             @click="sidebarOpen = false"

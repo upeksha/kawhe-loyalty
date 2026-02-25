@@ -4,6 +4,7 @@ use App\Http\Controllers\AdminDashboardController;
 use App\Http\Controllers\CardController;
 use App\Http\Controllers\JoinController;
 use App\Http\Controllers\MerchantCustomersController;
+use App\Http\Controllers\MerchantOnboardingWizardController;
 use App\Http\Controllers\OnboardingController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PublicStartController;
@@ -80,8 +81,22 @@ Route::get('/verify-email/{token}', [App\Http\Controllers\CustomerEmailVerificat
 
 // Merchant onboarding routes (no EnsureMerchantHasStore middleware)
 Route::middleware(['auth'])->prefix('merchant/onboarding')->name('merchant.onboarding.')->group(function () {
-    Route::get('/store', [OnboardingController::class, 'createStore'])->name('store');
+    // Legacy single-page onboarding: redirect GET to new wizard step 1; keep POST for backward compat
+    Route::get('/store', fn () => redirect()->route('merchant.onboarding.wizard.store-basics'))->name('store');
     Route::post('/store', [OnboardingController::class, 'storeStore'])->name('store.store');
+
+    // Onboarding v2 wizard
+    Route::get('/wizard', [MerchantOnboardingWizardController::class, 'index'])->name('wizard.index');
+    Route::get('/wizard/store-basics', [MerchantOnboardingWizardController::class, 'storeBasics'])->name('wizard.store-basics');
+    Route::post('/wizard/store-basics', [MerchantOnboardingWizardController::class, 'storeStoreBasics'])->name('wizard.store-basics.store');
+    Route::get('/wizard/card-design', [MerchantOnboardingWizardController::class, 'cardDesign'])->name('wizard.card-design');
+    Route::post('/wizard/card-design', [MerchantOnboardingWizardController::class, 'storeCardDesign'])->name('wizard.card-design.store');
+    Route::get('/wizard/customer-form', [MerchantOnboardingWizardController::class, 'customerForm'])->name('wizard.customer-form');
+    Route::post('/wizard/customer-form', [MerchantOnboardingWizardController::class, 'storeCustomerForm'])->name('wizard.customer-form.store');
+    Route::get('/wizard/card-ready', [MerchantOnboardingWizardController::class, 'cardReady'])->name('wizard.card-ready');
+    Route::post('/wizard/card-ready', [MerchantOnboardingWizardController::class, 'advanceToContinueTrial'])->name('wizard.card-ready.advance');
+    Route::get('/wizard/continue-trial', [MerchantOnboardingWizardController::class, 'continueTrial'])->name('wizard.continue-trial');
+    Route::post('/wizard/complete', [MerchantOnboardingWizardController::class, 'completeOnboarding'])->name('wizard.complete');
 });
 
 // Merchant area routes (requires store)

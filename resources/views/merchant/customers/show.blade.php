@@ -36,9 +36,17 @@
                     </x-ui.button>
                 </div>
                 <div class="space-y-2 text-sm">
-                    <p><strong class="text-stone-700">Name:</strong> <span class="text-stone-600">{{ $account->customer->name ?? '(No name)' }}</span></p>
+                    @if($account->customer->first_name || $account->customer->last_name)
+                        <p><strong class="text-stone-700">First Name:</strong> <span class="text-stone-600">{{ $account->customer->first_name ?? '-' }}</span></p>
+                        <p><strong class="text-stone-700">Last Name:</strong> <span class="text-stone-600">{{ $account->customer->last_name ?? '-' }}</span></p>
+                    @else
+                        <p><strong class="text-stone-700">Name:</strong> <span class="text-stone-600">{{ $account->customer->name ?? '(No name)' }}</span></p>
+                    @endif
                     <p><strong class="text-stone-700">Email:</strong> <span class="text-stone-600">{{ $account->customer->email ?? '-' }}</span></p>
                     <p><strong class="text-stone-700">Phone:</strong> <span class="text-stone-600">{{ $account->customer->phone ?? '-' }}</span></p>
+                    @if($account->customer->birthday)
+                        <p><strong class="text-stone-700">Birthday:</strong> <span class="text-stone-600">{{ \Carbon\Carbon::parse($account->customer->birthday)->format('M d, Y') }}</span></p>
+                    @endif
                     <p><strong class="text-stone-700">Joined:</strong> <span class="text-stone-600">{{ $account->created_at->format('M d, Y g:i A') }}</span></p>
                     @if($account->verified_at)
                         <p><strong class="text-stone-700">Verified:</strong> <span class="text-brand-600">{{ $account->verified_at->format('M d, Y') }}</span></p>

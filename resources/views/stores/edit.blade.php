@@ -122,13 +122,21 @@
                         <!-- Logo Upload -->
                         <div class="mb-5">
                             <label for="logo" class="block mb-2 text-sm font-medium text-stone-700">Store Logo</label>
-                            @if($store->logo_path)
-                                <div class="mb-2">
-                                    <p class="text-xs text-stone-500 mb-1">Current logo:</p>
-                                    <img src="{{ asset('storage/' . $store->logo_path) }}" alt="Store logo" class="h-16 w-16 object-contain rounded border border-stone-300">
+                            <div class="flex flex-wrap items-start gap-3">
+                                @if($store->logo_path)
+                                    <div class="mb-2">
+                                        <p class="text-xs text-stone-500 mb-1">Current:</p>
+                                        <img src="{{ asset('storage/' . $store->logo_path) }}" alt="Store logo" class="h-20 w-20 object-contain rounded-lg border border-stone-300 shadow-sm">
+                                    </div>
+                                @endif
+                                <div id="logo-thumbnail" class="hidden">
+                                    <p class="text-xs text-stone-500 mb-1">New selection:</p>
+                                    <img id="logo-thumbnail-img" src="" alt="Preview" class="h-20 w-20 object-contain rounded-lg border border-stone-300 bg-white shadow-sm">
                                 </div>
-                            @endif
-                            <x-ui.input type="file" id="logo" name="logo" accept="image/png,image/jpeg,image/jpg,image/webp" />
+                                <div class="flex-1 min-w-0">
+                                    <x-ui.input type="file" id="logo" name="logo" accept="image/png,image/jpeg,image/jpg,image/webp" />
+                                </div>
+                            </div>
                             <p class="mt-1 text-xs text-stone-500">PNG, JPG, or WebP (max 2MB). Used for customer card page.</p>
                             <x-input-error :messages="$errors->get('logo')" class="mt-2" />
                         </div>
@@ -136,29 +144,145 @@
                         <!-- Pass Logo Upload -->
                         <div class="mb-5">
                             <label for="pass_logo" class="block mb-2 text-sm font-medium text-stone-700">Pass Logo (Wallet Passes)</label>
-                            @if($store->pass_logo_path)
-                                <div class="mb-2">
-                                    <p class="text-xs text-stone-500 mb-1">Current pass logo:</p>
-                                    <img src="{{ asset('storage/' . $store->pass_logo_path) }}" alt="Pass logo" class="h-16 w-16 object-contain rounded border border-stone-300">
+                            <div class="flex flex-wrap items-start gap-3">
+                                @if($store->pass_logo_path)
+                                    <div class="mb-2">
+                                        <p class="text-xs text-stone-500 mb-1">Current:</p>
+                                        <img src="{{ asset('storage/' . $store->pass_logo_path) }}" alt="Pass logo" class="h-12 w-20 object-contain rounded-lg border border-stone-300 shadow-sm">
+                                    </div>
+                                @endif
+                                <div id="pass_logo-thumbnail" class="hidden">
+                                    <p class="text-xs text-stone-500 mb-1">New selection:</p>
+                                    <img id="pass_logo-thumbnail-img" src="" alt="Preview" class="h-12 w-20 object-contain rounded-lg border border-stone-300 bg-white shadow-sm">
                                 </div>
-                            @endif
-                            <x-ui.input type="file" id="pass_logo" name="pass_logo" accept="image/png,image/jpeg,image/jpg,image/webp" />
-                            <p class="mt-1 text-xs text-stone-500">PNG, JPG, or WebP (max 2MB). Used for Apple Wallet and Google Wallet passes. Recommended: 160x50px.</p>
+                                <div class="flex-1 min-w-0">
+                                    <x-ui.input type="file" id="pass_logo" name="pass_logo" accept="image/png,image/jpeg,image/jpg,image/webp" />
+                                </div>
+                            </div>
+                            <p class="mt-1 text-xs text-stone-500">PNG, JPG, or WebP (max 2MB). Recommended: 160x50px.</p>
                             <x-input-error :messages="$errors->get('pass_logo')" class="mt-2" />
                         </div>
 
                         <!-- Pass Hero Image Upload -->
                         <div class="mb-5">
                             <label for="pass_hero_image" class="block mb-2 text-sm font-medium text-stone-700">Pass Hero Image (Wallet Passes)</label>
-                            @if($store->pass_hero_image_path)
-                                <div class="mb-2">
-                                    <p class="text-xs text-stone-500 mb-1">Current hero image:</p>
-                                    <img src="{{ asset('storage/' . $store->pass_hero_image_path) }}" alt="Pass hero image" class="h-32 w-full object-cover rounded border border-stone-300">
+                            <div class="flex flex-wrap items-start gap-3">
+                                @if($store->pass_hero_image_path)
+                                    <div class="mb-2">
+                                        <p class="text-xs text-stone-500 mb-1">Current:</p>
+                                        <img src="{{ asset('storage/' . $store->pass_hero_image_path) }}" alt="Pass hero" class="h-20 w-32 object-cover rounded-lg border border-stone-300 shadow-sm">
+                                    </div>
+                                @endif
+                                <div id="pass_hero_image-thumbnail" class="hidden">
+                                    <p class="text-xs text-stone-500 mb-1">New selection:</p>
+                                    <img id="pass_hero_image-thumbnail-img" src="" alt="Preview" class="h-20 w-32 object-cover rounded-lg border border-stone-300 shadow-sm">
                                 </div>
-                            @endif
-                            <x-ui.input type="file" id="pass_hero_image" name="pass_hero_image" accept="image/png,image/jpeg,image/jpg,image/webp" />
-                            <p class="mt-1 text-xs text-stone-500">PNG, JPG, or WebP (max 2MB). Banner image for wallet passes. Recommended: 640x180px (Apple Wallet) or 640x200px (Google Wallet).</p>
+                                <div class="flex-1 min-w-0">
+                                    <x-ui.input type="file" id="pass_hero_image" name="pass_hero_image" accept="image/png,image/jpeg,image/jpg,image/webp" />
+                                </div>
+                            </div>
+                            <p class="mt-1 text-xs text-stone-500">PNG, JPG, or WebP (max 2MB). Recommended: 640x180px or 640x200px.</p>
                             <x-input-error :messages="$errors->get('pass_hero_image')" class="mt-2" />
+                        </div>
+
+                        <script>
+                            document.getElementById('logo')?.addEventListener('change', function(e) {
+                                var container = document.getElementById('logo-thumbnail');
+                                var img = document.getElementById('logo-thumbnail-img');
+                                if (e.target.files?.[0]) {
+                                    img.src = URL.createObjectURL(e.target.files[0]);
+                                    container.classList.remove('hidden');
+                                } else {
+                                    img.src = '';
+                                    container.classList.add('hidden');
+                                }
+                            });
+                            document.getElementById('pass_logo')?.addEventListener('change', function(e) {
+                                var container = document.getElementById('pass_logo-thumbnail');
+                                var img = document.getElementById('pass_logo-thumbnail-img');
+                                if (e.target.files?.[0]) {
+                                    img.src = URL.createObjectURL(e.target.files[0]);
+                                    container.classList.remove('hidden');
+                                } else {
+                                    img.src = '';
+                                    container.classList.add('hidden');
+                                }
+                            });
+                            document.getElementById('pass_hero_image')?.addEventListener('change', function(e) {
+                                var container = document.getElementById('pass_hero_image-thumbnail');
+                                var img = document.getElementById('pass_hero_image-thumbnail-img');
+                                if (e.target.files?.[0]) {
+                                    img.src = URL.createObjectURL(e.target.files[0]);
+                                    container.classList.remove('hidden');
+                                } else {
+                                    img.src = '';
+                                    container.classList.add('hidden');
+                                }
+                            });
+                        </script>
+
+                        <!-- Customer Registration Form Fields -->
+                        @php
+                            $formConfig = $store->registration_form_config ?? [];
+                            $fields = [
+                                'first_name' => 'First Name',
+                                'last_name'  => 'Last Name',
+                                'phone'      => 'Phone Number',
+                                'birthday'   => 'Birthday',
+                            ];
+                        @endphp
+                        <div class="mb-5">
+                            <label class="block mb-2 text-sm font-medium text-stone-700">Customer Registration Fields</label>
+                            <p class="text-xs text-stone-500 mb-3">Choose which fields to collect when customers join your loyalty program. Email is always required.</p>
+                            <div class="space-y-3 rounded-xl border border-stone-200 p-4 bg-stone-50">
+                                <!-- Email — always on, locked -->
+                                <div class="flex items-center justify-between py-1">
+                                    <span class="text-sm font-medium text-stone-700">Email Address</span>
+                                    <div class="flex items-center gap-4">
+                                        <label class="flex items-center gap-1.5 text-xs text-stone-400 cursor-not-allowed">
+                                            <input type="checkbox" checked disabled class="w-4 h-4 rounded text-brand-600 border-stone-300 opacity-50">
+                                            Enabled
+                                        </label>
+                                        <label class="flex items-center gap-1.5 text-xs text-stone-400 cursor-not-allowed">
+                                            <input type="checkbox" checked disabled class="w-4 h-4 rounded text-brand-600 border-stone-300 opacity-50">
+                                            Required
+                                        </label>
+                                    </div>
+                                </div>
+                                @foreach($fields as $key => $label)
+                                    @php
+                                        $enabled  = old("{$key}_enabled",  ($formConfig[$key]['enabled']  ?? false) ? '1' : '0') === '1';
+                                        $required = old("{$key}_required", ($formConfig[$key]['required'] ?? false) ? '1' : '0') === '1';
+                                    @endphp
+                                    <div class="flex items-center justify-between py-1 border-t border-stone-200" x-data="{ enabled: {{ $enabled ? 'true' : 'false' }} }">
+                                        <span class="text-sm font-medium text-stone-700">{{ $label }}</span>
+                                        <div class="flex items-center gap-4">
+                                            <label class="flex items-center gap-1.5 text-xs text-stone-600 cursor-pointer">
+                                                <input
+                                                    type="checkbox"
+                                                    name="{{ $key }}_enabled"
+                                                    value="1"
+                                                    x-model="enabled"
+                                                    {{ $enabled ? 'checked' : '' }}
+                                                    class="w-4 h-4 rounded text-brand-600 border-stone-300 focus:ring-brand-500"
+                                                >
+                                                Enabled
+                                            </label>
+                                            <label class="flex items-center gap-1.5 text-xs cursor-pointer" :class="enabled ? 'text-stone-600' : 'text-stone-300 cursor-not-allowed'">
+                                                <input
+                                                    type="checkbox"
+                                                    name="{{ $key }}_required"
+                                                    value="1"
+                                                    :disabled="!enabled"
+                                                    {{ $required ? 'checked' : '' }}
+                                                    class="w-4 h-4 rounded text-brand-600 border-stone-300 focus:ring-brand-500 disabled:opacity-40"
+                                                >
+                                                Required
+                                            </label>
+                                        </div>
+                                    </div>
+                                @endforeach
+                            </div>
                         </div>
 
                         <div class="flex items-center justify-end gap-4">

@@ -24,34 +24,46 @@
                     <!-- Customer Information -->
                     <div class="mb-6">
                         <h3 class="text-lg font-bold mb-4 text-stone-900">Customer Information</h3>
-                        
-                        <!-- Name -->
-                        <div class="mb-4">
-                            <label for="name" class="block text-sm font-medium text-stone-700 mb-2">
-                                Name
-                            </label>
-                            <x-ui.input 
-                                type="text" 
-                                id="name" 
-                                name="name" 
-                                value="{{ old('name', $account->customer->name) }}"
-                                placeholder="Customer name"
-                                :error="$errors->has('name')"
-                            />
-                            @error('name')
-                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                            @enderror
+
+                        <!-- First Name & Last Name -->
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                            <div>
+                                <label for="first_name" class="block text-sm font-medium text-stone-700 mb-2">First Name</label>
+                                <x-ui.input
+                                    type="text"
+                                    id="first_name"
+                                    name="first_name"
+                                    value="{{ old('first_name', $account->customer->first_name) }}"
+                                    placeholder="First name"
+                                    :error="$errors->has('first_name')"
+                                />
+                                @error('first_name')
+                                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                                @enderror
+                            </div>
+                            <div>
+                                <label for="last_name" class="block text-sm font-medium text-stone-700 mb-2">Last Name</label>
+                                <x-ui.input
+                                    type="text"
+                                    id="last_name"
+                                    name="last_name"
+                                    value="{{ old('last_name', $account->customer->last_name) }}"
+                                    placeholder="Last name"
+                                    :error="$errors->has('last_name')"
+                                />
+                                @error('last_name')
+                                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                                @enderror
+                            </div>
                         </div>
 
                         <!-- Email -->
                         <div class="mb-4">
-                            <label for="email" class="block text-sm font-medium text-stone-700 mb-2">
-                                Email
-                            </label>
-                            <x-ui.input 
-                                type="email" 
-                                id="email" 
-                                name="email" 
+                            <label for="email" class="block text-sm font-medium text-stone-700 mb-2">Email</label>
+                            <x-ui.input
+                                type="email"
+                                id="email"
+                                name="email"
                                 value="{{ old('email', $account->customer->email) }}"
                                 placeholder="customer@example.com"
                                 :error="$errors->has('email')"
@@ -63,18 +75,31 @@
 
                         <!-- Phone -->
                         <div class="mb-4">
-                            <label for="phone" class="block text-sm font-medium text-stone-700 mb-2">
-                                Phone
-                            </label>
-                            <x-ui.input 
-                                type="text" 
-                                id="phone" 
-                                name="phone" 
+                            <label for="phone" class="block text-sm font-medium text-stone-700 mb-2">Phone</label>
+                            <x-ui.input
+                                type="text"
+                                id="phone"
+                                name="phone"
                                 value="{{ old('phone', $account->customer->phone) }}"
                                 placeholder="+1 234 567 8900"
                                 :error="$errors->has('phone')"
                             />
                             @error('phone')
+                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                            @enderror
+                        </div>
+
+                        <!-- Birthday -->
+                        <div class="mb-4">
+                            <label for="birthday" class="block text-sm font-medium text-stone-700 mb-2">Birthday</label>
+                            <x-ui.input
+                                type="date"
+                                id="birthday"
+                                name="birthday"
+                                value="{{ old('birthday', $account->customer->birthday ? \Carbon\Carbon::parse($account->customer->birthday)->format('Y-m-d') : '') }}"
+                                :error="$errors->has('birthday')"
+                            />
+                            @error('birthday')
                                 <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                             @enderror
                         </div>
