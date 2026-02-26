@@ -13,7 +13,12 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        $middleware->trustProxies(at: '*');
+        $trustedProxies = env('TRUSTED_PROXIES');
+        $middleware->trustProxies(
+            at: $trustedProxies
+                ? array_values(array_filter(array_map('trim', explode(',', $trustedProxies))))
+                : null
+        );
         $middleware->alias([
             'rate.limit.stamps' => \App\Http\Middleware\RateLimitStamps::class,
             'superadmin' => \App\Http\Middleware\SuperAdmin::class,

@@ -5,9 +5,10 @@
 
     <div class="max-w-2xl mx-auto">
         <x-ui.card class="p-6">
-                    <form method="POST" action="{{ route('merchant.stores.update', $store) }}" enctype="multipart/form-data" class="max-w-md mx-auto">
+                    <form method="POST" action="{{ route('merchant.stores.update', $store) }}" enctype="multipart/form-data" class="max-w-md mx-auto" id="store-edit-form">
                         @csrf
                         @method('PUT')
+                        <x-form-error-summary form-id="store-edit-form" />
 
                         <!-- Name -->
                         <div class="mb-5">
@@ -304,4 +305,3 @@
                 </x-ui.card>
     </div>
 </x-merchant-layout>
-

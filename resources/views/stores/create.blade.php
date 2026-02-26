@@ -5,8 +5,9 @@
 
     <div class="max-w-2xl mx-auto">
         <x-ui.card class="p-6">
-            <form method="POST" action="{{ route('merchant.stores.store') }}" enctype="multipart/form-data">
+            <form method="POST" action="{{ route('merchant.stores.store') }}" enctype="multipart/form-data" id="store-create-form">
                 @csrf
+                <x-form-error-summary form-id="store-create-form" />
 
                 <!-- Name -->
                 <div class="mb-5">
@@ -171,4 +172,3 @@
                 </x-ui.card>
     </div>
 </x-merchant-layout>
-

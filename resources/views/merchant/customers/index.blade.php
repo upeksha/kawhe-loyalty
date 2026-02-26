@@ -5,11 +5,11 @@
 
     <div class="space-y-6">
         <!-- Controls Row -->
-        <x-ui.card class="p-6">
+        <x-ui.card class="p-6" x-data="{ searching: false, filtering: false }">
             <div class="flex flex-col sm:flex-row gap-4">
                 <!-- Search Input -->
                 <div class="flex-1">
-                    <form method="GET" action="{{ route('merchant.customers.index') }}" class="flex gap-2">
+                    <form method="GET" action="{{ route('merchant.customers.index') }}" class="flex gap-2" @submit="searching = true">
                         <x-ui.input 
                             type="text" 
                             name="q" 
@@ -21,8 +21,9 @@
                         @if($activeStoreId)
                             <input type="hidden" name="store_id" value="{{ $activeStoreId }}">
                         @endif
-                        <x-ui.button type="submit" variant="primary" size="md">
-                            Search
+                        <x-ui.button type="submit" variant="primary" size="md" x-bind:disabled="searching">
+                            <span x-show="!searching">Search</span>
+                            <span x-show="searching">Searching...</span>
                         </x-ui.button>
                         @if($q)
                             <x-ui.button href="{{ route('merchant.customers.index', ['store_id' => $activeStoreId]) }}" variant="secondary" size="md">
@@ -34,13 +35,14 @@
                 
                 <!-- Store Dropdown -->
                 <div class="w-full sm:w-auto">
-                    <form method="GET" action="{{ route('merchant.customers.index') }}" id="storeFilterForm">
+                    <form method="GET" action="{{ route('merchant.customers.index') }}" @submit="filtering = true">
                         @if($q)
                             <input type="hidden" name="q" value="{{ $q }}">
                         @endif
                         <select 
                             name="store_id" 
-                            onchange="document.getElementById('storeFilterForm').submit();"
+                            @change="$el.form.requestSubmit()"
+                            :disabled="filtering"
                             class="block w-full rounded-lg border border-stone-300 shadow-sm px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
                         >
                             <option value="">All Stores</option>
@@ -58,10 +60,64 @@
         <!-- Table -->
         @if($accounts->isEmpty())
             <x-ui.card class="p-12 text-center">
-                <p class="text-stone-500">No customers found.</p>
+                @if($q || $activeStoreId)
+                    <h3 class="text-lg font-semibold text-stone-900">No matching customers</h3>
+                    <p class="text-stone-500 mt-2">Try a different search term or clear your filters.</p>
+                    <div class="mt-6 flex flex-wrap justify-center gap-2">
+                        <x-ui.button href="{{ route('merchant.customers.index') }}" variant="primary" size="sm">
+                            Clear Filters
+                        </x-ui.button>
+                        <x-ui.button href="{{ route('merchant.stores.index') }}" variant="secondary" size="sm">
+                            View Store QR
+                        </x-ui.button>
+                    </div>
+                @else
+                    <h3 class="text-lg font-semibold text-stone-900">No customers yet</h3>
+                    <p class="text-stone-500 mt-2">Share your store join link or QR code and customers will appear here automatically.</p>
+                    <div class="mt-6 flex flex-wrap justify-center gap-2">
+                        <x-ui.button href="{{ route('merchant.stores.index') }}" variant="primary" size="sm">
+                            View Store QR
+                        </x-ui.button>
+                        <x-ui.button href="{{ route('merchant.scanner') }}" variant="secondary" size="sm">
+                            Open Scanner
+                        </x-ui.button>
+                    </div>
+                @endif
             </x-ui.card>
         @else
-            <x-ui.card class="p-0 overflow-hidden">
+            <div class="grid grid-cols-1 gap-4 md:hidden">
+                @foreach($accounts as $account)
+                    <x-ui.card class="p-5">
+                        <div class="flex items-start justify-between gap-3">
+                            <div>
+                                <p class="text-xs text-stone-500">{{ $account->store->name }}</p>
+                                <h3 class="font-semibold text-stone-900 mt-1">{{ $account->customer->name ?? '(No name)' }}</h3>
+                                <p class="text-sm text-stone-600 mt-1">{{ $account->customer->email ?? '-' }}</p>
+                                <p class="text-sm text-stone-500">{{ $account->customer->phone ?? '-' }}</p>
+                            </div>
+                            <div>
+                                @if($account->reward_redeemed_at)
+                                    <x-ui.badge variant="default">Redeemed</x-ui.badge>
+                                @elseif($account->reward_available_at)
+                                    <x-ui.badge variant="success">Available</x-ui.badge>
+                                @else
+                                    <x-ui.badge variant="default">Not yet</x-ui.badge>
+                                @endif
+                            </div>
+                        </div>
+                        <div class="mt-3 text-sm text-stone-600 space-y-1">
+                            <p>Stamps: {{ $account->stamp_count }} / {{ $account->store->reward_target }}</p>
+                            <p>Joined: {{ $account->created_at->format('M d, Y') }}</p>
+                            <p>Last stamped: {{ $account->last_stamped_at ? $account->last_stamped_at->format('M d, Y') : '-' }}</p>
+                        </div>
+                        <div class="mt-4">
+                            <a href="{{ route('merchant.customers.show', $account) }}" class="text-brand-600 hover:text-brand-700 font-medium text-sm">View details</a>
+                        </div>
+                    </x-ui.card>
+                @endforeach
+            </div>
+
+            <x-ui.card class="p-0 overflow-hidden hidden md:block">
                 <x-ui.table>
                     <x-ui.table-head>
                         <tr>
@@ -132,5 +188,3 @@
         @endif
     </div>
 </x-merchant-layout>
-
-

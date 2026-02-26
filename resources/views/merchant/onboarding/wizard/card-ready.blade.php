@@ -76,28 +76,61 @@
         </div>
 
         <x-slot name="actions">
-            <div class="flex items-center justify-between gap-4">
-                <form method="GET" action="{{ route('merchant.onboarding.wizard.customer-form') }}" class="inline-block">
-                    <button type="submit" class="inline-flex items-center gap-2 text-sm font-medium text-stone-600 hover:text-stone-900 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 rounded-lg py-2 px-1">
+            <div class="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-3">
+                <form method="GET" action="{{ route('merchant.onboarding.wizard.customer-form') }}" class="w-full sm:w-auto">
+                    <button type="submit" class="w-full sm:w-auto inline-flex items-center justify-center gap-2 text-sm font-medium text-stone-600 hover:text-stone-900 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 rounded-lg py-2 px-3">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
                         Back
                     </button>
                 </form>
-                <form method="POST" action="{{ route('merchant.onboarding.wizard.card-ready.advance') }}" class="inline-block">
+                <form method="POST" action="{{ route('merchant.onboarding.wizard.card-ready.advance') }}" class="w-full sm:w-auto">
                     @csrf
-                    <x-ui.button type="submit" variant="primary" size="lg" class="rounded-xl min-w-[160px]">Continue trial</x-ui.button>
+                    <x-ui.button type="submit" variant="primary" size="lg" class="w-full sm:w-auto rounded-xl min-w-[160px]">Continue trial</x-ui.button>
                 </form>
             </div>
         </x-slot>
     </x-onboarding-step-layout>
 
     <script>
+        function showCopyToast(message, isError = false) {
+            const existing = document.getElementById('copy-toast');
+            if (existing) {
+                existing.remove();
+            }
+
+            const toast = document.createElement('div');
+            toast.id = 'copy-toast';
+            toast.className = `fixed bottom-6 right-6 z-50 px-4 py-3 rounded-lg text-sm font-medium shadow-lg transition-opacity duration-300 ${isError ? 'bg-red-600 text-white' : 'bg-stone-900 text-white'}`;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+
+            setTimeout(() => {
+                toast.classList.add('opacity-0');
+                setTimeout(() => toast.remove(), 300);
+            }, 1800);
+        }
+
         function copyJoinLink() {
-            var el = document.getElementById('join-link');
-            el.select();
-            el.setSelectionRange(0, 99999);
-            navigator.clipboard.writeText(el.value).then(function() {
-                if (typeof alert !== 'undefined') alert('Link copied to clipboard');
+            const el = document.getElementById('join-link');
+            if (!el) return;
+
+            const value = el.value;
+            if (!value) {
+                showCopyToast('No link to copy yet.', true);
+                return;
+            }
+
+            navigator.clipboard.writeText(value).then(function() {
+                showCopyToast('Join link copied.');
+            }).catch(function() {
+                el.select();
+                el.setSelectionRange(0, 99999);
+                try {
+                    const copied = document.execCommand('copy');
+                    showCopyToast(copied ? 'Join link copied.' : 'Could not copy link.', !copied);
+                } catch (e) {
+                    showCopyToast('Could not copy link.', true);
+                }
             });
         }
     </script>

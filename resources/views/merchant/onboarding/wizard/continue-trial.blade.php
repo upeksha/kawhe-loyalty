@@ -21,14 +21,14 @@
         </form>
 
         <x-slot name="actions">
-            <div class="flex items-center justify-between gap-4">
-                <form method="GET" action="{{ route('merchant.onboarding.wizard.card-ready') }}" class="inline-block">
-                    <button type="submit" class="inline-flex items-center gap-2 text-sm font-medium text-stone-600 hover:text-stone-900 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 rounded-lg py-2 px-1">
+            <div class="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-3">
+                <form method="GET" action="{{ route('merchant.onboarding.wizard.card-ready') }}" class="w-full sm:w-auto">
+                    <button type="submit" class="w-full sm:w-auto inline-flex items-center justify-center gap-2 text-sm font-medium text-stone-600 hover:text-stone-900 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 rounded-lg py-2 px-3">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
                         Back
                     </button>
                 </form>
-                <x-ui.button type="submit" form="continue-trial-form" variant="primary" size="lg" class="rounded-xl min-w-[160px]">Get started</x-ui.button>
+                <x-ui.button type="submit" form="continue-trial-form" variant="primary" size="lg" class="w-full sm:w-auto rounded-xl min-w-[160px]">Get started</x-ui.button>
             </div>
         </x-slot>
     </x-onboarding-step-layout>

@@ -3,7 +3,7 @@
         {{ __('Billing & Subscription') }}
     </x-slot>
 
-    <div class="max-w-4xl mx-auto space-y-6">
+    <div class="max-w-4xl mx-auto space-y-4 sm:space-y-6">
         <!-- Error Messages -->
         @if ($errors->any())
             <x-ui.card class="p-4 bg-red-50 border border-red-200">
@@ -27,16 +27,21 @@
             </x-ui.card>
         @endif
         
-        <x-ui.card class="p-6">
+        @php
+            $remainingCards = max(0, (int) (($stats['limit'] ?? 0) - ($stats['non_grandfathered_count'] ?? 0)));
+            $usagePercent = min(100, max(0, (int) ($stats['usage_percentage'] ?? 0)));
+        @endphp
+
+        <x-ui.card class="p-4 sm:p-6">
             <!-- Current Plan Status -->
             <div class="mb-6">
-                <h3 class="text-lg font-bold text-stone-900 mb-4">Current Plan</h3>
+                <h3 class="text-base sm:text-lg font-bold text-stone-900 mb-3 sm:mb-4">Current Plan</h3>
                 @if($stats['is_subscribed'])
                     <div class="p-4 bg-brand-50 border border-brand-200 rounded-lg">
-                        <div class="flex items-center justify-between">
+                        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                             <div>
                                 <p class="text-brand-800 font-semibold">✓ Pro Plan Active</p>
-                                <p class="text-sm text-brand-700 mt-1">Unlimited loyalty cards</p>
+                                <p class="text-sm text-brand-700 mt-1">Unlimited customer cards and uninterrupted signups.</p>
                             </div>
                             <form method="POST" action="{{ route('billing.portal') }}">
                                 @csrf
@@ -48,31 +53,33 @@
                     </div>
                 @else
                     <div class="p-4 bg-stone-50 border border-stone-200 rounded-lg">
-                        <div class="flex items-center justify-between">
+                        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                             <div>
                                 <p class="text-stone-800 font-semibold">Free Plan</p>
                                 <p class="text-sm text-stone-600 mt-1">
-                                    {{ $stats['cards_count'] }} / {{ $stats['limit'] }} cards used
+                                    {{ $stats['cards_count'] }} / {{ $stats['limit'] }} cards used for new signups
                                     @if($stats['grandfathered_count'] > 0)
-                                        <span class="text-xs text-stone-500">({{ $stats['grandfathered_count'] }} grandfathered)</span>
+                                        <span class="text-xs text-stone-500">({{ $stats['grandfathered_count'] }} grandfathered still active)</span>
                                     @endif
                                 </p>
+                                <p class="text-xs text-stone-500 mt-1">Existing customers can always use their cards. Limit only affects new joins.</p>
+                                <p class="text-xs text-stone-600 mt-1"><strong>{{ $remainingCards }}</strong> new signup slot{{ $remainingCards === 1 ? '' : 's' }} remaining.</p>
                             </div>
                             @if($stats['non_grandfathered_count'] >= $stats['limit'])
-                                <div class="text-right">
+                                <div class="w-full sm:w-auto text-left sm:text-right">
                                     <p class="text-sm text-red-600 font-semibold mb-2">Limit Reached</p>
                                     <form method="POST" action="{{ route('billing.checkout') }}">
                                         @csrf
-                                        <x-ui.button type="submit" variant="primary" size="sm">
-                                            Upgrade Now
+                                        <x-ui.button type="submit" variant="primary" size="sm" class="w-full sm:w-auto">
+                                            Upgrade to Resume Signups
                                         </x-ui.button>
                                     </form>
                                 </div>
                             @else
                                 <form method="POST" action="{{ route('billing.checkout') }}" id="upgrade-form">
                                     @csrf
-                                    <x-ui.button type="submit" variant="primary" size="sm">
-                                        Upgrade to Pro
+                                    <x-ui.button type="submit" variant="primary" size="sm" class="w-full sm:w-auto">
+                                        Upgrade Before Limit
                                     </x-ui.button>
                                 </form>
                             @endif
@@ -84,7 +91,7 @@
             <!-- Usage Statistics -->
             @if(!$stats['is_subscribed'])
                 <div class="mb-6">
-                    <h3 class="text-lg font-bold text-stone-900 mb-4">Usage</h3>
+                    <h3 class="text-base sm:text-lg font-bold text-stone-900 mb-3 sm:mb-4">Usage Right Now</h3>
                     <div class="space-y-2">
                         <div class="flex justify-between text-sm">
                             <span class="text-stone-600">Loyalty Cards Issued</span>
@@ -92,7 +99,7 @@
                         </div>
                         @if($stats['grandfathered_count'] > 0)
                             <p class="text-xs text-brand-600">
-                                ℹ️ {{ $stats['grandfathered_count'] }} card(s) grandfathered from previous Pro subscription
+                                {{ $stats['grandfathered_count'] }} grandfathered card(s) are excluded from your free-plan limit.
                             </p>
                         @endif
                         <div class="w-full bg-stone-200 rounded-full h-3">
@@ -100,8 +107,20 @@
                                  style="width: {{ $stats['usage_percentage'] }}%"></div>
                         </div>
                         <p class="text-xs text-stone-500 mt-1">
-                            {{ $stats['limit'] - $stats['non_grandfathered_count'] }} cards remaining on free plan
+                            {{ $remainingCards }} cards remaining on free plan ({{ $usagePercent }}% used)
                         </p>
+                    </div>
+                    <div class="mt-4 rounded-lg border border-stone-200 bg-stone-50 p-3">
+                        <p class="text-xs font-semibold text-stone-700">Upgrade impact</p>
+                        <p class="text-xs text-stone-600 mt-1">Upgrading immediately removes the join limit. No customer data is reset or removed.</p>
+                    </div>
+                    <div class="mt-3 rounded-lg border border-brand-200 bg-brand-50 p-3">
+                        <p class="text-xs font-semibold text-brand-800">Decision helper</p>
+                        <ul class="mt-1 space-y-1 text-xs text-brand-700">
+                            <li>If you are near 0 remaining slots, upgrade now to avoid join interruptions.</li>
+                            <li>If you have active campaigns running, upgrade before limit to keep QR onboarding continuous.</li>
+                            <li>If growth is low this week, you can stay on free and monitor this page.</li>
+                        </ul>
                     </div>
                 </div>
             @endif
@@ -109,7 +128,7 @@
             <!-- Subscription Details -->
             @if($subscription)
                 <div class="mb-6">
-                    <h3 class="text-lg font-bold text-stone-900 mb-4">Subscription Details</h3>
+                    <h3 class="text-base sm:text-lg font-bold text-stone-900 mb-3 sm:mb-4">Subscription Details</h3>
                     <div class="bg-stone-50 p-4 rounded-lg">
                         <p class="text-sm text-stone-600">
                             <strong>Status:</strong> 
@@ -131,24 +150,23 @@
             @elseif(isset($debugInfo) && $debugInfo['has_stripe_id'])
                 <div class="mb-6">
                     <div class="bg-accent-50 border border-accent-200 rounded-lg p-4">
-                        <h3 class="text-sm font-semibold text-accent-800 mb-2">⚠️ Subscription Not Detected</h3>
+                        <h3 class="text-sm font-semibold text-accent-800 mb-2">Subscription Sync Pending</h3>
                         <p class="text-xs text-accent-700 mb-3">
-                            Your payment was successful, but the subscription hasn't been synced yet. 
-                            This usually happens if the webhook hasn't been processed. Try the options below:
+                            Your payment may be complete, but plan status has not synced yet. Use one of the actions below.
                         </p>
                         <div class="space-y-2">
                             <form method="POST" action="{{ route('billing.sync') }}" class="inline">
                                 @csrf
-                                <x-ui.button type="submit" variant="primary" size="sm">
-                                    🔄 Sync from Stripe Customer
+                                <x-ui.button type="submit" variant="primary" size="sm" class="w-full sm:w-auto">
+                                    Sync From Stripe
                                 </x-ui.button>
                             </form>
-                            <x-ui.button href="{{ route('billing.index', ['refresh' => 1]) }}" variant="primary" size="sm">
-                                🔄 Refresh Status
+                            <x-ui.button href="{{ route('billing.index', ['refresh' => 1]) }}" variant="primary" size="sm" class="w-full sm:w-auto">
+                                Refresh Status
                             </x-ui.button>
                         </div>
                         <p class="text-xs text-accent-600 mt-3">
-                            <strong>Note:</strong> If this persists, check your Stripe Dashboard to verify the subscription exists, 
+                            <strong>Note:</strong> If this persists, check Stripe Dashboard to verify the subscription exists, 
                             then contact support with your Stripe customer ID: <code>{{ $debugInfo['stripe_id'] }}</code>
                         </p>
                     </div>
@@ -175,59 +193,43 @@
             <!-- Upgrade Benefits -->
             @if(!$stats['is_subscribed'])
                 <div class="border-t pt-6">
-                    <h3 class="text-lg font-bold text-stone-900 mb-4">Pro Plan Benefits</h3>
+                    <h3 class="text-base sm:text-lg font-bold text-stone-900 mb-3 sm:mb-4">Why Upgrade</h3>
                     <ul class="space-y-2 text-sm text-stone-600">
                         <li class="flex items-start">
                             <svg class="w-5 h-5 text-brand-500 mr-2 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
                             </svg>
-                            Unlimited loyalty cards
+                            Unlimited new customer signups
                         </li>
                         <li class="flex items-start">
                             <svg class="w-5 h-5 text-brand-500 mr-2 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
                             </svg>
-                            All existing features included
+                            Existing cards continue without interruption
                         </li>
                         <li class="flex items-start">
                             <svg class="w-5 h-5 text-brand-500 mr-2 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
                             </svg>
-                            Cancel anytime
+                            Cancel anytime from billing portal
                         </li>
                     </ul>
                 </div>
             @endif
             
-            <!-- Debug Info (only show if Stripe not configured) -->
-            @if(empty(config('cashier.key')) || empty(config('cashier.secret')) || empty(config('cashier.price_id')))
+            <!-- Stripe setup details (development only) -->
+            @if((app()->environment('local') || config('app.debug')) && (empty(config('cashier.key')) || empty(config('cashier.secret')) || empty(config('cashier.price_id'))))
                 <div class="border-t pt-6 mt-6">
-                    <div class="bg-accent-50 border border-accent-200 rounded-lg p-4">
-                        <h4 class="text-sm font-semibold text-accent-800 mb-2">⚠️ Stripe Configuration Status</h4>
-                        <ul class="text-xs text-accent-700 space-y-1">
+                    <details class="bg-accent-50 border border-accent-200 rounded-lg p-4">
+                        <summary class="text-sm font-semibold text-accent-800 cursor-pointer">⚠️ Stripe Configuration Status</summary>
+                        <ul class="text-xs text-accent-700 space-y-1 mt-3">
                             <li>STRIPE_KEY: {{ empty(config('cashier.key')) ? '❌ Not set' : '✅ Set' }}</li>
                             <li>STRIPE_SECRET: {{ empty(config('cashier.secret')) ? '❌ Not set' : '✅ Set' }}</li>
                             <li>STRIPE_PRICE_ID: {{ empty(config('cashier.price_id')) ? '❌ Not set' : '✅ Set' }}</li>
                         </ul>
-                        <p class="text-xs text-accent-600 mt-2">
-                            Please configure Stripe in your <code>.env</code> file. See <a href="{{ route('billing.index') }}" class="underline">BILLING_SETUP.md</a> for instructions.
-                        </p>
-                    </div>
+                    </details>
                 </div>
             @endif
         </x-ui.card>
     </div>
-    
-    <script>
-        // Ensure form submission works
-        document.addEventListener('DOMContentLoaded', function() {
-            const form = document.getElementById('upgrade-form');
-            if (form) {
-                form.addEventListener('submit', function(e) {
-                    console.log('Form submitting to:', form.action);
-                    // Let form submit normally
-                });
-            }
-        });
-    </script>
 </x-merchant-layout>

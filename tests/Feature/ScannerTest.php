@@ -456,6 +456,8 @@ test('backwards compatibility - correct store selected works as before', functio
 });
 
 test('cooldown still works with auto-detected store', function () {
+    config(['loyalty.stamp_cooldown_seconds' => 30]);
+
     $merchant = User::factory()->create();
     $storeA = Store::factory()->create(['user_id' => $merchant->id]);
     $storeB = Store::factory()->create(['user_id' => $merchant->id]);

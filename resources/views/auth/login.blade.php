@@ -4,13 +4,15 @@
 
     <x-auth-session-status class="mb-4" :status="session('status')" />
 
-    <form method="POST" action="{{ route('login') }}" class="space-y-5">
+    <form method="POST" action="{{ route('login') }}" class="space-y-5" id="login-form">
         @csrf
+        <x-form-error-summary form-id="login-form" max-items="3" />
 
         <div>
             <label for="email" class="block text-sm font-medium text-stone-700 mb-1.5">Email address</label>
             <input id="email" type="email" name="email" value="{{ old('email') }}" required autofocus autocomplete="username"
-                class="w-full rounded-xl border border-stone-300 bg-stone-50 px-4 py-3 text-sm text-stone-900 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 transition">
+                @error('email') aria-invalid="true" @enderror
+                class="w-full rounded-xl border bg-stone-50 px-4 py-3 text-sm text-stone-900 placeholder-stone-400 focus:outline-none focus:ring-2 transition @error('email') border-red-300 focus:border-red-500 focus:ring-red-500/30 @else border-stone-300 focus:ring-brand-500/30 focus:border-brand-500 @enderror">
             <x-input-error :messages="$errors->get('email')" class="mt-1.5 text-sm" />
         </div>
 
@@ -24,7 +26,8 @@
                 @endif
             </div>
             <input id="password" type="password" name="password" required autocomplete="current-password"
-                class="w-full rounded-xl border border-stone-300 bg-stone-50 px-4 py-3 text-sm text-stone-900 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 transition">
+                @error('password') aria-invalid="true" @enderror
+                class="w-full rounded-xl border bg-stone-50 px-4 py-3 text-sm text-stone-900 placeholder-stone-400 focus:outline-none focus:ring-2 transition @error('password') border-red-300 focus:border-red-500 focus:ring-red-500/30 @else border-stone-300 focus:ring-brand-500/30 focus:border-brand-500 @enderror">
             <x-input-error :messages="$errors->get('password')" class="mt-1.5 text-sm" />
         </div>
 
@@ -34,10 +37,9 @@
             <label for="remember_me" class="text-sm text-stone-600">Remember me</label>
         </div>
 
-        <button type="submit"
-            class="w-full bg-brand-600 hover:bg-brand-700 text-white font-semibold rounded-xl px-4 py-3 text-sm transition focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-500">
+        <x-ui.button type="submit" variant="primary" class="w-full" data-loading-text="Signing in...">
             Sign in
-        </button>
+        </x-ui.button>
     </form>
 
     <p class="mt-6 text-center text-sm text-stone-500">

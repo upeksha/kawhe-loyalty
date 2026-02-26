@@ -10,9 +10,10 @@
 
     <div class="max-w-2xl mx-auto">
         <x-ui.card class="p-6">
-                    <form method="POST" action="{{ route('merchant.customers.update', $account) }}">
+                    <form method="POST" action="{{ route('merchant.customers.update', $account) }}" id="customer-edit-form">
                         @csrf
                         @method('PUT')
+                        <x-form-error-summary form-id="customer-edit-form" />
 
                     <!-- Success Message -->
                     @if(session('success'))

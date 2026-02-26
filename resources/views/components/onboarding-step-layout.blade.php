@@ -55,6 +55,14 @@
             <div class="bg-white rounded-2xl shadow-xl shadow-stone-200/50 border border-stone-200/80 overflow-hidden">
                     <div class="p-6 sm:p-8 lg:p-10">
                         <header class="mb-8">
+                            @if($backUrl)
+                                <div class="mb-4">
+                                    <a href="{{ $backUrl }}" class="inline-flex items-center gap-2 text-sm font-medium text-stone-600 hover:text-stone-900 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 rounded-lg px-2 py-1 -ml-2">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+                                        Back to previous step
+                                    </a>
+                                </div>
+                            @endif
                             <h2 class="text-2xl sm:text-3xl font-bold text-stone-900 tracking-tight">{{ $title }}</h2>
                             @if($subtitle)
                                 <p class="mt-3 text-base text-stone-600 leading-relaxed">{{ $subtitle }}</p>

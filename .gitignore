@@ -19,6 +19,9 @@
 /storage/*.key
 /storage/pail
 /storage/app/private/google-wallet/*.json
+/storage/app/private/passgenerator/certs/*
+/passgenerator/certs/*.p12
+/passgenerator/certs/*.pfx
 /vendor
 Homestead.json
 Homestead.yaml

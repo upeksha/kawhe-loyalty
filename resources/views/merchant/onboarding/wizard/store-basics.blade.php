@@ -16,6 +16,7 @@
 @endphp
         <form method="POST" action="{{ route('merchant.onboarding.wizard.store-basics.store') }}" id="store-basics-form" x-data="{ rewardTarget: {{ $defaultRewardTarget }}, rewardTitle: {{ json_encode($defaultRewardTitle) }} }">
             @csrf
+            <x-form-error-summary form-id="store-basics-form" />
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
                 <div class="sm:col-span-2 space-y-8">
                     <x-onboarding-form-section title="Store details">
@@ -52,9 +53,20 @@
                 </div>
 
                 <div class="sm:col-span-1">
-                    <div class="sticky top-8">
+                    <details class="sm:hidden rounded-xl border border-stone-200 bg-stone-50/70 p-4">
+                        <summary class="cursor-pointer list-none flex items-center justify-between text-sm font-semibold text-stone-800">
+                            Card summary preview
+                            <span class="text-xs font-medium text-stone-500">Tap to expand</span>
+                        </summary>
+                        <div class="mt-4 rounded-2xl bg-white border border-stone-200 p-6 shadow-sm" role="status" aria-live="polite">
+                            <p class="text-lg font-semibold text-stone-800 leading-snug" x-text="'Buy ' + (rewardTarget || 9) + ', get 1 free'"></p>
+                            <p class="text-stone-600 mt-1" x-text="(rewardTitle || 'reward').toLowerCase()"></p>
+                            <p class="text-xs text-stone-400 mt-4 pt-4 border-t border-stone-100">Stamp card summary</p>
+                        </div>
+                    </details>
+                    <div class="hidden sm:block sticky top-8">
                         <p class="text-xs font-semibold text-stone-500 uppercase tracking-wider mb-3">What customers will see</p>
-                        <div class="rounded-2xl bg-white border border-stone-200 p-6 shadow-lg shadow-stone-200/30">
+                        <div class="rounded-2xl bg-white border border-stone-200 p-6 shadow-lg shadow-stone-200/30" role="status" aria-live="polite">
                             <p class="text-lg font-semibold text-stone-800 leading-snug" x-text="'Buy ' + (rewardTarget || 9) + ', get 1 free'"></p>
                             <p class="text-stone-600 mt-1" x-text="(rewardTitle || 'reward').toLowerCase()"></p>
                             <p class="text-xs text-stone-400 mt-4 pt-4 border-t border-stone-100">Stamp card summary</p>
@@ -65,8 +77,8 @@
         </form>
 
         <x-slot name="actions">
-            <div class="flex justify-end">
-                <x-ui.button type="submit" form="store-basics-form" variant="primary" size="lg" class="min-w-[140px] rounded-xl">Continue</x-ui.button>
+            <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-3">
+                <x-ui.button type="submit" form="store-basics-form" variant="primary" size="lg" class="w-full sm:w-auto min-w-[140px] rounded-xl">Continue</x-ui.button>
             </div>
         </x-slot>
     </x-onboarding-step-layout>

@@ -101,6 +101,9 @@ sudo systemctl restart kawhe-queue-worker
 
 # 5. Test email configuration
 php artisan kawhe:mail-test your-email@example.com
+
+# 6. Run production readiness check
+php artisan health:check
 ```
 
 See **[PRODUCTION_EMAIL_SETUP.md](PRODUCTION_EMAIL_SETUP.md)** for complete production email setup instructions including:

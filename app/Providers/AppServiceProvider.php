@@ -2,7 +2,10 @@
 
 namespace App\Providers;
 
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 
@@ -21,15 +24,23 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        RateLimiter::for('api-login', function (Request $request): array {
+            $email = strtolower((string) $request->input('email'));
+
+            return [
+                Limit::perMinute(10)->by($email . '|' . $request->ip()),
+                Limit::perMinute(30)->by($request->ip()),
+            ];
+        });
+
         // Only force HTTPS in production, not in local development
         if (config('app.env') === 'production' && !str_contains(config('app.url'), 'localhost')) {
             URL::forceScheme('https');
         }
 
-        // Fix asset URLs when accessing through ngrok or external URLs
-        // This ensures Vite assets load correctly through ngrok
+        // Keep this local-only to avoid trusting spoofable forwarded host headers in production.
         $request = request();
-        if ($request->header('x-forwarded-host') || str_contains($request->getHost(), 'ngrok')) {
+        if (app()->isLocal() && str_contains($request->getHost(), 'ngrok')) {
             // Use the request's host for asset URLs when accessed through ngrok
             $host = $request->getHost();
             $scheme = $request->getScheme();

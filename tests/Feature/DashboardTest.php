@@ -14,5 +14,5 @@ test('authenticated user can access dashboard', function () {
     $response = $this->actingAs($user)->get('/dashboard');
 
     $response->assertStatus(200);
-    $response->assertSee('You\'re logged in');
+    $response->assertSeeText('Today’s Quick Actions');
 });

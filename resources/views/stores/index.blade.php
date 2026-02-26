@@ -11,13 +11,37 @@
     <div class="space-y-6">
         @if($stores->isEmpty())
             <x-ui.card class="p-12 text-center">
-                <p class="text-stone-500 mb-4">You haven't created any stores yet.</p>
-                <x-ui.button href="{{ route('merchant.stores.create') }}" variant="primary">
-                    Create Your First Store
-                </x-ui.button>
+                <h3 class="text-lg font-semibold text-stone-900">No stores yet</h3>
+                <p class="text-stone-500 mt-2">Create your first store to generate a join QR code and start collecting customers.</p>
+                <div class="mt-6 flex flex-wrap justify-center gap-2">
+                    <x-ui.button href="{{ route('merchant.stores.create') }}" variant="primary">
+                        Create Your First Store
+                    </x-ui.button>
+                    <x-ui.button href="{{ route('merchant.dashboard') }}" variant="secondary">
+                        Back to Dashboard
+                    </x-ui.button>
+                </div>
             </x-ui.card>
         @else
-            <x-ui.card class="p-0 overflow-hidden">
+            <div class="grid grid-cols-1 gap-4 md:hidden">
+                @foreach($stores as $store)
+                    <x-ui.card class="p-5">
+                        <div class="flex items-start justify-between gap-3">
+                            <div>
+                                <h3 class="font-semibold text-stone-900">{{ $store->name }}</h3>
+                                <p class="text-sm text-stone-500 mt-1">{{ $store->address ?? 'No address set' }}</p>
+                                <p class="text-sm text-stone-600 mt-2">{{ $store->reward_target }} stamps for {{ $store->reward_title }}</p>
+                            </div>
+                        </div>
+                        <div class="mt-4 flex items-center gap-3">
+                            <a href="{{ route('merchant.stores.edit', $store) }}" class="text-brand-600 hover:text-brand-700 font-medium text-sm">Edit</a>
+                            <a href="{{ route('merchant.stores.qr', $store) }}" class="text-brand-600 hover:text-brand-700 font-medium text-sm">QR Code</a>
+                        </div>
+                    </x-ui.card>
+                @endforeach
+            </div>
+
+            <x-ui.card class="p-0 overflow-hidden hidden md:block">
                 <x-ui.table>
                     <x-ui.table-head>
                         <tr>
@@ -53,4 +77,3 @@
         @endif
     </div>
 </x-merchant-layout>
-

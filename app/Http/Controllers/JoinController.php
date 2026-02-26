@@ -101,6 +101,8 @@ class JoinController extends Controller
 
         $rules = [
             'email' => ['required', 'email', 'max:255'],
+            // Legacy compatibility: older clients submit a single `name` field.
+            'name' => ['nullable', 'string', 'max:255'],
         ];
         if (! empty($config['first_name']['enabled'])) {
             $rules['first_name'] = $config['first_name']['required'] ? ['required', 'string', 'max:255'] : ['nullable', 'string', 'max:255'];
@@ -131,7 +133,7 @@ class JoinController extends Controller
             'birthday' => isset($validated['birthday']) ? $validated['birthday'] : null,
         ];
         $nameParts = array_filter([$customerData['first_name'] ?? '', $customerData['last_name'] ?? '']);
-        $customerData['name'] = $nameParts ? implode(' ', $nameParts) : null;
+        $customerData['name'] = $nameParts ? implode(' ', $nameParts) : ($validated['name'] ?? null);
 
         // Find existing customer or create new one
         $customer = null;

@@ -1,19 +1,19 @@
 <x-merchant-layout>
     <x-slot name="header">
-        <div class="flex justify-between items-center">
+        <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
             <span>{{ __('Customer Details') }}</span>
-            <x-ui.button href="{{ route('merchant.customers.index', request()->query()) }}" variant="ghost" size="sm">
+            <x-ui.button href="{{ route('merchant.customers.index', request()->query()) }}" variant="ghost" size="sm" class="w-full sm:w-auto">
                 ← Back to Customers
             </x-ui.button>
         </div>
     </x-slot>
 
-    <div class="space-y-6">
+    <div class="space-y-4 sm:space-y-6">
         <!-- Summary Cards -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             <!-- Store Info Card -->
-            <x-ui.card class="p-6">
-                <h3 class="text-lg font-bold mb-4 text-stone-900">Store Information</h3>
+            <x-ui.card class="p-4 sm:p-6">
+                <h3 class="text-base sm:text-lg font-bold mb-3 sm:mb-4 text-stone-900">Store Information</h3>
                 <div class="space-y-2 text-sm">
                     <p><strong class="text-stone-700">Name:</strong> <span class="text-stone-600">{{ $account->store->name }}</span></p>
                     @if($account->store->address)
@@ -25,10 +25,10 @@
             </x-ui.card>
 
             <!-- Customer Info Card -->
-            <x-ui.card class="p-6">
-                <div class="flex justify-between items-center mb-4">
-                    <h3 class="text-lg font-bold text-stone-900">Customer Information</h3>
-                    <x-ui.button href="{{ route('merchant.customers.edit', $account) }}" variant="primary" size="sm">
+            <x-ui.card class="p-4 sm:p-6">
+                <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-3 sm:mb-4">
+                    <h3 class="text-base sm:text-lg font-bold text-stone-900">Customer Information</h3>
+                    <x-ui.button href="{{ route('merchant.customers.edit', $account) }}" variant="primary" size="sm" class="w-full sm:w-auto">
                         <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
                         </svg>
@@ -56,8 +56,8 @@
         </div>
 
         <!-- Card Status Card -->
-        <x-ui.card class="p-6">
-            <h3 class="text-lg font-bold mb-4 text-stone-900">Card Status</h3>
+        <x-ui.card class="p-4 sm:p-6">
+            <h3 class="text-base sm:text-lg font-bold mb-3 sm:mb-4 text-stone-900">Card Status</h3>
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div>
                     <p class="text-sm text-stone-500 mb-1">Stamps</p>
@@ -89,12 +89,28 @@
         </x-ui.card>
 
         <!-- Activity Table -->
-        <x-ui.card class="p-6">
-            <h3 class="text-lg font-bold mb-4 text-stone-900">Recent Activity</h3>
+        <x-ui.card class="p-4 sm:p-6">
+            <h3 class="text-base sm:text-lg font-bold mb-3 sm:mb-4 text-stone-900">Recent Activity</h3>
             @if($events->isEmpty())
                 <p class="text-stone-500 text-center py-4">No activity recorded yet.</p>
             @else
-                <x-ui.table>
+                <div class="grid grid-cols-1 gap-3 md:hidden">
+                    @foreach($events as $event)
+                        <div class="rounded-xl border border-stone-200 bg-stone-50/60 p-4">
+                            <div class="flex items-center justify-between gap-2">
+                                <x-ui.badge variant="{{ $event->type === 'stamp' ? 'info' : 'success' }}">
+                                    {{ ucfirst($event->type) }}
+                                </x-ui.badge>
+                                <p class="text-xs text-stone-500">{{ $event->created_at->format('M d, Y g:i A') }}</p>
+                            </div>
+                            <div class="mt-2 text-sm text-stone-700 space-y-1">
+                                <p><strong>Count:</strong> {{ $event->count ?? '-' }}</p>
+                                <p><strong>By:</strong> {{ $event->user->name ?? 'System' }}</p>
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+                <x-ui.table class="hidden md:table">
                     <x-ui.table-head>
                         <tr>
                             <x-ui.table-header-cell>Type</x-ui.table-header-cell>
@@ -128,5 +144,4 @@
         </x-ui.card>
     </div>
 </x-merchant-layout>
-
 

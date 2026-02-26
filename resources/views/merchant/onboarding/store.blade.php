@@ -13,8 +13,9 @@
                 </p>
             </div>
 
-            <form method="POST" action="{{ route('merchant.onboarding.store.store') }}" enctype="multipart/form-data">
+            <form method="POST" action="{{ route('merchant.onboarding.store.store') }}" enctype="multipart/form-data" id="legacy-onboarding-store-form">
                         @csrf
+                <x-form-error-summary form-id="legacy-onboarding-store-form" />
 
                 <!-- Name -->
                 <div class="mb-5">

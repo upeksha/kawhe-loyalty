@@ -32,6 +32,7 @@
         "
         >
             @csrf
+            <x-form-error-summary form-id="card-design-form" />
             <div class="grid grid-cols-1 sm:grid-cols-5 gap-6">
                 <div class="sm:col-span-3 space-y-8">
                     <x-onboarding-form-section title="Brand colors">
@@ -40,18 +41,18 @@
                                 <label for="brand_color" class="block text-sm font-medium text-stone-700 mb-1.5">Brand color</label>
                                 <div class="flex gap-3 mt-1.5">
                                     <input type="color" id="brand_color" name="brand_color" x-ref="brandColor" value="{{ $brandColor }}" class="h-11 w-14 rounded-xl border border-stone-300 cursor-pointer flex-shrink-0 bg-white" />
-                                    <input type="text" x-ref="brandColorText" value="{{ $brandColor }}" placeholder="#0EA5E9" class="{{ $inputClass }}" />
+                                    <input type="text" id="brand_color_text" x-ref="brandColorText" value="{{ $brandColor }}" placeholder="#0EA5E9" aria-label="Brand color hex value" aria-describedby="brand_color_note" autocapitalize="off" spellcheck="false" class="{{ $inputClass }}" />
                                 </div>
-                                <x-onboarding-helper-note>Used for buttons and accents on the customer card.</x-onboarding-helper-note>
+                                <x-onboarding-helper-note id="brand_color_note">Used for buttons and accents on the customer card.</x-onboarding-helper-note>
                                 <x-input-error :messages="$errors->get('brand_color')" class="mt-2" />
                             </div>
                             <div>
                                 <label for="background_color" class="block text-sm font-medium text-stone-700 mb-1.5">Background color</label>
                                 <div class="flex gap-3 mt-1.5">
                                     <input type="color" id="background_color" name="background_color" x-ref="bgColor" value="{{ $bgColor }}" class="h-11 w-14 rounded-xl border border-stone-300 cursor-pointer flex-shrink-0 bg-white" />
-                                    <input type="text" x-ref="bgColorText" value="{{ $bgColor }}" placeholder="#1F2937" class="{{ $inputClass }}" />
+                                    <input type="text" id="background_color_text" x-ref="bgColorText" value="{{ $bgColor }}" placeholder="#1F2937" aria-label="Background color hex value" aria-describedby="background_color_note" autocapitalize="off" spellcheck="false" class="{{ $inputClass }}" />
                                 </div>
-                                <x-onboarding-helper-note>Background of the join page and card.</x-onboarding-helper-note>
+                                <x-onboarding-helper-note id="background_color_note">Background of the join page and card.</x-onboarding-helper-note>
                                 <x-input-error :messages="$errors->get('background_color')" class="mt-2" />
                             </div>
                         </div>
@@ -115,11 +116,38 @@
                     </x-onboarding-form-section>
                 </div>
 
-                {{-- Live preview panel --}}
                 <div class="sm:col-span-2">
-                    <div class="sticky top-8">
+                    <details class="sm:hidden rounded-xl border border-stone-200 bg-stone-50/70 p-4">
+                        <summary class="cursor-pointer list-none flex items-center justify-between text-sm font-semibold text-stone-800">
+                            Card preview
+                            <span class="text-xs font-medium text-stone-500">Tap to expand</span>
+                        </summary>
+                        <div class="mt-4 rounded-2xl overflow-hidden border border-stone-200 shadow-sm" :style="{ backgroundColor: bgColor }" role="status" aria-live="polite">
+                            <div class="p-5 text-white">
+                                <div class="flex items-center gap-3 mb-3">
+                                    <template x-if="logoPreview">
+                                        <img :src="logoPreview" alt="" class="h-10 w-10 object-contain rounded-lg bg-white/20 p-1">
+                                    </template>
+                                    <span class="font-semibold text-lg" x-text="'{{ addslashes($store->name) }}'"></span>
+                                </div>
+                                <p class="text-white/90 text-sm" x-text="'{{ addslashes($store->reward_title) }}'"></p>
+                                <div class="flex gap-1.5 mt-4 flex-wrap">
+                                    <span class="w-6 h-6 rounded-full border-2" :style="{ borderColor: brandColor }"></span>
+                                    <span class="w-6 h-6 rounded-full border-2" :style="{ borderColor: brandColor }"></span>
+                                    <span class="w-6 h-6 rounded-full border-2" :style="{ borderColor: brandColor }"></span>
+                                    <span class="w-6 h-6 rounded-full border-2 border-white/30"></span>
+                                    <span class="w-6 h-6 rounded-full border-2 border-white/30"></span>
+                                    <span class="w-6 h-6 rounded-full border-2 border-white/30"></span>
+                                    <span class="w-6 h-6 rounded-full border-2 border-white/30"></span>
+                                    <span class="w-6 h-6 rounded-full border-2 border-white/30"></span>
+                                    <span class="w-6 h-6 rounded-full border-2 border-white/30"></span>
+                                </div>
+                            </div>
+                        </div>
+                    </details>
+                    <div class="hidden sm:block sticky top-8">
                         <p class="text-xs font-semibold text-stone-500 uppercase tracking-wider mb-3">Preview</p>
-                        <div class="rounded-2xl overflow-hidden border border-stone-200 shadow-xl shadow-stone-200/40" :style="{ backgroundColor: bgColor }">
+                        <div class="rounded-2xl overflow-hidden border border-stone-200 shadow-xl shadow-stone-200/40" :style="{ backgroundColor: bgColor }" role="status" aria-live="polite">
                             <div class="p-5 text-white">
                                 <div class="flex items-center gap-3 mb-3">
                                     <template x-if="logoPreview">
@@ -154,14 +182,14 @@
         </form>
 
         <x-slot name="actions">
-            <div class="flex items-center justify-between gap-4">
-                <form method="GET" action="{{ route('merchant.onboarding.wizard.store-basics') }}" class="inline-block">
-                    <button type="submit" class="inline-flex items-center gap-2 text-sm font-medium text-stone-600 hover:text-stone-900 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 rounded-lg py-2 px-1">
+            <div class="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-3">
+                <form method="GET" action="{{ route('merchant.onboarding.wizard.store-basics') }}" class="w-full sm:w-auto">
+                    <button type="submit" class="w-full sm:w-auto inline-flex items-center justify-center gap-2 text-sm font-medium text-stone-600 hover:text-stone-900 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 rounded-lg py-2 px-3">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
                         Back
                     </button>
                 </form>
-                <x-ui.button type="submit" form="card-design-form" variant="primary" size="lg" class="rounded-xl min-w-[140px]">Continue</x-ui.button>
+                <x-ui.button type="submit" form="card-design-form" variant="primary" size="lg" class="w-full sm:w-auto rounded-xl min-w-[140px]">Continue</x-ui.button>
             </div>
         </x-slot>
     </x-onboarding-step-layout>
