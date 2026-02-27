@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Storage;
 
 class GoogleWalletStampStripRenderer
 {
-    private const RENDER_VERSION = 'v4';
+    private const RENDER_VERSION = 'v5';
 
     /**
      * Generate a stamp-strip PNG in public storage and return its relative path.
@@ -139,6 +139,7 @@ class GoogleWalletStampStripRenderer
         $startY = (int) floor((($height - $totalCirclesHeight) / 2)) + $circleRadius;
         $startY = max($paddingTop + $circleRadius, $startY);
         $index = 0;
+        imagesetthickness($image, 4);
         for ($row = 0; $row < $rows; $row++) {
             $itemsInRow = min($columns, $target - ($row * $columns));
             $rowWidth = ($itemsInRow * $circleDiameter) + (($itemsInRow - 1) * $gap);
@@ -153,12 +154,11 @@ class GoogleWalletStampStripRenderer
                     imageellipse($image, $x, $y, $circleDiameter, $circleDiameter, $fgColor);
                 } else {
                     imagefilledellipse($image, $x, $y, $circleDiameter, $circleDiameter, $bgColor);
-                    imagesetthickness($image, 4);
                     imageellipse($image, $x, $y, $circleDiameter, $circleDiameter, $fgColor);
-                    imagesetthickness($image, 1);
                 }
             }
         }
+        imagesetthickness($image, 1);
 
         ob_start();
         imagepng($image);
