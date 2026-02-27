@@ -8,6 +8,8 @@ use Illuminate\Support\Facades\Storage;
 
 class GoogleWalletStampStripRenderer
 {
+    private const RENDER_VERSION = 'v3';
+
     /**
      * Generate a stamp-strip PNG in public storage and return its relative path.
      */
@@ -38,6 +40,7 @@ class GoogleWalletStampStripRenderer
         $foreground = $this->bestContrastTextColor($background);
 
         $stateHash = substr(sha1(implode('|', [
+            self::RENDER_VERSION,
             $target,
             $stamps,
             $background,
