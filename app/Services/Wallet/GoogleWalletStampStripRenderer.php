@@ -51,12 +51,7 @@ class GoogleWalletStampStripRenderer
             return $relativePath;
         }
 
-        $heroPath = null;
-        if (! empty($store->pass_hero_image_path) && Storage::disk('public')->exists($store->pass_hero_image_path)) {
-            $heroPath = Storage::disk('public')->path($store->pass_hero_image_path);
-        }
-
-        $pngBinary = $this->renderPng($target, $stamps, $background, $accent, $foreground, $heroPath);
+        $pngBinary = $this->renderPng($target, $stamps, $background, $accent, $foreground);
         if (! $pngBinary) {
             return null;
         }
@@ -65,19 +60,12 @@ class GoogleWalletStampStripRenderer
         return $relativePath;
     }
 
-    protected function renderPng(
-        int $target,
-        int $stamps,
-        string $backgroundHex,
-        string $accentHex,
-        string $foregroundHex,
-        ?string $heroPath = null
-    ): ?string
+    protected function renderPng(int $target, int $stamps, string $backgroundHex, string $accentHex, string $foregroundHex): ?string
     {
         $width = 1032;
-        $height = 336;
+        $height = 230;
         $paddingX = 52;
-        $paddingTop = 56;
+        $paddingTop = 28;
 
         $image = imagecreatetruecolor($width, $height);
         if (! $image) {
@@ -93,41 +81,14 @@ class GoogleWalletStampStripRenderer
         $bgColor = imagecolorallocate($image, $bgR, $bgG, $bgB);
         $fgColor = imagecolorallocate($image, $fgR, $fgG, $fgB);
         $accentColor = imagecolorallocate($image, $acR, $acG, $acB);
-        $softAccent = imagecolorallocate($image, (int) (($acR + $bgR) / 2), (int) (($acG + $bgG) / 2), (int) (($acB + $bgB) / 2));
 
         imagefill($image, 0, 0, $bgColor);
 
-        // Use store hero image when available so front face resembles Apple pass styling.
-        if ($heroPath && is_readable($heroPath)) {
-            $heroBinary = @file_get_contents($heroPath);
-            if ($heroBinary !== false) {
-                $heroSource = @imagecreatefromstring($heroBinary);
-                if ($heroSource !== false) {
-                    $srcW = imagesx($heroSource);
-                    $srcH = imagesy($heroSource);
-                    if ($srcW > 0 && $srcH > 0) {
-                        $scale = max($width / $srcW, $height / $srcH);
-                        $drawW = (int) ceil($srcW * $scale);
-                        $drawH = (int) ceil($srcH * $scale);
-                        $dstX = (int) floor(($width - $drawW) / 2);
-                        $dstY = (int) floor(($height - $drawH) / 2);
-                        imagecopyresampled($image, $heroSource, $dstX, $dstY, 0, 0, $drawW, $drawH, $srcW, $srcH);
-                    }
-                    imagedestroy($heroSource);
-                }
-            }
-        }
-
-        // Slight overlay for circle contrast consistency.
-        $overlay = imagecolorallocatealpha($image, $bgR, $bgG, $bgB, 70);
-        imagefilledrectangle($image, 0, 0, $width, $height, $overlay);
-
-        $columns = min(max($target, 1), 6);
+        $columns = min(max($target, 1), 10);
         $rows = (int) ceil($target / $columns);
-        $maxRows = 2;
-        if ($rows > $maxRows) {
-            $rows = $maxRows;
-            $columns = (int) ceil($target / $rows);
+        if ($rows > 2) {
+            $rows = 2;
+            $columns = (int) ceil($target / 2);
         }
 
         $usableWidth = $width - ($paddingX * 2);
@@ -136,7 +97,9 @@ class GoogleWalletStampStripRenderer
         $circleDiameter = max(34, min($circleDiameter, 88));
         $circleRadius = (int) floor($circleDiameter / 2);
 
-        $startY = $paddingTop + $circleRadius;
+        $totalCirclesHeight = ($rows * $circleDiameter) + (($rows - 1) * 16);
+        $startY = (int) floor((($height - $totalCirclesHeight) / 2)) + $circleRadius;
+        $startY = max($paddingTop + $circleRadius, $startY);
         $index = 0;
         for ($row = 0; $row < $rows; $row++) {
             $itemsInRow = min($columns, $target - ($row * $columns));
@@ -159,9 +122,9 @@ class GoogleWalletStampStripRenderer
             }
         }
 
-        // Progress text kept subtle at top-right for quick glance.
+        // Subtle progress text near top-right.
         $progressText = sprintf('%d/%d', $stamps, $target);
-        imagestring($image, 5, $width - 120, 18, $progressText, $accentColor);
+        imagestring($image, 4, $width - 88, 12, $progressText, $accentColor);
 
         ob_start();
         imagepng($image);
