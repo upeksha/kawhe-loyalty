@@ -16,11 +16,13 @@ class GoogleWalletPassService
     protected $service;
     protected $issuerId;
     protected $classId;
+    protected GoogleWalletStampStripRenderer $stampStripRenderer;
 
     public function __construct()
     {
         $this->issuerId = config('services.google_wallet.issuer_id');
         $this->classId = config('services.google_wallet.class_id', 'loyalty_class_kawhe');
+        $this->stampStripRenderer = app(GoogleWalletStampStripRenderer::class);
         
         // Initialize Google Client
         $this->client = new Google_Client();
@@ -274,7 +276,8 @@ class GoogleWalletPassService
         if (!$heroImage) {
             $heroImage = $this->getDefaultLogoUri();
         }
-        $objectImageModules = $this->buildImageModulesData($heroImage);
+        $stampStripImage = $this->buildStampStripImage($account);
+        $objectImageModules = $this->buildObjectImageModulesData($stampStripImage, $heroImage);
         if (!empty($objectImageModules)) {
             $loyaltyObject->setImageModulesData($objectImageModules);
         }
@@ -282,23 +285,22 @@ class GoogleWalletPassService
         // Note: Background color is set on LoyaltyClass, not LoyaltyObject
         // The object inherits styling from the class
         
-        // Text modules: stamp progress circles first (like Apple Wallet), then customer, then rewards
+        // Text modules: keep concise, visual progress comes from generated strip image
         $rewardTarget = $store->reward_target ?? 10;
-        $circleIndicators = $this->generateCircleIndicators($account->stamp_count, $rewardTarget);
         $textModulesData = [
             [
-                'header' => 'Progress',
-                'body' => $circleIndicators . '  ' . sprintf('%d / %d stamps', $account->stamp_count, $rewardTarget),
+                'header' => 'Program',
+                'body' => $store->reward_title ?? 'Rewards',
             ],
             [
-                'header' => 'Customer',
-                'body' => $customer->name ?? $customer->email ?? 'Valued Customer',
+                'header' => 'Stamps',
+                'body' => sprintf('%d/%d', $account->stamp_count, $rewardTarget),
             ],
         ];
         if (($account->reward_balance ?? 0) > 0) {
             $textModulesData[] = [
                 'header' => 'Rewards',
-                'body' => '🎁 ' . (string) ($account->reward_balance ?? 0) . ' available to redeem',
+                'body' => (string) ($account->reward_balance ?? 0) . ' ready to redeem',
             ];
         }
         $loyaltyObject->setTextModulesData($textModulesData);
@@ -608,6 +610,49 @@ class GoogleWalletPassService
     }
 
     /**
+     * Build object image modules with stamp strip first for visual consistency.
+     */
+    protected function buildObjectImageModulesData($stampStripImage = null, $heroImage = null): array
+    {
+        $modules = [];
+
+        if ($stampStripImage) {
+            $stampModule = new \Google_Service_Walletobjects_ImageModuleData();
+            $stampModule->setMainImage($stampStripImage);
+            $modules[] = $stampModule;
+        }
+
+        if ($heroImage) {
+            $heroModule = new \Google_Service_Walletobjects_ImageModuleData();
+            $heroModule->setMainImage($heroImage);
+            $modules[] = $heroModule;
+        }
+
+        return $modules;
+    }
+
+    /**
+     * Build an image object for a generated per-account stamp strip.
+     */
+    protected function buildStampStripImage(LoyaltyAccount $account): ?\Google_Service_Walletobjects_Image
+    {
+        $relativePath = $this->stampStripRenderer->generateForAccount($account);
+        if (! $relativePath) {
+            return null;
+        }
+
+        $appUrl = rtrim(config('app.url'), '/');
+        $imageUrl = $this->ensureHttps($appUrl . '/storage/' . ltrim($relativePath, '/'));
+
+        $image = new \Google_Service_Walletobjects_Image();
+        $imageUri = new \Google_Service_Walletobjects_ImageUri();
+        $imageUri->setUri($imageUrl);
+        $image->setSourceUri($imageUri);
+
+        return $image;
+    }
+
+    /**
      * Determine if we should patch the loyalty class.
      */
     protected function shouldPatchLoyaltyClass($store, $existing, $logoUri, $heroImage, string $backgroundColor, int $rewardTarget): bool
@@ -795,17 +840,21 @@ class GoogleWalletPassService
 
         $customerName = $customer->name ?? $customer->email ?? 'Valued Customer';
         $rewardTarget = $store->reward_target ?? 10;
-        $circleIndicators = $this->generateCircleIndicators($account->stamp_count, $rewardTarget);
+        $stampStripImage = $this->buildStampStripImage($account);
         $textModules = [
             new \Google_Service_Walletobjects_TextModuleData([
-                'header' => 'Progress',
-                'body' => $circleIndicators . '  ' . sprintf('%d / %d stamps', $account->stamp_count, $rewardTarget),
+                'header' => 'Program',
+                'body' => $store->reward_title ?? 'Rewards',
+            ]),
+            new \Google_Service_Walletobjects_TextModuleData([
+                'header' => 'Stamps',
+                'body' => sprintf('%d/%d', $account->stamp_count, $rewardTarget),
             ]),
         ];
         if (($account->reward_balance ?? 0) > 0) {
             $textModules[] = new \Google_Service_Walletobjects_TextModuleData([
                 'header' => 'Rewards',
-                'body' => '🎁 ' . (string) ($account->reward_balance ?? 0) . ' available to redeem',
+                'body' => (string) ($account->reward_balance ?? 0) . ' ready to redeem',
             ]);
         }
 
@@ -819,6 +868,9 @@ class GoogleWalletPassService
         $genericObject->setHexBackgroundColor($backgroundColor);
         $genericObject->setBarcode($barcode);
         $genericObject->setTextModulesData($textModules);
+        if ($stampStripImage) {
+            $genericObject->setImageModulesData($this->buildObjectImageModulesData($stampStripImage));
+        }
         if ($heroImage) {
             $genericObject->setHeroImage($heroImage);
         }
@@ -939,24 +991,6 @@ class GoogleWalletPassService
         $image->setSourceUri($imageUri);
         
         return $image;
-    }
-
-    /**
-     * Generate circle indicators for stamp progress
-     * Example: "●●●○○" for 3 stamps out of 5
-     *
-     * @param int $stampCount Current stamp count
-     * @param int $rewardTarget Target stamps needed
-     * @return string Circle indicators string
-     */
-    protected function generateCircleIndicators(int $stampCount, int $rewardTarget): string
-    {
-        // Clamp stamp count to valid range (0 to reward_target)
-        $filled = max(0, min($stampCount, $rewardTarget));
-        $empty = $rewardTarget - $filled;
-        
-        // Unicode circles: filled = ● (U+25CF), empty = ○ (U+25CB)
-        return str_repeat('●', $filled) . str_repeat('○', $empty);
     }
 
     /**
