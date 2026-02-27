@@ -868,6 +868,8 @@ class GoogleWalletPassService
         $genericObject->setHexBackgroundColor($backgroundColor);
         $genericObject->setBarcode($barcode);
         $genericObject->setTextModulesData($textModules);
+        // Keep front circles in hero only; remove custom image modules from details/back.
+        $genericObject->setImageModulesData([]);
         if ($stampStripImage) {
             $genericObject->setHeroImage($stampStripImage);
         } elseif ($heroImage) {
