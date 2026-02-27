@@ -882,7 +882,7 @@ class GoogleWalletPassService
 
         try {
             $existing = $this->service->genericobject->get($objectId);
-            return $this->service->genericobject->patch($objectId, $genericObject);
+            return $this->service->genericobject->update($objectId, $genericObject);
         } catch (\Google\Service\Exception $e) {
             if ($e->getCode() !== 404) {
                 throw $e;
