@@ -869,9 +869,8 @@ class GoogleWalletPassService
         $genericObject->setBarcode($barcode);
         $genericObject->setTextModulesData($textModules);
         if ($stampStripImage) {
-            $genericObject->setImageModulesData($this->buildObjectImageModulesData($stampStripImage));
-        }
-        if ($heroImage) {
+            $genericObject->setHeroImage($stampStripImage);
+        } elseif ($heroImage) {
             $genericObject->setHeroImage($heroImage);
         }
         if ($logoUri) {

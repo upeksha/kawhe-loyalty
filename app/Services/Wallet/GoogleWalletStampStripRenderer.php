@@ -51,7 +51,12 @@ class GoogleWalletStampStripRenderer
             return $relativePath;
         }
 
-        $pngBinary = $this->renderPng($target, $stamps, $background, $accent, $foreground);
+        $heroPath = null;
+        if (! empty($store->pass_hero_image_path) && Storage::disk('public')->exists($store->pass_hero_image_path)) {
+            $heroPath = Storage::disk('public')->path($store->pass_hero_image_path);
+        }
+
+        $pngBinary = $this->renderPng($target, $stamps, $background, $accent, $foreground, $heroPath);
         if (! $pngBinary) {
             return null;
         }
@@ -60,12 +65,19 @@ class GoogleWalletStampStripRenderer
         return $relativePath;
     }
 
-    protected function renderPng(int $target, int $stamps, string $backgroundHex, string $accentHex, string $foregroundHex): ?string
+    protected function renderPng(
+        int $target,
+        int $stamps,
+        string $backgroundHex,
+        string $accentHex,
+        string $foregroundHex,
+        ?string $heroPath = null
+    ): ?string
     {
         $width = 1032;
         $height = 336;
         $paddingX = 52;
-        $paddingTop = 34;
+        $paddingTop = 56;
 
         $image = imagecreatetruecolor($width, $height);
         if (! $image) {
@@ -85,8 +97,30 @@ class GoogleWalletStampStripRenderer
 
         imagefill($image, 0, 0, $bgColor);
 
-        // Subtle top strip for depth.
-        imagefilledrectangle($image, 0, 0, $width, 62, $softAccent);
+        // Use store hero image when available so front face resembles Apple pass styling.
+        if ($heroPath && is_readable($heroPath)) {
+            $heroBinary = @file_get_contents($heroPath);
+            if ($heroBinary !== false) {
+                $heroSource = @imagecreatefromstring($heroBinary);
+                if ($heroSource !== false) {
+                    $srcW = imagesx($heroSource);
+                    $srcH = imagesy($heroSource);
+                    if ($srcW > 0 && $srcH > 0) {
+                        $scale = max($width / $srcW, $height / $srcH);
+                        $drawW = (int) ceil($srcW * $scale);
+                        $drawH = (int) ceil($srcH * $scale);
+                        $dstX = (int) floor(($width - $drawW) / 2);
+                        $dstY = (int) floor(($height - $drawH) / 2);
+                        imagecopyresampled($image, $heroSource, $dstX, $dstY, 0, 0, $drawW, $drawH, $srcW, $srcH);
+                    }
+                    imagedestroy($heroSource);
+                }
+            }
+        }
+
+        // Slight overlay for circle contrast consistency.
+        $overlay = imagecolorallocatealpha($image, $bgR, $bgG, $bgB, 70);
+        imagefilledrectangle($image, 0, 0, $width, $height, $overlay);
 
         $columns = min(max($target, 1), 6);
         $rows = (int) ceil($target / $columns);
@@ -125,13 +159,9 @@ class GoogleWalletStampStripRenderer
             }
         }
 
+        // Progress text kept subtle at top-right for quick glance.
         $progressText = sprintf('%d/%d', $stamps, $target);
-        $bottomBarTop = $height - 72;
-        imagefilledrectangle($image, 0, $bottomBarTop, $width, $height, $softAccent);
-
-        imagestring($image, 5, 32, $bottomBarTop + 22, 'PROGRAM', $fgColor);
-        imagestring($image, 5, 125, $bottomBarTop + 22, 'REWARDS', $fgColor);
-        imagestring($image, 5, $width - 150, $bottomBarTop + 22, $progressText, $accentColor);
+        imagestring($image, 5, $width - 120, 18, $progressText, $accentColor);
 
         ob_start();
         imagepng($image);
