@@ -9,6 +9,7 @@ use Google_Service_Walletobjects_LoyaltyClass;
 use Google_Service_Walletobjects_LoyaltyObject;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 class GoogleWalletPassService
 {
@@ -853,9 +854,9 @@ class GoogleWalletPassService
         );
         $barcode->setAlternateText('Manual code: ' . $manualCode);
 
-        $customerName = $customer->name ?? $customer->email ?? 'Valued Customer';
+        $customerName = $this->frontCustomerName($customer->name ?? $customer->email ?? 'Valued Customer');
         $programName = $this->programName($store);
-        $statusText = $this->statusText($account, $store);
+        $statusText = $this->frontStatusText($account, $store);
         $stampStripImage = $this->buildStampStripImage($account);
         $textModules = [
             new \Google_Service_Walletobjects_TextModuleData([
@@ -1047,6 +1048,31 @@ class GoogleWalletPassService
         }
 
         return $this->progressText($account, $store);
+    }
+
+    protected function frontStatusText(LoyaltyAccount $account, $store): string
+    {
+        $rewardBalance = (int) ($account->reward_balance ?? 0);
+
+        if ($rewardBalance > 1) {
+            return sprintf('%d rewards', $rewardBalance);
+        }
+
+        if ($rewardBalance === 1) {
+            return 'Ready';
+        }
+
+        $rewardTarget = max(1, (int) ($store->reward_target ?? 10));
+        $stampCount = max(0, min((int) $account->stamp_count, $rewardTarget));
+
+        return sprintf('%d/%d stamps', $stampCount, $rewardTarget);
+    }
+
+    protected function frontCustomerName(string $value): string
+    {
+        $normalized = preg_replace('/\s+/', ' ', trim($value)) ?: 'Valued Customer';
+
+        return Str::limit($normalized, 18, '…');
     }
 
     protected function rewardRuleText($store): string

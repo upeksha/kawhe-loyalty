@@ -6,6 +6,7 @@ use App\Models\LoyaltyAccount;
 use App\Services\Wallet\Apple\AppleWalletSerial;
 use Byte5\PassGenerator;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class AppleWalletPassService
 {
@@ -30,6 +31,8 @@ class AppleWalletPassService
 
         $programName = $this->programName($store);
         $statusText = $this->statusText($account, $store);
+        $frontStatusText = $this->frontStatusText($account, $store);
+        $customerDisplayName = $this->frontCustomerName($customer->name ?? $customer->email ?? 'Valued Customer');
         $manualCode = $account->manual_entry_code ?? $this->formatTokenForManualEntry(
             ($account->reward_balance ?? 0) > 0 && $account->redeem_token
                 ? $account->redeem_token
@@ -74,19 +77,14 @@ class AppleWalletPassService
                     [
                         'key' => 'customer',
                         'label' => 'Customer',
-                        'value' => $customer->name ?? $customer->email ?? 'Valued Customer',
-                    ],
-                    [
-                        'key' => 'program',
-                        'label' => 'Program',
-                        'value' => $programName,
+                        'value' => $customerDisplayName,
                     ],
                 ],
                 'auxiliaryFields' => [
                     [
                         'key' => 'status',
                         'label' => 'Status',
-                        'value' => $statusText,
+                        'value' => $frontStatusText,
                     ],
                 ],
                 'backFields' => [
@@ -331,6 +329,31 @@ class AppleWalletPassService
         }
 
         return $this->progressText($account, $store);
+    }
+
+    protected function frontStatusText(LoyaltyAccount $account, $store): string
+    {
+        $rewardBalance = (int) ($account->reward_balance ?? 0);
+
+        if ($rewardBalance > 1) {
+            return sprintf('%d rewards', $rewardBalance);
+        }
+
+        if ($rewardBalance === 1) {
+            return 'Ready';
+        }
+
+        $rewardTarget = max(1, (int) ($store->reward_target ?? 10));
+        $stampCount = max(0, min((int) $account->stamp_count, $rewardTarget));
+
+        return sprintf('%d/%d stamps', $stampCount, $rewardTarget);
+    }
+
+    protected function frontCustomerName(string $value): string
+    {
+        $normalized = preg_replace('/\s+/', ' ', trim($value)) ?: 'Valued Customer';
+
+        return Str::limit($normalized, 18, '…');
     }
 
     protected function rewardRuleText($store): string
