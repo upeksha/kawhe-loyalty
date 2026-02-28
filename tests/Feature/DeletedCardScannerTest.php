@@ -4,11 +4,8 @@ use App\Models\Customer;
 use App\Models\LoyaltyAccount;
 use App\Models\Store;
 use App\Models\User;
-use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
 
 test('preview returns stable not-active response for deleted loyalty account', function () {
-    $this->withoutMiddleware(VerifyCsrfToken::class);
-
     $user = User::factory()->create();
     $store = Store::factory()->create(['user_id' => $user->id]);
     $customer = Customer::factory()->create();
@@ -21,6 +18,8 @@ test('preview returns stable not-active response for deleted loyalty account', f
     $account->delete();
 
     $this->actingAs($user)
+        ->withSession(['_token' => 'test-token'])
+        ->withHeader('X-CSRF-TOKEN', 'test-token')
         ->postJson('/scanner/preview', [
             'store_id' => $store->id,
             'token' => $token,
@@ -34,8 +33,6 @@ test('preview returns stable not-active response for deleted loyalty account', f
 });
 
 test('stamp returns stable not-active response for deleted loyalty account', function () {
-    $this->withoutMiddleware(VerifyCsrfToken::class);
-
     $user = User::factory()->create();
     $store = Store::factory()->create(['user_id' => $user->id]);
     $customer = Customer::factory()->create();
@@ -48,6 +45,8 @@ test('stamp returns stable not-active response for deleted loyalty account', fun
     $account->delete();
 
     $this->actingAs($user)
+        ->withSession(['_token' => 'test-token'])
+        ->withHeader('X-CSRF-TOKEN', 'test-token')
         ->postJson('/stamp', [
             'store_id' => $store->id,
             'token' => $token,
@@ -61,8 +60,6 @@ test('stamp returns stable not-active response for deleted loyalty account', fun
 });
 
 test('redeem returns stable not-active response for deleted loyalty account', function () {
-    $this->withoutMiddleware(VerifyCsrfToken::class);
-
     $user = User::factory()->create();
     $store = Store::factory()->create(['user_id' => $user->id]);
     $customer = Customer::factory()->create();
@@ -77,6 +74,8 @@ test('redeem returns stable not-active response for deleted loyalty account', fu
     $account->delete();
 
     $this->actingAs($user)
+        ->withSession(['_token' => 'test-token'])
+        ->withHeader('X-CSRF-TOKEN', 'test-token')
         ->postJson('/redeem', [
             'store_id' => $store->id,
             'token' => $token,
