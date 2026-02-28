@@ -96,9 +96,6 @@ class GoogleWalletPassService
         if (!$logoUri) {
             $logoUri = $this->getLogoUri($store);
         }
-        if (!$logoUri) {
-            $logoUri = $this->getDefaultLogoUri();
-        }
 
         $heroImage = $this->getPassHeroImageUri($store);
         if (!$heroImage) {
@@ -106,9 +103,6 @@ class GoogleWalletPassService
         }
         if (!$heroImage) {
             $heroImage = $this->getLogoUri($store);
-        }
-        if (!$heroImage) {
-            $heroImage = $this->getDefaultLogoUri();
         }
         $imageModulesData = $this->buildImageModulesData($heroImage);
 
@@ -165,7 +159,9 @@ class GoogleWalletPassService
             // Patch image branding separately so image issues don't block name/color updates.
             $imagePatch = new \Google_Service_Walletobjects_LoyaltyClass();
             $imagePatch->setId($resourceId);
-            $imagePatch->setProgramLogo($logoUri);
+            if ($logoUri) {
+                $imagePatch->setProgramLogo($logoUri);
+            }
             $imagePatch->setImageModulesData($imageModulesData);
             $imagePatch->setReviewStatus($reviewStatus);
             try {
@@ -185,7 +181,9 @@ class GoogleWalletPassService
             $loyaltyClass->setId($resourceId);
             $loyaltyClass->setIssuerName(config('app.name', 'Kawhe'));
             $loyaltyClass->setProgramName($store->name);
-            $loyaltyClass->setProgramLogo($logoUri);
+            if ($logoUri) {
+                $loyaltyClass->setProgramLogo($logoUri);
+            }
             $loyaltyClass->setReviewStatus($this->normalizeReviewStatusForCreate());
             $rewardTarget = $store->reward_target ?? 10;
             $loyaltyClass->setTextModulesData([
@@ -278,9 +276,6 @@ class GoogleWalletPassService
         }
         if (!$heroImage) {
             $heroImage = $this->getLogoUri($store);
-        }
-        if (!$heroImage) {
-            $heroImage = $this->getDefaultLogoUri();
         }
         $stampStripImage = $this->buildStampStripImage($account);
         $objectImageModules = $this->buildObjectImageModulesData($stampStripImage, $heroImage);
@@ -836,8 +831,8 @@ class GoogleWalletPassService
 
         $this->createOrUpdateGenericClass($store);
 
-        $heroImage = $this->getPassHeroImageUri($store) ?: $this->getPassLogoUri($store) ?: $this->getLogoUri($store) ?: $this->getDefaultLogoUri();
-        $logoUri = $this->getPassLogoUri($store) ?: $this->getLogoUri($store) ?: $this->getDefaultLogoUri();
+        $heroImage = $this->getPassHeroImageUri($store) ?: $this->getPassLogoUri($store) ?: $this->getLogoUri($store);
+        $logoUri = $this->getPassLogoUri($store) ?: $this->getLogoUri($store);
         $backgroundColor = $store->background_color ?? '#1F2937';
         $backgroundColor = ltrim($backgroundColor, '#');
         if (strlen($backgroundColor) === 3) {
@@ -948,9 +943,7 @@ class GoogleWalletPassService
     }
 
     /**
-     * Get default logo Image object (required by Google Wallet)
-     *
-     * @return \Google_Service_Walletobjects_Image
+     * Get default logo Image object if a valid public fallback asset exists.
      */
     protected function getDefaultLogoUri()
     {
@@ -959,12 +952,9 @@ class GoogleWalletPassService
         $defaultLogoUrl = $this->ensureHttps($appUrl . '/' . $defaultLogoPath);
         
         if (!file_exists(public_path($defaultLogoPath))) {
-            Log::warning('Google Wallet: Default logo file not found', [
-                'path' => public_path($defaultLogoPath),
-                'url' => $defaultLogoUrl,
-            ]);
+            return null;
         }
-        
+
         $image = new \Google_Service_Walletobjects_Image();
         $imageUri = new \Google_Service_Walletobjects_ImageUri();
         $imageUri->setUri($defaultLogoUrl);
