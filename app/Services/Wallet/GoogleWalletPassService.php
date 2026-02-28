@@ -3,6 +3,7 @@
 namespace App\Services\Wallet;
 
 use App\Models\LoyaltyAccount;
+use App\Support\StoreAssets;
 use Google_Client;
 use Google_Service_Walletobjects;
 use Google_Service_Walletobjects_LoyaltyClass;
@@ -646,8 +647,7 @@ class GoogleWalletPassService
             return null;
         }
 
-        $appUrl = rtrim(config('app.url'), '/');
-        $imageUrl = $this->ensureHttps($appUrl . '/storage/' . ltrim($relativePath, '/'));
+        $imageUrl = $this->ensureHttps((string) StoreAssets::url($relativePath));
 
         $image = new \Google_Service_Walletobjects_Image();
         $imageUri = new \Google_Service_Walletobjects_ImageUri();
@@ -932,8 +932,7 @@ class GoogleWalletPassService
             return null;
         }
         
-        $appUrl = rtrim(config('app.url'), '/');
-        $logoUrl = $this->ensureHttps($appUrl . '/storage/' . $store->logo_path);
+        $logoUrl = $this->ensureHttps((string) StoreAssets::url($store->logo_path));
         
         $image = new \Google_Service_Walletobjects_Image();
         $imageUri = new \Google_Service_Walletobjects_ImageUri();
@@ -976,8 +975,7 @@ class GoogleWalletPassService
             return null;
         }
         
-        $appUrl = rtrim(config('app.url'), '/');
-        $logoUrl = $this->ensureHttps($appUrl . '/storage/' . $store->pass_logo_path);
+        $logoUrl = $this->ensureHttps((string) StoreAssets::url($store->pass_logo_path));
         
         $image = new \Google_Service_Walletobjects_Image();
         $imageUri = new \Google_Service_Walletobjects_ImageUri();
@@ -999,8 +997,7 @@ class GoogleWalletPassService
             return null;
         }
         
-        $appUrl = rtrim(config('app.url'), '/');
-        $heroUrl = $this->ensureHttps($appUrl . '/storage/' . $store->pass_hero_image_path);
+        $heroUrl = $this->ensureHttps((string) StoreAssets::url($store->pass_hero_image_path));
         
         $image = new \Google_Service_Walletobjects_Image();
         $imageUri = new \Google_Service_Walletobjects_ImageUri();

@@ -4,8 +4,6 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
-
 class StoreController extends Controller
 {
     public function index(Request $request)
@@ -27,10 +25,7 @@ class StoreController extends Controller
             ->get();
 
         $stores->transform(function ($store) {
-            $logoPath = $store->logo_path ?: $store->pass_logo_path;
-            $store->logo_url = $logoPath
-                ? url(Storage::disk('public')->url($logoPath))
-                : null;
+            $store->logo_url = $store->logo_url ?: $store->pass_logo_url;
 
             return $store;
         });

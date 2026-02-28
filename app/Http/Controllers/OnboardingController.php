@@ -3,9 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\Store;
+use App\Support\StoreAssets;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Storage;
 
 class OnboardingController extends Controller
 {
@@ -28,7 +28,7 @@ class OnboardingController extends Controller
 
         // Handle logo upload
         if ($request->hasFile('logo')) {
-            $logoPath = $request->file('logo')->store('logos', 'public');
+            $logoPath = StoreAssets::storeUploaded($request->file('logo'), 'logos');
             $validated['logo_path'] = $logoPath;
         }
 

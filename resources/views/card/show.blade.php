@@ -172,7 +172,7 @@
                         <!-- Store Logo (if available) -->
                         @if($account->store->logo_path)
                             <div class="flex justify-center mb-4">
-                                <img src="{{ asset('storage/' . $account->store->logo_path) }}" alt="{{ $account->store->name }} logo" class="h-20 w-20 object-contain rounded-lg bg-white/10 backdrop-blur-sm p-2 border-2" style="border-color: {{ $brand }};">
+                                <img src="{{ $account->store->logo_url }}" alt="{{ $account->store->name }} logo" class="h-20 w-20 object-contain rounded-lg bg-white/10 backdrop-blur-sm p-2 border-2" style="border-color: {{ $brand }};">
                             </div>
                         @endif
                         

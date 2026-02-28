@@ -54,7 +54,7 @@
 
             <div class="join-card rounded-2xl shadow-xl p-6 sm:p-8 w-full">
                 @if($store->logo_path)
-                    <img src="{{ asset('storage/' . $store->logo_path) }}" alt="{{ $store->name }}" class="h-12 w-auto mx-auto mb-4 sm:h-14 object-contain">
+                    <img src="{{ $store->logo_url }}" alt="{{ $store->name }}" class="h-12 w-auto mx-auto mb-4 sm:h-14 object-contain">
                 @endif
 
                 <h2 class="text-xl sm:text-2xl font-bold text-center text-stone-900 mb-1">Find my card</h2>

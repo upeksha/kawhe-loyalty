@@ -4,8 +4,8 @@ namespace App\Services\Wallet;
 
 use App\Models\LoyaltyAccount;
 use App\Services\Wallet\Apple\AppleWalletSerial;
+use App\Support\StoreAssets;
 use Byte5\PassGenerator;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class AppleWalletPassService
@@ -167,9 +167,9 @@ class AppleWalletPassService
         $assetsAdded = [];
         
         // Use store pass logo if available, otherwise fallback to default
-        if ($store->pass_logo_path && Storage::disk('public')->exists($store->pass_logo_path)) {
-            $passLogoPath = Storage::disk('public')->path($store->pass_logo_path);
-            if (file_exists($passLogoPath)) {
+        if ($store->pass_logo_path && StoreAssets::exists($store->pass_logo_path)) {
+            $passLogoPath = StoreAssets::localTempPath($store->pass_logo_path, pathinfo($store->pass_logo_path, PATHINFO_EXTENSION) ?: 'img');
+            if ($passLogoPath && file_exists($passLogoPath)) {
                 // Copy to temp file with exact name (logo.png) so PassGenerator recognizes it
                 $tempLogoPath = $tempDir . '/logo.png';
                 if (copy($passLogoPath, $tempLogoPath)) {
@@ -189,9 +189,9 @@ class AppleWalletPassService
         }
         
         // Use store pass hero image if available, otherwise fallback to default strip
-        if ($store->pass_hero_image_path && Storage::disk('public')->exists($store->pass_hero_image_path)) {
-            $passHeroPath = Storage::disk('public')->path($store->pass_hero_image_path);
-            if (file_exists($passHeroPath)) {
+        if ($store->pass_hero_image_path && StoreAssets::exists($store->pass_hero_image_path)) {
+            $passHeroPath = StoreAssets::localTempPath($store->pass_hero_image_path, pathinfo($store->pass_hero_image_path, PATHINFO_EXTENSION) ?: 'img');
+            if ($passHeroPath && file_exists($passHeroPath)) {
                 // Copy to temp file with exact name (strip.png) so PassGenerator recognizes it
                 $tempStripPath = $tempDir . '/strip.png';
                 if (copy($passHeroPath, $tempStripPath)) {

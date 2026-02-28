@@ -15,6 +15,8 @@ return [
 
     'default' => env('FILESYSTEM_DISK', 'local'),
 
+    'assets_disk' => env('ASSET_DISK', 'public'),
+
     /*
     |--------------------------------------------------------------------------
     | Filesystem Disks
@@ -64,6 +66,20 @@ return [
             'url' => env('AWS_URL'),
             'endpoint' => env('AWS_ENDPOINT'),
             'use_path_style_endpoint' => env('AWS_USE_PATH_STYLE_ENDPOINT', false),
+            'throw' => false,
+            'report' => false,
+        ],
+
+        'assets' => [
+            'driver' => 's3',
+            'key' => env('ASSETS_ACCESS_KEY_ID', env('AWS_ACCESS_KEY_ID')),
+            'secret' => env('ASSETS_SECRET_ACCESS_KEY', env('AWS_SECRET_ACCESS_KEY')),
+            'region' => env('ASSETS_DEFAULT_REGION', env('AWS_DEFAULT_REGION')),
+            'bucket' => env('ASSETS_BUCKET', env('AWS_BUCKET')),
+            'url' => env('ASSETS_URL', env('AWS_URL')),
+            'endpoint' => env('ASSETS_ENDPOINT', env('AWS_ENDPOINT')),
+            'use_path_style_endpoint' => env('ASSETS_USE_PATH_STYLE_ENDPOINT', env('AWS_USE_PATH_STYLE_ENDPOINT', false)),
+            'visibility' => 'public',
             'throw' => false,
             'report' => false,
         ],

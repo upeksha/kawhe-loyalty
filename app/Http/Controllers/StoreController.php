@@ -3,11 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Models\Store;
+use App\Support\StoreAssets;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use SimpleSoftwareIO\QrCode\Facades\QrCode;
@@ -52,19 +52,19 @@ class StoreController extends Controller
 
         // Handle logo upload
         if ($request->hasFile('logo')) {
-            $logoPath = $request->file('logo')->store('logos', 'public');
+            $logoPath = StoreAssets::storeUploaded($request->file('logo'), 'logos');
             $validated['logo_path'] = $logoPath;
         }
 
         // Handle pass logo upload
         if ($request->hasFile('pass_logo')) {
-            $passLogoPath = $request->file('pass_logo')->store('pass-logos', 'public');
+            $passLogoPath = StoreAssets::storeUploaded($request->file('pass_logo'), 'pass-logos');
             $validated['pass_logo_path'] = $passLogoPath;
         }
 
         // Handle pass hero image upload
         if ($request->hasFile('pass_hero_image')) {
-            $passHeroPath = $request->file('pass_hero_image')->store('pass-heroes', 'public');
+            $passHeroPath = StoreAssets::storeUploaded($request->file('pass_hero_image'), 'pass-heroes');
             $validated['pass_hero_image_path'] = $passHeroPath;
         }
 
@@ -109,37 +109,22 @@ class StoreController extends Controller
 
         // Handle logo upload
         if ($request->hasFile('logo')) {
-            // Delete old logo if exists
-            if ($store->logo_path && Storage::disk('public')->exists($store->logo_path)) {
-                Storage::disk('public')->delete($store->logo_path);
-            }
-
-            // Store new logo
-            $logoPath = $request->file('logo')->store('logos', 'public');
+            StoreAssets::delete($store->logo_path);
+            $logoPath = StoreAssets::storeUploaded($request->file('logo'), 'logos');
             $validated['logo_path'] = $logoPath;
         }
 
         // Handle pass logo upload
         if ($request->hasFile('pass_logo')) {
-            // Delete old pass logo if exists
-            if ($store->pass_logo_path && Storage::disk('public')->exists($store->pass_logo_path)) {
-                Storage::disk('public')->delete($store->pass_logo_path);
-            }
-
-            // Store new pass logo
-            $passLogoPath = $request->file('pass_logo')->store('pass-logos', 'public');
+            StoreAssets::delete($store->pass_logo_path);
+            $passLogoPath = StoreAssets::storeUploaded($request->file('pass_logo'), 'pass-logos');
             $validated['pass_logo_path'] = $passLogoPath;
         }
 
         // Handle pass hero image upload
         if ($request->hasFile('pass_hero_image')) {
-            // Delete old pass hero image if exists
-            if ($store->pass_hero_image_path && Storage::disk('public')->exists($store->pass_hero_image_path)) {
-                Storage::disk('public')->delete($store->pass_hero_image_path);
-            }
-
-            // Store new pass hero image
-            $passHeroPath = $request->file('pass_hero_image')->store('pass-heroes', 'public');
+            StoreAssets::delete($store->pass_hero_image_path);
+            $passHeroPath = StoreAssets::storeUploaded($request->file('pass_hero_image'), 'pass-heroes');
             $validated['pass_hero_image_path'] = $passHeroPath;
         }
 
@@ -238,9 +223,8 @@ class StoreController extends Controller
         }
 
         $logoDataUrl = null;
-        if (! empty($store->logo_path) && Storage::disk('public')->exists($store->logo_path)) {
-            $logoPath = public_path('storage/' . $store->logo_path);
-            $logoDataUrl = $this->fileToDataUri($logoPath);
+        if (! empty($store->logo_path) && StoreAssets::exists($store->logo_path)) {
+            $logoDataUrl = $this->binaryToDataUri(StoreAssets::get($store->logo_path), $store->logo_path);
         }
 
         $appleWalletBadgeDataUrl = $this->fileToDataUri(public_path('wallet-badges/add-to-apple-wallet.svg'));
@@ -295,5 +279,23 @@ class StoreController extends Controller
         }
 
         return 'data:' . $mime . ';base64,' . base64_encode($contents);
+    }
+
+    private function binaryToDataUri(?string $contents, string $pathHint): ?string
+    {
+        if ($contents === null) {
+            return null;
+        }
+
+        $extension = strtolower(pathinfo($pathHint, PATHINFO_EXTENSION));
+        $mime = match ($extension) {
+            'svg' => 'image/svg+xml',
+            'png' => 'image/png',
+            'jpg', 'jpeg' => 'image/jpeg',
+            'webp' => 'image/webp',
+            default => null,
+        };
+
+        return $mime ? 'data:' . $mime . ';base64,' . base64_encode($contents) : null;
     }
 }

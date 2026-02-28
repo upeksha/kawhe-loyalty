@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\StoreAssets;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -131,5 +132,20 @@ class Store extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function getLogoUrlAttribute(): ?string
+    {
+        return StoreAssets::url($this->logo_path);
+    }
+
+    public function getPassLogoUrlAttribute(): ?string
+    {
+        return StoreAssets::url($this->pass_logo_path);
+    }
+
+    public function getPassHeroImageUrlAttribute(): ?string
+    {
+        return StoreAssets::url($this->pass_hero_image_path);
     }
 }

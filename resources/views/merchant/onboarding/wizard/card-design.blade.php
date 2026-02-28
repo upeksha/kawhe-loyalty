@@ -17,9 +17,9 @@
         x-data="{
             brandColor: '{{ $brandColor }}',
             bgColor: '{{ $bgColor }}',
-            logoPreview: '{{ $store->logo_path ? asset('storage/' . $store->logo_path) : '' }}',
-            passLogoPreview: '{{ $store->pass_logo_path ? asset('storage/' . $store->pass_logo_path) : '' }}',
-            passHeroPreview: '{{ $store->pass_hero_image_path ? asset('storage/' . $store->pass_hero_image_path) : '' }}'
+            logoPreview: '{{ $store->logo_url ?? '' }}',
+            passLogoPreview: '{{ $store->pass_logo_url ?? '' }}',
+            passHeroPreview: '{{ $store->pass_hero_image_url ?? '' }}'
         }"
         x-init="
             $refs.brandColor && $refs.brandColor.addEventListener('input', e => { brandColor = e.target.value; $refs.brandColorText && ($refs.brandColorText.value = e.target.value); });

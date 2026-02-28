@@ -3,9 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\Store;
+use App\Support\StoreAssets;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Storage;
 
 class MerchantOnboardingWizardController extends Controller
 {
@@ -151,22 +151,16 @@ class MerchantOnboardingWizardController extends Controller
         ], fn ($v) => $v !== null);
 
         if ($request->hasFile('logo')) {
-            if ($store->logo_path && Storage::disk('public')->exists($store->logo_path)) {
-                Storage::disk('public')->delete($store->logo_path);
-            }
-            $updates['logo_path'] = $request->file('logo')->store('logos', 'public');
+            StoreAssets::delete($store->logo_path);
+            $updates['logo_path'] = StoreAssets::storeUploaded($request->file('logo'), 'logos');
         }
         if ($request->hasFile('pass_logo')) {
-            if ($store->pass_logo_path && Storage::disk('public')->exists($store->pass_logo_path)) {
-                Storage::disk('public')->delete($store->pass_logo_path);
-            }
-            $updates['pass_logo_path'] = $request->file('pass_logo')->store('pass-logos', 'public');
+            StoreAssets::delete($store->pass_logo_path);
+            $updates['pass_logo_path'] = StoreAssets::storeUploaded($request->file('pass_logo'), 'pass-logos');
         }
         if ($request->hasFile('pass_hero_image')) {
-            if ($store->pass_hero_image_path && Storage::disk('public')->exists($store->pass_hero_image_path)) {
-                Storage::disk('public')->delete($store->pass_hero_image_path);
-            }
-            $updates['pass_hero_image_path'] = $request->file('pass_hero_image')->store('pass-heroes', 'public');
+            StoreAssets::delete($store->pass_hero_image_path);
+            $updates['pass_hero_image_path'] = StoreAssets::storeUploaded($request->file('pass_hero_image'), 'pass-heroes');
         }
 
         $updates['onboarding_step'] = Store::ONBOARDING_STEP_CUSTOMER_FORM;

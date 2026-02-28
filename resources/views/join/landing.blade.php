@@ -44,7 +44,7 @@
         <div class="flex flex-col flex-1 justify-center w-full max-w-md mx-auto px-4 py-8 sm:px-6 sm:py-10 lg:py-12">
             <div class="text-center mb-6 sm:mb-8">
                 @if($store->logo_path)
-                    <img src="{{ asset('storage/' . $store->logo_path) }}" alt="{{ $store->name }}" class="h-16 w-auto mx-auto object-contain sm:h-20" style="max-height: 5rem;">
+                    <img src="{{ $store->logo_url }}" alt="{{ $store->name }}" class="h-16 w-auto mx-auto object-contain sm:h-20" style="max-height: 5rem;">
                 @else
                     <h1 class="text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight">{{ $store->name }}</h1>
                 @endif

@@ -127,7 +127,7 @@
                                 @if($store->logo_path)
                                     <div class="mb-2">
                                         <p class="text-xs text-stone-500 mb-1">Current:</p>
-                                        <img src="{{ asset('storage/' . $store->logo_path) }}" alt="Store logo" class="h-20 w-20 object-contain rounded-lg border border-stone-300 shadow-sm">
+                                        <img src="{{ $store->logo_url }}" alt="Store logo" class="h-20 w-20 object-contain rounded-lg border border-stone-300 shadow-sm">
                                     </div>
                                 @endif
                                 <div id="logo-thumbnail" class="hidden">
@@ -149,7 +149,7 @@
                                 @if($store->pass_logo_path)
                                     <div class="mb-2">
                                         <p class="text-xs text-stone-500 mb-1">Current:</p>
-                                        <img src="{{ asset('storage/' . $store->pass_logo_path) }}" alt="Pass logo" class="h-12 w-20 object-contain rounded-lg border border-stone-300 shadow-sm">
+                                        <img src="{{ $store->pass_logo_url }}" alt="Pass logo" class="h-12 w-20 object-contain rounded-lg border border-stone-300 shadow-sm">
                                     </div>
                                 @endif
                                 <div id="pass_logo-thumbnail" class="hidden">
@@ -171,7 +171,7 @@
                                 @if($store->pass_hero_image_path)
                                     <div class="mb-2">
                                         <p class="text-xs text-stone-500 mb-1">Current:</p>
-                                        <img src="{{ asset('storage/' . $store->pass_hero_image_path) }}" alt="Pass hero" class="h-20 w-32 object-cover rounded-lg border border-stone-300 shadow-sm">
+                                        <img src="{{ $store->pass_hero_image_url }}" alt="Pass hero" class="h-20 w-32 object-cover rounded-lg border border-stone-300 shadow-sm">
                                     </div>
                                 @endif
                                 <div id="pass_hero_image-thumbnail" class="hidden">

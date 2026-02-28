@@ -3,15 +3,15 @@
 namespace App\Services\Wallet;
 
 use App\Models\LoyaltyAccount;
+use App\Support\StoreAssets;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Storage;
 
 class GoogleWalletStampStripRenderer
 {
     private const RENDER_VERSION = 'v5';
 
     /**
-     * Generate a stamp-strip PNG in public storage and return its relative path.
+     * Generate a stamp-strip PNG on the configured asset disk and return its relative path.
      */
     public function generateForAccount(LoyaltyAccount $account): ?string
     {
@@ -50,21 +50,21 @@ class GoogleWalletStampStripRenderer
         ])), 0, 16);
 
         $relativePath = sprintf('wallet/google/stamp-strips/store_%d_account_%d_%s.png', $store->id, $account->id, $stateHash);
-        if (Storage::disk('public')->exists($relativePath)) {
+        if (StoreAssets::exists($relativePath)) {
             return $relativePath;
         }
 
-        $heroPath = null;
-        if (! empty($store->pass_hero_image_path) && Storage::disk('public')->exists($store->pass_hero_image_path)) {
-            $heroPath = Storage::disk('public')->path($store->pass_hero_image_path);
+        $heroBinary = null;
+        if (! empty($store->pass_hero_image_path) && StoreAssets::exists($store->pass_hero_image_path)) {
+            $heroBinary = StoreAssets::get($store->pass_hero_image_path);
         }
 
-        $pngBinary = $this->renderPng($target, $stamps, $background, $accent, $foreground, $heroPath);
+        $pngBinary = $this->renderPng($target, $stamps, $background, $accent, $foreground, $heroBinary);
         if (! $pngBinary) {
             return null;
         }
 
-        Storage::disk('public')->put($relativePath, $pngBinary);
+        StoreAssets::put($relativePath, $pngBinary);
         return $relativePath;
     }
 
@@ -74,7 +74,7 @@ class GoogleWalletStampStripRenderer
         string $backgroundHex,
         string $accentHex,
         string $foregroundHex,
-        ?string $heroPath = null
+        ?string $heroBinary = null
     ): ?string
     {
         $width = 1032;
@@ -98,23 +98,20 @@ class GoogleWalletStampStripRenderer
         imagefill($image, 0, 0, $bgColor);
 
         // Blend store hero image under circles for front-card visual parity.
-        if ($heroPath && is_readable($heroPath)) {
-            $heroBinary = @file_get_contents($heroPath);
-            if ($heroBinary !== false) {
-                $heroSource = @imagecreatefromstring($heroBinary);
-                if ($heroSource !== false) {
-                    $srcW = imagesx($heroSource);
-                    $srcH = imagesy($heroSource);
-                    if ($srcW > 0 && $srcH > 0) {
-                        $scale = max($width / $srcW, $height / $srcH);
-                        $drawW = (int) ceil($srcW * $scale);
-                        $drawH = (int) ceil($srcH * $scale);
-                        $dstX = (int) floor(($width - $drawW) / 2);
-                        $dstY = (int) floor(($height - $drawH) / 2);
-                        imagecopyresampled($image, $heroSource, $dstX, $dstY, 0, 0, $drawW, $drawH, $srcW, $srcH);
-                    }
-                    imagedestroy($heroSource);
+        if ($heroBinary) {
+            $heroSource = @imagecreatefromstring($heroBinary);
+            if ($heroSource !== false) {
+                $srcW = imagesx($heroSource);
+                $srcH = imagesy($heroSource);
+                if ($srcW > 0 && $srcH > 0) {
+                    $scale = max($width / $srcW, $height / $srcH);
+                    $drawW = (int) ceil($srcW * $scale);
+                    $drawH = (int) ceil($srcH * $scale);
+                    $dstX = (int) floor(($width - $drawW) / 2);
+                    $dstY = (int) floor(($height - $drawH) / 2);
+                    imagecopyresampled($image, $heroSource, $dstX, $dstY, 0, 0, $drawW, $drawH, $srcW, $srcH);
                 }
+                imagedestroy($heroSource);
             }
         }
 
