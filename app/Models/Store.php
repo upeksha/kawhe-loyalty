@@ -77,6 +77,13 @@ class Store extends Model
                 $store->join_short_code = self::generateJoinShortCode();
             }
         });
+
+        static::deleting(function (self $store) {
+            StoreAssets::delete($store->logo_path);
+            StoreAssets::delete($store->pass_logo_path);
+            StoreAssets::delete($store->pass_hero_image_path);
+            StoreAssets::deleteGeneratedStampStripsForStore($store->id);
+        });
     }
 
     /**

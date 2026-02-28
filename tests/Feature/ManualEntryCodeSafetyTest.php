@@ -60,8 +60,11 @@ test('stamp with 4-char code and wrong store does not find card (no cross-store 
         'token' => $code,
     ]);
 
-    $response->assertStatus(422);
-    $response->assertJsonValidationErrors(['token']);
+    $response->assertStatus(404);
+    $response->assertJson([
+        'success' => false,
+        'code' => 'CARD_NOT_ACTIVE',
+    ]);
     $accountAtA->refresh();
     $this->assertEquals(0, $accountAtA->stamp_count);
 });
@@ -82,8 +85,11 @@ test('stamp with 4-char code without store_id does not use 4-char lookup (not fo
         'token' => $code,
     ]);
 
-    $response->assertStatus(422);
-    $response->assertJsonValidationErrors(['token']);
+    $response->assertStatus(404);
+    $response->assertJson([
+        'success' => false,
+        'code' => 'CARD_NOT_ACTIVE',
+    ]);
     $account->refresh();
     $this->assertEquals(0, $account->stamp_count);
 });
@@ -177,14 +183,17 @@ test('redeem with 4-char code and wrong store does not redeem other store card',
     $codeA = $accountA->manual_entry_code;
 
     // Merchant selects Store B and enters Store A card's 4-char code.
-    // 4-char resolve: (storeB, codeA) finds no account. Token stays codeA. Redeem lookup by redeem_token=codeA finds nothing → 422.
+    // 4-char resolve: (storeB, codeA) finds no account. Token stays codeA. Redeem lookup by redeem_token=codeA finds nothing → stable 404.
     $response = $this->actingAs($user)->postJson(route('redeem.store'), [
         'store_id' => $storeB->id,
         'token' => $codeA,
     ]);
 
-    $response->assertStatus(422);
-    $response->assertJsonValidationErrors(['token']);
+    $response->assertStatus(404);
+    $response->assertJson([
+        'success' => false,
+        'code' => 'CARD_NOT_ACTIVE',
+    ]);
     $accountA->refresh();
     $accountB->refresh();
     $this->assertEquals(1, $accountA->reward_balance);

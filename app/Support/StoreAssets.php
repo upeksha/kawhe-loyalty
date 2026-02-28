@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Storage;
 
 class StoreAssets
@@ -55,6 +56,39 @@ class StoreAssets
     public static function put(string $path, string $contents): void
     {
         static::disk()->put($path, $contents);
+    }
+
+    public static function deleteMatching(string $directory, callable $predicate): int
+    {
+        $paths = collect(static::disk()->allFiles($directory))
+            ->filter($predicate)
+            ->values();
+
+        if ($paths->isEmpty()) {
+            return 0;
+        }
+
+        static::disk()->delete($paths->all());
+
+        return $paths->count();
+    }
+
+    public static function deleteGeneratedStampStripsForStore(int $storeId): int
+    {
+        $prefix = sprintf('store_%d_', $storeId);
+
+        return static::deleteMatching('wallet/google/stamp-strips', function (string $path) use ($prefix) {
+            return str_contains(basename($path), $prefix);
+        });
+    }
+
+    public static function deleteGeneratedStampStripsForAccount(int $accountId): int
+    {
+        $needle = sprintf('_account_%d_', $accountId);
+
+        return static::deleteMatching('wallet/google/stamp-strips', function (string $path) use ($needle) {
+            return str_contains(basename($path), $needle);
+        });
     }
 
     public static function localTempPath(?string $path, string $extension = 'bin'): ?string

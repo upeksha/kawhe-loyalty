@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\StoreAssets;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -82,6 +83,10 @@ class LoyaltyAccount extends Model
             if (empty($account->manual_entry_code) && $account->store_id) {
                 $account->manual_entry_code = self::generateManualEntryCode($account->store_id);
             }
+        });
+
+        static::deleting(function (self $account) {
+            StoreAssets::deleteGeneratedStampStripsForAccount($account->id);
         });
     }
 

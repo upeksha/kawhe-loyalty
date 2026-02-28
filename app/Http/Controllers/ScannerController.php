@@ -15,6 +15,9 @@ use Illuminate\Validation\ValidationException;
 
 class ScannerController extends Controller
 {
+    private const CARD_NOT_ACTIVE_CODE = 'CARD_NOT_ACTIVE';
+    private const CARD_NOT_ACTIVE_MESSAGE = 'This loyalty card is no longer active. Ask the customer to rejoin or contact the store.';
+
     public function index()
     {
         $stores = Auth::user()->stores()->get();
@@ -79,9 +82,7 @@ class ScannerController extends Controller
         }
 
         if (!$account) {
-            throw ValidationException::withMessages([
-                'token' => 'This loyalty card is invalid or not found. Please check the QR code and try again.'
-            ]);
+            return $this->cardNotActiveResponse();
         }
 
         // STEP 2: Determine the store from the account
@@ -342,7 +343,8 @@ class ScannerController extends Controller
         if (!$account) {
             return response()->json([
                 'success' => false,
-                'message' => 'Invalid QR code. Please check and try again.',
+                'code' => self::CARD_NOT_ACTIVE_CODE,
+                'message' => self::CARD_NOT_ACTIVE_MESSAGE,
             ], 404);
         }
 
@@ -432,7 +434,8 @@ class ScannerController extends Controller
         if (!$account) {
             return response()->json([
                 'success' => false,
-                'message' => 'Invalid redemption code.',
+                'code' => self::CARD_NOT_ACTIVE_CODE,
+                'message' => self::CARD_NOT_ACTIVE_MESSAGE,
             ], 404);
         }
 
@@ -595,10 +598,8 @@ class ScannerController extends Controller
                         ->pluck('id', 'redeem_token')
                         ->toArray(),
                 ]);
-                
-                throw ValidationException::withMessages([
-                    'token' => 'This redemption code is invalid or has expired. Please check the code and try again.'
-                ]);
+
+                return $this->cardNotActiveResponse();
             }
 
             // Check if rewards are available
@@ -793,5 +794,14 @@ class ScannerController extends Controller
                 ]);
             }
         });
+    }
+
+    private function cardNotActiveResponse()
+    {
+        return response()->json([
+            'success' => false,
+            'code' => self::CARD_NOT_ACTIVE_CODE,
+            'message' => self::CARD_NOT_ACTIVE_MESSAGE,
+        ], 404);
     }
 }

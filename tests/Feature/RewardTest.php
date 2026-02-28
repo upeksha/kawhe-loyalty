@@ -74,12 +74,13 @@ test('cannot redeem when no rewards available', function () {
         'store_id' => $store->id,
         'customer_id' => $customer->id,
         'reward_balance' => 0,
-        'redeem_token' => 'old-token',
+        'redeem_token' => 'oldtoken',
+        'verified_at' => now(),
     ]);
 
     $response = $this->actingAs($user)->postJson('/redeem', [
         'store_id' => $store->id,
-        'token' => 'REDEEM:old-token',
+        'token' => 'REDEEM:oldtoken',
     ]);
 
     $response->assertStatus(422);
