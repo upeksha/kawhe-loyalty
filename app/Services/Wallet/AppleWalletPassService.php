@@ -28,6 +28,15 @@ class AppleWalletPassService
             $account->saveQuietly();
         }
 
+        $programName = $this->programName($store);
+        $statusText = $this->statusText($account, $store);
+        $manualCode = $account->manual_entry_code ?? $this->formatTokenForManualEntry(
+            ($account->reward_balance ?? 0) > 0 && $account->redeem_token
+                ? $account->redeem_token
+                : $account->public_token
+        );
+        $rewardTarget = max(1, (int) ($store->reward_target ?? 10));
+
         // Build pass definition
         $passDefinition = [
             'formatVersion' => 1,
@@ -49,11 +58,7 @@ class AppleWalletPassService
                     ? 'LR:' . $account->redeem_token
                     : 'LA:' . $account->public_token,
                 // Show the manual entry code directly under the QR code
-                'altText' => 'Manual Code: ' . ($account->manual_entry_code ?? $this->formatTokenForManualEntry(
-                    ($account->reward_balance ?? 0) > 0 && $account->redeem_token
-                        ? $account->redeem_token
-                        : $account->public_token
-                )),
+                'altText' => 'Manual code: ' . $manualCode,
                 'format' => 'PKBarcodeFormatQR',
                 'messageEncoding' => 'utf-8',
             ],
@@ -62,54 +67,70 @@ class AppleWalletPassService
                     [
                         'key' => 'stamps',
                         'label' => ' ',
-                        'value' => $this->generateCircleIndicators($account->stamp_count, $store->reward_target ?? 10),
+                        'value' => $this->generateCircleIndicators($account->stamp_count, $rewardTarget),
                     ],
                 ],
-                // Left column: Customer. Right column: Rewards (when available).
                 'secondaryFields' => [
                     [
                         'key' => 'customer',
                         'label' => 'Customer',
                         'value' => $customer->name ?? $customer->email ?? 'Valued Customer',
                     ],
-                    ...(($account->reward_balance ?? 0) > 0 ? [[
-                        'key' => 'reward_indicator',
-                        'label' => ' ',
-                        'value' => '🎁 ' . (string) ($account->reward_balance ?? 0),
-                    ]] : []),
+                    [
+                        'key' => 'program',
+                        'label' => 'Program',
+                        'value' => $programName,
+                    ],
                 ],
-                'auxiliaryFields' => [],
+                'auxiliaryFields' => [
+                    [
+                        'key' => 'status',
+                        'label' => 'Status',
+                        'value' => $statusText,
+                    ],
+                ],
                 'backFields' => [
                     [
-                        'key' => 'manual_entry_title',
-                        'label' => 'Manual Entry',
-                        'value' => 'If QR code cannot be scanned, enter this code manually:',
+                        'key' => 'program_back',
+                        'label' => 'Program',
+                        'value' => $programName,
+                    ],
+                    [
+                        'key' => 'progress',
+                        'label' => 'Progress',
+                        'value' => $this->progressText($account, $store),
+                    ],
+                    [
+                        'key' => 'status_back',
+                        'label' => 'Status',
+                        'value' => $statusText,
                     ],
                     [
                         'key' => 'manual_entry_code',
                         'label' => 'Manual Code',
-                        'value' => $account->manual_entry_code ?? $this->formatTokenForManualEntry(
-                            ($account->reward_balance ?? 0) > 0 && $account->redeem_token
-                                ? $account->redeem_token
-                                : $account->public_token
-                        ),
+                        'value' => $manualCode,
                     ],
                     [
-                        'key' => 'manual_entry_instruction',
-                        'label' => 'How to Use',
-                        'value' => ($account->reward_balance ?? 0) > 0 && $account->redeem_token
-                            ? 'Enter this code in the scanner if QR code cannot be read.'
-                            : 'Enter this code in the scanner if QR code cannot be read.',
+                        'key' => 'reward_rule',
+                        'label' => 'How it works',
+                        'value' => $this->rewardRuleText($store),
                     ],
                     [
-                        'key' => 'support',
-                        'label' => 'Support',
-                        'value' => 'support@kawhe.shop',
+                        'key' => 'verification',
+                        'label' => 'Redemption',
+                        'value' => $store->require_verification_for_redemption
+                            ? 'Email verification is required before rewards can be redeemed.'
+                            : 'Rewards can be redeemed without email verification.',
                     ],
                     [
-                        'key' => 'terms',
-                        'label' => 'Terms',
-                        'value' => 'Show this pass at checkout to collect stamps.',
+                        'key' => 'scan_instruction',
+                        'label' => 'How to use',
+                        'value' => 'Show this pass at checkout to collect stamps or redeem rewards.',
+                    ],
+                    [
+                        'key' => 'store_name',
+                        'label' => 'Store',
+                        'value' => $store->name,
                     ],
                 ],
             ],
@@ -117,7 +138,7 @@ class AppleWalletPassService
 
         // Add colors from store branding (with fallbacks)
         $backgroundColor = $store->background_color ?? '#1F2937';
-        $foregroundColor = $store->brand_color ?? '#FFFFFF';
+        $foregroundColor = $this->bestContrastTextColor($backgroundColor);
         
         $passDefinition['backgroundColor'] = $this->hexToRgb($backgroundColor);
         $passDefinition['foregroundColor'] = $this->hexToRgb($foregroundColor);
@@ -282,6 +303,53 @@ class AppleWalletPassService
     protected function formatTokenForManualEntry(string $token): string
     {
         return implode('-', str_split($token, 4));
+    }
+
+    protected function programName($store): string
+    {
+        return trim((string) ($store->reward_title ?? 'Rewards')) ?: 'Rewards';
+    }
+
+    protected function progressText(LoyaltyAccount $account, $store): string
+    {
+        $rewardTarget = max(1, (int) ($store->reward_target ?? 10));
+        $stampCount = max(0, min((int) $account->stamp_count, $rewardTarget));
+
+        return sprintf('Stamps %d/%d', $stampCount, $rewardTarget);
+    }
+
+    protected function statusText(LoyaltyAccount $account, $store): string
+    {
+        $rewardBalance = (int) ($account->reward_balance ?? 0);
+
+        if ($rewardBalance > 1) {
+            return sprintf('%d rewards available', $rewardBalance);
+        }
+
+        if ($rewardBalance === 1) {
+            return 'Reward ready';
+        }
+
+        return $this->progressText($account, $store);
+    }
+
+    protected function rewardRuleText($store): string
+    {
+        $rewardTarget = max(1, (int) ($store->reward_target ?? 10));
+
+        return sprintf(
+            'Collect %d stamps to earn %s.',
+            $rewardTarget,
+            $this->programName($store)
+        );
+    }
+
+    protected function bestContrastTextColor(string $backgroundHex): string
+    {
+        [$r, $g, $b] = $this->hexToRgbArray($backgroundHex);
+        $luminance = (0.299 * $r) + (0.587 * $g) + (0.114 * $b);
+
+        return $luminance > 146 ? '#111111' : '#FFFFFF';
     }
 
     /**

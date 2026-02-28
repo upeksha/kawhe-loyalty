@@ -88,6 +88,8 @@ class GoogleWalletPassService
     {
         $classId = $this->getClassIdForStore($store);
         $resourceId = "{$this->issuerId}.{$classId}";
+        $programName = $this->programName($store);
+        $rewardRule = $this->rewardRuleText($store);
 
         // Build logo, hero/logo image, and color (always use fallback so pass shows color and image)
         $logoUri = $this->getPassLogoUri($store);
@@ -145,7 +147,8 @@ class GoogleWalletPassService
             $basePatch->setIssuerName(config('app.name', 'Kawhe'));
             $basePatch->setProgramName($store->name);
             $basePatch->setTextModulesData([
-                ['header' => 'Reward Target', 'body' => "Collect {$rewardTarget} stamps to earn: " . ($store->reward_title ?? 'rewards')],
+                ['header' => 'Program', 'body' => $programName],
+                ['header' => 'How it works', 'body' => $rewardRule],
             ]);
             $basePatch->setHexBackgroundColor($backgroundColor);
             $basePatch->setReviewStatus($reviewStatus);
@@ -186,7 +189,8 @@ class GoogleWalletPassService
             $loyaltyClass->setReviewStatus($this->normalizeReviewStatusForCreate());
             $rewardTarget = $store->reward_target ?? 10;
             $loyaltyClass->setTextModulesData([
-                ['header' => 'Reward Target', 'body' => "Collect {$rewardTarget} stamps to earn: " . ($store->reward_title ?? 'rewards')],
+                ['header' => 'Program', 'body' => $programName],
+                ['header' => 'How it works', 'body' => $rewardRule],
             ]);
             $loyaltyClass->setImageModulesData($imageModulesData);
             $loyaltyClass->setHexBackgroundColor($backgroundColor);
@@ -215,6 +219,13 @@ class GoogleWalletPassService
         }
         
         $objectId = $this->getObjectIdForAccount($account);
+        $programName = $this->programName($store);
+        $statusText = $this->statusText($account, $store);
+        $manualCode = $account->manual_entry_code ?? $this->formatTokenForManualEntry(
+            ($account->reward_balance ?? 0) > 0 && $account->redeem_token
+                ? $account->redeem_token
+                : $account->public_token
+        );
         
         // Ensure class exists
         $this->createLoyaltyClass($store);
@@ -257,12 +268,7 @@ class GoogleWalletPassService
         $barcode = new \Google_Service_Walletobjects_Barcode();
         $barcode->setType('QR_CODE');
         $barcode->setValue($barcodeValue);
-        // Show the manual code directly under the QR code
-        $barcode->setAlternateText('Manual Code: ' . ($account->manual_entry_code ?? $this->formatTokenForManualEntry(
-            ($account->reward_balance ?? 0) > 0 && $account->redeem_token
-                ? $account->redeem_token
-                : $account->public_token
-        )));
+        $barcode->setAlternateText('Manual code: ' . $manualCode);
         $loyaltyObject->setBarcode($barcode);
         
         // Hero image on the card (Pass Hero Image) – same as class so card shows it
@@ -286,21 +292,24 @@ class GoogleWalletPassService
         // The object inherits styling from the class
         
         // Text modules: keep concise, visual progress comes from generated strip image
-        $rewardTarget = $store->reward_target ?? 10;
         $textModulesData = [
             [
                 'header' => 'Program',
-                'body' => $store->reward_title ?? 'Rewards',
+                'body' => $programName,
             ],
             [
-                'header' => 'Stamps',
-                'body' => sprintf('%d/%d', $account->stamp_count, $rewardTarget),
+                'header' => 'Status',
+                'body' => $statusText,
+            ],
+            [
+                'header' => 'How it works',
+                'body' => $this->rewardRuleText($store),
             ],
         ];
-        if (($account->reward_balance ?? 0) > 0) {
+        if ($store->require_verification_for_redemption) {
             $textModulesData[] = [
-                'header' => 'Rewards',
-                'body' => (string) ($account->reward_balance ?? 0) . ' ready to redeem',
+                'header' => 'Redemption',
+                'body' => 'Email verification is required before rewards can be redeemed.',
             ];
         }
         $loyaltyObject->setTextModulesData($textModulesData);
@@ -674,14 +683,18 @@ class GoogleWalletPassService
     protected function existingClassDiffers($existing, $store, $logoUri, $heroImage, string $backgroundColor, int $rewardTarget): bool
     {
         $desiredProgramName = $store->name;
-        $desiredTextHeader = 'Reward Target';
-        $desiredTextBody = "Collect {$rewardTarget} stamps to earn: " . ($store->reward_title ?? 'rewards');
+        $desiredProgramHeader = 'Program';
+        $desiredProgramBody = $this->programName($store);
+        $desiredRuleHeader = 'How it works';
+        $desiredRuleBody = $this->rewardRuleText($store);
 
         $existingProgramName = $existing->getProgramName();
         $existingColor = $existing->getHexBackgroundColor();
         $textModules = $existing->getTextModulesData() ?? [];
-        $existingTextHeader = $textModules[0]?->getHeader();
-        $existingTextBody = $textModules[0]?->getBody();
+        $existingProgramTextHeader = $textModules[0]?->getHeader();
+        $existingProgramTextBody = $textModules[0]?->getBody();
+        $existingRuleHeader = $textModules[1]?->getHeader();
+        $existingRuleBody = $textModules[1]?->getBody();
 
         $existingLogoUri = $this->extractImageUri($existing->getProgramLogo());
         $existingHeroUri = null;
@@ -695,8 +708,10 @@ class GoogleWalletPassService
 
         return $existingProgramName !== $desiredProgramName
             || $existingColor !== $backgroundColor
-            || $existingTextHeader !== $desiredTextHeader
-            || $existingTextBody !== $desiredTextBody
+            || $existingProgramTextHeader !== $desiredProgramHeader
+            || $existingProgramTextBody !== $desiredProgramBody
+            || $existingRuleHeader !== $desiredRuleHeader
+            || $existingRuleBody !== $desiredRuleBody
             || $existingLogoUri !== $desiredLogoUri
             || $existingHeroUri !== $desiredHeroUri;
     }
@@ -836,25 +851,35 @@ class GoogleWalletPassService
         $barcode = new \Google_Service_Walletobjects_Barcode();
         $barcode->setType('QR_CODE');
         $barcode->setValue($barcodeValue);
-        $barcode->setAlternateText('Manual: ' . ($account->manual_entry_code ?? $this->formatTokenForManualEntry($account->public_token)));
+        $manualCode = $account->manual_entry_code ?? $this->formatTokenForManualEntry(
+            ($account->reward_balance ?? 0) > 0 && $account->redeem_token
+                ? $account->redeem_token
+                : $account->public_token
+        );
+        $barcode->setAlternateText('Manual code: ' . $manualCode);
 
         $customerName = $customer->name ?? $customer->email ?? 'Valued Customer';
-        $rewardTarget = $store->reward_target ?? 10;
+        $programName = $this->programName($store);
+        $statusText = $this->statusText($account, $store);
         $stampStripImage = $this->buildStampStripImage($account);
         $textModules = [
             new \Google_Service_Walletobjects_TextModuleData([
                 'header' => 'Program',
-                'body' => $store->reward_title ?? 'Rewards',
+                'body' => $programName,
             ]),
             new \Google_Service_Walletobjects_TextModuleData([
-                'header' => 'Stamps',
-                'body' => sprintf('%d/%d', $account->stamp_count, $rewardTarget),
+                'header' => 'Status',
+                'body' => $statusText,
+            ]),
+            new \Google_Service_Walletobjects_TextModuleData([
+                'header' => 'How it works',
+                'body' => $this->rewardRuleText($store),
             ]),
         ];
-        if (($account->reward_balance ?? 0) > 0) {
+        if ($store->require_verification_for_redemption) {
             $textModules[] = new \Google_Service_Walletobjects_TextModuleData([
-                'header' => 'Rewards',
-                'body' => (string) ($account->reward_balance ?? 0) . ' ready to redeem',
+                'header' => 'Redemption',
+                'body' => 'Email verification is required before rewards can be redeemed.',
             ]);
         }
 
@@ -863,8 +888,8 @@ class GoogleWalletPassService
         $genericObject->setClassId($classId);
         $genericObject->setState('ACTIVE');
         $genericObject->setCardTitle($this->makeLocalizedString($store->name));
-        // When card is opened: show customer name (no "Hi") to match card design
         $genericObject->setHeader($this->makeLocalizedString($customerName));
+        $genericObject->setSubheader($this->makeLocalizedString($statusText));
         $genericObject->setHexBackgroundColor($backgroundColor);
         $genericObject->setBarcode($barcode);
         $genericObject->setTextModulesData($textModules);
@@ -1004,5 +1029,44 @@ class GoogleWalletPassService
     protected function formatTokenForManualEntry(string $token): string
     {
         return implode('-', str_split($token, 4));
+    }
+
+    protected function programName($store): string
+    {
+        return trim((string) ($store->reward_title ?? 'Rewards')) ?: 'Rewards';
+    }
+
+    protected function progressText(LoyaltyAccount $account, $store): string
+    {
+        $rewardTarget = max(1, (int) ($store->reward_target ?? 10));
+        $stampCount = max(0, min((int) $account->stamp_count, $rewardTarget));
+
+        return sprintf('Stamps %d/%d', $stampCount, $rewardTarget);
+    }
+
+    protected function statusText(LoyaltyAccount $account, $store): string
+    {
+        $rewardBalance = (int) ($account->reward_balance ?? 0);
+
+        if ($rewardBalance > 1) {
+            return sprintf('%d rewards available', $rewardBalance);
+        }
+
+        if ($rewardBalance === 1) {
+            return 'Reward ready';
+        }
+
+        return $this->progressText($account, $store);
+    }
+
+    protected function rewardRuleText($store): string
+    {
+        $rewardTarget = max(1, (int) ($store->reward_target ?? 10));
+
+        return sprintf(
+            'Collect %d stamps to earn %s.',
+            $rewardTarget,
+            $this->programName($store)
+        );
     }
 }
