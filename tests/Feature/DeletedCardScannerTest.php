@@ -4,6 +4,11 @@ use App\Models\Customer;
 use App\Models\LoyaltyAccount;
 use App\Models\Store;
 use App\Models\User;
+use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
+
+beforeEach(function () {
+    $this->withoutMiddleware(VerifyCsrfToken::class);
+});
 
 test('preview returns stable not-active response for deleted loyalty account', function () {
     $user = User::factory()->create();
