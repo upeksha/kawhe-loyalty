@@ -32,8 +32,8 @@ if [[ "${disk_use:-0}" -ge "$DISK_THRESHOLD" ]]; then
   warnings+=("Disk usage is ${disk_use}%")
 fi
 
-queue_pending="$(php "$APP_DIR/artisan" tinker --execute='echo Illuminate\Support\Facades\DB::table(\"jobs\")->count();' 2>/dev/null || echo 0)"
-failed_jobs="$(php "$APP_DIR/artisan" tinker --execute='echo Illuminate\Support\Facades\DB::table(\"failed_jobs\")->count();' 2>/dev/null || echo 0)"
+queue_pending="$(php "$APP_DIR/artisan" tinker --execute="echo Illuminate\\Support\\Facades\\DB::table('jobs')->count();" 2>/dev/null || echo 0)"
+failed_jobs="$(php "$APP_DIR/artisan" tinker --execute="echo Illuminate\\Support\\Facades\\DB::table('failed_jobs')->count();" 2>/dev/null || echo 0)"
 
 if [[ "${queue_pending:-0}" -ge "$QUEUE_WARN_THRESHOLD" ]]; then
   warnings+=("Queue backlog is ${queue_pending}")
