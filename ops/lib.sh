@@ -35,7 +35,7 @@ alert() {
   local level="$1"
   local title="$2"
   local body="${3:-}"
-  local payload message
+  local payload message webhook_url json_message
 
   message="[$level] $title"
   if [[ -n "$body" ]]; then
@@ -44,8 +44,14 @@ alert() {
 
   log "$message"
 
-  if [[ -n "${OPS_ALERT_WEBHOOK_URL:-}" ]]; then
-    payload=$(printf '{"text":"%s"}' "$(printf '%s' "$message" | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read())[1:-1])')")
+  webhook_url="${OPS_ALERT_WEBHOOK_URL:-}"
+  if [[ -n "$webhook_url" ]]; then
+    json_message="$(printf '%s' "$message" | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read())[1:-1])')"
+    if [[ "$webhook_url" == *"discord.com/api/webhooks/"* ]]; then
+      payload=$(printf '{"content":"%s"}' "$json_message")
+    else
+      payload=$(printf '{"text":"%s"}' "$json_message")
+    fi
     curl -fsS -X POST -H "Content-Type: application/json" -d "$payload" "$OPS_ALERT_WEBHOOK_URL" >/dev/null || log "Webhook alert delivery failed"
   fi
 }
