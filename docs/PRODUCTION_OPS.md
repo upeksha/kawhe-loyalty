@@ -19,6 +19,12 @@ These are optional but recommended in `/var/www/kawhe/.env` or `/etc/kawhe-ops.e
 - `OPS_HEALTHCHECK_URL`
 - `OPS_DISK_WARN_PERCENT`
 - `OPS_QUEUE_WARN_THRESHOLD`
+- `OPS_BACKUP_SPACES_ACCESS_KEY_ID`
+- `OPS_BACKUP_SPACES_SECRET_ACCESS_KEY`
+- `OPS_BACKUP_SPACES_REGION`
+- `OPS_BACKUP_SPACES_BUCKET`
+- `OPS_BACKUP_SPACES_ENDPOINT`
+- `OPS_BACKUP_SPACES_PREFIX`
 
 ## Cron schedule
 
@@ -31,3 +37,4 @@ These are optional but recommended in `/var/www/kawhe/.env` or `/etc/kawhe-ops.e
 
 - Backups are currently local-to-server unless you add an off-server sync step.
 - Alert delivery is a no-op until `OPS_ALERT_WEBHOOK_URL` is configured.
+- DB backups can be uploaded to Spaces with private ACL by setting the `OPS_BACKUP_SPACES_*` variables.

@@ -9,6 +9,7 @@ source "$SCRIPT_DIR/lib.sh"
 BACKUP_DIR="${OPS_BACKUP_DIR:-$APP_DIR/storage/backups}"
 DB_BACKUP_DIR="$BACKUP_DIR/db"
 RETENTION_DAYS="${OPS_DB_BACKUP_RETENTION_DAYS:-14}"
+REMOTE_PREFIX="${OPS_BACKUP_SPACES_PREFIX:-backups/db}"
 
 ensure_dir "$DB_BACKUP_DIR"
 
@@ -40,4 +41,14 @@ mv "${TMP_FILE}.gz" "$OUT_FILE"
 find "$DB_BACKUP_DIR" -type f -name '*.sql.gz' -mtime +"$RETENTION_DAYS" -delete
 
 SIZE="$(du -h "$OUT_FILE" | awk '{print $1}')"
-alert "INFO" "DB backup completed" "File: $OUT_FILE"$'\n'"Size: $SIZE"
+REMOTE_KEY=""
+if [[ -n "${OPS_BACKUP_SPACES_BUCKET:-${ASSETS_BUCKET:-}}" && -n "${OPS_BACKUP_SPACES_ENDPOINT:-${ASSETS_ENDPOINT:-}}" ]]; then
+  REMOTE_KEY="$REMOTE_PREFIX/$(basename "$OUT_FILE")"
+  php "$SCRIPT_DIR/upload-to-spaces.php" "$OUT_FILE" "$REMOTE_KEY"
+fi
+
+if [[ -n "$REMOTE_KEY" ]]; then
+  alert "INFO" "DB backup completed" "File: $OUT_FILE"$'\n'"Size: $SIZE"$'\n'"Spaces key: $REMOTE_KEY"
+else
+  alert "INFO" "DB backup completed" "File: $OUT_FILE"$'\n'"Size: $SIZE"
+fi
