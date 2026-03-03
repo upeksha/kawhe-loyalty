@@ -165,33 +165,14 @@
 
                             <div class="sm:col-span-2">
                                 <div class="sticky top-8 space-y-4">
-                                    <p class="text-xs font-semibold text-stone-500 uppercase tracking-wider">Preview</p>
-                                    <div class="rounded-2xl overflow-hidden border border-stone-200 shadow-xl shadow-stone-200/40" :style="{ backgroundColor: bgColor }" role="status" aria-live="polite">
-                                        <div class="p-5 text-white">
-                                            <div class="flex items-center gap-3 mb-3">
-                                                <template x-if="logoPreview">
-                                                    <img :src="logoPreview" alt="" class="h-10 w-10 object-contain rounded-lg bg-white/20 p-1">
-                                                </template>
-                                                <span class="font-semibold text-lg" x-text="storeName || 'Your store name'"></span>
-                                            </div>
-                                            <p class="text-white/90 text-sm" x-text="rewardTitle || 'Free coffee'"></p>
-                                            <div class="flex gap-1.5 mt-4 flex-wrap">
-                                                <span class="w-6 h-6 rounded-full border-2" :style="{ borderColor: brandColor }"></span>
-                                                <span class="w-6 h-6 rounded-full border-2" :style="{ borderColor: brandColor }"></span>
-                                                <span class="w-6 h-6 rounded-full border-2" :style="{ borderColor: brandColor }"></span>
-                                                <template x-for="i in Math.max((rewardTarget || 9) - 3, 0)" :key="i">
-                                                    <span class="w-6 h-6 rounded-full border-2 border-white/30"></span>
-                                                </template>
-                                            </div>
-                                        </div>
-                                    </div>
+                                    <x-wallet-pass-preview />
                                     <div class="rounded-xl bg-stone-50/80 border border-stone-200/80 p-5">
-                                        <p class="text-sm font-semibold text-stone-800">What matches onboarding</p>
+                                        <p class="text-sm font-semibold text-stone-800">What merchants are seeing</p>
                                         <ul class="mt-3 space-y-2 text-sm text-stone-600">
-                                            <li>Same section structure and spacing</li>
-                                            <li>Same color and asset inputs</li>
-                                            <li>Same live preview pattern</li>
-                                            <li>Same helper text and upload styling</li>
+                                            <li>Apple Wallet-style front card mock</li>
+                                            <li>Google Wallet-style front card mock</li>
+                                            <li>Live updates from colors, logo, and wallet assets</li>
+                                            <li>Closer preview of the real pass before saving</li>
                                         </ul>
                                     </div>
                                 </div>

@@ -15,6 +15,9 @@
     >
         <form method="POST" action="{{ route('merchant.onboarding.wizard.card-design.store') }}" enctype="multipart/form-data" id="card-design-form"
         x-data="{
+            storeName: '{{ addslashes($store->name ?? '') }}',
+            rewardTarget: {{ (int) ($store->reward_target ?? 9) }},
+            rewardTitle: '{{ addslashes($store->reward_title ?? 'Free coffee') }}',
             brandColor: '{{ $brandColor }}',
             bgColor: '{{ $bgColor }}',
             logoPreview: '{{ $store->logo_url ?? '' }}',
@@ -119,56 +122,15 @@
                 <div class="sm:col-span-2">
                     <details class="sm:hidden rounded-xl border border-stone-200 bg-stone-50/70 p-4">
                         <summary class="cursor-pointer list-none flex items-center justify-between text-sm font-semibold text-stone-800">
-                            Card preview
+                            Wallet pass preview
                             <span class="text-xs font-medium text-stone-500">Tap to expand</span>
                         </summary>
-                        <div class="mt-4 rounded-2xl overflow-hidden border border-stone-200 shadow-sm" :style="{ backgroundColor: bgColor }" role="status" aria-live="polite">
-                            <div class="p-5 text-white">
-                                <div class="flex items-center gap-3 mb-3">
-                                    <template x-if="logoPreview">
-                                        <img :src="logoPreview" alt="" class="h-10 w-10 object-contain rounded-lg bg-white/20 p-1">
-                                    </template>
-                                    <span class="font-semibold text-lg" x-text="'{{ addslashes($store->name) }}'"></span>
-                                </div>
-                                <p class="text-white/90 text-sm" x-text="'{{ addslashes($store->reward_title) }}'"></p>
-                                <div class="flex gap-1.5 mt-4 flex-wrap">
-                                    <span class="w-6 h-6 rounded-full border-2" :style="{ borderColor: brandColor }"></span>
-                                    <span class="w-6 h-6 rounded-full border-2" :style="{ borderColor: brandColor }"></span>
-                                    <span class="w-6 h-6 rounded-full border-2" :style="{ borderColor: brandColor }"></span>
-                                    <span class="w-6 h-6 rounded-full border-2 border-white/30"></span>
-                                    <span class="w-6 h-6 rounded-full border-2 border-white/30"></span>
-                                    <span class="w-6 h-6 rounded-full border-2 border-white/30"></span>
-                                    <span class="w-6 h-6 rounded-full border-2 border-white/30"></span>
-                                    <span class="w-6 h-6 rounded-full border-2 border-white/30"></span>
-                                    <span class="w-6 h-6 rounded-full border-2 border-white/30"></span>
-                                </div>
-                            </div>
+                        <div class="mt-4">
+                            <x-wallet-pass-preview />
                         </div>
                     </details>
                     <div class="hidden sm:block sticky top-8">
-                        <p class="text-xs font-semibold text-stone-500 uppercase tracking-wider mb-3">Preview</p>
-                        <div class="rounded-2xl overflow-hidden border border-stone-200 shadow-xl shadow-stone-200/40" :style="{ backgroundColor: bgColor }" role="status" aria-live="polite">
-                            <div class="p-5 text-white">
-                                <div class="flex items-center gap-3 mb-3">
-                                    <template x-if="logoPreview">
-                                        <img :src="logoPreview" alt="" class="h-10 w-10 object-contain rounded-lg bg-white/20 p-1">
-                                    </template>
-                                    <span class="font-semibold text-lg" x-text="'{{ addslashes($store->name) }}'"></span>
-                                </div>
-                                <p class="text-white/90 text-sm" x-text="'{{ addslashes($store->reward_title) }}'"></p>
-                                <div class="flex gap-1.5 mt-4 flex-wrap">
-                                    <span class="w-6 h-6 rounded-full border-2" :style="{ borderColor: brandColor }"></span>
-                                    <span class="w-6 h-6 rounded-full border-2" :style="{ borderColor: brandColor }"></span>
-                                    <span class="w-6 h-6 rounded-full border-2" :style="{ borderColor: brandColor }"></span>
-                                    <span class="w-6 h-6 rounded-full border-2 border-white/30"></span>
-                                    <span class="w-6 h-6 rounded-full border-2 border-white/30"></span>
-                                    <span class="w-6 h-6 rounded-full border-2 border-white/30"></span>
-                                    <span class="w-6 h-6 rounded-full border-2 border-white/30"></span>
-                                    <span class="w-6 h-6 rounded-full border-2 border-white/30"></span>
-                                    <span class="w-6 h-6 rounded-full border-2 border-white/30"></span>
-                                </div>
-                            </div>
-                        </div>
+                        <x-wallet-pass-preview />
                         @if($store->pass_logo_path || $store->pass_hero_image_path)
                             <p class="mt-3 text-xs text-stone-500 flex items-center gap-1.5">
                                 <span class="inline-flex items-center gap-1 rounded-md bg-stone-200 px-1.5 py-0.5">Apple Wallet</span>
