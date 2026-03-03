@@ -1,19 +1,20 @@
 @php
-    $bg    = $store->brand_color ?? $store->background_color ?? '#7B3F1E';
+    $candidateBg = $store->brand_color ?? $store->background_color ?? '#7B3F1E';
     $brand = $store->brand_color ?? '#7B3F1E';
 
-    $hex = ltrim($bg, '#');
+    $hex = ltrim($candidateBg, '#');
     if (strlen($hex) === 6) {
         $r = hexdec(substr($hex, 0, 2));
         $g = hexdec(substr($hex, 2, 2));
         $b = hexdec(substr($hex, 4, 2));
         $lum = (0.299 * $r + 0.587 * $g + 0.114 * $b) / 255;
-        $textColor  = $lum < 0.5 ? '#ffffff' : '#111111';
-        $mutedColor = $lum < 0.5 ? '#cccccc' : '#666666';
+        $bg = $lum > 0.78 ? ($store->background_color ?? '#7B3F1E') : $candidateBg;
     } else {
-        $textColor  = '#ffffff';
-        $mutedColor = '#cccccc';
+        $bg = '#7B3F1E';
     }
+
+    $textColor = '#ffffff';
+    $mutedColor = '#ffffff';
 @endphp
 <!DOCTYPE html>
 <html lang="en">
@@ -117,12 +118,12 @@
             font-size: 11pt;
             color: {{ $textColor }};
             line-height: 1.8;
-            margin-bottom: 2mm;
+            margin-bottom: 2.5mm;
         }
 
         .wallet-table {
             display: table;
-            margin: 8mm auto 0;
+            margin: 10mm auto 0;
             border-collapse: collapse;
         }
         .wallet-cell {
@@ -140,7 +141,7 @@
             font-family: Helvetica, Arial, sans-serif;
             font-size: 9pt;
             color: {{ $textColor }};
-            margin-top: 36mm;
+            margin-top: 34mm;
         }
     </style>
 </head>
@@ -155,14 +156,13 @@
 
             <div class="reward-title">{{ $store->reward_title ?: 'Loyalty Rewards' }}</div>
             <div class="store-name">{{ $store->name }}</div>
-            <div class="tagline">Scan to join our loyalty program</div>
+            <div class="tagline">Scan the QR code to join our loyalty program</div>
 
             <div class="qr-wrap">
                 <img src="{{ $qrCodeDataUrl }}" alt="QR Code">
             </div>
 
-            <div class="instruction">Point your camera at the QR code</div>
-            <div class="instruction">Add to Apple Wallet or Google Wallet</div>
+            <div class="instruction">Save your card to your wallet. Collect stamps. Get rewards.</div>
 
             @if(!empty($appleWalletBadgeDataUrl) || !empty($googleWalletBadgeDataUrl))
                 <div class="wallet-table">
@@ -179,7 +179,7 @@
                 </div>
             @endif
 
-            <div class="footer">Powered by Rewardly</div>
+            <div class="footer">Powered by Kawhe</div>
         </div>
     </div>
 </body>
