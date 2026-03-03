@@ -1,6 +1,6 @@
 @php
-    $bg    = $store->background_color ?? '#7B3F1E';
-    $brand = $store->brand_color ?? '#ffffff';
+    $bg    = $store->brand_color ?? $store->background_color ?? '#7B3F1E';
+    $brand = $store->brand_color ?? '#7B3F1E';
 
     $hex = ltrim($bg, '#');
     if (strlen($hex) === 6) {
@@ -34,7 +34,6 @@
             background: {{ $bg }};
         }
 
-        /* DomPDF-safe full-page vertical layout via display:table */
         .outer {
             display: table;
             width: 210mm;
@@ -45,32 +44,25 @@
             display: table-cell;
             vertical-align: middle;
             text-align: center;
-            padding: 12mm 18mm 14mm;
-        }
-
-        .brand-panel {
-            width: 100%;
-            background: rgba(255, 255, 255, 0.08);
-            border: 1px solid rgba(255, 255, 255, 0.12);
-            border-radius: 8mm;
-            padding: 8mm 8mm 9mm;
+            padding: 18mm 18mm 18mm;
         }
 
         .hero-image {
-            width: 100%;
-            height: 42mm;
+            width: 34mm;
+            height: 34mm;
             object-fit: cover;
-            border-radius: 6mm;
+            border-radius: 50%;
             display: block;
-            margin: 0 auto 7mm;
+            margin: 0 auto 10mm;
+            background: #ffffff;
         }
 
         .logo {
-            width: 24mm;
-            height: 24mm;
+            width: 26mm;
+            height: 26mm;
             border-radius: 50%;
             object-fit: cover;
-            margin: 0 auto 7mm;
+            margin: 0 auto 10mm;
             display: block;
             background: #ffffff;
             padding: 2mm;
@@ -78,60 +70,59 @@
 
         .reward-title {
             font-family: Helvetica, Arial, sans-serif;
-            font-size: 28pt;
+            font-size: 30pt;
             font-weight: bold;
             color: {{ $textColor }};
             line-height: 1.1;
-            margin-bottom: 4mm;
+            margin-bottom: 6mm;
         }
 
         .store-name {
             font-family: Helvetica, Arial, sans-serif;
-            font-size: 16pt;
-            font-weight: bold;
+            font-size: 15pt;
+            font-weight: 600;
             color: {{ $textColor }};
-            margin-bottom: 3mm;
+            margin-bottom: 6mm;
         }
 
         .tagline {
             font-family: Helvetica, Arial, sans-serif;
-            font-size: 11pt;
+            font-size: 12pt;
             color: {{ $mutedColor }};
-            margin-bottom: 10mm;
+            margin-bottom: 12mm;
         }
 
         .promo {
             font-family: Helvetica, Arial, sans-serif;
-            font-size: 13pt;
+            font-size: 14pt;
             line-height: 1.4;
             color: {{ $textColor }};
-            margin-bottom: 10mm;
+            margin-bottom: 12mm;
         }
 
         .qr-wrap {
             display: inline-block;
             background: #ffffff;
-            border-radius: 6mm;
             padding: 5mm;
-            margin-bottom: 10mm;
-            border: 2px solid {{ $brand }};
+            margin-bottom: 14mm;
         }
         .qr-wrap img {
             display: block;
-            width: 82mm;
-            height: 82mm;
+            width: 92mm;
+            height: 92mm;
         }
 
         .instruction {
             font-family: Helvetica, Arial, sans-serif;
             font-size: 11pt;
-            color: {{ $mutedColor }};
-            line-height: 1.7;
+            color: {{ $textColor }};
+            line-height: 1.8;
+            margin-bottom: 2mm;
         }
 
         .wallet-table {
             display: table;
-            margin: 10mm auto 0;
+            margin: 8mm auto 0;
             border-collapse: collapse;
         }
         .wallet-cell {
@@ -147,54 +138,48 @@
 
         .footer {
             font-family: Helvetica, Arial, sans-serif;
-            font-size: 8pt;
-            color: {{ $mutedColor }};
-            margin-top: 12mm;
+            font-size: 9pt;
+            color: {{ $textColor }};
+            margin-top: 36mm;
         }
     </style>
 </head>
 <body>
     <div class="outer">
         <div class="middle">
-            <div class="brand-panel">
-                @if(!empty($heroImageDataUrl))
-                    <img src="{{ $heroImageDataUrl }}" alt="{{ $store->name }} artwork" class="hero-image">
-                @endif
+            @if(!empty($logoDataUrl))
+                <img src="{{ $logoDataUrl }}" alt="{{ $store->name }}" class="logo">
+            @elseif(!empty($heroImageDataUrl))
+                <img src="{{ $heroImageDataUrl }}" alt="{{ $store->name }} artwork" class="hero-image">
+            @endif
 
-                @if(!empty($logoDataUrl))
-                    <img src="{{ $logoDataUrl }}" alt="{{ $store->name }}" class="logo">
-                @endif
+            <div class="reward-title">{{ $store->reward_title ?: 'Loyalty Rewards' }}</div>
+            <div class="store-name">{{ $store->name }}</div>
+            <div class="tagline">Scan to join our loyalty program</div>
 
-                <div class="store-name">{{ $store->name }}</div>
-                <div class="reward-title">{{ $store->reward_title ?: 'Loyalty Rewards' }}</div>
-                <div class="tagline">Scan to join our loyalty program</div>
-
-                <div class="promo">{!! $promoHtml !!}</div>
-
-                <div class="qr-wrap">
-                    <img src="{{ $qrCodeDataUrl }}" alt="QR Code">
-                </div>
-
-                <div class="instruction">Point your camera at the QR code</div>
-                <div class="instruction">Join instantly and add your card to Apple Wallet or Google Wallet</div>
-
-                @if(!empty($appleWalletBadgeDataUrl) || !empty($googleWalletBadgeDataUrl))
-                    <div class="wallet-table">
-                        @if(!empty($appleWalletBadgeDataUrl))
-                            <div class="wallet-cell">
-                                <img src="{{ $appleWalletBadgeDataUrl }}" alt="Add to Apple Wallet">
-                            </div>
-                        @endif
-                        @if(!empty($googleWalletBadgeDataUrl))
-                            <div class="wallet-cell">
-                                <img src="{{ $googleWalletBadgeDataUrl }}" alt="Add to Google Wallet">
-                            </div>
-                        @endif
-                    </div>
-                @endif
-
-                <div class="footer">Powered by Rewardly</div>
+            <div class="qr-wrap">
+                <img src="{{ $qrCodeDataUrl }}" alt="QR Code">
             </div>
+
+            <div class="instruction">Point your camera at the QR code</div>
+            <div class="instruction">Add to Apple Wallet or Google Wallet</div>
+
+            @if(!empty($appleWalletBadgeDataUrl) || !empty($googleWalletBadgeDataUrl))
+                <div class="wallet-table">
+                    @if(!empty($appleWalletBadgeDataUrl))
+                        <div class="wallet-cell">
+                            <img src="{{ $appleWalletBadgeDataUrl }}" alt="Add to Apple Wallet">
+                        </div>
+                    @endif
+                    @if(!empty($googleWalletBadgeDataUrl))
+                        <div class="wallet-cell">
+                            <img src="{{ $googleWalletBadgeDataUrl }}" alt="Add to Google Wallet">
+                        </div>
+                    @endif
+                </div>
+            @endif
+
+            <div class="footer">Powered by Rewardly</div>
         </div>
     </div>
 </body>
