@@ -45,103 +45,95 @@
             display: table-cell;
             vertical-align: middle;
             text-align: center;
-            padding: 18mm 18mm 18mm;
+            padding: 12mm 16mm 12mm;
         }
 
         .hero-image {
-            width: 34mm;
-            height: 34mm;
+            width: 28mm;
+            height: 28mm;
             object-fit: cover;
             border-radius: 50%;
             display: block;
-            margin: 0 auto 10mm;
+            margin: 0 auto 6mm;
             background: #ffffff;
         }
 
         .logo {
-            width: 26mm;
-            height: 26mm;
+            width: 22mm;
+            height: 22mm;
             border-radius: 50%;
             object-fit: cover;
-            margin: 0 auto 10mm;
+            margin: 0 auto 6mm;
             display: block;
             background: #ffffff;
-            padding: 2mm;
+            padding: 1.5mm;
         }
 
         .reward-title {
             font-family: Helvetica, Arial, sans-serif;
-            font-size: 30pt;
+            font-size: 27pt;
             font-weight: bold;
             color: {{ $textColor }};
             line-height: 1.1;
-            margin-bottom: 6mm;
+            margin-bottom: 4mm;
         }
 
         .store-name {
             font-family: Helvetica, Arial, sans-serif;
-            font-size: 15pt;
+            font-size: 14pt;
             font-weight: 600;
             color: {{ $textColor }};
-            margin-bottom: 6mm;
+            margin-bottom: 4mm;
         }
 
         .tagline {
             font-family: Helvetica, Arial, sans-serif;
-            font-size: 12pt;
+            font-size: 11pt;
             color: {{ $mutedColor }};
-            margin-bottom: 12mm;
-        }
-
-        .promo {
-            font-family: Helvetica, Arial, sans-serif;
-            font-size: 14pt;
-            line-height: 1.4;
-            color: {{ $textColor }};
-            margin-bottom: 12mm;
+            margin-bottom: 8mm;
         }
 
         .qr-wrap {
             display: inline-block;
             background: #ffffff;
-            padding: 5mm;
-            margin-bottom: 14mm;
+            padding: 4mm;
+            margin-bottom: 9mm;
         }
         .qr-wrap img {
             display: block;
-            width: 92mm;
-            height: 92mm;
+            width: 82mm;
+            height: 82mm;
         }
 
         .instruction {
             font-family: Helvetica, Arial, sans-serif;
-            font-size: 11pt;
+            font-size: 10pt;
             color: {{ $textColor }};
-            line-height: 1.8;
-            margin-bottom: 2.5mm;
+            line-height: 1.55;
+            margin-bottom: 1.5mm;
         }
 
         .wallet-table {
             display: table;
-            margin: 10mm auto 0;
+            margin: 6mm auto 0;
             border-collapse: collapse;
         }
         .wallet-cell {
             display: table-cell;
-            padding: 0 4mm;
+            padding: 0 3mm;
             vertical-align: middle;
         }
         .wallet-cell img {
-            height: 13mm;
+            height: 12mm;
             width: auto;
             display: block;
         }
 
         .footer {
             font-family: Helvetica, Arial, sans-serif;
-            font-size: 9pt;
+            font-size: 8pt;
             color: {{ $textColor }};
-            margin-top: 34mm;
+            margin-top: 22mm;
         }
     </style>
 </head>
