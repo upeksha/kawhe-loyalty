@@ -132,7 +132,7 @@
             vertical-align: middle;
         }
         .wallet-cell img {
-            height: 11mm;
+            height: 13mm;
             width: auto;
             display: block;
         }
