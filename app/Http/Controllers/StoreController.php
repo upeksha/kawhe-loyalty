@@ -223,8 +223,20 @@ class StoreController extends Controller
         }
 
         $logoDataUrl = null;
-        if (! empty($store->logo_path) && StoreAssets::exists($store->logo_path)) {
-            $logoDataUrl = $this->binaryToDataUri(StoreAssets::get($store->logo_path), $store->logo_path);
+        $logoPath = null;
+        foreach ([$store->pass_logo_path, $store->logo_path] as $candidatePath) {
+            if (! empty($candidatePath) && StoreAssets::exists($candidatePath)) {
+                $logoPath = $candidatePath;
+                break;
+            }
+        }
+        if ($logoPath) {
+            $logoDataUrl = $this->binaryToDataUri(StoreAssets::get($logoPath), $logoPath);
+        }
+
+        $heroImageDataUrl = null;
+        if (! empty($store->pass_hero_image_path) && StoreAssets::exists($store->pass_hero_image_path)) {
+            $heroImageDataUrl = $this->binaryToDataUri(StoreAssets::get($store->pass_hero_image_path), $store->pass_hero_image_path);
         }
 
         $appleWalletBadgeDataUrl = $this->fileToDataUri(public_path('wallet-badges/add-to-apple-wallet.svg'));
@@ -238,6 +250,7 @@ class StoreController extends Controller
             'joinUrl' => $joinUrl,
             'qrCodeDataUrl' => $qrCodeDataUrl,
             'logoDataUrl' => $logoDataUrl,
+            'heroImageDataUrl' => $heroImageDataUrl,
             'appleWalletBadgeDataUrl' => $appleWalletBadgeDataUrl,
             'googleWalletBadgeDataUrl' => $googleWalletBadgeDataUrl,
             'promoHtml' => $promoHtml,
