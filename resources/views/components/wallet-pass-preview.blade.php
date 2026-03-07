@@ -37,7 +37,7 @@
                 <div class="grid grid-cols-2 gap-3">
                     <div class="min-w-0">
                         <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/65">Customer</p>
-                        <p class="truncate pt-1 text-[2.9rem] font-light leading-none">Cchq</p>
+                        <p class="truncate pt-1 text-[2.9rem] font-light leading-none">John Doe</p>
                     </div>
                     <div class="min-w-0 text-left">
                         <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/65">Status</p>
