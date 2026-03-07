@@ -48,7 +48,7 @@
 
             <div class="px-4 py-7">
                 <div class="mx-auto w-full max-w-[15.5rem] rounded-2xl bg-white p-3 shadow-xl shadow-black/20">
-                    <div class="mx-auto h-52 w-52 rounded-lg bg-[linear-gradient(90deg,transparent_0,transparent_7%,#000_7%,#000_12%,transparent_12%,transparent_19%,#000_19%,#000_24%,transparent_24%,transparent_32%,#000_32%,#000_36%,transparent_36%,transparent_44%,#000_44%,#000_50%,transparent_50%,transparent_56%,#000_56%,#000_60%,transparent_60%,transparent_68%,#000_68%,#000_73%,transparent_73%,transparent_80%,#000_80%,#000_87%,transparent_87%,transparent_100%)]"></div>
+                    <img src="{{ asset('images/qr-preview-sample.svg') }}" alt="Sample QR code preview" class="mx-auto h-52 w-52 rounded-lg object-contain" />
                     <p class="pt-3 text-center text-[2rem] font-medium leading-none text-black">Manual code: J7LU</p>
                 </div>
             </div>
