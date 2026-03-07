@@ -1,3 +1,7 @@
+@php
+    $fallbackHeroUrl = asset('images/wallet-preview-hero.svg');
+@endphp
+
 <div class="space-y-3" role="status" aria-live="polite">
     <div class="flex items-center justify-between gap-3">
         <div>
@@ -23,12 +27,10 @@
             </div>
 
             <div class="relative h-44 overflow-hidden border-t border-white/10 border-b border-white/10">
-                <div x-show="passHeroPreview" class="absolute inset-0 bg-cover bg-center" :style="{ backgroundImage: `url(${passHeroPreview})` }"></div>
-                <div x-show="!passHeroPreview" class="absolute inset-0" :style="{ background: `linear-gradient(135deg, ${brandColor || '#0EA5E9'}55, rgba(255,255,255,0.12))` }"></div>
-                <div class="absolute inset-0 bg-[linear-gradient(to_bottom,rgba(15,23,42,0.05),rgba(15,23,42,0.18))]"></div>
-                <div class="absolute inset-x-0 top-9 flex items-center justify-center gap-3 px-5">
+                <div class="absolute inset-0 bg-cover bg-center" :style="passHeroPreview ? { backgroundImage: `linear-gradient(rgba(15,23,42,0.04), rgba(15,23,42,0.16)), url(${passHeroPreview})` } : { backgroundImage: `linear-gradient(rgba(15,23,42,0.04), rgba(15,23,42,0.16)), url({{ @js($fallbackHeroUrl) }})` }"></div>
+                <div class="absolute inset-x-0 top-9 z-10 flex items-center justify-center gap-3 px-5">
                     <template x-for="stamp in Array.from({ length: Math.max(Number(rewardTarget) || 1, 1) }, (_, index) => index + 1)" :key="`apple-stamp-${stamp}`">
-                        <span class="h-10 w-10 rounded-full border-[3px]" :style="stamp <= Math.min(2, Math.max(Number(rewardTarget) || 1, 1)) ? { borderColor: '#FFFFFF', backgroundColor: '#FFFFFF' } : { borderColor: 'rgba(255,255,255,0.95)', backgroundColor: 'transparent' }"></span>
+                        <span class="h-10 w-10 rounded-full border-[4px] shadow-[0_1px_8px_rgba(0,0,0,0.08)]" :style="stamp <= Math.min(2, Math.max(Number(rewardTarget) || 1, 1)) ? { borderColor: '#FFFFFF', backgroundColor: '#FFFFFF' } : { borderColor: 'rgba(255,255,255,0.96)', backgroundColor: 'transparent' }"></span>
                     </template>
                 </div>
             </div>
