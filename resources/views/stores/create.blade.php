@@ -170,7 +170,6 @@
                                         <p class="text-sm font-semibold text-stone-800">What merchants are seeing</p>
                                         <ul class="mt-3 space-y-2 text-sm text-stone-600">
                                             <li>Apple Wallet-style front card mock</li>
-                                            <li>Google Wallet-style front card mock</li>
                                             <li>Live updates from colors, logo, and wallet assets</li>
                                             <li>Closer preview of the real pass before saving</li>
                                         </ul>
