@@ -47,9 +47,9 @@
             </div>
 
             <div class="px-4 py-7">
-                <div class="mx-auto w-full max-w-[15.5rem] rounded-2xl bg-white p-3 shadow-xl shadow-black/20">
-                    <img src="{{ asset('images/qr-preview-sample.svg') }}" alt="Sample QR code preview" class="mx-auto h-52 w-52 rounded-lg object-contain" />
-                    <p class="pt-3 text-center text-[2rem] font-medium leading-none text-black">Manual code: J7LU</p>
+                <div class="mx-auto w-full max-w-[13.25rem] rounded-2xl bg-white p-3 shadow-xl shadow-black/20">
+                    <img src="{{ asset('images/qr-preview-sample.svg') }}" alt="Sample QR code preview" class="mx-auto h-40 w-40 rounded-lg object-contain" />
+                    <p class="pt-2.5 text-center text-[1.55rem] font-medium leading-none text-black">Manual code: J7LU</p>
                 </div>
             </div>
         </div>
