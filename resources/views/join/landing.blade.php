@@ -2,6 +2,7 @@
     $bg = $store->background_color ?? '#1F2937';
     $brand = $store->brand_color ?? '#0EA5E9';
     $hex = ltrim($bg, '#');
+    $brandHex = ltrim($brand, '#');
     if (strlen($hex) === 6) {
         $r = hexdec(substr($hex, 0, 2));
         $g = hexdec(substr($hex, 2, 2));
@@ -13,6 +14,25 @@
         $textOnBg = '#ffffff';
         $mutedOnBg = 'rgba(255,255,255,0.85)';
     }
+    if (strlen($brandHex) === 6) {
+        $brandR = hexdec(substr($brandHex, 0, 2));
+        $brandG = hexdec(substr($brandHex, 2, 2));
+        $brandB = hexdec(substr($brandHex, 4, 2));
+        $brandLum = (0.299 * $brandR + 0.587 * $brandG + 0.114 * $brandB) / 255;
+    } else {
+        $brandLum = 0.5;
+    }
+    $brandIsVeryLight = $brandLum > 0.9;
+    $joinCardBg = $brandIsVeryLight ? 'rgba(17,24,39,0.92)' : 'rgba(255,255,255,0.97)';
+    $joinCardText = $brandIsVeryLight ? '#F8FAFC' : '#111827';
+    $joinCardMuted = $brandIsVeryLight ? 'rgba(248,250,252,0.76)' : '#4B5563';
+    $joinCardStrong = $brandIsVeryLight ? '#FFFFFF' : '#111827';
+    $joinCardBorder = $brandIsVeryLight ? 'rgba(255,255,255,0.14)' : 'rgba(17,24,39,0.08)';
+    $textOnBrand = $brandLum < 0.58 ? '#ffffff' : '#111827';
+    $secondaryBorder = $brandIsVeryLight ? 'rgba(255,255,255,0.2)' : $brand;
+    $secondaryText = $brandIsVeryLight ? '#F8FAFC' : $brand;
+    $secondaryHoverBg = $brandIsVeryLight ? 'rgba(255,255,255,0.08)' : $brand;
+    $secondaryHoverText = $brandIsVeryLight ? '#FFFFFF' : $textOnBrand;
 @endphp
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
@@ -33,11 +53,13 @@
         <style>
             .join-page { background-color: {{ $bg }}; color: {{ $textOnBg }}; }
             .join-muted { color: {{ $mutedOnBg }}; }
-            .join-card { background: rgba(255,255,255,0.97); color: #111827; }
-            .join-btn-primary { background-color: {{ $brand }}; }
+            .join-card { background: {{ $joinCardBg }}; color: {{ $joinCardText }}; }
+            .join-card-title { color: {{ $joinCardStrong }}; }
+            .join-card-body { color: {{ $joinCardMuted }}; }
+            .join-btn-primary { background-color: {{ $brand }}; color: {{ $textOnBrand }}; }
             .join-btn-primary:hover { filter: brightness(1.1); }
-            .join-btn-secondary { border-color: {{ $brand }}; color: {{ $brand }}; }
-            .join-btn-secondary:hover { background: {{ $brand }}; color: #fff; }
+            .join-btn-secondary { border-color: {{ $secondaryBorder }}; color: {{ $secondaryText }}; }
+            .join-btn-secondary:hover { background: {{ $secondaryHoverBg }}; color: {{ $secondaryHoverText }}; }
         </style>
     </head>
     <body class="font-sans antialiased join-page min-h-screen min-h-[100dvh] flex flex-col" x-data="joinLanding()">
@@ -57,10 +79,10 @@
                 <div class="space-y-4 sm:space-y-5">
                     <template x-if="lastToken">
                         <div>
-                            <a :href="'/c/' + lastToken" class="join-btn-primary w-full flex justify-center items-center py-3.5 px-4 rounded-xl text-sm sm:text-base font-semibold text-white transition focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white" style="--tw-ring-color: {{ $brand }};">
+                            <a :href="'/c/' + lastToken" class="join-btn-primary w-full flex justify-center items-center py-3.5 px-4 rounded-xl text-sm sm:text-base font-semibold transition focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white" style="--tw-ring-color: {{ $brand }};">
                                 Open My Card
                             </a>
-                            <p class="mt-2 text-center text-xs sm:text-sm text-stone-500">
+                            <p class="join-card-body mt-2 text-center text-xs sm:text-sm">
                                 Found a card saved on this device.
                             </p>
                         </div>
@@ -73,7 +95,7 @@
                     </div>
 
                     <div>
-                        <a href="{{ route('join.show', ['slug' => $store->slug, 't' => $token]) }}" class="join-btn-primary w-full flex justify-center items-center py-3.5 px-4 rounded-xl text-sm sm:text-base font-semibold text-white transition focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white" style="--tw-ring-color: {{ $brand }};">
+                        <a href="{{ route('join.show', ['slug' => $store->slug, 't' => $token]) }}" class="join-btn-primary w-full flex justify-center items-center py-3.5 px-4 rounded-xl text-sm sm:text-base font-semibold transition focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white" style="--tw-ring-color: {{ $brand }};">
                             Create a new card
                         </a>
                     </div>

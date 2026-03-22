@@ -2,6 +2,7 @@
     $bg = $store->background_color ?? '#1F2937';
     $brand = $store->brand_color ?? '#0EA5E9';
     $hex = ltrim($bg, '#');
+    $brandHex = ltrim($brand, '#');
     if (strlen($hex) === 6) {
         $r = hexdec(substr($hex, 0, 2));
         $g = hexdec(substr($hex, 2, 2));
@@ -13,6 +14,25 @@
         $textOnBg = '#ffffff';
         $mutedOnBg = 'rgba(255,255,255,0.85)';
     }
+    if (strlen($brandHex) === 6) {
+        $brandR = hexdec(substr($brandHex, 0, 2));
+        $brandG = hexdec(substr($brandHex, 2, 2));
+        $brandB = hexdec(substr($brandHex, 4, 2));
+        $brandLum = (0.299 * $brandR + 0.587 * $brandG + 0.114 * $brandB) / 255;
+    } else {
+        $brandLum = 0.5;
+    }
+    $brandIsVeryLight = $brandLum > 0.9;
+    $joinCardBg = $brandIsVeryLight ? 'rgba(17,24,39,0.92)' : 'rgba(255,255,255,0.97)';
+    $joinCardText = $brandIsVeryLight ? '#F8FAFC' : '#111827';
+    $joinCardMuted = $brandIsVeryLight ? 'rgba(248,250,252,0.76)' : '#4B5563';
+    $joinCardStrong = $brandIsVeryLight ? '#FFFFFF' : '#111827';
+    $joinCardLabel = $brandIsVeryLight ? 'rgba(248,250,252,0.88)' : '#374151';
+    $joinInputBg = $brandIsVeryLight ? 'rgba(255,255,255,0.06)' : '#F8FAFC';
+    $joinInputText = $brandIsVeryLight ? '#F8FAFC' : '#111827';
+    $joinInputBorder = $brandIsVeryLight ? 'rgba(255,255,255,0.16)' : '#D1D5DB';
+    $joinInputPlaceholder = $brandIsVeryLight ? 'rgba(248,250,252,0.45)' : '#9CA3AF';
+    $textOnBrand = $brandLum < 0.58 ? '#ffffff' : '#111827';
 @endphp
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
@@ -33,9 +53,18 @@
         <style>
             .join-page { background-color: {{ $bg }}; color: {{ $textOnBg }}; }
             .join-muted { color: {{ $mutedOnBg }}; }
-            .join-card { background: rgba(255,255,255,0.97); color: #111827; }
-            .join-btn { background-color: {{ $brand }}; }
+            .join-card { background: {{ $joinCardBg }}; color: {{ $joinCardText }}; }
+            .join-card-title { color: {{ $joinCardStrong }}; }
+            .join-card-body { color: {{ $joinCardMuted }}; }
+            .join-card-label { color: {{ $joinCardLabel }}; }
+            .join-btn { background-color: {{ $brand }}; color: {{ $textOnBrand }}; }
             .join-btn:hover { filter: brightness(1.1); }
+            .join-input {
+                background-color: {{ $joinInputBg }};
+                color: {{ $joinInputText }};
+                border-color: {{ $joinInputBorder }};
+            }
+            .join-input::placeholder { color: {{ $joinInputPlaceholder }}; }
             .join-input:focus { border-color: {{ $brand }}; box-shadow: 0 0 0 3px {{ $brand }}40; }
         </style>
     </head>
@@ -52,8 +81,8 @@
                 @if($store->logo_path)
                     <img src="{{ $store->logo_url }}" alt="{{ $store->name }}" class="h-12 w-auto mx-auto mb-4 sm:h-14 object-contain">
                 @endif
-                <h2 class="text-xl sm:text-2xl font-bold text-center text-stone-900 mb-2">Join {{ $store->name }}</h2>
-                <p class="text-stone-600 text-center text-sm sm:text-base mb-6">
+                <h2 class="join-card-title text-xl sm:text-2xl font-bold text-center mb-2">Join {{ $store->name }}</h2>
+                <p class="join-card-body text-center text-sm sm:text-base mb-6">
                     Collect stamps and earn {{ $store->reward_title }}!
                 </p>
 
@@ -64,45 +93,45 @@
                     @csrf
 
                     <div>
-                        <label for="email" class="block mb-1.5 text-sm font-medium text-stone-700">Email Address</label>
-                        <input type="email" id="email" name="email" value="{{ old('email') }}" class="join-input w-full rounded-xl border border-stone-300 bg-stone-50 text-stone-900 text-sm sm:text-base px-4 py-3 focus:outline-none transition" placeholder="you@example.com" required>
+                        <label for="email" class="join-card-label block mb-1.5 text-sm font-medium">Email Address</label>
+                        <input type="email" id="email" name="email" value="{{ old('email') }}" class="join-input w-full rounded-xl border text-sm sm:text-base px-4 py-3 focus:outline-none transition" placeholder="you@example.com" required>
                         <x-input-error :messages="$errors->get('email')" class="mt-1.5 text-sm" />
                     </div>
 
                     @if(!empty($formConfig['first_name']['enabled']))
                     <div>
-                        <label for="first_name" class="block mb-1.5 text-sm font-medium text-stone-700">First name{{ !empty($formConfig['first_name']['required']) ? '' : ' (optional)' }}</label>
-                        <input type="text" id="first_name" name="first_name" value="{{ old('first_name') }}" class="join-input w-full rounded-xl border border-stone-300 bg-stone-50 text-stone-900 text-sm sm:text-base px-4 py-3 focus:outline-none transition" placeholder="First name" {{ !empty($formConfig['first_name']['required']) ? 'required' : '' }}>
+                        <label for="first_name" class="join-card-label block mb-1.5 text-sm font-medium">First name{{ !empty($formConfig['first_name']['required']) ? '' : ' (optional)' }}</label>
+                        <input type="text" id="first_name" name="first_name" value="{{ old('first_name') }}" class="join-input w-full rounded-xl border text-sm sm:text-base px-4 py-3 focus:outline-none transition" placeholder="First name" {{ !empty($formConfig['first_name']['required']) ? 'required' : '' }}>
                         <x-input-error :messages="$errors->get('first_name')" class="mt-1.5 text-sm" />
                     </div>
                     @endif
 
                     @if(!empty($formConfig['last_name']['enabled']))
                     <div>
-                        <label for="last_name" class="block mb-1.5 text-sm font-medium text-stone-700">Last name{{ !empty($formConfig['last_name']['required']) ? '' : ' (optional)' }}</label>
-                        <input type="text" id="last_name" name="last_name" value="{{ old('last_name') }}" class="join-input w-full rounded-xl border border-stone-300 bg-stone-50 text-stone-900 text-sm sm:text-base px-4 py-3 focus:outline-none transition" placeholder="Last name" {{ !empty($formConfig['last_name']['required']) ? 'required' : '' }}>
+                        <label for="last_name" class="join-card-label block mb-1.5 text-sm font-medium">Last name{{ !empty($formConfig['last_name']['required']) ? '' : ' (optional)' }}</label>
+                        <input type="text" id="last_name" name="last_name" value="{{ old('last_name') }}" class="join-input w-full rounded-xl border text-sm sm:text-base px-4 py-3 focus:outline-none transition" placeholder="Last name" {{ !empty($formConfig['last_name']['required']) ? 'required' : '' }}>
                         <x-input-error :messages="$errors->get('last_name')" class="mt-1.5 text-sm" />
                     </div>
                     @endif
 
                     @if(!empty($formConfig['phone']['enabled']))
                     <div>
-                        <label for="phone" class="block mb-1.5 text-sm font-medium text-stone-700">Phone{{ !empty($formConfig['phone']['required']) ? '' : ' (optional)' }}</label>
-                        <input type="tel" id="phone" name="phone" value="{{ old('phone') }}" class="join-input w-full rounded-xl border border-stone-300 bg-stone-50 text-stone-900 text-sm sm:text-base px-4 py-3 focus:outline-none transition" placeholder="Phone number" {{ !empty($formConfig['phone']['required']) ? 'required' : '' }}>
+                        <label for="phone" class="join-card-label block mb-1.5 text-sm font-medium">Phone{{ !empty($formConfig['phone']['required']) ? '' : ' (optional)' }}</label>
+                        <input type="tel" id="phone" name="phone" value="{{ old('phone') }}" class="join-input w-full rounded-xl border text-sm sm:text-base px-4 py-3 focus:outline-none transition" placeholder="Phone number" {{ !empty($formConfig['phone']['required']) ? 'required' : '' }}>
                         <x-input-error :messages="$errors->get('phone')" class="mt-1.5 text-sm" />
                     </div>
                     @endif
 
                     @if(!empty($formConfig['birthday']['enabled']))
                     <div>
-                        <label for="birthday" class="block mb-1.5 text-sm font-medium text-stone-700">Birthday{{ !empty($formConfig['birthday']['required']) ? '' : ' (optional)' }}</label>
-                        <input type="date" id="birthday" name="birthday" value="{{ old('birthday') }}" class="join-input w-full rounded-xl border border-stone-300 bg-stone-50 text-stone-900 text-sm sm:text-base px-4 py-3 focus:outline-none transition" {{ !empty($formConfig['birthday']['required']) ? 'required' : '' }}>
+                        <label for="birthday" class="join-card-label block mb-1.5 text-sm font-medium">Birthday{{ !empty($formConfig['birthday']['required']) ? '' : ' (optional)' }}</label>
+                        <input type="date" id="birthday" name="birthday" value="{{ old('birthday') }}" class="join-input w-full rounded-xl border text-sm sm:text-base px-4 py-3 focus:outline-none transition" {{ !empty($formConfig['birthday']['required']) ? 'required' : '' }}>
                         <x-input-error :messages="$errors->get('birthday')" class="mt-1.5 text-sm" />
                     </div>
                     @endif
 
                     <div class="pt-1">
-                        <button type="submit" class="join-btn w-full text-white font-semibold rounded-xl text-sm sm:text-base px-4 py-3.5 focus:outline-none focus:ring-2 focus:ring-offset-2 transition" style="--tw-ring-color: {{ $brand }};">
+                        <button type="submit" class="join-btn w-full font-semibold rounded-xl text-sm sm:text-base px-4 py-3.5 focus:outline-none focus:ring-2 focus:ring-offset-2 transition" style="--tw-ring-color: {{ $brand }};">
                             Join Now
                         </button>
                     </div>

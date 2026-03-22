@@ -2,6 +2,7 @@
     $bg    = $store->background_color ?? '#1F2937';
     $brand = $store->brand_color ?? '#0EA5E9';
     $hex   = ltrim($bg, '#');
+    $brandHex = ltrim($brand, '#');
     if (strlen($hex) === 6) {
         $r = hexdec(substr($hex, 0, 2));
         $g = hexdec(substr($hex, 2, 2));
@@ -13,6 +14,30 @@
         $textOnBg  = '#ffffff';
         $mutedOnBg = 'rgba(255,255,255,0.85)';
     }
+    if (strlen($brandHex) === 6) {
+        $brandR = hexdec(substr($brandHex, 0, 2));
+        $brandG = hexdec(substr($brandHex, 2, 2));
+        $brandB = hexdec(substr($brandHex, 4, 2));
+        $brandLum = (0.299 * $brandR + 0.587 * $brandG + 0.114 * $brandB) / 255;
+    } else {
+        $brandLum = 0.5;
+    }
+    $brandIsVeryLight = $brandLum > 0.9;
+    $joinCardBg = $brandIsVeryLight ? 'rgba(17,24,39,0.92)' : 'rgba(255,255,255,0.97)';
+    $joinCardText = $brandIsVeryLight ? '#F8FAFC' : '#111827';
+    $joinCardMuted = $brandIsVeryLight ? 'rgba(248,250,252,0.76)' : '#4B5563';
+    $joinCardStrong = $brandIsVeryLight ? '#FFFFFF' : '#111827';
+    $joinCardLabel = $brandIsVeryLight ? 'rgba(248,250,252,0.88)' : '#374151';
+    $joinInputBg = $brandIsVeryLight ? 'rgba(255,255,255,0.06)' : '#F8FAFC';
+    $joinInputText = $brandIsVeryLight ? '#F8FAFC' : '#111827';
+    $joinInputBorder = $brandIsVeryLight ? 'rgba(255,255,255,0.16)' : '#D1D5DB';
+    $joinInputPlaceholder = $brandIsVeryLight ? 'rgba(248,250,252,0.45)' : '#9CA3AF';
+    $textOnBrand = $brandLum < 0.58 ? '#ffffff' : '#111827';
+    $secondaryBorder = $brandIsVeryLight ? 'rgba(255,255,255,0.22)' : $brand;
+    $secondaryText = $brandIsVeryLight ? '#F8FAFC' : $brand;
+    $secondaryHoverBg = $brandIsVeryLight ? 'rgba(255,255,255,0.08)' : $brand;
+    $secondaryHoverText = $brandIsVeryLight ? '#FFFFFF' : $textOnBrand;
+    $dividerColor = $brandIsVeryLight ? 'rgba(255,255,255,0.12)' : '#F1F5F9';
 @endphp
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
@@ -33,11 +58,20 @@
         <style>
             .join-page { background-color: {{ $bg }}; color: {{ $textOnBg }}; }
             .join-muted { color: {{ $mutedOnBg }}; }
-            .join-card { background: rgba(255,255,255,0.97); color: #111827; }
-            .join-btn { background-color: {{ $brand }}; }
+            .join-card { background: {{ $joinCardBg }}; color: {{ $joinCardText }}; }
+            .join-card-title { color: {{ $joinCardStrong }}; }
+            .join-card-body { color: {{ $joinCardMuted }}; }
+            .join-card-label { color: {{ $joinCardLabel }}; }
+            .join-btn { background-color: {{ $brand }}; color: {{ $textOnBrand }}; }
             .join-btn:hover { filter: brightness(1.1); }
-            .join-btn-outline { border: 2px solid {{ $brand }}; color: {{ $brand }}; background: transparent; }
-            .join-btn-outline:hover { background-color: {{ $brand }}; color: #fff; }
+            .join-btn-outline { border: 2px solid {{ $secondaryBorder }}; color: {{ $secondaryText }}; background: transparent; }
+            .join-btn-outline:hover { background-color: {{ $secondaryHoverBg }}; color: {{ $secondaryHoverText }}; }
+            .join-input {
+                background-color: {{ $joinInputBg }};
+                color: {{ $joinInputText }};
+                border-color: {{ $joinInputBorder }};
+            }
+            .join-input::placeholder { color: {{ $joinInputPlaceholder }}; }
             .join-input:focus { border-color: {{ $brand }}; box-shadow: 0 0 0 3px {{ $brand }}40; }
         </style>
     </head>
@@ -57,20 +91,20 @@
                     <img src="{{ $store->logo_url }}" alt="{{ $store->name }}" class="h-12 w-auto mx-auto mb-4 sm:h-14 object-contain">
                 @endif
 
-                <h2 class="text-xl sm:text-2xl font-bold text-center text-stone-900 mb-1">Find my card</h2>
-                <p class="text-stone-500 text-center text-sm sm:text-base mb-6">
-                    Enter your email to access your loyalty card for <strong class="text-stone-700">{{ $store->name }}</strong>.
+                <h2 class="join-card-title text-xl sm:text-2xl font-bold text-center mb-1">Find my card</h2>
+                <p class="join-card-body text-center text-sm sm:text-base mb-6">
+                    Enter your email to access your loyalty card for <strong class="join-card-title">{{ $store->name }}</strong>.
                 </p>
 
                 <form action="{{ route('join.lookup', ['slug' => $store->slug, 't' => $token]) }}" method="POST" class="space-y-4 sm:space-y-5">
                     @csrf
                     <div>
-                        <label for="email" class="block mb-1.5 text-sm font-medium text-stone-700">Email address</label>
+                        <label for="email" class="join-card-label block mb-1.5 text-sm font-medium">Email address</label>
                         <input
                             id="email" name="email" type="email" autocomplete="email" required
                             value="{{ old('email') }}"
                             placeholder="you@example.com"
-                            class="join-input w-full rounded-xl border border-stone-300 bg-stone-50 text-stone-900 text-sm sm:text-base px-4 py-3 focus:outline-none transition"
+                            class="join-input w-full rounded-xl border text-sm sm:text-base px-4 py-3 focus:outline-none transition"
                         >
                         @error('email')
                             <p class="mt-1.5 text-sm text-red-600">{{ $message }}</p>
@@ -78,14 +112,14 @@
                     </div>
 
                     <div class="pt-1">
-                        <button type="submit" class="join-btn w-full text-white font-semibold rounded-xl text-sm sm:text-base px-4 py-3.5 focus:outline-none focus:ring-2 focus:ring-offset-2 transition" style="--tw-ring-color: {{ $brand }};">
+                        <button type="submit" class="join-btn w-full font-semibold rounded-xl text-sm sm:text-base px-4 py-3.5 focus:outline-none focus:ring-2 focus:ring-offset-2 transition" style="--tw-ring-color: {{ $brand }};">
                             Open my card
                         </button>
                     </div>
                 </form>
 
-                <div class="mt-6 pt-5 border-t border-stone-100 text-center">
-                    <p class="text-sm text-stone-500 mb-3">Don't have a card yet?</p>
+                <div class="mt-6 pt-5 text-center" style="border-top: 1px solid {{ $dividerColor }};">
+                    <p class="join-card-body text-sm mb-3">Don't have a card yet?</p>
                     <a href="{{ route('join.show', ['slug' => $store->slug, 't' => $token]) }}"
                         class="join-btn-outline w-full inline-flex justify-center items-center py-3 px-4 rounded-xl text-sm sm:text-base font-semibold transition focus:outline-none focus:ring-2 focus:ring-offset-2"
                         style="--tw-ring-color: {{ $brand }};">
