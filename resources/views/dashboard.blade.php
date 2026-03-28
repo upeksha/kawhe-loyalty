@@ -8,6 +8,17 @@
         $cardsRemaining = isset($usageStats) && !($usageStats['is_subscribed'] ?? false)
             ? max(0, (int) (($usageStats['limit'] ?? 0) - ($usageStats['non_grandfathered_count'] ?? 0)))
             : null;
+        $merchantStores = request()->user()?->stores()->get() ?? collect();
+        $storesCount = $merchantStores->count();
+        $storesWithLogo = $merchantStores->filter(fn ($store) => !empty($store->logo_path))->count();
+        $storesWithWalletAssets = $merchantStores->filter(fn ($store) => !empty($store->pass_logo_path) || !empty($store->pass_hero_image_path))->count();
+        $storesWithRewardRules = $merchantStores->filter(fn ($store) => !empty($store->reward_title) && (int) ($store->reward_target ?? 0) > 0)->count();
+        $walletReadyCount = $merchantStores->filter(function ($store) {
+            return !empty($store->reward_title)
+                && (int) ($store->reward_target ?? 0) > 0
+                && !empty($store->background_color)
+                && (!empty($store->logo_path) || !empty($store->pass_logo_path));
+        })->count();
     @endphp
 
     <div class="space-y-4 sm:space-y-6">
@@ -80,6 +91,95 @@
                     </x-ui.button>
                 </x-ui.card>
             @endif
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <x-ui.card class="p-4 sm:p-6">
+                <div class="flex items-start justify-between gap-3">
+                    <div>
+                        <h3 class="text-base sm:text-lg font-bold text-stone-900">Wallet Readiness</h3>
+                        <p class="mt-1 text-sm text-stone-600">A quick view of how ready your stores are for Apple Wallet and Google Wallet presentation.</p>
+                    </div>
+                    <span class="inline-flex items-center rounded-full bg-stone-100 px-3 py-1 text-xs font-semibold text-stone-700">
+                        {{ $walletReadyCount }}/{{ max(1, $storesCount) }} launch-ready
+                    </span>
+                </div>
+
+                <div class="mt-5 space-y-3 text-sm">
+                    <div class="flex items-center justify-between rounded-xl border border-stone-200 bg-stone-50/80 px-4 py-3">
+                        <span class="text-stone-700">Store branding added</span>
+                        <span class="font-medium {{ $storesWithLogo === $storesCount && $storesCount > 0 ? 'text-emerald-700' : 'text-amber-700' }}">
+                            {{ $storesWithLogo }}/{{ $storesCount }}
+                        </span>
+                    </div>
+                    <div class="flex items-center justify-between rounded-xl border border-stone-200 bg-stone-50/80 px-4 py-3">
+                        <span class="text-stone-700">Wallet assets added</span>
+                        <span class="font-medium {{ $storesWithWalletAssets === $storesCount && $storesCount > 0 ? 'text-emerald-700' : 'text-amber-700' }}">
+                            {{ $storesWithWalletAssets }}/{{ $storesCount }}
+                        </span>
+                    </div>
+                    <div class="flex items-center justify-between rounded-xl border border-stone-200 bg-stone-50/80 px-4 py-3">
+                        <span class="text-stone-700">Reward setup complete</span>
+                        <span class="font-medium {{ $storesWithRewardRules === $storesCount && $storesCount > 0 ? 'text-emerald-700' : 'text-amber-700' }}">
+                            {{ $storesWithRewardRules }}/{{ $storesCount }}
+                        </span>
+                    </div>
+                </div>
+
+                <p class="mt-4 text-xs leading-relaxed text-stone-500">
+                    A store counts as wallet-ready when it has reward settings, background styling, and at least one usable logo source for pass generation.
+                </p>
+            </x-ui.card>
+
+            <x-ui.card class="p-4 sm:p-6">
+                <div class="flex items-start justify-between gap-3">
+                    <div>
+                        <h3 class="text-base sm:text-lg font-bold text-stone-900">Billing Readiness</h3>
+                        <p class="mt-1 text-sm text-stone-600">Make sure new customers can keep joining without an unexpected plan limit.</p>
+                    </div>
+                    <span class="inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold {{ isset($usageStats) && ($usageStats['is_subscribed'] ?? false) ? 'bg-emerald-100 text-emerald-700' : 'bg-stone-100 text-stone-700' }}">
+                        @if(isset($usageStats) && ($usageStats['is_subscribed'] ?? false))
+                            Pro active
+                        @else
+                            Free plan
+                        @endif
+                    </span>
+                </div>
+
+                <div class="mt-5 space-y-3 text-sm">
+                    <div class="flex items-center justify-between rounded-xl border border-stone-200 bg-stone-50/80 px-4 py-3">
+                        <span class="text-stone-700">Current plan</span>
+                        <span class="font-medium text-stone-900">
+                            @if(isset($usageStats) && ($usageStats['is_subscribed'] ?? false))
+                                Paid
+                            @else
+                                Free
+                            @endif
+                        </span>
+                    </div>
+                    <div class="flex items-center justify-between rounded-xl border border-stone-200 bg-stone-50/80 px-4 py-3">
+                        <span class="text-stone-700">Cards issued</span>
+                        <span class="font-medium text-stone-900">
+                            {{ $usageStats['cards_count'] ?? 0 }} / {{ isset($usageStats) && ($usageStats['is_subscribed'] ?? false) ? '∞' : ($usageStats['limit'] ?? 0) }}
+                        </span>
+                    </div>
+                    <div class="flex items-center justify-between rounded-xl border border-stone-200 bg-stone-50/80 px-4 py-3">
+                        <span class="text-stone-700">Can add more customers</span>
+                        <span class="font-medium {{ isset($usageStats) && ($usageStats['can_create_card'] ?? false) ? 'text-emerald-700' : 'text-accent-700' }}">
+                            {{ isset($usageStats) && ($usageStats['can_create_card'] ?? false) ? 'Yes' : 'Needs plan review' }}
+                        </span>
+                    </div>
+                </div>
+
+                <div class="mt-4 flex flex-wrap gap-2">
+                    <x-ui.button href="{{ route('billing.index') }}" variant="secondary" size="sm">
+                        Open Billing
+                    </x-ui.button>
+                    <x-ui.button href="{{ route('merchant.stores.index') }}" variant="ghost" size="sm">
+                        Review Stores
+                    </x-ui.button>
+                </div>
+            </x-ui.card>
         </div>
 
         @if(isset($usageStats) && !$usageStats['is_subscribed'])

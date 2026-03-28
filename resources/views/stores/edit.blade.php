@@ -3,7 +3,19 @@
         {{ __('Edit Store') }}
     </x-slot>
 
-    <div class="max-w-2xl mx-auto">
+    @php
+        $usageStats = $usageStats ?? app(\App\Services\Billing\UsageService::class)->getUsageStats(request()->user());
+        $walletReady = !empty($store->reward_title)
+            && (int) ($store->reward_target ?? 0) > 0
+            && !empty($store->background_color)
+            && (!empty($store->logo_path) || !empty($store->pass_logo_path));
+        $billingReady = isset($usageStats)
+            ? (bool) ($usageStats['can_create_card'] ?? false)
+            : true;
+    @endphp
+
+    <div class="max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div class="lg:col-span-2">
         <x-ui.card class="p-6">
                     <form method="POST" action="{{ route('merchant.stores.update', $store) }}" enctype="multipart/form-data" class="max-w-md mx-auto" id="store-edit-form">
                         @csrf
@@ -303,5 +315,83 @@
                         </form>
                     </div>
                 </x-ui.card>
+        </div>
+
+        <div class="lg:col-span-1 space-y-4">
+            <x-ui.card class="p-5">
+                <div class="flex items-start justify-between gap-3">
+                    <div>
+                        <h3 class="text-base font-bold text-stone-900">Wallet Readiness</h3>
+                        <p class="mt-1 text-sm text-stone-600">Check whether this store is visually ready for Apple Wallet and Google Wallet.</p>
+                    </div>
+                    <span class="inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold {{ $walletReady ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700' }}">
+                        {{ $walletReady ? 'Ready' : 'Needs review' }}
+                    </span>
+                </div>
+
+                <ul class="mt-4 space-y-3 text-sm">
+                    <li class="flex items-center justify-between rounded-xl border border-stone-200 bg-stone-50/80 px-4 py-3">
+                        <span class="text-stone-700">Reward setup</span>
+                        <span class="font-medium {{ !empty($store->reward_title) && (int) ($store->reward_target ?? 0) > 0 ? 'text-emerald-700' : 'text-stone-500' }}">
+                            {{ !empty($store->reward_title) && (int) ($store->reward_target ?? 0) > 0 ? 'Ready' : 'Needed' }}
+                        </span>
+                    </li>
+                    <li class="flex items-center justify-between rounded-xl border border-stone-200 bg-stone-50/80 px-4 py-3">
+                        <span class="text-stone-700">Store branding</span>
+                        <span class="font-medium {{ !empty($store->logo_path) ? 'text-emerald-700' : 'text-amber-700' }}">
+                            {{ !empty($store->logo_path) ? 'Ready' : 'Optional' }}
+                        </span>
+                    </li>
+                    <li class="flex items-center justify-between rounded-xl border border-stone-200 bg-stone-50/80 px-4 py-3">
+                        <span class="text-stone-700">Wallet assets</span>
+                        <span class="font-medium {{ (!empty($store->pass_logo_path) || !empty($store->pass_hero_image_path)) ? 'text-emerald-700' : 'text-amber-700' }}">
+                            {{ (!empty($store->pass_logo_path) || !empty($store->pass_hero_image_path)) ? 'Ready' : 'Optional' }}
+                        </span>
+                    </li>
+                    <li class="flex items-center justify-between rounded-xl border border-stone-200 bg-stone-50/80 px-4 py-3">
+                        <span class="text-stone-700">Background styling</span>
+                        <span class="font-medium {{ !empty($store->background_color) ? 'text-emerald-700' : 'text-stone-500' }}">
+                            {{ !empty($store->background_color) ? 'Ready' : 'Needed' }}
+                        </span>
+                    </li>
+                </ul>
+            </x-ui.card>
+
+            <x-ui.card class="p-5">
+                <div class="flex items-start justify-between gap-3">
+                    <div>
+                        <h3 class="text-base font-bold text-stone-900">Billing Readiness</h3>
+                        <p class="mt-1 text-sm text-stone-600">Check that plan limits will not block new customer signups for this store.</p>
+                    </div>
+                    <span class="inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold {{ $billingReady ? 'bg-emerald-100 text-emerald-700' : 'bg-accent-100 text-accent-700' }}">
+                        {{ $billingReady ? 'Ready' : 'Review plan' }}
+                    </span>
+                </div>
+
+                <ul class="mt-4 space-y-3 text-sm">
+                    <li class="flex items-center justify-between rounded-xl border border-stone-200 bg-stone-50/80 px-4 py-3">
+                        <span class="text-stone-700">Can add more cards</span>
+                        <span class="font-medium {{ $billingReady ? 'text-emerald-700' : 'text-accent-700' }}">
+                            {{ $billingReady ? 'Yes' : 'No' }}
+                        </span>
+                    </li>
+                    <li class="flex items-center justify-between rounded-xl border border-stone-200 bg-stone-50/80 px-4 py-3">
+                        <span class="text-stone-700">Verification policy</span>
+                        <span class="font-medium text-stone-900">
+                            {{ ($store->require_verification_for_redemption ?? true) ? 'Protected' : 'Open' }}
+                        </span>
+                    </li>
+                </ul>
+
+                <div class="mt-4 flex flex-wrap gap-2">
+                    <x-ui.button href="{{ route('billing.index') }}" variant="secondary" size="sm">
+                        Open Billing
+                    </x-ui.button>
+                    <x-ui.button href="{{ route('merchant.stores.qr', $store) }}" variant="ghost" size="sm">
+                        Open QR page
+                    </x-ui.button>
+                </div>
+            </x-ui.card>
+        </div>
     </div>
 </x-merchant-layout>

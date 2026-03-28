@@ -3,7 +3,43 @@
         {{ __('Store QR Code') }} - {{ $store->name }}
     </x-slot>
 
-    <div class="max-w-2xl mx-auto">
+    @php
+        $usageStats = app(\App\Services\Billing\UsageService::class)->getUsageStats(request()->user());
+        $walletReady = !empty($store->reward_title)
+            && (int) ($store->reward_target ?? 0) > 0
+            && !empty($store->background_color)
+            && (!empty($store->logo_path) || !empty($store->pass_logo_path));
+        $launchChecks = [
+            [
+                'label' => 'Reward setup',
+                'ready' => !empty($store->reward_title) && (int) ($store->reward_target ?? 0) > 0,
+                'hint' => 'Customers need a clear reward title and target before you share the QR.',
+            ],
+            [
+                'label' => 'Join flow branding',
+                'ready' => !empty($store->background_color) && !empty($store->brand_color),
+                'hint' => 'Brand colors help the join page and loyalty card feel complete.',
+            ],
+            [
+                'label' => 'Store logo',
+                'ready' => !empty($store->logo_path),
+                'hint' => 'Optional, but recommended for a more polished customer-facing card.',
+            ],
+            [
+                'label' => 'Wallet-ready assets',
+                'ready' => $walletReady,
+                'hint' => 'Recommended if you expect customers to save cards to Apple Wallet or Google Wallet.',
+            ],
+            [
+                'label' => 'Plan capacity',
+                'ready' => (bool) ($usageStats['can_create_card'] ?? false),
+                'hint' => 'New customers can only join while your current plan still allows more cards.',
+            ],
+        ];
+    @endphp
+
+    <div class="max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div class="lg:col-span-2">
         <x-ui.card class="p-8 flex flex-col items-center justify-center space-y-6">
             <div class="p-4 bg-white rounded-lg shadow-sm border border-stone-200">
                 {!! SimpleSoftwareIO\QrCode\Facades\QrCode::size(256)->generate($joinUrl) !!}
@@ -35,6 +71,44 @@
                 ← Back to Stores
             </x-ui.button>
         </x-ui.card>
+        </div>
+
+        <div class="lg:col-span-1 space-y-4">
+            <x-ui.card class="p-5">
+                <div class="flex items-start justify-between gap-3">
+                    <div>
+                        <h3 class="text-base font-bold text-stone-900">Store Launch Checklist</h3>
+                        <p class="mt-1 text-sm text-stone-600">Review these before you print or publish this QR code.</p>
+                    </div>
+                    <span class="inline-flex items-center rounded-full bg-stone-100 px-3 py-1 text-xs font-semibold text-stone-700">
+                        {{ collect($launchChecks)->where('ready', true)->count() }}/{{ count($launchChecks) }}
+                    </span>
+                </div>
+
+                <ul class="mt-4 space-y-3 text-sm">
+                    @foreach($launchChecks as $check)
+                        <li class="rounded-xl border border-stone-200 bg-stone-50/80 px-4 py-3">
+                            <div class="flex items-center justify-between gap-3">
+                                <span class="font-medium text-stone-800">{{ $check['label'] }}</span>
+                                <span class="font-medium {{ $check['ready'] ? 'text-emerald-700' : 'text-amber-700' }}">
+                                    {{ $check['ready'] ? 'Ready' : 'Review' }}
+                                </span>
+                            </div>
+                            <p class="mt-1 text-xs leading-relaxed text-stone-500">{{ $check['hint'] }}</p>
+                        </li>
+                    @endforeach
+                </ul>
+
+                <div class="mt-4 flex flex-wrap gap-2">
+                    <x-ui.button href="{{ route('merchant.stores.edit', $store) }}" variant="secondary" size="sm">
+                        Review Store Setup
+                    </x-ui.button>
+                    <x-ui.button href="{{ route('billing.index') }}" variant="ghost" size="sm">
+                        Review Billing
+                    </x-ui.button>
+                </div>
+            </x-ui.card>
+        </div>
     </div>
 
     <script>
@@ -50,4 +124,3 @@
         }
     </script>
 </x-merchant-layout>
-
