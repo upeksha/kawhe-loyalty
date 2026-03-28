@@ -11,6 +11,7 @@ use App\Http\Controllers\PublicStartController;
 use App\Http\Controllers\ScannerController;
 use App\Http\Controllers\StoreController;
 use App\Http\Controllers\SupportLogController;
+use App\Services\Analytics\MerchantAnalyticsService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -105,7 +106,12 @@ Route::middleware(['auth', App\Http\Middleware\EnsureMerchantHasStore::class])->
     Route::get('/dashboard', function (Request $request) {
         $usageService = app(\App\Services\Billing\UsageService::class);
         $stats = $usageService->getUsageStats($request->user());
-        return view('dashboard', ['usageStats' => $stats]);
+        $analytics = app(MerchantAnalyticsService::class)->getDashboardAnalytics($request->user());
+
+        return view('dashboard', [
+            'usageStats' => $stats,
+            'analytics' => $analytics,
+        ]);
     })->name('dashboard');
     
     Route::get('/stores', [StoreController::class, 'index'])->name('stores.index');

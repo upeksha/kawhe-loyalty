@@ -19,6 +19,14 @@
                 && !empty($store->background_color)
                 && (!empty($store->logo_path) || !empty($store->pass_logo_path));
         })->count();
+        $analytics = $analytics ?? [
+            'active_customers' => 0,
+            'joins_last_window' => 0,
+            'rewards_earned_last_window' => 0,
+            'rewards_redeemed_last_window' => 0,
+            'recent_activity_trend' => collect(),
+        ];
+        $trendMax = max(1, collect($analytics['recent_activity_trend'] ?? [])->max('total') ?? 0);
     @endphp
 
     <div class="space-y-4 sm:space-y-6">
@@ -94,6 +102,89 @@
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <x-ui.card class="p-4 sm:p-6">
+                <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                    <div>
+                        <h3 class="text-base sm:text-lg font-bold text-stone-900">Merchant Analytics</h3>
+                        <p class="mt-1 text-sm text-stone-600">A quick read on joins, active customers, and reward activity across your stores.</p>
+                    </div>
+                    <span class="inline-flex items-center rounded-full bg-brand-100 px-3 py-1 text-xs font-semibold text-brand-700">
+                        Last 30 days
+                    </span>
+                </div>
+
+                <div class="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div class="rounded-2xl border border-stone-200 bg-stone-50/80 p-4">
+                        <p class="text-xs font-semibold uppercase tracking-wide text-stone-500">Active customers</p>
+                        <p class="mt-2 text-3xl font-bold text-stone-900">{{ $analytics['active_customers'] }}</p>
+                        <p class="mt-1 text-xs text-stone-500">Joined or used their card in the last 30 days.</p>
+                    </div>
+                    <div class="rounded-2xl border border-stone-200 bg-stone-50/80 p-4">
+                        <p class="text-xs font-semibold uppercase tracking-wide text-stone-500">Joins over time</p>
+                        <p class="mt-2 text-3xl font-bold text-stone-900">{{ $analytics['joins_last_window'] }}</p>
+                        <p class="mt-1 text-xs text-stone-500">New loyalty cards created in the last 30 days.</p>
+                    </div>
+                    <div class="rounded-2xl border border-stone-200 bg-stone-50/80 p-4">
+                        <p class="text-xs font-semibold uppercase tracking-wide text-stone-500">Rewards earned</p>
+                        <p class="mt-2 text-3xl font-bold text-stone-900">{{ $analytics['rewards_earned_last_window'] }}</p>
+                        <p class="mt-1 text-xs text-stone-500">Times customers completed a reward cycle.</p>
+                    </div>
+                    <div class="rounded-2xl border border-stone-200 bg-stone-50/80 p-4">
+                        <p class="text-xs font-semibold uppercase tracking-wide text-stone-500">Rewards redeemed</p>
+                        <p class="mt-2 text-3xl font-bold text-stone-900">{{ $analytics['rewards_redeemed_last_window'] }}</p>
+                        <p class="mt-1 text-xs text-stone-500">Rewards redeemed across all stores in the last 30 days.</p>
+                    </div>
+                </div>
+            </x-ui.card>
+
+            <x-ui.card class="p-4 sm:p-6">
+                <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                    <div>
+                        <h3 class="text-base sm:text-lg font-bold text-stone-900">Recent Activity Trend</h3>
+                        <p class="mt-1 text-sm text-stone-600">Daily joins, stamps, and redeems over the last 14 days.</p>
+                    </div>
+                    <span class="inline-flex items-center rounded-full bg-stone-100 px-3 py-1 text-xs font-semibold text-stone-700">
+                        Last 14 days
+                    </span>
+                </div>
+
+                @if(collect($analytics['recent_activity_trend'])->every(fn ($day) => ($day['total'] ?? 0) === 0))
+                    <div class="mt-5 rounded-2xl border border-dashed border-stone-200 bg-stone-50/70 p-5">
+                        <p class="text-sm text-stone-600">No recent join or card activity yet. Once customers start joining and collecting stamps, your trend will appear here.</p>
+                    </div>
+                @else
+                    <div class="mt-5 space-y-3">
+                        @foreach($analytics['recent_activity_trend'] as $day)
+                            <div class="grid grid-cols-[4rem,1fr,auto] items-center gap-3">
+                                <p class="text-xs font-medium text-stone-500">{{ $day['label'] }}</p>
+                                <div class="h-3 overflow-hidden rounded-full bg-stone-100">
+                                    <div class="flex h-full rounded-full" style="width: {{ max(6, (int) round(($day['total'] / $trendMax) * 100)) }}%">
+                                        @if($day['joins'] > 0)
+                                            <div class="h-full bg-brand-500" style="width: {{ ($day['joins'] / max(1, $day['total'])) * 100 }}%"></div>
+                                        @endif
+                                        @if($day['stamps'] > 0)
+                                            <div class="h-full bg-emerald-500" style="width: {{ ($day['stamps'] / max(1, $day['total'])) * 100 }}%"></div>
+                                        @endif
+                                        @if($day['redeems'] > 0)
+                                            <div class="h-full bg-amber-500" style="width: {{ ($day['redeems'] / max(1, $day['total'])) * 100 }}%"></div>
+                                        @endif
+                                    </div>
+                                </div>
+                                <div class="text-right text-xs text-stone-600">
+                                    <span class="font-semibold text-stone-900">{{ $day['total'] }}</span>
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+
+                    <div class="mt-4 flex flex-wrap gap-4 text-xs text-stone-600">
+                        <span class="inline-flex items-center gap-2"><span class="h-2.5 w-2.5 rounded-full bg-brand-500"></span>Joins</span>
+                        <span class="inline-flex items-center gap-2"><span class="h-2.5 w-2.5 rounded-full bg-emerald-500"></span>Stamps</span>
+                        <span class="inline-flex items-center gap-2"><span class="h-2.5 w-2.5 rounded-full bg-amber-500"></span>Redeems</span>
+                    </div>
+                @endif
+            </x-ui.card>
+
             <x-ui.card class="p-4 sm:p-6">
                 <div class="flex items-start justify-between gap-3">
                     <div>
