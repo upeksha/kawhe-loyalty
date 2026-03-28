@@ -74,6 +74,22 @@
                         If a customer is standing at the counter, the manual code is the fastest fallback. If they are remote, ask for the email address used to join.
                     </p>
                 </div>
+                <div class="mt-4 flex flex-wrap gap-2">
+                    @if(!$account->verified_at && $account->customer->email)
+                        <form method="POST" action="{{ route('merchant.customers.resend-verification', $account) }}">
+                            @csrf
+                            <x-ui.button type="submit" variant="secondary" size="sm">
+                                Resend Verification Email
+                            </x-ui.button>
+                        </form>
+                    @endif
+                    <form method="POST" action="{{ route('merchant.customers.sync-wallet', $account) }}">
+                        @csrf
+                        <x-ui.button type="submit" variant="ghost" size="sm">
+                            Queue Wallet Refresh
+                        </x-ui.button>
+                    </form>
+                </div>
             </x-ui.card>
         </div>
 
@@ -106,6 +122,35 @@
                     @else
                         <p class="text-lg font-semibold text-stone-400">Never</p>
                     @endif
+                </div>
+            </div>
+        </x-ui.card>
+
+        <x-ui.card class="p-4 sm:p-6">
+            <h3 class="text-base sm:text-lg font-bold mb-3 sm:mb-4 text-stone-900">Wallet Status</h3>
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+                <div>
+                    <p class="text-sm text-stone-500 mb-1">Apple registrations</p>
+                    <p class="text-2xl font-bold text-stone-900">{{ $walletStatus['active_apple_registrations'] }}</p>
+                    <p class="text-xs text-stone-400 mt-1">{{ $walletStatus['total_apple_registrations'] }} total device registration{{ $walletStatus['total_apple_registrations'] === 1 ? '' : 's' }}</p>
+                </div>
+                <div>
+                    <p class="text-sm text-stone-500 mb-1">Last Apple registration</p>
+                    @if($walletStatus['last_registered_at'])
+                        <p class="text-lg font-semibold text-stone-900">{{ \Carbon\Carbon::parse($walletStatus['last_registered_at'])->format('M d, Y') }}</p>
+                        <p class="text-xs text-stone-400">{{ \Carbon\Carbon::parse($walletStatus['last_registered_at'])->format('g:i A') }}</p>
+                    @else
+                        <p class="text-lg font-semibold text-stone-400">None yet</p>
+                    @endif
+                </div>
+                <div>
+                    <p class="text-sm text-stone-500 mb-1">Latest card change</p>
+                    <p class="text-lg font-semibold text-stone-900">{{ $walletStatus['latest_card_change_at']->format('M d, Y') }}</p>
+                    <p class="text-xs text-stone-400">{{ $walletStatus['latest_card_change_at']->format('g:i A') }}</p>
+                </div>
+                <div>
+                    <p class="text-sm text-stone-500 mb-1">Support guidance</p>
+                    <p class="text-sm text-stone-600 leading-relaxed">If a customer says the pass looks stale, queue a wallet refresh first. If Apple stays unchanged, ask them to re-open or re-add the pass.</p>
                 </div>
             </div>
         </x-ui.card>

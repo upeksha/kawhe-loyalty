@@ -33,6 +33,45 @@
         @endphp
 
         <x-ui.card class="p-4 sm:p-6">
+            @if(isset($billingDiagnostics))
+                @php
+                    $billingDiagnosticReady = collect($billingDiagnostics)->where('ready', true)->count();
+                    $billingDiagnosticTotal = count($billingDiagnostics);
+                    $billingDiagnosticLabel = $billingDiagnosticReady === $billingDiagnosticTotal
+                        ? 'Healthy'
+                        : ($billingDiagnosticReady >= 2 ? 'Needs attention' : 'Needs review');
+                    $billingDiagnosticTone = $billingDiagnosticReady === $billingDiagnosticTotal
+                        ? 'bg-emerald-100 text-emerald-700'
+                        : ($billingDiagnosticReady >= 2 ? 'bg-amber-100 text-amber-700' : 'bg-accent-100 text-accent-700');
+                @endphp
+
+                <div class="mb-6 rounded-xl border border-stone-200 bg-stone-50/70 p-5">
+                    <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                        <div>
+                            <h3 class="text-base sm:text-lg font-bold text-stone-900">Billing Support Diagnostics</h3>
+                            <p class="mt-1 text-sm text-stone-600">Use this when checkout, sync, or new-customer capacity looks wrong.</p>
+                        </div>
+                        <span class="inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold {{ $billingDiagnosticTone }}">
+                            {{ $billingDiagnosticLabel }}
+                        </span>
+                    </div>
+                    <p class="mt-3 text-sm text-stone-600">{{ $billingDiagnosticReady }}/{{ $billingDiagnosticTotal }} billing checks are in a strong place.</p>
+                    <ul class="mt-4 space-y-3 text-sm">
+                        @foreach($billingDiagnostics as $diagnostic)
+                            <li class="rounded-xl border border-stone-200 bg-white px-4 py-3">
+                                <div class="flex items-center justify-between gap-3">
+                                    <span class="font-medium text-stone-800">{{ $diagnostic['label'] }}</span>
+                                    <span class="font-medium {{ $diagnostic['ready'] ? 'text-emerald-700' : 'text-amber-700' }}">
+                                        {{ $diagnostic['ready'] ? 'Ready' : 'Review' }}
+                                    </span>
+                                </div>
+                                <p class="mt-1 text-xs leading-relaxed text-stone-500">{{ $diagnostic['hint'] }}</p>
+                            </li>
+                        @endforeach
+                    </ul>
+                </div>
+            @endif
+
             <!-- Current Plan Status -->
             <div class="mb-6">
                 <h3 class="text-base sm:text-lg font-bold text-stone-900 mb-3 sm:mb-4">Current Plan</h3>

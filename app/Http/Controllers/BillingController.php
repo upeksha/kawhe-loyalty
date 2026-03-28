@@ -58,11 +58,35 @@ class BillingController extends Controller
             'subscriptions_count' => $user->subscriptions()->count(),
         ];
 
+        $billingDiagnostics = [
+            [
+                'label' => 'Stripe customer linked',
+                'ready' => !empty($user->stripe_id),
+                'hint' => 'Needed for portal access and reliable subscription sync.',
+            ],
+            [
+                'label' => 'Subscription record present',
+                'ready' => $subscription !== null,
+                'hint' => 'If missing after checkout, run a sync from Stripe.',
+            ],
+            [
+                'label' => 'Plan allows new joins',
+                'ready' => (bool) ($stats['can_create_card'] ?? false),
+                'hint' => 'New customer joins pause when free-plan capacity is full.',
+            ],
+            [
+                'label' => 'Stripe configuration available',
+                'ready' => !empty(config('cashier.key')) && !empty(config('cashier.secret')) && !empty(config('cashier.price_id')),
+                'hint' => 'Needed for checkout, sync, and subscription management.',
+            ],
+        ];
+
         return view('billing.index', [
             'stats' => $stats,
             'subscription' => $subscription,
             'stripePriceId' => config('cashier.price_id'),
             'debugInfo' => $debugInfo,
+            'billingDiagnostics' => $billingDiagnostics,
         ]);
     }
 

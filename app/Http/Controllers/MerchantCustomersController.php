@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Jobs\UpdateWalletPassJob;
+use App\Models\AppleWalletRegistration;
 use App\Models\LoyaltyAccount;
 use App\Models\StampEvent;
 use Illuminate\Http\Request;
@@ -79,10 +81,18 @@ class MerchantCustomersController extends Controller
             ->latest()
             ->limit(50)
             ->get();
+
+        $walletStatus = [
+            'active_apple_registrations' => AppleWalletRegistration::where('loyalty_account_id', $account->id)->active()->count(),
+            'total_apple_registrations' => AppleWalletRegistration::where('loyalty_account_id', $account->id)->count(),
+            'last_registered_at' => AppleWalletRegistration::where('loyalty_account_id', $account->id)->active()->max('last_registered_at'),
+            'latest_card_change_at' => $account->updated_at,
+        ];
         
         return view('merchant.customers.show', [
             'account' => $account,
             'events' => $events,
+            'walletStatus' => $walletStatus,
         ]);
     }
     
@@ -137,5 +147,29 @@ class MerchantCustomersController extends Controller
         return redirect()
             ->route('merchant.customers.show', $loyaltyAccount)
             ->with('success', 'Customer information updated successfully.');
+    }
+
+    public function resendVerification(Request $request, LoyaltyAccount $loyaltyAccount)
+    {
+        $storeIds = Auth::user()->stores()->pluck('id');
+
+        if (!$storeIds->contains($loyaltyAccount->store_id)) {
+            abort(404, 'Loyalty account not found or you do not have access to it.');
+        }
+
+        return app(CustomerEmailVerificationController::class)->send($request, $loyaltyAccount->public_token);
+    }
+
+    public function syncWallet(LoyaltyAccount $loyaltyAccount)
+    {
+        $storeIds = Auth::user()->stores()->pluck('id');
+
+        if (!$storeIds->contains($loyaltyAccount->store_id)) {
+            abort(404, 'Loyalty account not found or you do not have access to it.');
+        }
+
+        UpdateWalletPassJob::dispatch($loyaltyAccount->id);
+
+        return back()->with('success', 'Wallet refresh queued. Apple and Google Wallet will update on the next sync cycle.');
     }
 }

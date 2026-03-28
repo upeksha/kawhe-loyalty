@@ -122,6 +122,8 @@ Route::middleware(['auth', App\Http\Middleware\EnsureMerchantHasStore::class])->
     Route::get('/customers/{loyaltyAccount}', [MerchantCustomersController::class, 'show'])->name('customers.show');
     Route::get('/customers/{loyaltyAccount}/edit', [MerchantCustomersController::class, 'edit'])->name('customers.edit');
     Route::put('/customers/{loyaltyAccount}', [MerchantCustomersController::class, 'update'])->name('customers.update');
+    Route::post('/customers/{loyaltyAccount}/resend-verification', [MerchantCustomersController::class, 'resendVerification'])->name('customers.resend-verification');
+    Route::post('/customers/{loyaltyAccount}/sync-wallet', [MerchantCustomersController::class, 'syncWallet'])->name('customers.sync-wallet');
 });
 
 // Scanner actions (keep outside merchant group to avoid double middleware)
