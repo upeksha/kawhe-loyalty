@@ -10,6 +10,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PublicStartController;
 use App\Http\Controllers\ScannerController;
 use App\Http\Controllers\StoreController;
+use App\Http\Controllers\SupportLogController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -124,6 +125,7 @@ Route::middleware(['auth', App\Http\Middleware\EnsureMerchantHasStore::class])->
     Route::put('/customers/{loyaltyAccount}', [MerchantCustomersController::class, 'update'])->name('customers.update');
     Route::post('/customers/{loyaltyAccount}/resend-verification', [MerchantCustomersController::class, 'resendVerification'])->name('customers.resend-verification');
     Route::post('/customers/{loyaltyAccount}/sync-wallet', [MerchantCustomersController::class, 'syncWallet'])->name('customers.sync-wallet');
+    Route::get('/support', [SupportLogController::class, 'merchantIndex'])->name('support.index');
 });
 
 // Scanner actions (keep outside merchant group to avoid double middleware)
@@ -137,6 +139,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 // Admin area routes (super admin only)
 Route::middleware(['auth', App\Http\Middleware\SuperAdmin::class])->prefix('admin')->name('admin.')->group(function () {
     Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
+    Route::get('/support', [SupportLogController::class, 'adminIndex'])->name('support.index');
 });
 
 Route::middleware('auth')->group(function () {
