@@ -4,6 +4,18 @@
     </x-slot>
 
     <div class="max-w-4xl mx-auto space-y-4 sm:space-y-6">
+        @if (session('success'))
+            <x-ui.card class="p-4 bg-emerald-50 border border-emerald-200">
+                <p class="text-sm font-medium text-emerald-800">{{ session('success') }}</p>
+            </x-ui.card>
+        @endif
+
+        @if (session('info'))
+            <x-ui.card class="p-4 bg-brand-50 border border-brand-200">
+                <p class="text-sm font-medium text-brand-800">{{ session('info') }}</p>
+            </x-ui.card>
+        @endif
+
         <!-- Error Messages -->
         @if ($errors->any())
             <x-ui.card class="p-4 bg-red-50 border border-red-200">
@@ -31,6 +43,31 @@
             $remainingCards = max(0, (int) (($stats['limit'] ?? 0) - ($stats['non_grandfathered_count'] ?? 0)));
             $usagePercent = min(100, max(0, (int) ($stats['usage_percentage'] ?? 0)));
         @endphp
+
+        @if(isset($planState))
+            <x-ui.card class="p-4 sm:p-6">
+                <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                        <h2 class="text-base sm:text-lg font-bold text-stone-900">Plan State</h2>
+                        <p class="mt-1 text-sm text-stone-600">A plain-language summary of where billing stands right now.</p>
+                    </div>
+                    <span class="inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold {{ $planState['tone'] }}">
+                        {{ $planState['label'] }}
+                    </span>
+                </div>
+
+                <div class="mt-4 grid gap-4 md:grid-cols-2">
+                    <div class="rounded-xl border border-stone-200 bg-stone-50/70 p-4">
+                        <p class="text-xs font-semibold uppercase tracking-wide text-stone-500">Current state</p>
+                        <p class="mt-2 text-sm leading-relaxed text-stone-700">{{ $planState['summary'] }}</p>
+                    </div>
+                    <div class="rounded-xl border border-stone-200 bg-white p-4">
+                        <p class="text-xs font-semibold uppercase tracking-wide text-stone-500">What changes next</p>
+                        <p class="mt-2 text-sm leading-relaxed text-stone-700">{{ $planState['transition'] }}</p>
+                    </div>
+                </div>
+            </x-ui.card>
+        @endif
 
         <x-ui.card class="p-4 sm:p-6">
             @if(isset($billingDiagnostics))
@@ -73,6 +110,38 @@
                         <p class="text-sm font-semibold text-stone-800">Recommended next step</p>
                         <p class="mt-2 text-sm leading-relaxed text-stone-600">{{ $recommendedBillingAction }}</p>
                     </div>
+
+                    @if(!empty($recoveryActions))
+                        <div class="mt-4 rounded-xl border border-stone-200 bg-white p-4">
+                            <p class="text-sm font-semibold text-stone-800">Recovery actions</p>
+                            <ul class="mt-2 space-y-2 text-sm leading-relaxed text-stone-600 list-disc list-inside">
+                                @foreach($recoveryActions as $action)
+                                    <li>{{ $action }}</li>
+                                @endforeach
+                            </ul>
+                            <div class="mt-4 flex flex-wrap gap-2">
+                                <form method="POST" action="{{ route('billing.sync') }}">
+                                    @csrf
+                                    <x-ui.button type="submit" variant="secondary" size="sm">
+                                        Sync From Stripe
+                                    </x-ui.button>
+                                </form>
+                                @if(!empty($debugInfo['has_stripe_id']))
+                                    <x-ui.button href="{{ route('billing.index', ['refresh' => 1]) }}" variant="ghost" size="sm">
+                                        Refresh Status
+                                    </x-ui.button>
+                                @endif
+                                @if($stats['is_subscribed'])
+                                    <form method="POST" action="{{ route('billing.portal') }}">
+                                        @csrf
+                                        <x-ui.button type="submit" variant="ghost" size="sm">
+                                            Open Billing Portal
+                                        </x-ui.button>
+                                    </form>
+                                @endif
+                            </div>
+                        </div>
+                    @endif
                 </div>
             @endif
 
@@ -85,6 +154,7 @@
                             <div>
                                 <p class="text-brand-800 font-semibold">✓ Pro Plan Active</p>
                                 <p class="text-sm text-brand-700 mt-1">Unlimited customer cards and uninterrupted signups.</p>
+                                <p class="text-xs text-brand-700 mt-2">If you cancel later, your current billing period stays active. New joins only fall back to the free-plan limit after the subscription actually ends.</p>
                             </div>
                             <form method="POST" action="{{ route('billing.portal') }}">
                                 @csrf
@@ -106,6 +176,7 @@
                                     @endif
                                 </p>
                                 <p class="text-xs text-stone-500 mt-1">Existing customers can always use their cards. Limit only affects new joins.</p>
+                                <p class="text-xs text-stone-500 mt-1">Upgrading does not remove or reset any customer cards. It only restores unlimited join capacity.</p>
                                 <p class="text-xs text-stone-600 mt-1"><strong>{{ $remainingCards }}</strong> new signup slot{{ $remainingCards === 1 ? '' : 's' }} remaining.</p>
                             </div>
                             @if($stats['non_grandfathered_count'] >= $stats['limit'])
@@ -187,6 +258,16 @@
                                class="text-xs text-brand-600 hover:text-brand-700 underline">
                                 🔄 Refresh Subscription Status
                             </a>
+                        </div>
+                        <div class="mt-4 rounded-lg border border-stone-200 bg-white p-3">
+                            <p class="text-xs font-semibold text-stone-700">Plan transition note</p>
+                            <p class="mt-1 text-xs leading-relaxed text-stone-600">
+                                @if($subscription->ends_at)
+                                    Your plan will keep working until {{ $subscription->ends_at->format('M d, Y') }}, then new joins return to the free-plan limit automatically.
+                                @else
+                                    Your plan stays active until you change it in the billing portal. Existing customers are never removed by plan changes.
+                                @endif
+                            </p>
                         </div>
                     </div>
                 </div>

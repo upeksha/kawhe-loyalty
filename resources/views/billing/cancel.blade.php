@@ -10,6 +10,17 @@
             <p class="text-stone-600 mb-6">
                 Your subscription checkout was cancelled. No charges were made.
             </p>
+
+            @if(!empty($nextSteps))
+                <div class="mb-6 rounded-xl border border-stone-200 bg-stone-50/70 p-4 text-left">
+                    <p class="text-sm font-semibold text-stone-800">What this means</p>
+                    <ul class="mt-2 space-y-2 text-sm leading-relaxed text-stone-600 list-disc list-inside">
+                        @foreach($nextSteps as $step)
+                            <li>{{ $step }}</li>
+                        @endforeach
+                    </ul>
+                </div>
+            @endif
             
             <div class="space-y-3">
                 <x-ui.button href="{{ route('billing.index') }}" variant="primary">

@@ -82,6 +82,9 @@ class BillingController extends Controller
             ],
         ];
 
+        $planState = $this->buildPlanState($stats, $subscription);
+        $recoveryActions = $this->buildRecoveryActions($user, $stats, $subscription);
+
         $recommendedBillingAction = !empty(config('cashier.key')) && !empty(config('cashier.secret')) && !empty(config('cashier.price_id'))
             ? ($subscription === null && !empty($user->stripe_id)
                 ? 'Stripe knows this merchant, but no local subscription is visible yet. Run a sync from Stripe before escalating.'
@@ -97,6 +100,8 @@ class BillingController extends Controller
             'debugInfo' => $debugInfo,
             'billingDiagnostics' => $billingDiagnostics,
             'recommendedBillingAction' => $recommendedBillingAction,
+            'planState' => $planState,
+            'recoveryActions' => $recoveryActions,
         ]);
     }
 
@@ -217,6 +222,7 @@ class BillingController extends Controller
             return view('billing.success', [
                 'error' => 'No session ID provided. Please check your subscription status on the billing page.',
                 'hasSession' => false,
+                'nextSteps' => $this->billingSuccessNextSteps('error'),
             ]);
         }
         
@@ -248,6 +254,7 @@ class BillingController extends Controller
                     'sessionStatus' => $session->status,
                     'canRetry' => true,
                     'sessionId' => $sessionId,
+                    'nextSteps' => $this->billingSuccessNextSteps('processing'),
                 ]);
             }
             
@@ -279,6 +286,7 @@ class BillingController extends Controller
                     'error' => 'Could not identify your account. Please contact support with your payment confirmation.',
                     'hasSession' => true,
                     'sessionId' => $sessionId,
+                    'nextSteps' => $this->billingSuccessNextSteps('error'),
                 ]);
             }
             
@@ -390,6 +398,7 @@ class BillingController extends Controller
                         'hasSession' => true,
                         'canRetry' => true,
                         'sessionId' => $sessionId,
+                        'nextSteps' => $this->billingSuccessNextSteps('processing'),
                     ]);
                     
                 } catch (\Exception $e) {
@@ -414,6 +423,7 @@ class BillingController extends Controller
                         'hasSession' => true,
                         'canRetry' => true,
                         'sessionId' => $sessionId,
+                        'nextSteps' => $this->billingSuccessNextSteps('error'),
                     ]);
                 }
             } else {
@@ -430,6 +440,7 @@ class BillingController extends Controller
                     'canRetry' => true,
                     'isAsyncPayment' => true,
                     'sessionId' => $sessionId,
+                    'nextSteps' => $this->billingSuccessNextSteps('processing'),
                 ]);
             }
             
@@ -442,6 +453,7 @@ class BillingController extends Controller
             return view('billing.success', [
                 'error' => 'Invalid session. Please check your subscription status on the billing page.',
                 'hasSession' => false,
+                'nextSteps' => $this->billingSuccessNextSteps('error'),
             ]);
         } catch (\Exception $e) {
             Log::error('Error processing checkout success', [
@@ -465,6 +477,7 @@ class BillingController extends Controller
                 'hasSession' => true,
                 'canRetry' => true,
                 'sessionId' => $sessionId,
+                'nextSteps' => $this->billingSuccessNextSteps('error'),
             ]);
         }
     }
@@ -672,6 +685,101 @@ class BillingController extends Controller
      */
     public function cancel(Request $request)
     {
-        return view('billing.cancel');
+        $user = $request->user();
+        $stats = $this->usageService->getUsageStats($user);
+
+        return view('billing.cancel', [
+            'stats' => $stats,
+            'nextSteps' => [
+                'Nothing has been charged. Your current plan stays exactly as it was.',
+                ($stats['can_create_card'] ?? false)
+                    ? 'You still have room to add customers on your current plan if you want to wait before upgrading.'
+                    : 'If new joins are already blocked, you can return to billing anytime and restart checkout when you are ready.',
+                'You can review usage and plan limits on the billing page before deciding again.',
+            ],
+        ]);
+    }
+
+    protected function buildPlanState(array $stats, $subscription): array
+    {
+        if ($subscription && in_array($subscription->stripe_status, ['active', 'trialing'], true) && ! $subscription->ends_at) {
+            return [
+                'label' => 'Pro active',
+                'tone' => 'bg-emerald-100 text-emerald-700',
+                'summary' => 'Unlimited joins are active and your customers can keep signing up without plan-based interruptions.',
+                'transition' => 'If you cancel later, your current subscription stays active until the end of the billing period.',
+            ];
+        }
+
+        if ($subscription && $subscription->ends_at) {
+            return [
+                'label' => 'Pro ending',
+                'tone' => 'bg-amber-100 text-amber-700',
+                'summary' => 'Your Pro plan is still active for now, but it is scheduled to end on ' . $subscription->ends_at->format('M d, Y') . '.',
+                'transition' => 'After the billing period ends, new joins will fall back to your free-plan limit while existing customers keep their cards.',
+            ];
+        }
+
+        if (! ($stats['can_create_card'] ?? false)) {
+            return [
+                'label' => 'Free plan full',
+                'tone' => 'bg-accent-100 text-accent-700',
+                'summary' => 'Your free-plan join limit is full, so new customers are currently blocked from joining.',
+                'transition' => 'Upgrading restores new joins immediately. Existing customers and cards are not reset.',
+            ];
+        }
+
+        return [
+            'label' => 'Free plan active',
+            'tone' => 'bg-stone-100 text-stone-700',
+            'summary' => 'Your free plan is active and existing customers can continue using their cards normally.',
+            'transition' => 'If you outgrow the free limit later, upgrading only changes join capacity. It does not remove existing customer data.',
+        ];
+    }
+
+    protected function buildRecoveryActions($user, array $stats, $subscription): array
+    {
+        $actions = [];
+
+        if ($subscription === null && !empty($user->stripe_id)) {
+            $actions[] = 'Run a Stripe sync if checkout completed but your plan still looks unchanged.';
+        }
+
+        if (! ($stats['can_create_card'] ?? false) && ! ($stats['is_subscribed'] ?? false)) {
+            $actions[] = 'Upgrade to Pro to reopen new customer signups right away.';
+        }
+
+        if ($subscription && $subscription->ends_at) {
+            $actions[] = 'Open the billing portal if you want to keep Pro active beyond the current end date.';
+        }
+
+        if (empty(config('cashier.key')) || empty(config('cashier.secret')) || empty(config('cashier.price_id'))) {
+            $actions[] = 'Stripe configuration needs attention before checkout or sync can work reliably.';
+        }
+
+        if (empty($actions)) {
+            $actions[] = 'Billing looks healthy. If something still feels wrong, refresh status first and then review Stripe in the billing portal.';
+        }
+
+        return $actions;
+    }
+
+    protected function billingSuccessNextSteps(string $mode): array
+    {
+        return match ($mode) {
+            'processing' => [
+                'Return to billing and refresh status if the plan does not update automatically within a few minutes.',
+                'Use manual sync only if checkout completed but the plan still looks unchanged.',
+                'Existing customers can keep using their cards while payment finishes processing.',
+            ],
+            'error' => [
+                'Go back to billing to refresh status before retrying checkout.',
+                'If Stripe took payment but your plan still looks unchanged, use manual sync first.',
+                'If the problem persists, contact support with your Stripe session or customer details.',
+            ],
+            default => [
+                'Return to billing to review your current plan state.',
+            ],
+        };
     }
 }

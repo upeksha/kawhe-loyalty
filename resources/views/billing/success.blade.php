@@ -57,6 +57,17 @@
                             Your Pro plan subscription has been successfully activated. You can now create unlimited loyalty cards.
                         </p>
                     @endif
+
+                    @if(!empty($nextSteps))
+                        <div class="mt-6 rounded-xl border border-stone-200 bg-stone-50/70 p-4 text-left">
+                            <p class="text-sm font-semibold text-stone-800">What to do next</p>
+                            <ul class="mt-2 space-y-2 text-sm leading-relaxed text-stone-600 list-disc list-inside">
+                                @foreach($nextSteps as $step)
+                                    <li>{{ $step }}</li>
+                                @endforeach
+                            </ul>
+                        </div>
+                    @endif
                     
                     <div class="space-y-3">
                         <x-ui.button href="{{ route('billing.index', ['refresh' => 1]) }}" variant="primary">
