@@ -2,18 +2,47 @@
     <x-slot name="header">Support Logs</x-slot>
 
     <div class="space-y-6">
+        <div class="grid grid-cols-1 gap-4 md:grid-cols-4">
+            <div class="bg-white overflow-hidden shadow-sm rounded-lg p-5">
+                <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Matching events</p>
+                <p class="mt-2 text-3xl font-bold text-gray-900">{{ $summary['total'] ?? 0 }}</p>
+            </div>
+            <div class="bg-white overflow-hidden shadow-sm rounded-lg p-5">
+                <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Failed events</p>
+                <p class="mt-2 text-3xl font-bold text-red-600">{{ $summary['failed'] ?? 0 }}</p>
+            </div>
+            <div class="bg-white overflow-hidden shadow-sm rounded-lg p-5">
+                <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Wallet issues</p>
+                <p class="mt-2 text-3xl font-bold text-amber-600">{{ $summary['wallet_issues'] ?? 0 }}</p>
+            </div>
+            <div class="bg-white overflow-hidden shadow-sm rounded-lg p-5">
+                <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Billing issues</p>
+                <p class="mt-2 text-3xl font-bold text-accent-600">{{ $summary['billing_issues'] ?? 0 }}</p>
+            </div>
+        </div>
+
         <div class="bg-white overflow-hidden shadow-sm rounded-lg p-6">
             <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
                 <div>
                     <h2 class="text-lg font-semibold text-gray-900">Global support event stream</h2>
                     <p class="mt-1 text-sm text-gray-600">Filter down to repeated billing and wallet issues or review the full operational trail.</p>
                 </div>
-                <form method="GET" action="{{ route('admin.support.index') }}" class="grid grid-cols-1 sm:grid-cols-4 gap-3 w-full lg:w-auto lg:min-w-[760px]">
+                <form method="GET" action="{{ route('admin.support.index') }}" class="grid grid-cols-1 sm:grid-cols-5 gap-3 w-full lg:w-auto lg:min-w-[980px]">
+                    <select name="store_id" class="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm">
+                        <option value="">All stores</option>
+                        @foreach($stores as $store)
+                            <option value="{{ $store->id }}" {{ (string) $activeStoreId === (string) $store->id ? 'selected' : '' }}>
+                                {{ $store->name }}{{ $store->deleted_at ? ' (Archived)' : '' }}
+                            </option>
+                        @endforeach
+                    </select>
                     <select name="event_type" class="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm">
                         <option value="">All event types</option>
                         <option value="wallet_sync" {{ $eventType === 'wallet_sync' ? 'selected' : '' }}>Wallet sync</option>
                         <option value="verification_send" {{ $eventType === 'verification_send' ? 'selected' : '' }}>Verification send</option>
                         <option value="manual_support_action" {{ $eventType === 'manual_support_action' ? 'selected' : '' }}>Manual support action</option>
+                        <option value="welcome_email_send" {{ $eventType === 'welcome_email_send' ? 'selected' : '' }}>Welcome email</option>
+                        <option value="store_wallet_refresh" {{ $eventType === 'store_wallet_refresh' ? 'selected' : '' }}>Store wallet refresh</option>
                         <option value="billing_issue" {{ $eventType === 'billing_issue' ? 'selected' : '' }}>Billing issue</option>
                     </select>
                     <select name="status" class="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm">
@@ -27,7 +56,8 @@
                         <input type="checkbox" name="issues_only" value="1" {{ $issuesOnly ? 'checked' : '' }}>
                         Issues only
                     </label>
-                    <div class="flex gap-2">
+                    <input type="text" name="q" value="{{ $search }}" placeholder="Store, email, token, code" class="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm">
+                    <div class="flex gap-2 sm:col-span-5 lg:col-span-1">
                         <button type="submit" class="inline-flex items-center justify-center rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700">Filter</button>
                         <a href="{{ route('admin.support.index') }}" class="inline-flex items-center justify-center rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">Clear</a>
                     </div>

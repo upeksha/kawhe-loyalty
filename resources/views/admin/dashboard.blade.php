@@ -115,6 +115,7 @@
                                     <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Billing Issues</th>
                                     <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Wallet Issues</th>
                                     <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Recommended Next Step</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-gray-200">
@@ -133,10 +134,15 @@
                                                 Review the most recent support events below.
                                             @endif
                                         </td>
+                                        <td class="px-4 py-3 text-sm text-gray-600">
+                                            <a href="{{ route('admin.support.index', ['store_id' => $merchantIssue->id, 'issues_only' => 1]) }}" class="text-brand-600 hover:text-brand-700 font-medium">
+                                                Open diagnostics
+                                            </a>
+                                        </td>
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="5" class="px-4 py-3 text-sm text-gray-500 text-center">No repeated merchant billing or wallet issues in the last 14 days.</td>
+                                        <td colspan="6" class="px-4 py-3 text-sm text-gray-500 text-center">No repeated merchant billing or wallet issues in the last 14 days.</td>
                                     </tr>
                                 @endforelse
                             </tbody>
