@@ -31,6 +31,25 @@
     <div class="max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div class="lg:col-span-2">
         <x-ui.card class="p-6">
+                    @if($store->trashed())
+                        <div class="mb-6 rounded-2xl border border-amber-200 bg-amber-50 p-4">
+                            <div class="flex items-start justify-between gap-4">
+                                <div>
+                                    <p class="text-sm font-semibold text-amber-800">This store is archived</p>
+                                    <p class="mt-1 text-sm leading-relaxed text-amber-700">
+                                        New joins are paused, QR sharing is disabled, and customers can no longer stamp or redeem through this store until you restore it. Customer records, wallet history, and branding are still preserved.
+                                    </p>
+                                </div>
+                                <form method="POST" action="{{ route('merchant.stores.restore', $store) }}">
+                                    @csrf
+                                    <x-ui.button type="submit" variant="secondary" size="sm">
+                                        Restore Store
+                                    </x-ui.button>
+                                </form>
+                            </div>
+                        </div>
+                    @endif
+
                     <form method="POST" action="{{ route('merchant.stores.update', $store) }}" enctype="multipart/form-data" class="max-w-md mx-auto" id="store-edit-form">
                         @csrf
                         @method('PUT')
@@ -320,13 +339,32 @@
                     </form>
 
                     <div class="mt-8 pt-6 border-t border-stone-200">
-                        <form method="POST" action="{{ route('merchant.stores.destroy', $store) }}" onsubmit="return confirm('Are you sure you want to delete this store?');">
-                            @csrf
-                            @method('DELETE')
-                            <x-ui.button type="submit" variant="danger">
-                                Delete Store
-                            </x-ui.button>
-                        </form>
+                        <div class="rounded-2xl border border-accent-200 bg-accent-50 p-4">
+                            <p class="text-sm font-semibold text-accent-800">{{ $store->trashed() ? 'Archived store' : 'Archive this store' }}</p>
+                            <ul class="mt-2 space-y-1 text-sm leading-relaxed text-accent-700 list-disc list-inside">
+                                <li>Join links and QR codes stop accepting new customers.</li>
+                                <li>Existing customer cards and history stay preserved for support and restore.</li>
+                                <li>Wallet cards may remain on customer phones, but new stamp or redeem actions should stop.</li>
+                            </ul>
+                            <div class="mt-4 flex flex-wrap gap-2">
+                                @if($store->trashed())
+                                    <form method="POST" action="{{ route('merchant.stores.restore', $store) }}">
+                                        @csrf
+                                        <x-ui.button type="submit" variant="secondary">
+                                            Restore Store
+                                        </x-ui.button>
+                                    </form>
+                                @else
+                                    <form method="POST" action="{{ route('merchant.stores.destroy', $store) }}" onsubmit="return confirm('Archive this store? Customers and history will stay preserved, but new joins and QR sharing will stop until you restore it.');">
+                                        @csrf
+                                        @method('DELETE')
+                                        <x-ui.button type="submit" variant="danger">
+                                            Archive Store
+                                        </x-ui.button>
+                                    </form>
+                                @endif
+                            </div>
+                        </div>
                     </div>
                 </x-ui.card>
         </div>
@@ -415,9 +453,11 @@
                     <x-ui.button href="{{ route('billing.index') }}" variant="secondary" size="sm">
                         Open Billing
                     </x-ui.button>
-                    <x-ui.button href="{{ route('merchant.stores.qr', $store) }}" variant="ghost" size="sm">
-                        Open QR page
-                    </x-ui.button>
+                    @if(!$store->trashed())
+                        <x-ui.button href="{{ route('merchant.stores.qr', $store) }}" variant="ghost" size="sm">
+                            Open QR page
+                        </x-ui.button>
+                    @endif
                 </div>
             </x-ui.card>
 

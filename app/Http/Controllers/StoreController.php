@@ -27,8 +27,11 @@ class StoreController extends Controller
      */
     public function index()
     {
-        $stores = Store::queryForUser(Auth::user())->latest()->get();
-        return view('stores.index', compact('stores'));
+        $allStores = Store::queryForUser(Auth::user(), includeArchived: true)->latest()->get();
+        $stores = $allStores->whereNull('deleted_at')->values();
+        $archivedStores = $allStores->whereNotNull('deleted_at')->values();
+
+        return view('stores.index', compact('stores', 'archivedStores'));
     }
 
     /**
@@ -87,7 +90,7 @@ class StoreController extends Controller
      */
     public function edit(Store $store)
     {
-        $store = Store::queryForUser(Auth::user())->whereKey($store->id)->firstOrFail();
+        $store = Store::queryForUser(Auth::user(), includeArchived: true)->whereKey($store->id)->firstOrFail();
         return view('stores.edit', compact('store'));
     }
 
@@ -96,7 +99,7 @@ class StoreController extends Controller
      */
     public function update(Request $request, Store $store)
     {
-        $store = Store::queryForUser(Auth::user())->whereKey($store->id)->firstOrFail();
+        $store = Store::queryForUser(Auth::user(), includeArchived: true)->whereKey($store->id)->firstOrFail();
 
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
@@ -180,8 +183,27 @@ class StoreController extends Controller
     public function destroy(Store $store)
     {
         $this->authorize('delete', $store);
+        if ($store->trashed()) {
+            return redirect()->route('merchant.stores.index')->with('success', 'Store is already archived.');
+        }
+
         $store->delete();
-        return redirect()->route('merchant.stores.index')->with('success', 'Store deleted successfully.');
+
+        return redirect()->route('merchant.stores.index')->with('success', 'Store archived. New joins and QR sharing are now paused, but customers and history are preserved.');
+    }
+
+    public function restore(Store $store)
+    {
+        $store = Store::queryForUser(Auth::user(), includeArchived: true)->whereKey($store->id)->firstOrFail();
+        $this->authorize('restore', $store);
+
+        if (! $store->trashed()) {
+            return redirect()->route('merchant.stores.edit', $store)->with('success', 'Store is already active.');
+        }
+
+        $store->restore();
+
+        return redirect()->route('merchant.stores.edit', $store)->with('success', 'Store restored. Join links, QR sharing, and wallet activity are active again.');
     }
 
     /**
@@ -190,7 +212,7 @@ class StoreController extends Controller
     public function qr(Store $store)
     {
         // First check if store exists
-        $store = Store::find($store->id);
+        $store = Store::withTrashed()->find($store->id);
         if (!$store) {
             abort(404);
         }
@@ -199,6 +221,12 @@ class StoreController extends Controller
         if ($store->user_id !== Auth::id() && !Auth::user()->is_super_admin) {
             abort(403);
         }
+
+        if ($store->trashed()) {
+            return redirect()->route('merchant.stores.edit', $store)->withErrors([
+                'store' => 'This store is archived. Restore it before sharing the join QR code again.',
+            ]);
+        }
         
         $joinUrl = $store->join_url; // short URL /j/{code} when join_short_code is set
         return view('stores.qr', compact('store', 'joinUrl'));
@@ -206,7 +234,11 @@ class StoreController extends Controller
 
     public function refreshWallets(Store $store)
     {
-        $store = Store::queryForUser(Auth::user())->whereKey($store->id)->firstOrFail();
+        $store = Store::queryForUser(Auth::user(), includeArchived: true)->whereKey($store->id)->firstOrFail();
+
+        if ($store->trashed()) {
+            return back()->withErrors(['store' => 'Restore this store before queueing wallet refreshes.']);
+        }
 
         $queuedCount = $this->merchantRecoveryService->queueStoreWalletRefresh($store, Auth::id());
 
@@ -218,12 +250,17 @@ class StoreController extends Controller
      */
     public function qrPdf(Store $store)
     {
-        $store = Store::find($store->id);
+        $store = Store::withTrashed()->find($store->id);
         if (! $store) {
             abort(404);
         }
         if ($store->user_id !== Auth::id() && ! Auth::user()->is_super_admin) {
             abort(403);
+        }
+        if ($store->trashed()) {
+            return redirect()->route('merchant.stores.edit', $store)->withErrors([
+                'store' => 'This store is archived. Restore it before generating or sharing join posters.',
+            ]);
         }
 
         $joinUrl = $store->join_url;

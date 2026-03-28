@@ -92,7 +92,7 @@ class LoyaltyAccount extends Model
 
     public function store(): BelongsTo
     {
-        return $this->belongsTo(Store::class);
+        return $this->belongsTo(Store::class)->withTrashed();
     }
 
     public function customer(): BelongsTo

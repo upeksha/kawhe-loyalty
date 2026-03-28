@@ -6,24 +6,32 @@ use App\Support\StoreAssets;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
 
 class Store extends Model
 {
     /** @use HasFactory<\Database\Factories\StoreFactory> */
-    use HasFactory;
+    use HasFactory, SoftDeletes;
 
     /**
      * Get a query builder for stores accessible by the given user.
      * Super admins can access all stores, regular users only their own.
      */
-    public static function queryForUser($user)
+    public static function queryForUser($user, bool $includeArchived = false)
     {
         if ($user && $user->isSuperAdmin()) {
-            return static::query();
+            $query = static::query();
+            return $includeArchived ? $query->withTrashed() : $query;
         }
 
-        return $user ? $user->stores() : static::whereRaw('0 = 1');
+        if (! $user) {
+            return static::whereRaw('0 = 1');
+        }
+
+        $query = $user->stores();
+
+        return $includeArchived ? $query->withTrashed() : $query;
     }
 
     /** Length of join short code (e.g. /j/abc12x). */
@@ -62,6 +70,7 @@ class Store extends Model
     protected $casts = [
         'onboarding_completed_at' => 'datetime',
         'registration_form_config' => 'array',
+        'deleted_at' => 'datetime',
     ];
 
     protected static function boot()
@@ -90,6 +99,10 @@ class Store extends Model
         });
 
         static::deleting(function (self $store) {
+            if (! $store->isForceDeleting()) {
+                return;
+            }
+
             StoreAssets::delete($store->logo_path);
             StoreAssets::delete($store->pass_logo_path);
             StoreAssets::delete($store->pass_hero_image_path);
@@ -150,6 +163,11 @@ class Store extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function getIsArchivedAttribute(): bool
+    {
+        return $this->trashed();
     }
 
     public function getLogoUrlAttribute(): ?string

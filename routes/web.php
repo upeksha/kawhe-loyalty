@@ -117,12 +117,13 @@ Route::middleware(['auth', App\Http\Middleware\EnsureMerchantHasStore::class])->
     Route::get('/stores', [StoreController::class, 'index'])->name('stores.index');
     Route::get('/stores/create', [StoreController::class, 'create'])->name('stores.create');
     Route::post('/stores', [StoreController::class, 'store'])->name('stores.store');
-    Route::get('/stores/{store}/edit', [StoreController::class, 'edit'])->name('stores.edit');
-    Route::put('/stores/{store}', [StoreController::class, 'update'])->name('stores.update');
-    Route::delete('/stores/{store}', [StoreController::class, 'destroy'])->name('stores.destroy');
-    Route::get('/stores/{store}/qr', [StoreController::class, 'qr'])->name('stores.qr');
-    Route::get('/stores/{store}/qr/pdf', [StoreController::class, 'qrPdf'])->name('stores.qr.pdf');
-    Route::post('/stores/{store}/refresh-wallets', [StoreController::class, 'refreshWallets'])->name('stores.refresh-wallets');
+    Route::get('/stores/{store}/edit', [StoreController::class, 'edit'])->withTrashed()->name('stores.edit');
+    Route::put('/stores/{store}', [StoreController::class, 'update'])->withTrashed()->name('stores.update');
+    Route::delete('/stores/{store}', [StoreController::class, 'destroy'])->withTrashed()->name('stores.destroy');
+    Route::post('/stores/{store}/restore', [StoreController::class, 'restore'])->withTrashed()->name('stores.restore');
+    Route::get('/stores/{store}/qr', [StoreController::class, 'qr'])->withTrashed()->name('stores.qr');
+    Route::get('/stores/{store}/qr/pdf', [StoreController::class, 'qrPdf'])->withTrashed()->name('stores.qr.pdf');
+    Route::post('/stores/{store}/refresh-wallets', [StoreController::class, 'refreshWallets'])->withTrashed()->name('stores.refresh-wallets');
 
     Route::get('/scanner', [ScannerController::class, 'index'])->name('scanner');
     
