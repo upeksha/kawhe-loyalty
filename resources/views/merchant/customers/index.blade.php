@@ -4,6 +4,18 @@
     </x-slot>
 
     <div class="space-y-6">
+        <x-ui.card class="p-5">
+            <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                    <h3 class="text-base font-bold text-stone-900">Customer support lookup</h3>
+                    <p class="mt-1 text-sm text-stone-600">Search by customer name, email, phone, manual code, or public token when you need to help someone quickly.</p>
+                </div>
+                <div class="rounded-xl border border-stone-200 bg-stone-50 px-4 py-3 text-sm text-stone-600">
+                    Fastest support path: ask the customer for their <span class="font-semibold text-stone-800">manual code</span> or email.
+                </div>
+            </div>
+        </x-ui.card>
+
         <!-- Controls Row -->
         <x-ui.card class="p-6" x-data="{ searching: false, filtering: false }">
             <div class="flex flex-col sm:flex-row gap-4">
@@ -15,6 +27,7 @@
                             name="q" 
                             value="{{ $q }}" 
                             placeholder="Search by name, email, or phone..."
+                            placeholder="Search by name, email, phone, manual code, or public token..."
                             class="flex-1"
                             :error="$errors->has('q')"
                         />
@@ -106,6 +119,7 @@
                             </div>
                         </div>
                         <div class="mt-3 text-sm text-stone-600 space-y-1">
+                            <p>Manual code: <span class="font-mono font-semibold tracking-wider">{{ $account->manual_entry_code ?? '-' }}</span></p>
                             <p>Stamps: {{ $account->stamp_count }} / {{ $account->store->reward_target }}</p>
                             <p>Joined: {{ $account->created_at->format('M d, Y') }}</p>
                             <p>Last stamped: {{ $account->last_stamped_at ? $account->last_stamped_at->format('M d, Y') : '-' }}</p>
@@ -126,6 +140,7 @@
                             <x-ui.table-header-cell>Email</x-ui.table-header-cell>
                             <x-ui.table-header-cell>Phone</x-ui.table-header-cell>
                             <x-ui.table-header-cell>Birthday</x-ui.table-header-cell>
+                            <x-ui.table-header-cell>Manual Code</x-ui.table-header-cell>
                             <x-ui.table-header-cell>Stamps</x-ui.table-header-cell>
                             <x-ui.table-header-cell>Reward</x-ui.table-header-cell>
                             <x-ui.table-header-cell>Last Stamped</x-ui.table-header-cell>
@@ -153,6 +168,9 @@
                                 </x-ui.table-cell>
                                 <x-ui.table-cell>
                                     {{ $account->customer->birthday ? \Carbon\Carbon::parse($account->customer->birthday)->format('M d, Y') : '-' }}
+                                </x-ui.table-cell>
+                                <x-ui.table-cell>
+                                    <span class="font-mono text-xs tracking-wider text-stone-700">{{ $account->manual_entry_code ?? '-' }}</span>
                                 </x-ui.table-cell>
                                 <x-ui.table-cell>
                                     {{ $account->stamp_count }} / {{ $account->store->reward_target }}

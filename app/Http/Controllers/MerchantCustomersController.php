@@ -36,10 +36,16 @@ class MerchantCustomersController extends Controller
         // Search filter
         $searchTerm = $request->input('q');
         if ($searchTerm) {
-            $query->whereHas('customer', function ($q) use ($searchTerm) {
-                $q->where('name', 'like', "%{$searchTerm}%")
-                  ->orWhere('email', 'like', "%{$searchTerm}%")
-                  ->orWhere('phone', 'like', "%{$searchTerm}%");
+            $normalizedSearch = strtoupper(trim($searchTerm));
+
+            $query->where(function ($query) use ($searchTerm, $normalizedSearch) {
+                $query->whereHas('customer', function ($q) use ($searchTerm) {
+                    $q->where('name', 'like', "%{$searchTerm}%")
+                        ->orWhere('email', 'like', "%{$searchTerm}%")
+                        ->orWhere('phone', 'like', "%{$searchTerm}%");
+                })
+                ->orWhere('manual_entry_code', $normalizedSearch)
+                ->orWhere('public_token', $searchTerm);
             });
         }
         
@@ -133,4 +139,3 @@ class MerchantCustomersController extends Controller
             ->with('success', 'Customer information updated successfully.');
     }
 }
-

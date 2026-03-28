@@ -37,6 +37,14 @@
                                 </div>
                             </div>
                         </div>
+                        <div class="mt-5 rounded-xl border border-stone-200 bg-stone-50/70 p-4">
+                            <p class="text-sm font-semibold text-stone-800">What to check before launch</p>
+                            <ul class="mt-2 space-y-2 text-sm leading-relaxed text-stone-600">
+                                <li>The join page looks clear on a phone, not just on a desktop screen.</li>
+                                <li>The reward wording is short enough to understand in one quick glance.</li>
+                                <li>The poster QR scans comfortably from counter distance.</li>
+                            </ul>
+                        </div>
                     </div>
 
                     <div class="flex flex-wrap gap-3">
@@ -64,7 +72,7 @@
                                 </li>
                                 <li class="rounded-lg border border-stone-200 bg-white px-4 py-3">
                                     <span class="font-medium text-stone-800">Print or save the poster</span>
-                                    <p class="mt-1 text-xs leading-relaxed text-stone-500">Use the PDF so staff can place it near the counter and customers know exactly how to join.</p>
+                                    <p class="mt-1 text-xs leading-relaxed text-stone-500">Use the PDF so staff can place it near the counter. If the poster feels crowded, update the reward wording or branding before you print.</p>
                                 </li>
                                 <li class="rounded-lg border border-stone-200 bg-white px-4 py-3">
                                     <span class="font-medium text-stone-800">Check wallet branding later if needed</span>
@@ -88,6 +96,12 @@
                                 <span>You stamp and reward returning customers</span>
                             </li>
                         </ol>
+                        </div>
+                        <div class="rounded-xl border border-stone-200 bg-white p-5 shadow-sm">
+                            <p class="text-sm font-semibold text-stone-800">Poster guidance</p>
+                            <p class="mt-2 text-sm leading-relaxed text-stone-600">
+                                Your PDF poster uses the same reward title, store branding, and join link customers will see live. If anything feels unclear here, it will usually feel unclear on the printed poster too.
+                            </p>
                         </div>
                     </div>
                 </div>

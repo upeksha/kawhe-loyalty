@@ -73,6 +73,9 @@
                 <p class="mt-2 sm:mt-3 text-sm sm:text-base join-muted">
                     Join our loyalty program and start earning {{ strtolower($store->reward_title ?: 'rewards') }}.
                 </p>
+                <p class="mt-1 text-xs sm:text-sm join-muted">
+                    Most customers finish signup in under a minute.
+                </p>
             </div>
 
             <div class="join-card rounded-2xl shadow-xl p-6 sm:p-8 w-full">
@@ -100,6 +103,9 @@
                         </a>
                         <p class="join-card-body mt-2 text-center text-xs sm:text-sm">
                             Save your card to Apple Wallet or Google Wallet after you join.
+                        </p>
+                        <p class="join-card-body mt-1 text-center text-xs">
+                            Use the same email again later if you ever need to recover your card.
                         </p>
                     </div>
 

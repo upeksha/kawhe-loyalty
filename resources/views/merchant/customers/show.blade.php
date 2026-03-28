@@ -10,7 +10,7 @@
 
     <div class="space-y-4 sm:space-y-6">
         <!-- Summary Cards -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
             <!-- Store Info Card -->
             <x-ui.card class="p-4 sm:p-6">
                 <h3 class="text-base sm:text-lg font-bold mb-3 sm:mb-4 text-stone-900">Store Information</h3>
@@ -51,6 +51,28 @@
                     @if($account->verified_at)
                         <p><strong class="text-stone-700">Verified:</strong> <span class="text-brand-600">{{ $account->verified_at->format('M d, Y') }}</span></p>
                     @endif
+                </div>
+            </x-ui.card>
+
+            <x-ui.card class="p-4 sm:p-6">
+                <h3 class="text-base sm:text-lg font-bold mb-3 sm:mb-4 text-stone-900">Support Snapshot</h3>
+                <div class="space-y-2 text-sm">
+                    <p><strong class="text-stone-700">Manual Code:</strong> <span class="font-mono font-semibold tracking-widest text-stone-900">{{ $account->manual_entry_code ?? '-' }}</span></p>
+                    <p><strong class="text-stone-700">Public Token:</strong> <span class="font-mono text-xs text-stone-600 break-all">{{ $account->public_token }}</span></p>
+                    <p><strong class="text-stone-700">Verification:</strong>
+                        <span class="{{ $account->verified_at ? 'text-emerald-700' : 'text-amber-700' }}">
+                            {{ $account->verified_at ? 'Verified' : 'Not verified' }}
+                        </span>
+                    </p>
+                    <p><strong class="text-stone-700">Card URL:</strong>
+                        <a href="{{ route('card.show', $account->public_token) }}" target="_blank" class="text-brand-600 hover:text-brand-700 underline">Open card</a>
+                    </p>
+                </div>
+                <div class="mt-4 rounded-xl border border-stone-200 bg-stone-50/70 p-4">
+                    <p class="text-xs font-semibold uppercase tracking-wider text-stone-500">Support tip</p>
+                    <p class="mt-2 text-sm leading-relaxed text-stone-600">
+                        If a customer is standing at the counter, the manual code is the fastest fallback. If they are remote, ask for the email address used to join.
+                    </p>
                 </div>
             </x-ui.card>
         </div>
@@ -144,4 +166,3 @@
         </x-ui.card>
     </div>
 </x-merchant-layout>
-
