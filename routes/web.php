@@ -116,6 +116,7 @@ Route::middleware(['auth', App\Http\Middleware\EnsureMerchantHasStore::class])->
     Route::delete('/stores/{store}', [StoreController::class, 'destroy'])->name('stores.destroy');
     Route::get('/stores/{store}/qr', [StoreController::class, 'qr'])->name('stores.qr');
     Route::get('/stores/{store}/qr/pdf', [StoreController::class, 'qrPdf'])->name('stores.qr.pdf');
+    Route::post('/stores/{store}/refresh-wallets', [StoreController::class, 'refreshWallets'])->name('stores.refresh-wallets');
 
     Route::get('/scanner', [ScannerController::class, 'index'])->name('scanner');
     
@@ -124,6 +125,7 @@ Route::middleware(['auth', App\Http\Middleware\EnsureMerchantHasStore::class])->
     Route::get('/customers/{loyaltyAccount}/edit', [MerchantCustomersController::class, 'edit'])->name('customers.edit');
     Route::put('/customers/{loyaltyAccount}', [MerchantCustomersController::class, 'update'])->name('customers.update');
     Route::post('/customers/{loyaltyAccount}/resend-verification', [MerchantCustomersController::class, 'resendVerification'])->name('customers.resend-verification');
+    Route::post('/customers/{loyaltyAccount}/resend-welcome', [MerchantCustomersController::class, 'resendWelcomeEmail'])->name('customers.resend-welcome');
     Route::post('/customers/{loyaltyAccount}/sync-wallet', [MerchantCustomersController::class, 'syncWallet'])->name('customers.sync-wallet');
     Route::get('/support', [SupportLogController::class, 'merchantIndex'])->name('support.index');
 });

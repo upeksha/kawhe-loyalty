@@ -7,6 +7,7 @@ use App\Models\AppleWalletRegistration;
 use App\Models\LoyaltyAccount;
 use App\Models\StampEvent;
 use App\Models\SupportAuditLog;
+use App\Services\Support\MerchantRecoveryService;
 use App\Services\Support\SupportAuditService;
 use Illuminate\Support\Collection;
 use Illuminate\Http\Request;
@@ -15,7 +16,8 @@ use Illuminate\Support\Facades\Auth;
 class MerchantCustomersController extends Controller
 {
     public function __construct(
-        protected SupportAuditService $supportAuditService
+        protected SupportAuditService $supportAuditService,
+        protected MerchantRecoveryService $merchantRecoveryService
     ) {
     }
 
@@ -252,6 +254,27 @@ class MerchantCustomersController extends Controller
         );
 
         return app(CustomerEmailVerificationController::class)->send($request, $loyaltyAccount->public_token);
+    }
+
+    public function resendWelcomeEmail(LoyaltyAccount $loyaltyAccount)
+    {
+        $storeIds = Auth::user()->stores()->pluck('id');
+
+        if (!$storeIds->contains($loyaltyAccount->store_id)) {
+            abort(404, 'Loyalty account not found or you do not have access to it.');
+        }
+
+        try {
+            $this->merchantRecoveryService->resendWelcomeEmail($loyaltyAccount, Auth::id());
+
+            return back()->with('success', 'Welcome email resent. The customer should receive a fresh join and verification message shortly.');
+        } catch (\RuntimeException $e) {
+            return back()->withErrors(['support' => $e->getMessage()]);
+        } catch (\Throwable $e) {
+            report($e);
+
+            return back()->withErrors(['support' => 'The welcome email could not be queued right now. Please try again shortly.']);
+        }
     }
 
     public function syncWallet(LoyaltyAccount $loyaltyAccount)

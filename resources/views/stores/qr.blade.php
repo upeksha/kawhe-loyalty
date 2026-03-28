@@ -116,6 +116,24 @@
                     </ol>
                 </div>
 
+                <div class="mt-4 rounded-xl border border-stone-200 bg-stone-50/80 p-4">
+                    <p class="text-sm font-semibold text-stone-800">Recovery Tools</p>
+                    <p class="mt-2 text-sm leading-relaxed text-stone-600">
+                        Poster and join page previews are always generated from your current branding, so there is no manual rebuild step. If cards already in customer wallets look stale, you can queue a refresh for every card in this store.
+                    </p>
+                    <div class="mt-4 flex flex-wrap gap-2">
+                        <x-ui.button href="{{ route('merchant.stores.qr.pdf', ['store' => $store, 'preview' => 1]) }}" variant="ghost" size="sm" target="_blank">
+                            Open Poster Preview
+                        </x-ui.button>
+                        <form method="POST" action="{{ route('merchant.stores.refresh-wallets', $store) }}">
+                            @csrf
+                            <x-ui.button type="submit" variant="secondary" size="sm">
+                                Queue Wallet Refresh for All Cards
+                            </x-ui.button>
+                        </form>
+                    </div>
+                </div>
+
                 <div class="mt-4 flex flex-wrap gap-2">
                     <x-ui.button href="{{ route('merchant.stores.edit', $store) }}" variant="secondary" size="sm">
                         Review Store Setup

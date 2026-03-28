@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Store;
+use App\Services\Support\MerchantRecoveryService;
 use App\Support\StoreAssets;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
@@ -15,6 +16,11 @@ use SimpleSoftwareIO\QrCode\Facades\QrCode;
 class StoreController extends Controller
 {
     use AuthorizesRequests;
+
+    public function __construct(
+        protected MerchantRecoveryService $merchantRecoveryService
+    ) {
+    }
 
     /**
      * Display a listing of the resource.
@@ -196,6 +202,15 @@ class StoreController extends Controller
         
         $joinUrl = $store->join_url; // short URL /j/{code} when join_short_code is set
         return view('stores.qr', compact('store', 'joinUrl'));
+    }
+
+    public function refreshWallets(Store $store)
+    {
+        $store = Store::queryForUser(Auth::user())->whereKey($store->id)->firstOrFail();
+
+        $queuedCount = $this->merchantRecoveryService->queueStoreWalletRefresh($store, Auth::id());
+
+        return back()->with('success', "Queued wallet refresh for {$queuedCount} card" . ($queuedCount === 1 ? '' : 's') . '.');
     }
 
     /**

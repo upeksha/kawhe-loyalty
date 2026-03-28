@@ -75,6 +75,14 @@
                     </p>
                 </div>
                 <div class="mt-4 flex flex-wrap gap-2">
+                    @if($account->customer->email)
+                        <form method="POST" action="{{ route('merchant.customers.resend-welcome', $account) }}">
+                            @csrf
+                            <x-ui.button type="submit" variant="ghost" size="sm">
+                                Resend Welcome Email
+                            </x-ui.button>
+                        </form>
+                    @endif
                     @if(!$account->verified_at && $account->customer->email)
                         <form method="POST" action="{{ route('merchant.customers.resend-verification', $account) }}">
                             @csrf
