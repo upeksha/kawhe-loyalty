@@ -71,7 +71,7 @@
                     <h1 class="text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight">{{ $store->name }}</h1>
                 @endif
                 <p class="mt-2 sm:mt-3 text-sm sm:text-base join-muted">
-                    Join our loyalty program and start earning rewards!
+                    Join our loyalty program and start earning {{ strtolower($store->reward_title ?: 'rewards') }}.
                 </p>
             </div>
 
@@ -98,6 +98,9 @@
                         <a href="{{ route('join.show', ['slug' => $store->slug, 't' => $token]) }}" class="join-btn-primary w-full flex justify-center items-center py-3.5 px-4 rounded-xl text-sm sm:text-base font-semibold transition focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white" style="--tw-ring-color: {{ $brand }};">
                             Create a new card
                         </a>
+                        <p class="join-card-body mt-2 text-center text-xs sm:text-sm">
+                            Save your card to Apple Wallet or Google Wallet after you join.
+                        </p>
                     </div>
 
                     <template x-if="lastToken">

@@ -5,7 +5,7 @@
         :step="4"
         :totalSteps="5"
         title="Your loyalty card is ready"
-        subtitle="Start collecting customers today."
+        subtitle="You can start collecting customers today. Review the checklist below first so your first launch feels polished and easy to use."
         :backUrl="route('merchant.onboarding.wizard.customer-form')"
     >
         <div class="space-y-8">
@@ -54,7 +54,25 @@
 
                 {{-- How it works --}}
                 <div class="lg:col-span-1">
-                    <div class="sticky top-8 rounded-xl border border-stone-200 bg-stone-50/70 p-5 shadow-sm">
+                    <div class="sticky top-8 space-y-4">
+                        <div class="rounded-xl border border-stone-200 bg-stone-50/70 p-5 shadow-sm">
+                            <p class="text-sm font-semibold text-stone-800 mb-4">Before you share</p>
+                            <ul class="space-y-3 text-sm text-stone-700">
+                                <li class="rounded-lg border border-stone-200 bg-white px-4 py-3">
+                                    <span class="font-medium text-stone-800">Test the join page once yourself</span>
+                                    <p class="mt-1 text-xs leading-relaxed text-stone-500">Make sure the store name, reward wording, and signup fields feel clear on mobile.</p>
+                                </li>
+                                <li class="rounded-lg border border-stone-200 bg-white px-4 py-3">
+                                    <span class="font-medium text-stone-800">Print or save the poster</span>
+                                    <p class="mt-1 text-xs leading-relaxed text-stone-500">Use the PDF so staff can place it near the counter and customers know exactly how to join.</p>
+                                </li>
+                                <li class="rounded-lg border border-stone-200 bg-white px-4 py-3">
+                                    <span class="font-medium text-stone-800">Check wallet branding later if needed</span>
+                                    <p class="mt-1 text-xs leading-relaxed text-stone-500">If you skipped wallet-specific images, Kawhe will still generate a safe branded default presentation.</p>
+                                </li>
+                            </ul>
+                        </div>
+                        <div class="rounded-xl border border-stone-200 bg-stone-50/70 p-5 shadow-sm">
                         <p class="text-sm font-semibold text-stone-800 mb-4">How it works</p>
                         <ol class="space-y-4 text-sm text-stone-700">
                             <li class="flex gap-3">
@@ -70,6 +88,7 @@
                                 <span>You stamp and reward returning customers</span>
                             </li>
                         </ol>
+                        </div>
                     </div>
                 </div>
             </div>

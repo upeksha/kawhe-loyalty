@@ -5,7 +5,7 @@
         :step="5"
         :totalSteps="5"
         title="Launch your digital stamp card"
-        subtitle="You can begin using Kawhe right away — your first 50 customer cards are included."
+        subtitle="You can begin using Kawhe right away. Your first 50 customer cards are included, and the setup you completed gives you a safe starting point for join pages and wallet cards."
         :backUrl="route('merchant.onboarding.wizard.card-ready')"
     >
         <form method="POST" action="{{ route('merchant.onboarding.wizard.complete') }}" id="continue-trial-form">
@@ -17,6 +17,14 @@
                 <p class="text-sm text-stone-600 mt-3 leading-relaxed">
                     You can always add more stores, change branding, or upgrade your plan from the dashboard.
                 </p>
+            </div>
+            <div class="mt-5 rounded-xl border border-stone-200 bg-stone-50/80 p-5">
+                <p class="text-sm font-semibold text-stone-800">What Kawhe already handles for you</p>
+                <ul class="mt-3 space-y-2 text-sm leading-relaxed text-stone-600">
+                    <li>Safe default store colors if you skipped custom branding</li>
+                    <li>Fallback wallet presentation when wallet-specific images are missing</li>
+                    <li>A simple join flow that keeps customer signup light by default</li>
+                </ul>
             </div>
         </form>
 

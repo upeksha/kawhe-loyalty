@@ -8,7 +8,7 @@
         :step="1"
         :totalSteps="5"
         title="Create your first loyalty card"
-        subtitle="Start with the basics for your café's rewards program."
+        subtitle="Start with the basics merchants need to launch quickly: a clear reward, a simple card, and a join flow customers understand at a glance."
     >
 @php
     $defaultRewardTarget = (int) old('reward_target', $store?->reward_target ?? 9);
@@ -47,6 +47,12 @@
                                 <input type="text" id="reward_title" name="reward_title" x-model="rewardTitle" value="{{ old('reward_title', $store?->reward_title ?? 'Free coffee') }}" class="{{ $inputClass }}" placeholder="e.g. Free coffee" required />
                                 <p class="mt-1.5 text-xs text-stone-500">e.g. “Free regular coffee”, “Free pastry”</p>
                                 <x-input-error :messages="$errors->get('reward_title')" class="mt-2" />
+                            </div>
+                            <div class="rounded-xl border border-stone-200 bg-stone-50/80 p-4">
+                                <p class="text-sm font-semibold text-stone-800">Best practice</p>
+                                <p class="mt-1 text-sm leading-relaxed text-stone-600">
+                                    Short, concrete rewards usually convert better than broad ones. “Free regular coffee” or “Free pastry” is easier for customers and staff than a vague reward name.
+                                </p>
                             </div>
                         </div>
                     </x-onboarding-form-section>

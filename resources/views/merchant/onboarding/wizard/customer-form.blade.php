@@ -17,7 +17,7 @@
         :step="3"
         :totalSteps="5"
         title="Choose what customer details to collect"
-        subtitle="Keep sign-up quick. You can always ask for more details later."
+        subtitle="Keep sign-up quick and low-friction. Most merchants get better conversion when the first join is fast and the data request feels reasonable."
         :backUrl="route('merchant.onboarding.wizard.card-design')"
     >
         <form method="POST" action="{{ route('merchant.onboarding.wizard.customer-form.store') }}" id="customer-form-form"
@@ -28,6 +28,17 @@
                     last_name: { enabled: {{ ($config['last_name']['enabled'] ?? false) ? 'true' : 'false' }}, required: {{ ($config['last_name']['required'] ?? false) ? 'true' : 'false' }} },
                     phone: { enabled: {{ ($config['phone']['enabled'] ?? false) ? 'true' : 'false' }}, required: {{ ($config['phone']['required'] ?? false) ? 'true' : 'false' }} },
                     birthday: { enabled: {{ ($config['birthday']['enabled'] ?? false) ? 'true' : 'false' }}, required: {{ ($config['birthday']['required'] ?? false) ? 'true' : 'false' }} }
+                },
+                get optionalFieldCount() {
+                    return ['first_name', 'last_name', 'phone', 'birthday'].filter((key) => this.config[key].enabled).length;
+                },
+                get requiredFieldCount() {
+                    return ['email', 'first_name', 'last_name', 'phone', 'birthday'].filter((key) => this.config[key].required).length;
+                },
+                get signupFrictionLabel() {
+                    if (this.requiredFieldCount <= 1 && this.optionalFieldCount <= 1) return 'Fastest';
+                    if (this.requiredFieldCount <= 2 && this.optionalFieldCount <= 2) return 'Balanced';
+                    return 'Heavier';
                 }
             }"
         >
@@ -99,6 +110,16 @@
                         </div>
                     </details>
                     <div class="hidden sm:block sticky top-8">
+                        <div class="rounded-xl border border-stone-200 bg-stone-50/80 p-5 shadow-sm mb-4">
+                            <p class="text-xs font-semibold text-stone-500 uppercase tracking-wider">Signup guidance</p>
+                            <div class="mt-4 flex items-center justify-between rounded-xl border border-stone-200 bg-white px-4 py-3">
+                                <span class="text-sm text-stone-700">Friction level</span>
+                                <span class="font-semibold" :class="signupFrictionLabel === 'Fastest' ? 'text-emerald-700' : (signupFrictionLabel === 'Balanced' ? 'text-brand-700' : 'text-amber-700')" x-text="signupFrictionLabel"></span>
+                            </div>
+                            <p class="mt-3 text-xs leading-relaxed text-stone-500">
+                                Keep the first join light if you want more signups. You can always collect more detail later at the counter or through follow-up campaigns.
+                            </p>
+                        </div>
                         <p class="text-xs font-semibold text-stone-500 uppercase tracking-wider mb-3">Signup form preview</p>
                         <div class="rounded-xl border border-stone-200 bg-white p-5 shadow-sm" role="status" aria-live="polite">
                             <p class="text-xs text-stone-400 mb-4">What customers will see when they join:</p>

@@ -10,7 +10,7 @@
         :step="2"
         :totalSteps="5"
         title="Make it yours"
-        subtitle="Brand colors and logo for your customer card and join page. Optional: add images for Apple &amp; Google Wallet."
+        subtitle="Choose branding that stays readable across the join page, wallet passes, and the customer card. Optional wallet assets help polish the result, but safe fallbacks are built in."
         :backUrl="route('merchant.onboarding.wizard.store-basics')"
     >
         <form method="POST" action="{{ route('merchant.onboarding.wizard.card-design.store') }}" enctype="multipart/form-data" id="card-design-form"
@@ -99,6 +99,14 @@
                                     These colors are very close together or very light, so wallet and join screens may look washed out. The card will still work, but merchants usually get a clearer result with more contrast between accent and background colors.
                                 </p>
                             </div>
+                            <div class="rounded-xl border border-stone-200 bg-stone-50/80 p-4">
+                                <p class="text-sm font-semibold text-stone-800">Recommended approach</p>
+                                <ul class="mt-2 space-y-2 text-sm leading-relaxed text-stone-600">
+                                    <li>Use a darker background with a brighter accent for the safest wallet and join-page readability.</li>
+                                    <li>If you skip wallet-specific assets, Kawhe falls back to your main logo and clean branded backgrounds.</li>
+                                    <li>Choose colors customers can recognise quickly from the counter or poster, not just on a laptop screen.</li>
+                                </ul>
+                            </div>
                         </div>
                     </x-onboarding-form-section>
 
@@ -116,6 +124,7 @@
                                         <input type="file" id="logo" name="logo" x-ref="logoInput" accept="image/png,image/jpeg,image/jpg,image/webp" class="sr-only" />
                                     </label>
                                     <x-onboarding-helper-note class="mt-1.5">PNG, JPG or WebP, max 2MB. Shown on customer card.</x-onboarding-helper-note>
+                                    <p class="mt-2 text-xs leading-relaxed text-stone-500">Best results usually come from a simple square or circular logo with generous empty space around it.</p>
                                 </div>
                             </div>
                             <x-input-error :messages="$errors->get('logo')" class="mt-2" />
@@ -124,7 +133,7 @@
 
                     <x-onboarding-form-section title="Wallet assets" class="relative">
                         <span class="absolute -top-1 right-0 text-xs font-medium text-stone-500 bg-stone-100 px-2.5 py-1 rounded-lg">Optional</span>
-                        <p class="text-sm text-stone-600 mb-4">For Apple Wallet and Google Wallet passes. Skip if you don’t use wallet passes yet.</p>
+                        <p class="text-sm text-stone-600 mb-4">For Apple Wallet and Google Wallet passes. Skip them for now if you want. Kawhe will use safer built-in fallbacks until you upload polished wallet-specific assets.</p>
                         <div class="space-y-5">
                             <div>
                                 <label for="pass_logo" class="block text-sm font-medium text-stone-700 mb-1.5">Pass logo</label>
