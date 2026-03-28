@@ -69,6 +69,10 @@
                             </li>
                         @endforeach
                     </ul>
+                    <div class="mt-4 rounded-xl border border-stone-200 bg-white p-4">
+                        <p class="text-sm font-semibold text-stone-800">Recommended next step</p>
+                        <p class="mt-2 text-sm leading-relaxed text-stone-600">{{ $recommendedBillingAction }}</p>
+                    </div>
                 </div>
             @endif
 

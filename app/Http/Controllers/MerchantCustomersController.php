@@ -6,6 +6,7 @@ use App\Jobs\UpdateWalletPassJob;
 use App\Models\AppleWalletRegistration;
 use App\Models\LoyaltyAccount;
 use App\Models\StampEvent;
+use Illuminate\Support\Collection;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -82,17 +83,74 @@ class MerchantCustomersController extends Controller
             ->limit(50)
             ->get();
 
+        $recentRegistrations = AppleWalletRegistration::where('loyalty_account_id', $account->id)
+            ->active()
+            ->orderByDesc('last_registered_at')
+            ->limit(5)
+            ->get();
+
         $walletStatus = [
             'active_apple_registrations' => AppleWalletRegistration::where('loyalty_account_id', $account->id)->active()->count(),
             'total_apple_registrations' => AppleWalletRegistration::where('loyalty_account_id', $account->id)->count(),
             'last_registered_at' => AppleWalletRegistration::where('loyalty_account_id', $account->id)->active()->max('last_registered_at'),
             'latest_card_change_at' => $account->updated_at,
         ];
+
+        $walletStatus['next_action'] = $walletStatus['active_apple_registrations'] === 0
+            ? 'No active Apple Wallet device registration is on file yet. Ask the customer to open or re-add the pass, then try a refresh again.'
+            : 'If the customer says the pass looks stale, queue a wallet refresh first, then ask them to reopen Wallet before removing the pass.';
+
+        $supportTimeline = collect();
+
+        foreach ($events->take(10) as $event) {
+            $supportTimeline->push([
+                'title' => $event->type === 'redeem' ? 'Reward redeemed' : 'Stamp update',
+                'detail' => ($event->type === 'redeem'
+                    ? 'Redeem'
+                    : 'Stamp') . ' recorded' . ($event->count ? ' for ' . $event->count : '') . ($event->user ? ' by ' . $event->user->name : ''),
+                'at' => $event->created_at,
+                'tone' => $event->type === 'redeem' ? 'text-accent-700' : 'text-brand-700',
+            ]);
+        }
+
+        if ($account->email_verification_sent_at) {
+            $supportTimeline->push([
+                'title' => 'Verification email sent',
+                'detail' => 'Most recent verification email request for this card.',
+                'at' => $account->email_verification_sent_at,
+                'tone' => 'text-amber-700',
+            ]);
+        }
+
+        if ($account->verified_at) {
+            $supportTimeline->push([
+                'title' => 'Email verified',
+                'detail' => 'The customer can redeem rewards without email verification blocking them.',
+                'at' => $account->verified_at,
+                'tone' => 'text-emerald-700',
+            ]);
+        }
+
+        foreach ($recentRegistrations as $registration) {
+            if ($registration->last_registered_at) {
+                $supportTimeline->push([
+                    'title' => 'Apple Wallet registered',
+                    'detail' => 'A device registered this pass for Apple Wallet updates.',
+                    'at' => $registration->last_registered_at,
+                    'tone' => 'text-stone-700',
+                ]);
+            }
+        }
+
+        $supportTimeline = $supportTimeline
+            ->sortByDesc(fn (array $item) => optional($item['at'])->timestamp ?? 0)
+            ->values();
         
         return view('merchant.customers.show', [
             'account' => $account,
             'events' => $events,
             'walletStatus' => $walletStatus,
+            'supportTimeline' => $supportTimeline,
         ]);
     }
     

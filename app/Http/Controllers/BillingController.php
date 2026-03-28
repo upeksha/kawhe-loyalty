@@ -81,12 +81,21 @@ class BillingController extends Controller
             ],
         ];
 
+        $recommendedBillingAction = !empty(config('cashier.key')) && !empty(config('cashier.secret')) && !empty(config('cashier.price_id'))
+            ? ($subscription === null && !empty($user->stripe_id)
+                ? 'Stripe knows this merchant, but no local subscription is visible yet. Run a sync from Stripe before escalating.'
+                : ((!($stats['can_create_card'] ?? false) && !($stats['is_subscribed'] ?? false))
+                    ? 'New joins are blocked by the free-plan cap. Upgrading is the fastest way to restore signups.'
+                    : 'Billing looks healthy. If a merchant still reports issues, refresh subscription status first, then check Stripe Dashboard.'))
+            : 'Stripe configuration is incomplete. Fix configuration first before testing checkout or sync behaviour.';
+
         return view('billing.index', [
             'stats' => $stats,
             'subscription' => $subscription,
             'stripePriceId' => config('cashier.price_id'),
             'debugInfo' => $debugInfo,
             'billingDiagnostics' => $billingDiagnostics,
+            'recommendedBillingAction' => $recommendedBillingAction,
         ]);
     }
 

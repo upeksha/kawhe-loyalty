@@ -59,6 +59,7 @@ class MerchantCustomersSupportTest extends TestCase
         $response->assertSee('Support Snapshot');
         $response->assertSee('Z9KP');
         $response->assertSee($account->public_token);
+        $response->assertSee('Recent Support Timeline');
     }
 
     public function test_merchant_can_queue_wallet_refresh_from_customer_details(): void

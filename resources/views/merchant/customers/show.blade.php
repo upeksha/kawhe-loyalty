@@ -150,9 +150,41 @@
                 </div>
                 <div>
                     <p class="text-sm text-stone-500 mb-1">Support guidance</p>
-                    <p class="text-sm text-stone-600 leading-relaxed">If a customer says the pass looks stale, queue a wallet refresh first. If Apple stays unchanged, ask them to re-open or re-add the pass.</p>
+                    <p class="text-sm text-stone-600 leading-relaxed">{{ $walletStatus['next_action'] }}</p>
                 </div>
             </div>
+        </x-ui.card>
+
+        <x-ui.card class="p-4 sm:p-6">
+            <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                <div>
+                    <h3 class="text-base sm:text-lg font-bold text-stone-900">Recent Support Timeline</h3>
+                    <p class="mt-1 text-sm text-stone-600">A combined view of card activity, verification, and Apple Wallet registration signals.</p>
+                </div>
+                @if($account->email_verification_sent_at)
+                    <span class="inline-flex items-center rounded-full bg-stone-100 px-3 py-1 text-xs font-semibold text-stone-700">
+                        Verification sent {{ $account->email_verification_sent_at->diffForHumans() }}
+                    </span>
+                @endif
+            </div>
+
+            @if($supportTimeline->isEmpty())
+                <p class="mt-4 text-sm text-stone-500">No support events recorded yet.</p>
+            @else
+                <div class="mt-4 space-y-3">
+                    @foreach($supportTimeline as $item)
+                        <div class="rounded-xl border border-stone-200 bg-stone-50/60 px-4 py-3">
+                            <div class="flex items-start justify-between gap-3">
+                                <div>
+                                    <p class="text-sm font-semibold {{ $item['tone'] }}">{{ $item['title'] }}</p>
+                                    <p class="mt-1 text-sm text-stone-600">{{ $item['detail'] }}</p>
+                                </div>
+                                <p class="text-xs text-stone-500 whitespace-nowrap">{{ $item['at']?->format('M d, Y g:i A') }}</p>
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+            @endif
         </x-ui.card>
 
         <!-- Activity Table -->

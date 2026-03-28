@@ -22,5 +22,6 @@ class BillingDiagnosticsTest extends TestCase
         $response->assertSee('Billing Support Diagnostics');
         $response->assertSee('Stripe customer linked');
         $response->assertSee('Plan allows new joins');
+        $response->assertSee('Recommended next step');
     }
 }
