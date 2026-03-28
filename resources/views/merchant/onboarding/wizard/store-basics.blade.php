@@ -14,7 +14,7 @@
     $defaultRewardTarget = (int) old('reward_target', $store?->reward_target ?? 9);
     $defaultRewardTitle = old('reward_title', $store?->reward_title ?? 'Free coffee');
 @endphp
-        <form method="POST" action="{{ route('merchant.onboarding.wizard.store-basics.store') }}" id="store-basics-form" x-data="{ rewardTarget: {{ $defaultRewardTarget }}, rewardTitle: {{ json_encode($defaultRewardTitle) }} }">
+        <form method="POST" action="{{ route('merchant.onboarding.wizard.store-basics.store') }}" id="store-basics-form" x-data="{ storeName: {{ json_encode(old('name', $store?->name ?? '')) }}, rewardTarget: {{ $defaultRewardTarget }}, rewardTitle: {{ json_encode($defaultRewardTitle) }} }">
             @csrf
             <x-form-error-summary form-id="store-basics-form" />
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
@@ -23,7 +23,7 @@
                         <div class="space-y-5">
                             <div>
                                 <label for="name" class="block text-sm font-medium text-stone-700 mb-1.5">Store name</label>
-                                <x-ui.input type="text" id="name" name="name" value="{{ old('name', $store?->name ?? '') }}" class="{{ $inputClass }}" required />
+                                <x-ui.input type="text" id="name" name="name" x-model="storeName" value="{{ old('name', $store?->name ?? '') }}" class="{{ $inputClass }}" required />
                                 <x-input-error :messages="$errors->get('name')" class="mt-2" />
                             </div>
                             <div>
@@ -65,6 +65,24 @@
                         </div>
                     </details>
                     <div class="hidden sm:block sticky top-8">
+                        <div class="rounded-2xl border border-stone-200 bg-stone-50/80 p-5 shadow-sm mb-4">
+                            <p class="text-xs font-semibold uppercase tracking-wider text-stone-500">Setup status</p>
+                            <ul class="mt-4 space-y-3 text-sm">
+                                <li class="flex items-start justify-between gap-3">
+                                    <span class="text-stone-700">Store name added</span>
+                                    <span class="font-medium" :class="storeName?.trim() ? 'text-emerald-700' : 'text-stone-500'" x-text="storeName?.trim() ? 'Ready' : 'Needed'"></span>
+                                </li>
+                                <li class="flex items-start justify-between gap-3">
+                                    <span class="text-stone-700">Reward target set</span>
+                                    <span class="font-medium" :class="rewardTarget > 0 ? 'text-emerald-700' : 'text-stone-500'" x-text="rewardTarget > 0 ? 'Ready' : 'Needed'"></span>
+                                </li>
+                                <li class="flex items-start justify-between gap-3">
+                                    <span class="text-stone-700">Reward title named</span>
+                                    <span class="font-medium" :class="rewardTitle?.trim() ? 'text-emerald-700' : 'text-stone-500'" x-text="rewardTitle?.trim() ? 'Ready' : 'Needed'"></span>
+                                </li>
+                            </ul>
+                            <p class="mt-4 text-xs leading-relaxed text-stone-500">Once these are ready, the next step is branding and wallet styling.</p>
+                        </div>
                         <p class="text-xs font-semibold text-stone-500 uppercase tracking-wider mb-3">What customers will see</p>
                         <div class="rounded-2xl bg-white border border-stone-200 p-6 shadow-lg shadow-stone-200/30" role="status" aria-live="polite">
                             <p class="text-lg font-semibold text-stone-800 leading-snug" x-text="'Buy ' + (rewardTarget || 9) + ', get 1 free'"></p>

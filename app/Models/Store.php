@@ -37,6 +37,8 @@ class Store extends Model
     public const ONBOARDING_STEP_CUSTOMER_FORM = 'customer_form';
     public const ONBOARDING_STEP_CARD_READY = 'card_ready';
     public const ONBOARDING_STEP_CONTINUE_TRIAL = 'continue_trial';
+    public const DEFAULT_BRAND_COLOR = '#0EA5E9';
+    public const DEFAULT_BACKGROUND_COLOR = '#1F2937';
 
     protected $fillable = [
         'name',
@@ -75,6 +77,15 @@ class Store extends Model
             }
             if (empty($store->join_short_code)) {
                 $store->join_short_code = self::generateJoinShortCode();
+            }
+            if (empty($store->brand_color)) {
+                $store->brand_color = self::DEFAULT_BRAND_COLOR;
+            }
+            if (empty($store->background_color)) {
+                $store->background_color = self::DEFAULT_BACKGROUND_COLOR;
+            }
+            if (empty($store->registration_form_config)) {
+                $store->registration_form_config = self::defaultRegistrationFormConfig();
             }
         });
 

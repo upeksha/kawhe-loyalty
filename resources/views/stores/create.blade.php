@@ -34,7 +34,42 @@
                             bgColor: @js($bgColor),
                             logoPreview: null,
                             passLogoPreview: null,
-                            passHeroPreview: null
+                            passHeroPreview: null,
+                            hexToRgb(hex) {
+                                const cleaned = (hex || '').replace('#', '');
+                                if (cleaned.length !== 6) return null;
+                                const value = parseInt(cleaned, 16);
+                                if (Number.isNaN(value)) return null;
+                                return {
+                                    r: (value >> 16) & 255,
+                                    g: (value >> 8) & 255,
+                                    b: value & 255,
+                                };
+                            },
+                            luminance(hex) {
+                                const rgb = this.hexToRgb(hex);
+                                if (!rgb) return 0;
+                                const convert = (channel) => {
+                                    const normalized = channel / 255;
+                                    return normalized <= 0.03928
+                                        ? normalized / 12.92
+                                        : Math.pow((normalized + 0.055) / 1.055, 2.4);
+                                };
+                                return (0.2126 * convert(rgb.r)) + (0.7152 * convert(rgb.g)) + (0.0722 * convert(rgb.b));
+                            },
+                            contrastRatio(a, b) {
+                                const l1 = this.luminance(a);
+                                const l2 = this.luminance(b);
+                                const lighter = Math.max(l1, l2);
+                                const darker = Math.min(l1, l2);
+                                return (lighter + 0.05) / (darker + 0.05);
+                            },
+                            get hasLowContrastPreview() {
+                                return this.contrastRatio(this.brandColor, this.bgColor) < 2.4;
+                            },
+                            get hasVeryLightBackground() {
+                                return this.luminance(this.bgColor) > 0.9;
+                            }
                         }"
                         x-init="
                             $refs.brandColor.addEventListener('input', e => { brandColor = e.target.value; $refs.brandColorText.value = e.target.value; });
@@ -102,6 +137,12 @@
                                             <x-onboarding-helper-note>Background of the join page and card.</x-onboarding-helper-note>
                                             <x-input-error :messages="$errors->get('background_color')" class="mt-2" />
                                         </div>
+                                        <div x-show="hasLowContrastPreview || hasVeryLightBackground" x-cloak class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                                            <p class="font-semibold">Preview warning</p>
+                                            <p class="mt-1 leading-relaxed">
+                                                These colors are very close together or very light, so wallet and join screens may lose contrast. The store will still save, but merchants usually get a cleaner result with more separation between the accent and background colors.
+                                            </p>
+                                        </div>
                                     </div>
                                 </x-onboarding-form-section>
 
@@ -166,6 +207,32 @@
                             <div class="sm:col-span-2">
                                 <div class="sticky top-8 space-y-4">
                                     <x-wallet-pass-preview />
+                                    <div class="rounded-xl border border-stone-200 bg-stone-50/80 p-5 shadow-sm">
+                                        <p class="text-xs font-semibold uppercase tracking-wider text-stone-500">Setup status</p>
+                                        <ul class="mt-4 space-y-3 text-sm">
+                                            <li class="flex items-start justify-between gap-3">
+                                                <span class="text-stone-700">Store basics</span>
+                                                <span class="font-medium" :class="(storeName?.trim() && rewardTarget > 0 && rewardTitle?.trim()) ? 'text-emerald-700' : 'text-stone-500'" x-text="(storeName?.trim() && rewardTarget > 0 && rewardTitle?.trim()) ? 'Ready' : 'Needed'"></span>
+                                            </li>
+                                            <li class="flex items-start justify-between gap-3">
+                                                <span class="text-stone-700">Brand colors</span>
+                                                <span class="font-medium" :class="(brandColor && bgColor) ? 'text-emerald-700' : 'text-stone-500'" x-text="(brandColor && bgColor) ? 'Ready' : 'Needed'"></span>
+                                            </li>
+                                            <li class="flex items-start justify-between gap-3">
+                                                <span class="text-stone-700">Store logo</span>
+                                                <span class="font-medium" :class="logoPreview ? 'text-emerald-700' : 'text-amber-700'" x-text="logoPreview ? 'Ready' : 'Optional'"></span>
+                                            </li>
+                                            <li class="flex items-start justify-between gap-3">
+                                                <span class="text-stone-700">Wallet pass assets</span>
+                                                <span class="font-medium" :class="(passLogoPreview || passHeroPreview) ? 'text-emerald-700' : 'text-amber-700'" x-text="(passLogoPreview || passHeroPreview) ? 'Ready' : 'Optional'"></span>
+                                            </li>
+                                            <li class="flex items-start justify-between gap-3">
+                                                <span class="text-stone-700">Visual contrast</span>
+                                                <span class="font-medium" :class="(hasLowContrastPreview || hasVeryLightBackground) ? 'text-amber-700' : 'text-emerald-700'" x-text="(hasLowContrastPreview || hasVeryLightBackground) ? 'Review' : 'Ready'"></span>
+                                            </li>
+                                        </ul>
+                                        <p class="mt-4 text-xs leading-relaxed text-stone-500">The store can still be created without the optional items. This checklist is only here to help merchants launch with a cleaner customer-facing result.</p>
+                                    </div>
                                     <div class="rounded-xl bg-stone-50/80 border border-stone-200/80 p-5">
                                         <p class="text-sm font-semibold text-stone-800">What merchants are seeing</p>
                                         <ul class="mt-3 space-y-2 text-sm text-stone-600">

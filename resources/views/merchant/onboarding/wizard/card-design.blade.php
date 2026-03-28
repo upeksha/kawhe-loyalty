@@ -22,7 +22,42 @@
             bgColor: '{{ $bgColor }}',
             logoPreview: '{{ $store->logo_url ?? '' }}',
             passLogoPreview: '{{ $store->pass_logo_url ?? '' }}',
-            passHeroPreview: '{{ $store->pass_hero_image_url ?? '' }}'
+            passHeroPreview: '{{ $store->pass_hero_image_url ?? '' }}',
+            hexToRgb(hex) {
+                const cleaned = (hex || '').replace('#', '');
+                if (cleaned.length !== 6) return null;
+                const value = parseInt(cleaned, 16);
+                if (Number.isNaN(value)) return null;
+                return {
+                    r: (value >> 16) & 255,
+                    g: (value >> 8) & 255,
+                    b: value & 255,
+                };
+            },
+            luminance(hex) {
+                const rgb = this.hexToRgb(hex);
+                if (!rgb) return 0;
+                const convert = (channel) => {
+                    const normalized = channel / 255;
+                    return normalized <= 0.03928
+                        ? normalized / 12.92
+                        : Math.pow((normalized + 0.055) / 1.055, 2.4);
+                };
+                return (0.2126 * convert(rgb.r)) + (0.7152 * convert(rgb.g)) + (0.0722 * convert(rgb.b));
+            },
+            contrastRatio(a, b) {
+                const l1 = this.luminance(a);
+                const l2 = this.luminance(b);
+                const lighter = Math.max(l1, l2);
+                const darker = Math.min(l1, l2);
+                return (lighter + 0.05) / (darker + 0.05);
+            },
+            get hasLowContrastPreview() {
+                return this.contrastRatio(this.brandColor, this.bgColor) < 2.4;
+            },
+            get hasVeryLightBackground() {
+                return this.luminance(this.bgColor) > 0.9;
+            }
         }"
         x-init="
             $refs.brandColor && $refs.brandColor.addEventListener('input', e => { brandColor = e.target.value; $refs.brandColorText && ($refs.brandColorText.value = e.target.value); });
@@ -57,6 +92,12 @@
                                 </div>
                                 <x-onboarding-helper-note id="background_color_note">Background of the join page and card.</x-onboarding-helper-note>
                                 <x-input-error :messages="$errors->get('background_color')" class="mt-2" />
+                            </div>
+                            <div x-show="hasLowContrastPreview || hasVeryLightBackground" x-cloak class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                                <p class="font-semibold">Preview warning</p>
+                                <p class="mt-1 leading-relaxed">
+                                    These colors are very close together or very light, so wallet and join screens may look washed out. The card will still work, but merchants usually get a clearer result with more contrast between accent and background colors.
+                                </p>
                             </div>
                         </div>
                     </x-onboarding-form-section>
@@ -131,6 +172,32 @@
                     </details>
                     <div class="hidden sm:block sticky top-8">
                         <x-wallet-pass-preview />
+                        <div class="mt-4 rounded-2xl border border-stone-200 bg-stone-50/80 p-5 shadow-sm">
+                            <p class="text-xs font-semibold uppercase tracking-wider text-stone-500">Setup status</p>
+                            <ul class="mt-4 space-y-3 text-sm">
+                                <li class="flex items-start justify-between gap-3">
+                                    <span class="text-stone-700">Brand accent chosen</span>
+                                    <span class="font-medium" :class="brandColor ? 'text-emerald-700' : 'text-stone-500'" x-text="brandColor ? 'Ready' : 'Needed'"></span>
+                                </li>
+                                <li class="flex items-start justify-between gap-3">
+                                    <span class="text-stone-700">Background chosen</span>
+                                    <span class="font-medium" :class="bgColor ? 'text-emerald-700' : 'text-stone-500'" x-text="bgColor ? 'Ready' : 'Needed'"></span>
+                                </li>
+                                <li class="flex items-start justify-between gap-3">
+                                    <span class="text-stone-700">Store logo</span>
+                                    <span class="font-medium" :class="logoPreview ? 'text-emerald-700' : 'text-amber-700'" x-text="logoPreview ? 'Ready' : 'Optional'"></span>
+                                </li>
+                                <li class="flex items-start justify-between gap-3">
+                                    <span class="text-stone-700">Wallet pass assets</span>
+                                    <span class="font-medium" :class="(passLogoPreview || passHeroPreview) ? 'text-emerald-700' : 'text-amber-700'" x-text="(passLogoPreview || passHeroPreview) ? 'Ready' : 'Optional'"></span>
+                                </li>
+                                <li class="flex items-start justify-between gap-3">
+                                    <span class="text-stone-700">Visual contrast</span>
+                                    <span class="font-medium" :class="(hasLowContrastPreview || hasVeryLightBackground) ? 'text-amber-700' : 'text-emerald-700'" x-text="(hasLowContrastPreview || hasVeryLightBackground) ? 'Review' : 'Ready'"></span>
+                                </li>
+                            </ul>
+                            <p class="mt-4 text-xs leading-relaxed text-stone-500">This does not block saving. It is here to help merchants avoid weak branding combinations before customers see the card.</p>
+                        </div>
                         @if($store->pass_logo_path || $store->pass_hero_image_path)
                             <p class="mt-3 text-xs text-stone-500 flex items-center gap-1.5">
                                 <span class="inline-flex items-center gap-1 rounded-md bg-stone-200 px-1.5 py-0.5">Apple Wallet</span>
