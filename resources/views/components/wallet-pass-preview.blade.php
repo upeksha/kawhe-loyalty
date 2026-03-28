@@ -2,11 +2,15 @@
     $fallbackHeroUrl = asset('images/wallet-preview-hero.svg');
 @endphp
 
-<div class="space-y-3" role="status" aria-live="polite">
+<div class="space-y-3" role="status" aria-live="polite" x-data="{ previewMode: 'collecting' }">
     <div class="flex items-center justify-between gap-3">
         <div>
             <p class="text-xs font-semibold text-stone-500 uppercase tracking-wider">Wallet preview</p>
             <p class="mt-1 text-sm text-stone-600">Apple Wallet-style front card preview.</p>
+        </div>
+        <div class="inline-flex rounded-xl border border-stone-200 bg-white p-1 shadow-sm">
+            <button type="button" @click="previewMode = 'collecting'" class="rounded-lg px-3 py-1.5 text-xs font-medium transition-colors" :class="previewMode === 'collecting' ? 'bg-stone-900 text-white' : 'text-stone-600 hover:bg-stone-50'">Collecting</button>
+            <button type="button" @click="previewMode = 'ready'" class="rounded-lg px-3 py-1.5 text-xs font-medium transition-colors" :class="previewMode === 'ready' ? 'bg-stone-900 text-white' : 'text-stone-600 hover:bg-stone-50'">Reward ready</button>
         </div>
     </div>
 
@@ -31,7 +35,7 @@
                 <div class="absolute inset-0 bg-[linear-gradient(to_bottom,rgba(15,23,42,0.04),rgba(15,23,42,0.16))]"></div>
                 <div class="absolute inset-x-0 top-9 z-10 flex items-center justify-center gap-3 px-5">
                     <template x-for="stamp in Array.from({ length: Math.max(Number(rewardTarget) || 1, 1) }, (_, index) => index + 1)" :key="`apple-stamp-${stamp}`">
-                        <span class="h-10 w-10 rounded-full border-[4px] shadow-[0_1px_8px_rgba(0,0,0,0.08)]" :class="stamp <= Math.min(2, Math.max(Number(rewardTarget) || 1, 1)) ? 'bg-white border-white' : 'bg-transparent border-white/95'"></span>
+                        <span class="h-10 w-10 rounded-full border-[4px] shadow-[0_1px_8px_rgba(0,0,0,0.08)]" :class="previewMode === 'ready' || stamp <= Math.min(2, Math.max(Number(rewardTarget) || 1, 1)) ? 'bg-white border-white' : 'bg-transparent border-white/95'"></span>
                     </template>
                 </div>
             </div>
@@ -44,7 +48,7 @@
                     </div>
                     <div class="min-w-0 text-left">
                         <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/65">Status</p>
-                        <p class="truncate pt-1 text-[2.35rem] font-light leading-none" x-text="`${Math.min(2, Math.max(Number(rewardTarget) || 1, 1))}/${Math.max(Number(rewardTarget) || 1, 1)} stamps`"></p>
+                        <p class="truncate pt-1 text-[2.35rem] font-light leading-none" x-text="previewMode === 'ready' ? 'Reward ready' : `${Math.min(2, Math.max(Number(rewardTarget) || 1, 1))}/${Math.max(Number(rewardTarget) || 1, 1)} stamps`"></p>
                     </div>
                 </div>
             </div>

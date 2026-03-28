@@ -29,6 +29,31 @@
                     phone: { enabled: {{ ($config['phone']['enabled'] ?? false) ? 'true' : 'false' }}, required: {{ ($config['phone']['required'] ?? false) ? 'true' : 'false' }} },
                     birthday: { enabled: {{ ($config['birthday']['enabled'] ?? false) ? 'true' : 'false' }}, required: {{ ($config['birthday']['required'] ?? false) ? 'true' : 'false' }} }
                 },
+                applyPreset(preset) {
+                    const presets = {
+                        fastest: {
+                            first_name: { enabled: false, required: false },
+                            last_name: { enabled: false, required: false },
+                            phone: { enabled: false, required: false },
+                            birthday: { enabled: false, required: false },
+                        },
+                        balanced: {
+                            first_name: { enabled: true, required: false },
+                            last_name: { enabled: false, required: false },
+                            phone: { enabled: false, required: false },
+                            birthday: { enabled: true, required: false },
+                        },
+                        marketing: {
+                            first_name: { enabled: true, required: true },
+                            last_name: { enabled: false, required: false },
+                            phone: { enabled: true, required: false },
+                            birthday: { enabled: true, required: false },
+                        },
+                    };
+                    Object.entries(presets[preset]).forEach(([key, value]) => {
+                        this.config[key] = { ...value };
+                    });
+                },
                 get optionalFieldCount() {
                     return ['first_name', 'last_name', 'phone', 'birthday'].filter((key) => this.config[key].enabled).length;
                 },
@@ -46,6 +71,15 @@
             <x-form-error-summary form-id="customer-form-form" />
             <div class="grid grid-cols-1 sm:grid-cols-5 gap-6">
                 <div class="sm:col-span-3 space-y-6">
+                    <div class="rounded-xl border border-stone-200 bg-stone-50/80 p-5">
+                        <p class="text-sm font-semibold text-stone-800">Quick presets</p>
+                        <div class="mt-3 flex flex-wrap gap-2">
+                            <button type="button" @click="applyPreset('fastest')" class="inline-flex items-center rounded-xl border border-stone-300 bg-white px-3 py-2 text-sm font-medium text-stone-700 hover:bg-stone-50 transition-colors">Fastest signup</button>
+                            <button type="button" @click="applyPreset('balanced')" class="inline-flex items-center rounded-xl border border-stone-300 bg-white px-3 py-2 text-sm font-medium text-stone-700 hover:bg-stone-50 transition-colors">Balanced</button>
+                            <button type="button" @click="applyPreset('marketing')" class="inline-flex items-center rounded-xl border border-stone-300 bg-white px-3 py-2 text-sm font-medium text-stone-700 hover:bg-stone-50 transition-colors">Marketing-friendly</button>
+                        </div>
+                        <p class="mt-2 text-xs text-stone-500">These presets only change the form switches on this step. You can still fine-tune every field before saving.</p>
+                    </div>
                     <div class="rounded-xl border border-amber-200/80 bg-amber-50/80 p-5">
                         <p class="text-sm font-semibold text-amber-900">Recommended for cafés</p>
                         <p class="text-sm text-amber-800/90 mt-1 leading-relaxed">Email (required), First name (optional), Birthday (optional). Shorter forms usually get more signups.</p>

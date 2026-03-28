@@ -14,7 +14,23 @@
     $defaultRewardTarget = (int) old('reward_target', $store?->reward_target ?? 9);
     $defaultRewardTitle = old('reward_title', $store?->reward_title ?? 'Free coffee');
 @endphp
-        <form method="POST" action="{{ route('merchant.onboarding.wizard.store-basics.store') }}" id="store-basics-form" x-data="{ storeName: {{ json_encode(old('name', $store?->name ?? '')) }}, rewardTarget: {{ $defaultRewardTarget }}, rewardTitle: {{ json_encode($defaultRewardTitle) }} }">
+        <form method="POST" action="{{ route('merchant.onboarding.wizard.store-basics.store') }}" id="store-basics-form" x-data="{
+            storeName: {{ json_encode(old('name', $store?->name ?? '')) }},
+            rewardTarget: {{ $defaultRewardTarget }},
+            rewardTitle: {{ json_encode($defaultRewardTitle) }},
+            applyPreset(preset) {
+                if (preset === 'classic') {
+                    this.rewardTarget = 9;
+                    this.rewardTitle = 'Free coffee';
+                } else if (preset === 'repeat-visits') {
+                    this.rewardTarget = 6;
+                    this.rewardTitle = 'Free regular coffee';
+                } else if (preset === 'higher-ticket') {
+                    this.rewardTarget = 10;
+                    this.rewardTitle = 'Free brunch item';
+                }
+            }
+        }">
             @csrf
             <x-form-error-summary form-id="store-basics-form" />
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
@@ -36,6 +52,15 @@
 
                     <x-onboarding-form-section title="Reward setup">
                         <div class="space-y-5">
+                            <div>
+                                <p class="block text-sm font-medium text-stone-700 mb-2">Quick presets</p>
+                                <div class="flex flex-wrap gap-2">
+                                    <button type="button" @click="applyPreset('classic')" class="inline-flex items-center rounded-xl border border-stone-300 bg-stone-50 px-3 py-2 text-sm font-medium text-stone-700 hover:bg-stone-100 transition-colors">Classic coffee card</button>
+                                    <button type="button" @click="applyPreset('repeat-visits')" class="inline-flex items-center rounded-xl border border-stone-300 bg-stone-50 px-3 py-2 text-sm font-medium text-stone-700 hover:bg-stone-100 transition-colors">Fast repeat visits</button>
+                                    <button type="button" @click="applyPreset('higher-ticket')" class="inline-flex items-center rounded-xl border border-stone-300 bg-stone-50 px-3 py-2 text-sm font-medium text-stone-700 hover:bg-stone-100 transition-colors">Higher-ticket reward</button>
+                                </div>
+                                <p class="mt-2 text-xs text-stone-500">These only fill the fields for you. You can still customise everything before saving.</p>
+                            </div>
                             <div>
                                 <label for="reward_target" class="block text-sm font-medium text-stone-700 mb-1.5">Stamps needed for reward</label>
                                 <input type="number" id="reward_target" name="reward_target" x-model.number="rewardTarget" value="{{ old('reward_target', $store?->reward_target ?? 9) }}" min="1" class="{{ $inputClass }}" required />
