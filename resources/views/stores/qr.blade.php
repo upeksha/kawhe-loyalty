@@ -36,6 +36,13 @@
                 'hint' => 'New customers can only join while your current plan still allows more cards.',
             ],
         ];
+        $launchScore = collect($launchChecks)->where('ready', true)->count();
+        $launchLabel = $launchScore >= count($launchChecks)
+            ? 'Good to launch'
+            : ($launchScore >= 3 ? 'Launchable, but could be improved' : 'Needs review');
+        $launchTone = $launchScore >= count($launchChecks)
+            ? 'bg-emerald-100 text-emerald-700'
+            : ($launchScore >= 3 ? 'bg-amber-100 text-amber-700' : 'bg-accent-100 text-accent-700');
     @endphp
 
     <div class="max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -80,10 +87,11 @@
                         <h3 class="text-base font-bold text-stone-900">Store Launch Checklist</h3>
                         <p class="mt-1 text-sm text-stone-600">Review these before you print or publish this QR code.</p>
                     </div>
-                    <span class="inline-flex items-center rounded-full bg-stone-100 px-3 py-1 text-xs font-semibold text-stone-700">
-                        {{ collect($launchChecks)->where('ready', true)->count() }}/{{ count($launchChecks) }}
+                    <span class="inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold {{ $launchTone }}">
+                        {{ $launchLabel }}
                     </span>
                 </div>
+                <p class="mt-3 text-sm text-stone-600">{{ $launchScore }}/{{ count($launchChecks) }} launch checks are in a strong place.</p>
 
                 <ul class="mt-4 space-y-3 text-sm">
                     @foreach($launchChecks as $check)
@@ -99,12 +107,24 @@
                     @endforeach
                 </ul>
 
+                <div class="mt-4 rounded-xl border border-stone-200 bg-white p-4">
+                    <p class="text-sm font-semibold text-stone-800">Before you print or share</p>
+                    <ol class="mt-2 space-y-2 text-sm leading-relaxed text-stone-600 list-decimal list-inside">
+                        <li>Open the join page once yourself and check the logo, colors, and reward copy.</li>
+                        <li>Save one test card to Apple Wallet or Google Wallet to confirm the brand feels right.</li>
+                        <li>Make sure your plan still has room for new joins so customers are not blocked.</li>
+                    </ol>
+                </div>
+
                 <div class="mt-4 flex flex-wrap gap-2">
                     <x-ui.button href="{{ route('merchant.stores.edit', $store) }}" variant="secondary" size="sm">
                         Review Store Setup
                     </x-ui.button>
                     <x-ui.button href="{{ route('billing.index') }}" variant="ghost" size="sm">
                         Review Billing
+                    </x-ui.button>
+                    <x-ui.button href="{{ $joinUrl }}" variant="ghost" size="sm" target="_blank">
+                        Open Join Page
                     </x-ui.button>
                 </div>
             </x-ui.card>

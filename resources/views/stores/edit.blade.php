@@ -12,6 +12,20 @@
         $billingReady = isset($usageStats)
             ? (bool) ($usageStats['can_create_card'] ?? false)
             : true;
+        $launchChecks = [
+            !empty($store->reward_title) && (int) ($store->reward_target ?? 0) > 0,
+            !empty($store->brand_color) && !empty($store->background_color),
+            !empty($store->logo_path),
+            !empty($store->pass_logo_path) || !empty($store->pass_hero_image_path),
+            $billingReady,
+        ];
+        $launchScore = collect($launchChecks)->filter()->count();
+        $launchLabel = $launchScore >= 5
+            ? 'Good to launch'
+            : ($launchScore >= 3 ? 'Launchable, but could be improved' : 'Needs review');
+        $launchTone = $launchScore >= 5
+            ? 'bg-emerald-100 text-emerald-700'
+            : ($launchScore >= 3 ? 'bg-amber-100 text-amber-700' : 'bg-accent-100 text-accent-700');
     @endphp
 
     <div class="max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -321,6 +335,20 @@
             <x-ui.card class="p-5">
                 <div class="flex items-start justify-between gap-3">
                     <div>
+                        <h3 class="text-base font-bold text-stone-900">Launch Quality</h3>
+                        <p class="mt-1 text-sm text-stone-600">A quick overall read on whether this store feels ready to share publicly.</p>
+                    </div>
+                    <span class="inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold {{ $launchTone }}">
+                        {{ $launchLabel }}
+                    </span>
+                </div>
+                <p class="mt-4 text-sm text-stone-600">{{ $launchScore }}/5 launch signals are in a strong place.</p>
+                <p class="mt-3 text-xs leading-relaxed text-stone-500">This score is guidance only. It helps merchants catch branding or plan issues before they print posters or publish the join link.</p>
+            </x-ui.card>
+
+            <x-ui.card class="p-5">
+                <div class="flex items-start justify-between gap-3">
+                    <div>
                         <h3 class="text-base font-bold text-stone-900">Wallet Readiness</h3>
                         <p class="mt-1 text-sm text-stone-600">Check whether this store is visually ready for Apple Wallet and Google Wallet.</p>
                     </div>
@@ -391,6 +419,15 @@
                         Open QR page
                     </x-ui.button>
                 </div>
+            </x-ui.card>
+
+            <x-ui.card class="p-5">
+                <h3 class="text-base font-bold text-stone-900">Asset guidance</h3>
+                <ul class="mt-4 space-y-3 text-sm leading-relaxed text-stone-600">
+                    <li>Use a clean logo with space around it so it still reads at wallet size.</li>
+                    <li>Choose one strong hero image rather than a busy collage with small text.</li>
+                    <li>If you only upload one thing, make it the store logo. It improves the most screens at once.</li>
+                </ul>
             </x-ui.card>
         </div>
     </div>

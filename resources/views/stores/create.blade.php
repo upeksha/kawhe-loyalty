@@ -64,6 +64,25 @@
                                 const darker = Math.min(l1, l2);
                                 return (lighter + 0.05) / (darker + 0.05);
                             },
+                            get launchScore() {
+                                let score = 0;
+                                if (this.storeName?.trim() && this.rewardTarget > 0 && this.rewardTitle?.trim()) score++;
+                                if (this.brandColor && this.bgColor) score++;
+                                if (this.logoPreview) score++;
+                                if (this.passLogoPreview || this.passHeroPreview) score++;
+                                if (!this.hasLowContrastPreview && !this.hasVeryLightBackground) score++;
+                                return score;
+                            },
+                            get launchLabel() {
+                                if (this.launchScore >= 5) return 'Good to launch';
+                                if (this.launchScore >= 3) return 'Launchable, but could be improved';
+                                return 'Needs review';
+                            },
+                            get launchTone() {
+                                if (this.launchScore >= 5) return 'bg-emerald-100 text-emerald-700';
+                                if (this.launchScore >= 3) return 'bg-amber-100 text-amber-700';
+                                return 'bg-accent-100 text-accent-700';
+                            },
                             get hasLowContrastPreview() {
                                 return this.contrastRatio(this.brandColor, this.bgColor) < 2.4;
                             },
@@ -143,6 +162,14 @@
                                                 These colors are very close together or very light, so wallet and join screens may lose contrast. The store will still save, but merchants usually get a cleaner result with more separation between the accent and background colors.
                                             </p>
                                         </div>
+                                        <div class="rounded-xl border border-stone-200 bg-stone-50/80 p-4">
+                                            <p class="text-sm font-semibold text-stone-800">Recommended approach</p>
+                                            <ul class="mt-2 space-y-2 text-sm leading-relaxed text-stone-600">
+                                                <li>Use a background that feels clearly darker or lighter than your accent so wallet text stays readable.</li>
+                                                <li>If you are unsure, keep your accent bright and your background dark. That is the safest launch combination.</li>
+                                                <li>Wallet-specific images are optional. A strong logo plus clean colors is enough to launch well.</li>
+                                            </ul>
+                                        </div>
                                     </div>
                                 </x-onboarding-form-section>
 
@@ -160,6 +187,7 @@
                                                     <input type="file" id="logo" name="logo" x-ref="logoInput" accept="image/png,image/jpeg,image/jpg,image/webp" class="sr-only" />
                                                 </label>
                                                 <x-onboarding-helper-note class="mt-1.5">PNG, JPG or WebP, max 2MB. Shown on customer card.</x-onboarding-helper-note>
+                                                <p class="mt-2 text-xs leading-relaxed text-stone-500">Simple square or circular logos with breathing room usually look best on wallet passes and posters.</p>
                                             </div>
                                         </div>
                                         <x-input-error :messages="$errors->get('logo')" class="mt-2" />
@@ -198,6 +226,7 @@
                                                 </label>
                                             </div>
                                             <x-onboarding-helper-note>Banner. Recommended: 640×180px (Apple) or 640×200px (Google).</x-onboarding-helper-note>
+                                            <p class="mt-2 text-xs leading-relaxed text-stone-500">Choose one strong scene or texture. Busy hero images with tiny text tend to look weak on the pass.</p>
                                             <x-input-error :messages="$errors->get('pass_hero_image')" class="mt-2" />
                                         </div>
                                     </div>
@@ -208,7 +237,15 @@
                                 <div class="sticky top-8 space-y-4">
                                     <x-wallet-pass-preview />
                                     <div class="rounded-xl border border-stone-200 bg-stone-50/80 p-5 shadow-sm">
-                                        <p class="text-xs font-semibold uppercase tracking-wider text-stone-500">Setup status</p>
+                                        <div class="flex items-start justify-between gap-3">
+                                            <div>
+                                                <p class="text-xs font-semibold uppercase tracking-wider text-stone-500">Launch quality</p>
+                                                <p class="mt-1 text-sm text-stone-600">A quick read on whether this store will look ready to customers on day one.</p>
+                                            </div>
+                                            <span class="inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold" :class="launchTone" x-text="launchLabel"></span>
+                                        </div>
+                                        <p class="mt-3 text-xs text-stone-500" x-text="launchScore + ' of 5 launch signals are in a strong place.'"></p>
+                                        <p class="mt-4 text-xs font-semibold uppercase tracking-wider text-stone-500">Setup status</p>
                                         <ul class="mt-4 space-y-3 text-sm">
                                             <li class="flex items-start justify-between gap-3">
                                                 <span class="text-stone-700">Store basics</span>
@@ -232,6 +269,14 @@
                                             </li>
                                         </ul>
                                         <p class="mt-4 text-xs leading-relaxed text-stone-500">The store can still be created without the optional items. This checklist is only here to help merchants launch with a cleaner customer-facing result.</p>
+                                    </div>
+                                    <div class="rounded-xl bg-white border border-stone-200/80 p-5 shadow-sm">
+                                        <p class="text-sm font-semibold text-stone-800">Asset guidance</p>
+                                        <ul class="mt-3 space-y-2 text-sm text-stone-600">
+                                            <li>Lead with a clear logo first. It improves the join page, poster, and wallet pass all at once.</li>
+                                            <li>Only add a hero image when it adds atmosphere without making the pass harder to read.</li>
+                                            <li>If you skip wallet assets today, the pass still launches with safe branded fallbacks.</li>
+                                        </ul>
                                     </div>
                                     <div class="rounded-xl bg-stone-50/80 border border-stone-200/80 p-5">
                                         <p class="text-sm font-semibold text-stone-800">What merchants are seeing</p>

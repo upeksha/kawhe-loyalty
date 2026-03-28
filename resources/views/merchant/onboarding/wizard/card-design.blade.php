@@ -52,6 +52,25 @@
                 const darker = Math.min(l1, l2);
                 return (lighter + 0.05) / (darker + 0.05);
             },
+            get launchScore() {
+                let score = 0;
+                if (this.brandColor) score++;
+                if (this.bgColor) score++;
+                if (this.logoPreview) score++;
+                if (this.passLogoPreview || this.passHeroPreview) score++;
+                if (!this.hasLowContrastPreview && !this.hasVeryLightBackground) score++;
+                return score;
+            },
+            get launchLabel() {
+                if (this.launchScore >= 5) return 'Good to launch';
+                if (this.launchScore >= 3) return 'Launchable, but could be improved';
+                return 'Needs review';
+            },
+            get launchTone() {
+                if (this.launchScore >= 5) return 'bg-emerald-100 text-emerald-700';
+                if (this.launchScore >= 3) return 'bg-amber-100 text-amber-700';
+                return 'bg-accent-100 text-accent-700';
+            },
             get hasLowContrastPreview() {
                 return this.contrastRatio(this.brandColor, this.bgColor) < 2.4;
             },
@@ -182,7 +201,15 @@
                     <div class="hidden sm:block sticky top-8">
                         <x-wallet-pass-preview />
                         <div class="mt-4 rounded-2xl border border-stone-200 bg-stone-50/80 p-5 shadow-sm">
-                            <p class="text-xs font-semibold uppercase tracking-wider text-stone-500">Setup status</p>
+                            <div class="flex items-start justify-between gap-3">
+                                <div>
+                                    <p class="text-xs font-semibold uppercase tracking-wider text-stone-500">Launch quality</p>
+                                    <p class="mt-1 text-sm text-stone-600">A quick read on whether this card will feel polished before customers save it.</p>
+                                </div>
+                                <span class="inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold" :class="launchTone" x-text="launchLabel"></span>
+                            </div>
+                            <p class="mt-3 text-xs text-stone-500" x-text="launchScore + ' of 5 launch signals are in a strong place.'"></p>
+                            <p class="mt-4 text-xs font-semibold uppercase tracking-wider text-stone-500">Setup status</p>
                             <ul class="mt-4 space-y-3 text-sm">
                                 <li class="flex items-start justify-between gap-3">
                                     <span class="text-stone-700">Brand accent chosen</span>
@@ -206,6 +233,14 @@
                                 </li>
                             </ul>
                             <p class="mt-4 text-xs leading-relaxed text-stone-500">This does not block saving. It is here to help merchants avoid weak branding combinations before customers see the card.</p>
+                        </div>
+                        <div class="mt-4 rounded-2xl border border-stone-200 bg-white p-5 shadow-sm">
+                            <p class="text-sm font-semibold text-stone-800">Asset guidance</p>
+                            <ul class="mt-3 space-y-2 text-sm leading-relaxed text-stone-600">
+                                <li>Use a clean logo with plenty of empty space so it still reads at small wallet sizes.</li>
+                                <li>Pick a hero image with one strong subject or texture, not a collage of text-heavy elements.</li>
+                                <li>If you are short on time, upload the logo first. Kawhe can still generate a solid first version of the pass.</li>
+                            </ul>
                         </div>
                         @if($store->pass_logo_path || $store->pass_hero_image_path)
                             <p class="mt-3 text-xs text-stone-500 flex items-center gap-1.5">
