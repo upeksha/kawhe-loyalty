@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Services\Billing\UsageService;
+use App\Services\Support\SupportAuditService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Stripe\Stripe;
@@ -13,7 +14,7 @@ class BillingController extends Controller
 {
     protected $usageService;
 
-    public function __construct(UsageService $usageService)
+    public function __construct(UsageService $usageService, protected SupportAuditService $supportAuditService)
     {
         $this->usageService = $usageService;
     }
@@ -118,6 +119,13 @@ class BillingController extends Controller
                 'has_secret' => !empty($stripeSecret),
             ]);
             
+            $this->supportAuditService->log(
+                eventType: 'billing_issue',
+                status: 'failed',
+                actorUserId: $user->id,
+                source: 'billing.checkout',
+                message: 'Checkout blocked because Stripe keys are not configured.'
+            );
             return back()->withErrors([
                 'error' => 'Stripe is not configured. Please contact support or check your environment variables (STRIPE_KEY, STRIPE_SECRET).'
             ]);
@@ -128,6 +136,13 @@ class BillingController extends Controller
                 'user_id' => $user->id,
             ]);
             
+            $this->supportAuditService->log(
+                eventType: 'billing_issue',
+                status: 'failed',
+                actorUserId: $user->id,
+                source: 'billing.checkout',
+                message: 'Checkout blocked because Stripe price ID is not configured.'
+            );
             return back()->withErrors([
                 'error' => 'Stripe price ID not configured. Please contact support or check STRIPE_PRICE_ID in your environment variables.'
             ]);
@@ -150,6 +165,14 @@ class BillingController extends Controller
                 'trace' => $e->getTraceAsString(),
             ]);
 
+            $this->supportAuditService->log(
+                eventType: 'billing_issue',
+                status: 'failed',
+                actorUserId: $user->id,
+                source: 'billing.checkout',
+                message: 'Stripe checkout failed.',
+                metadata: ['error' => $e->getMessage()]
+            );
             return back()->withErrors([
                 'error' => 'Failed to create checkout session: ' . $e->getMessage() . ' Please check your Stripe configuration.'
             ]);
@@ -378,6 +401,14 @@ class BillingController extends Controller
                         'trace' => $e->getTraceAsString(),
                     ]);
                     
+                    $this->supportAuditService->log(
+                        eventType: 'billing_issue',
+                        status: 'failed',
+                        actorUserId: $user->id,
+                        source: 'billing.success',
+                        message: 'Payment succeeded but subscription sync failed.',
+                        metadata: ['error' => $e->getMessage()]
+                    );
                     return view('billing.success', [
                         'error' => 'Payment was successful, but we encountered an issue syncing your subscription. Please use the "Sync Subscription" button on the billing page or contact support.',
                         'hasSession' => true,
@@ -419,6 +450,16 @@ class BillingController extends Controller
                 'trace' => $e->getTraceAsString(),
             ]);
             
+            if ($request->user()) {
+                $this->supportAuditService->log(
+                    eventType: 'billing_issue',
+                    status: 'failed',
+                    actorUserId: $request->user()->id,
+                    source: 'billing.success',
+                    message: 'Billing success page failed while processing session.',
+                    metadata: ['error' => $e->getMessage()]
+                );
+            }
             return view('billing.success', [
                 'error' => 'An error occurred while processing your subscription. Please contact support or try syncing from the billing page.',
                 'hasSession' => true,
@@ -457,6 +498,13 @@ class BillingController extends Controller
                 // Verify this session belongs to the authenticated user
                 $sessionUserId = $session->client_reference_id;
                 if ($sessionUserId && (string) $user->id !== $sessionUserId) {
+                    $this->supportAuditService->log(
+                        eventType: 'billing_issue',
+                        status: 'failed',
+                        actorUserId: $user->id,
+                        source: 'billing.sync',
+                        message: 'Manual billing sync blocked because the session does not belong to the authenticated user.'
+                    );
                     return back()->withErrors(['error' => 'This session does not belong to your account.']);
                 }
                 

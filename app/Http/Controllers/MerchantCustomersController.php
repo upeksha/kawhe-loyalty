@@ -6,12 +6,19 @@ use App\Jobs\UpdateWalletPassJob;
 use App\Models\AppleWalletRegistration;
 use App\Models\LoyaltyAccount;
 use App\Models\StampEvent;
+use App\Models\SupportAuditLog;
+use App\Services\Support\SupportAuditService;
 use Illuminate\Support\Collection;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class MerchantCustomersController extends Controller
 {
+    public function __construct(
+        protected SupportAuditService $supportAuditService
+    ) {
+    }
+
     public function index(Request $request)
     {
         // Load merchant stores list
@@ -142,6 +149,22 @@ class MerchantCustomersController extends Controller
             }
         }
 
+        $supportLogs = SupportAuditLog::where('loyalty_account_id', $account->id)
+            ->latest()
+            ->limit(10)
+            ->get();
+
+        foreach ($supportLogs as $log) {
+            $supportTimeline->push([
+                'title' => str($log->event_type)->replace('_', ' ')->title()->toString(),
+                'detail' => $log->message ?: 'Support event recorded.',
+                'at' => $log->created_at,
+                'tone' => $log->status === 'failed'
+                    ? 'text-accent-700'
+                    : ($log->status === 'blocked' || $log->status === 'partial' ? 'text-amber-700' : 'text-stone-700'),
+            ]);
+        }
+
         $supportTimeline = $supportTimeline
             ->sortByDesc(fn (array $item) => optional($item['at'])->timestamp ?? 0)
             ->values();
@@ -215,6 +238,19 @@ class MerchantCustomersController extends Controller
             abort(404, 'Loyalty account not found or you do not have access to it.');
         }
 
+        $this->supportAuditService->log(
+            eventType: 'manual_support_action',
+            status: 'success',
+            storeId: $loyaltyAccount->store_id,
+            loyaltyAccountId: $loyaltyAccount->id,
+            actorUserId: $request->user()?->id,
+            source: 'merchant',
+            message: 'Merchant requested a verification resend from customer support view.',
+            metadata: [
+                'action' => 'resend_verification',
+            ]
+        );
+
         return app(CustomerEmailVerificationController::class)->send($request, $loyaltyAccount->public_token);
     }
 
@@ -227,6 +263,19 @@ class MerchantCustomersController extends Controller
         }
 
         UpdateWalletPassJob::dispatch($loyaltyAccount->id);
+
+        $this->supportAuditService->log(
+            eventType: 'manual_support_action',
+            status: 'success',
+            storeId: $loyaltyAccount->store_id,
+            loyaltyAccountId: $loyaltyAccount->id,
+            actorUserId: Auth::id(),
+            source: 'merchant',
+            message: 'Merchant queued a wallet refresh from customer support view.',
+            metadata: [
+                'action' => 'sync_wallet',
+            ]
+        );
 
         return back()->with('success', 'Wallet refresh queued. Apple and Google Wallet will update on the next sync cycle.');
     }

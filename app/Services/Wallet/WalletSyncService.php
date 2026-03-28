@@ -7,6 +7,7 @@ use App\Services\Wallet\Apple\ApplePassService;
 use App\Services\Wallet\Apple\ApplePushService;
 use App\Services\Wallet\Apple\AppleWalletSerial;
 use App\Services\Wallet\GoogleWalletPassService;
+use App\Services\Support\SupportAuditService;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -19,13 +20,16 @@ class WalletSyncService
     protected ?ApplePassService $applePassService = null;
     protected ?ApplePushService $applePushService = null;
     protected ?GoogleWalletPassService $googleService = null;
+    protected ?SupportAuditService $supportAuditService = null;
 
     public function __construct(
         ?ApplePassService $applePassService = null,
-        ?ApplePushService $applePushService = null
+        ?ApplePushService $applePushService = null,
+        ?SupportAuditService $supportAuditService = null
     ) {
         $this->applePassService = $applePassService ?? app(ApplePassService::class);
         $this->applePushService = $applePushService ?? app(ApplePushService::class);
+        $this->supportAuditService = $supportAuditService ?? app(SupportAuditService::class);
     }
 
     /**
@@ -49,6 +53,8 @@ class WalletSyncService
         ]);
 
         // Phase 2: Send Apple Wallet push notifications
+        $appleStatus = 'success';
+        $appleError = null;
         try {
             $passTypeIdentifier = config('passgenerator.pass_type_identifier');
             // Use centralized serial number helper to ensure consistency
@@ -70,6 +76,8 @@ class WalletSyncService
                 'serial_number' => $serialNumber,
             ]);
         } catch (\Exception $e) {
+            $appleStatus = 'failed';
+            $appleError = $e->getMessage();
             Log::error('Wallet sync: Failed to send Apple Wallet push notifications', [
                 'loyalty_account_id' => $account->id,
                 'serial_number' => AppleWalletSerial::fromAccount($account),
@@ -80,6 +88,8 @@ class WalletSyncService
         }
 
         // Google Wallet sync: Update the pass object when stamps/rewards change (loyalty or generic)
+        $googleStatus = 'success';
+        $googleError = null;
         try {
             $this->googleService = $this->googleService ?? app(GoogleWalletPassService::class);
             $useGeneric = config('services.google_wallet.pass_type', 'loyalty') === 'generic';
@@ -102,6 +112,8 @@ class WalletSyncService
                 'public_token' => $account->public_token,
             ]);
         } catch (\Exception $e) {
+            $googleStatus = 'failed';
+            $googleError = $e->getMessage();
             Log::error('Wallet sync: Failed to update Google Wallet object', [
                 'loyalty_account_id' => $account->id,
                 'public_token' => $account->public_token,
@@ -110,5 +122,25 @@ class WalletSyncService
             ]);
             // Don't throw - allow the sync to complete even if Google Wallet fails
         }
+
+        $this->supportAuditService?->log(
+            eventType: 'wallet_sync',
+            status: ($appleStatus === 'success' && $googleStatus === 'success') ? 'success' : 'partial',
+            storeId: $account->store_id,
+            loyaltyAccountId: $account->id,
+            source: 'system',
+            message: ($appleStatus === 'success' && $googleStatus === 'success')
+                ? 'Wallet sync completed.'
+                : 'Wallet sync completed with one or more channel issues.',
+            metadata: [
+                'apple_serial' => AppleWalletSerial::fromAccount($account),
+                'apple_status' => $appleStatus,
+                'apple_error' => $appleError,
+                'google_status' => $googleStatus,
+                'google_error' => $googleError,
+                'reward_balance' => $account->reward_balance ?? 0,
+                'stamp_count' => $account->stamp_count,
+            ]
+        );
     }
 }
