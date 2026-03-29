@@ -44,13 +44,13 @@ class SupportLogController extends Controller
             });
         }
 
+        $summaryQuery = clone $query;
         $logs = $query->paginate(25)->withQueryString();
-        $matchingLogIds = (clone $query)->toBase()->select('id');
 
         $summary = [
-            'total' => (clone $query)->count(),
-            'failed' => SupportAuditLog::query()->whereIn('id', $matchingLogIds)->where('status', 'failed')->count(),
-            'actionable' => SupportAuditLog::query()->whereIn('id', $matchingLogIds)->whereIn('status', ['failed', 'blocked', 'partial'])->count(),
+            'total' => (clone $summaryQuery)->count(),
+            'failed' => (clone $summaryQuery)->where('status', 'failed')->count(),
+            'actionable' => (clone $summaryQuery)->whereIn('status', ['failed', 'blocked', 'partial'])->count(),
         ];
 
         return view('merchant.support.index', [
@@ -111,14 +111,14 @@ class SupportLogController extends Controller
             });
         }
 
+        $summaryQuery = clone $query;
         $logs = $query->paginate(40)->withQueryString();
-        $matchingLogIds = (clone $query)->toBase()->select('id');
 
         $summary = [
-            'total' => (clone $query)->count(),
-            'failed' => SupportAuditLog::query()->whereIn('id', $matchingLogIds)->where('status', 'failed')->count(),
-            'wallet_issues' => SupportAuditLog::query()->whereIn('id', $matchingLogIds)->where('event_type', 'wallet_sync')->where('status', '!=', 'success')->count(),
-            'billing_issues' => SupportAuditLog::query()->whereIn('id', $matchingLogIds)->where('event_type', 'billing_issue')->count(),
+            'total' => (clone $summaryQuery)->count(),
+            'failed' => (clone $summaryQuery)->where('status', 'failed')->count(),
+            'wallet_issues' => (clone $summaryQuery)->where('event_type', 'wallet_sync')->where('status', '!=', 'success')->count(),
+            'billing_issues' => (clone $summaryQuery)->where('event_type', 'billing_issue')->count(),
         ];
 
         return view('admin.support.index', [
