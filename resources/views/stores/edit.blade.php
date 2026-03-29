@@ -370,6 +370,45 @@
         </div>
 
         <div class="lg:col-span-1 space-y-4">
+            <x-ui.card class="p-5 mb-4">
+                <div class="flex items-start justify-between gap-3">
+                    <div>
+                        <h3 class="text-base font-bold text-stone-900">Wallet Health</h3>
+                        <p class="mt-1 text-sm text-stone-600">Use this before launch or when a merchant reports a stale pass.</p>
+                    </div>
+                    <span class="inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold {{ $walletHealth['status_tone'] }}">
+                        {{ $walletHealth['status_label'] }}
+                    </span>
+                </div>
+                <div class="mt-4 grid gap-3 sm:grid-cols-2">
+                    <div class="rounded-xl border border-stone-200 bg-stone-50/70 p-3">
+                        <p class="text-xs font-semibold uppercase tracking-wide text-stone-500">Active cards</p>
+                        <p class="mt-1 text-lg font-semibold text-stone-900">{{ $walletHealth['active_cards'] }}</p>
+                    </div>
+                    <div class="rounded-xl border border-stone-200 bg-stone-50/70 p-3">
+                        <p class="text-xs font-semibold uppercase tracking-wide text-stone-500">Wallet issues (7 days)</p>
+                        <p class="mt-1 text-lg font-semibold text-stone-900">{{ $walletHealth['wallet_failures_last_7_days'] }}</p>
+                    </div>
+                </div>
+                <div class="mt-4 rounded-xl border border-stone-200 bg-white p-4">
+                    <p class="text-sm font-semibold text-stone-800">Recommended next action</p>
+                    <p class="mt-2 text-sm leading-relaxed text-stone-600">{{ $walletHealth['recommended_action'] }}</p>
+                    <div class="mt-4 flex flex-wrap gap-2">
+                        @unless($store->trashed())
+                            <form method="POST" action="{{ route('merchant.stores.refresh-wallets', $store) }}">
+                                @csrf
+                                <x-ui.button type="submit" variant="secondary" size="sm">
+                                    Queue Wallet Refresh for All Cards
+                                </x-ui.button>
+                            </form>
+                        @endunless
+                        <x-ui.button href="{{ route('merchant.support.index', ['event_type' => 'wallet_sync', 'store_id' => $store->id]) }}" variant="ghost" size="sm">
+                            Review Wallet Logs
+                        </x-ui.button>
+                    </div>
+                </div>
+            </x-ui.card>
+
             <x-ui.card class="p-5">
                 <div class="flex items-start justify-between gap-3">
                     <div>

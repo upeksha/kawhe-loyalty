@@ -42,7 +42,36 @@
         @php
             $remainingCards = max(0, (int) (($stats['limit'] ?? 0) - ($stats['non_grandfathered_count'] ?? 0)));
             $usagePercent = min(100, max(0, (int) ($stats['usage_percentage'] ?? 0)));
+            $billingBlocked = !($stats['can_create_card'] ?? false) && !($stats['is_subscribed'] ?? false);
+            $stripeConfigReady = !empty(config('cashier.key')) && !empty(config('cashier.secret')) && !empty(config('cashier.price_id'));
         @endphp
+
+        @if($billingBlocked)
+            <x-ui.card class="p-4 sm:p-6 border border-red-200 bg-red-50">
+                <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                        <h2 class="text-base sm:text-lg font-bold text-red-900">New customer joins are blocked</h2>
+                        <p class="mt-1 text-sm leading-relaxed text-red-700">Your free-plan join capacity is full. Existing cards still work, but new signups and QR poster scans will keep hitting the limit screen until billing is updated.</p>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                        @if($stripeConfigReady)
+                            <form method="POST" action="{{ route('billing.checkout') }}">
+                                @csrf
+                                <x-ui.button type="submit" variant="primary" size="sm">
+                                    Upgrade and Reopen Signups
+                                </x-ui.button>
+                            </form>
+                        @endif
+                        <form method="POST" action="{{ route('billing.sync') }}">
+                            @csrf
+                            <x-ui.button type="submit" variant="secondary" size="sm">
+                                Sync Billing Status
+                            </x-ui.button>
+                        </form>
+                    </div>
+                </div>
+            </x-ui.card>
+        @endif
 
         @if(isset($planState))
             <x-ui.card class="p-4 sm:p-6">
@@ -123,12 +152,12 @@
                                 <form method="POST" action="{{ route('billing.sync') }}">
                                     @csrf
                                     <x-ui.button type="submit" variant="secondary" size="sm">
-                                        Sync From Stripe
+                                        Sync Billing Status
                                     </x-ui.button>
                                 </form>
                                 @if(!empty($debugInfo['has_stripe_id']))
                                     <x-ui.button href="{{ route('billing.index', ['refresh' => 1]) }}" variant="ghost" size="sm">
-                                        Refresh Status
+                                        Refresh Billing Checks
                                     </x-ui.button>
                                 @endif
                                 @if($stats['is_subscribed'])
@@ -282,11 +311,11 @@
                             <form method="POST" action="{{ route('billing.sync') }}" class="inline">
                                 @csrf
                                 <x-ui.button type="submit" variant="primary" size="sm" class="w-full sm:w-auto">
-                                    Sync From Stripe
+                                    Sync Billing Status
                                 </x-ui.button>
                             </form>
                             <x-ui.button href="{{ route('billing.index', ['refresh' => 1]) }}" variant="primary" size="sm" class="w-full sm:w-auto">
-                                Refresh Status
+                                Refresh Billing Checks
                             </x-ui.button>
                         </div>
                         <p class="text-xs text-accent-600 mt-3">

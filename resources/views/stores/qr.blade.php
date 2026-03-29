@@ -43,6 +43,7 @@
         $launchTone = $launchScore >= count($launchChecks)
             ? 'bg-emerald-100 text-emerald-700'
             : ($launchScore >= 3 ? 'bg-amber-100 text-amber-700' : 'bg-accent-100 text-accent-700');
+        $billingBlocked = !($usageStats['can_create_card'] ?? false) && !($usageStats['is_subscribed'] ?? false);
     @endphp
 
     <div class="max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -117,11 +118,61 @@
                 </div>
 
                 <div class="mt-4 rounded-xl border border-stone-200 bg-stone-50/80 p-4">
+                    <div class="flex items-start justify-between gap-3">
+                        <div>
+                            <p class="text-sm font-semibold text-stone-800">Wallet Health</p>
+                            <p class="mt-1 text-sm text-stone-600">A quick read on whether saved passes are in a good place before you launch.</p>
+                        </div>
+                        <span class="inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold {{ $walletHealth['status_tone'] }}">{{ $walletHealth['status_label'] }}</span>
+                    </div>
+                    <div class="mt-4 grid gap-3 sm:grid-cols-2">
+                        <div class="rounded-xl border border-stone-200 bg-white p-3">
+                            <p class="text-xs font-semibold uppercase tracking-wide text-stone-500">Active cards</p>
+                            <p class="mt-1 text-lg font-semibold text-stone-900">{{ $walletHealth['active_cards'] }}</p>
+                        </div>
+                        <div class="rounded-xl border border-stone-200 bg-white p-3">
+                            <p class="text-xs font-semibold uppercase tracking-wide text-stone-500">Apple registrations</p>
+                            <p class="mt-1 text-lg font-semibold text-stone-900">{{ $walletHealth['active_apple_registrations'] }}</p>
+                            <p class="mt-1 text-xs text-stone-500">{{ $walletHealth['last_apple_registration_at'] ? 'Last registration '.\Illuminate\Support\Carbon::parse($walletHealth['last_apple_registration_at'])->diffForHumans() : 'No active Apple registrations yet' }}</p>
+                        </div>
+                    </div>
+                    <div class="mt-4 rounded-xl border border-stone-200 bg-white p-4">
+                        <p class="text-sm font-semibold text-stone-800">Recommended next action</p>
+                        <p class="mt-2 text-sm leading-relaxed text-stone-600">{{ $walletHealth['recommended_action'] }}</p>
+                        @if($walletHealth['recent_wallet_syncs']->isNotEmpty())
+                            <div class="mt-3 border-t border-stone-200 pt-3">
+                                <p class="text-xs font-semibold uppercase tracking-wide text-stone-500">Recent wallet sync attempts</p>
+                                <ul class="mt-2 space-y-2 text-xs text-stone-600">
+                                    @foreach($walletHealth['recent_wallet_syncs'] as $sync)
+                                        <li class="flex items-start justify-between gap-3">
+                                            <span>{{ $sync->message }}</span>
+                                            <span class="whitespace-nowrap font-medium {{ $sync->status === 'success' ? 'text-emerald-700' : 'text-amber-700' }}">{{ ucfirst($sync->status) }}</span>
+                                        </li>
+                                    @endforeach
+                                </ul>
+                            </div>
+                        @endif
+                    </div>
+                </div>
+
+                <div class="mt-4 rounded-xl border border-stone-200 bg-stone-50/80 p-4">
                     <p class="text-sm font-semibold text-stone-800">Recovery Tools</p>
                     <p class="mt-2 text-sm leading-relaxed text-stone-600">
                         Poster and join page previews are always generated from your current branding, so there is no manual rebuild step. If cards already in customer wallets look stale, you can queue a refresh for every card in this store.
                     </p>
-                    <div class="mt-4 flex flex-wrap gap-2">
+                    @if($billingBlocked)
+                    <div class="mt-4 rounded-xl border border-red-200 bg-red-50 p-4">
+                        <p class="text-sm font-semibold text-red-800">New joins are blocked right now</p>
+                        <p class="mt-2 text-sm leading-relaxed text-red-700">This store has reached the free-plan join limit. Existing customers can still use their current cards, but new customers will see a blocked join message until billing is updated.</p>
+                        <div class="mt-3">
+                            <x-ui.button href="{{ route('billing.index') }}" variant="primary" size="sm">
+                                Fix Billing Before Sharing
+                            </x-ui.button>
+                        </div>
+                    </div>
+                @endif
+
+                <div class="mt-4 flex flex-wrap gap-2">
                         <x-ui.button href="{{ route('merchant.stores.qr.pdf', ['store' => $store, 'preview' => 1]) }}" variant="ghost" size="sm" target="_blank">
                             Open Poster Preview
                         </x-ui.button>

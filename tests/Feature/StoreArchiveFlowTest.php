@@ -37,7 +37,8 @@ class StoreArchiveFlowTest extends TestCase
         $this->assertDatabaseCount('loyalty_accounts', 1);
 
         $this->get(route('join.index', ['slug' => $store->slug, 't' => $store->join_token]))
-            ->assertNotFound();
+            ->assertOk()
+            ->assertSee('Store temporarily unavailable');
 
         $restoreResponse = $this
             ->actingAs($merchant)

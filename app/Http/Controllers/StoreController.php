@@ -2,7 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AppleWalletRegistration;
+use App\Models\LoyaltyAccount;
 use App\Models\Store;
+use App\Models\SupportAuditLog;
 use App\Services\Support\MerchantRecoveryService;
 use App\Support\StoreAssets;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -91,7 +94,9 @@ class StoreController extends Controller
     public function edit(Store $store)
     {
         $store = Store::queryForUser(Auth::user(), includeArchived: true)->whereKey($store->id)->firstOrFail();
-        return view('stores.edit', compact('store'));
+        $walletHealth = $this->walletHealth($store);
+
+        return view('stores.edit', compact('store', 'walletHealth'));
     }
 
     /**
@@ -229,7 +234,75 @@ class StoreController extends Controller
         }
         
         $joinUrl = $store->join_url; // short URL /j/{code} when join_short_code is set
-        return view('stores.qr', compact('store', 'joinUrl'));
+        $walletHealth = $this->walletHealth($store);
+
+        return view('stores.qr', compact('store', 'joinUrl', 'walletHealth'));
+    }
+
+    private function walletHealth(Store $store): array
+    {
+        $accountIds = LoyaltyAccount::where('store_id', $store->id)->pluck('id');
+        $activeCards = $accountIds->count();
+        $activeAppleRegistrations = $accountIds->isEmpty()
+            ? 0
+            : AppleWalletRegistration::query()->whereIn('loyalty_account_id', $accountIds)->active()->count();
+
+        $lastAppleRegistrationAt = $accountIds->isEmpty()
+            ? null
+            : AppleWalletRegistration::query()->whereIn('loyalty_account_id', $accountIds)->active()->max('last_registered_at');
+
+        $recentWalletSyncs = SupportAuditLog::query()
+            ->where('store_id', $store->id)
+            ->where('event_type', 'wallet_sync')
+            ->latest()
+            ->limit(5)
+            ->get(['status', 'message', 'created_at']);
+
+        $walletFailuresLast7Days = SupportAuditLog::query()
+            ->where('store_id', $store->id)
+            ->where('event_type', 'wallet_sync')
+            ->where('status', '!=', 'success')
+            ->where('created_at', '>=', now()->subDays(7))
+            ->count();
+
+        $walletReady = !empty($store->reward_title)
+            && (int) ($store->reward_target ?? 0) > 0
+            && !empty($store->background_color)
+            && (!empty($store->logo_path) || !empty($store->pass_logo_path));
+
+        if (! $walletReady) {
+            $statusLabel = 'Needs setup';
+            $statusTone = 'bg-amber-100 text-amber-700';
+            $recommendedAction = 'Finish wallet branding first. Add a readable background color and at least one logo so saved passes look complete.';
+        } elseif ($activeCards === 0) {
+            $statusLabel = 'Ready for first customer';
+            $statusTone = 'bg-brand-100 text-brand-700';
+            $recommendedAction = 'Your wallet setup looks ready. Save one test card to Apple Wallet and Google Wallet before sharing widely.';
+        } elseif ($walletFailuresLast7Days > 0) {
+            $statusLabel = 'Needs attention';
+            $statusTone = 'bg-amber-100 text-amber-700';
+            $recommendedAction = 'Recent wallet refreshes have had issues. Queue a store-wide wallet refresh, then ask affected customers to reopen or re-add their pass if it still looks stale.';
+        } elseif ($activeAppleRegistrations === 0) {
+            $statusLabel = 'Launchable';
+            $statusTone = 'bg-stone-100 text-stone-700';
+            $recommendedAction = 'No active Apple Wallet registrations are on file yet. That usually means customers have not added the pass yet, or they removed it. Test with one fresh add before launch.';
+        } else {
+            $statusLabel = 'Healthy';
+            $statusTone = 'bg-emerald-100 text-emerald-700';
+            $recommendedAction = 'Wallet setup looks healthy. If a customer reports a stale card, queue a refresh first, then ask them to reopen the pass. Re-adding is the fallback if Apple or Google still shows cached artwork.';
+        }
+
+        return [
+            'ready' => $walletReady,
+            'status_label' => $statusLabel,
+            'status_tone' => $statusTone,
+            'active_cards' => $activeCards,
+            'active_apple_registrations' => $activeAppleRegistrations,
+            'last_apple_registration_at' => $lastAppleRegistrationAt,
+            'wallet_failures_last_7_days' => $walletFailuresLast7Days,
+            'recent_wallet_syncs' => $recentWalletSyncs,
+            'recommended_action' => $recommendedAction,
+        ];
     }
 
     public function refreshWallets(Store $store)

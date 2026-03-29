@@ -8,6 +8,7 @@ use App\Models\LoyaltyAccount;
 use App\Models\Store;
 use App\Services\Billing\UsageService;
 use Illuminate\Http\Request;
+use Illuminate\View\View;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -19,7 +20,7 @@ class JoinController extends Controller
      */
     public function shortRedirect(string $code)
     {
-        $store = Store::where('join_short_code', strtoupper($code))->firstOrFail();
+        $store = Store::withTrashed()->where('join_short_code', strtoupper($code))->firstOrFail();
         return redirect()->route('join.index', [
             'slug' => $store->slug,
             't' => $store->join_token,
@@ -30,9 +31,11 @@ class JoinController extends Controller
     {
         $token = $request->query('t');
 
-        $store = Store::where('slug', $slug)
-            ->where('join_token', $token)
-            ->firstOrFail();
+        $store = $this->findJoinStore($slug, $token);
+
+        if ($archived = $this->archivedStoreResponse($store, $token)) {
+            return $archived;
+        }
 
         return view('join.landing', compact('store', 'token'));
     }
@@ -41,9 +44,11 @@ class JoinController extends Controller
     {
         $token = $request->query('t');
 
-        $store = Store::where('slug', $slug)
-            ->where('join_token', $token)
-            ->firstOrFail();
+        $store = $this->findJoinStore($slug, $token);
+
+        if ($archived = $this->archivedStoreResponse($store, $token)) {
+            return $archived;
+        }
 
         return view('join.existing', compact('store', 'token'));
     }
@@ -52,9 +57,11 @@ class JoinController extends Controller
     {
         $token = $request->query('t');
 
-        $store = Store::where('slug', $slug)
-            ->where('join_token', $token)
-            ->firstOrFail();
+        $store = $this->findJoinStore($slug, $token);
+
+        if ($archived = $this->archivedStoreResponse($store, $token)) {
+            return $archived;
+        }
 
         $validated = $request->validate([
             'email' => ['required', 'email', 'max:255'],
@@ -82,9 +89,11 @@ class JoinController extends Controller
     {
         $token = $request->query('t');
 
-        $store = Store::where('slug', $slug)
-            ->where('join_token', $token)
-            ->firstOrFail();
+        $store = $this->findJoinStore($slug, $token);
+
+        if ($archived = $this->archivedStoreResponse($store, $token)) {
+            return $archived;
+        }
 
         return view('join.show', compact('store', 'token'));
     }
@@ -93,9 +102,11 @@ class JoinController extends Controller
     {
         $token = $request->query('t');
 
-        $store = Store::where('slug', $slug)
-            ->where('join_token', $token)
-            ->firstOrFail();
+        $store = $this->findJoinStore($slug, $token);
+
+        if ($archived = $this->archivedStoreResponse($store, $token)) {
+            return $archived;
+        }
 
         $config = $store->registration_form_config;
 
@@ -271,5 +282,22 @@ class JoinController extends Controller
         return redirect()->route('card.show', ['public_token' => $loyaltyAccount->public_token])
             ->with('registered', true)
             ->with('show_wallet_nudge', true);
+    }
+
+    private function findJoinStore(string $slug, ?string $token): Store
+    {
+        return Store::withTrashed()
+            ->where('slug', $slug)
+            ->where('join_token', $token)
+            ->firstOrFail();
+    }
+
+    private function archivedStoreResponse(Store $store, ?string $token): ?View
+    {
+        if (! $store->trashed()) {
+            return null;
+        }
+
+        return view('join.archived', compact('store', 'token'));
     }
 }

@@ -39,7 +39,7 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
         <meta name="theme-color" content="{{ $bg }}">
-        <title>Limit Reached – {{ $store->name }}</title>
+        <title>Store Temporarily Unavailable – {{ $store->name }}</title>
         <link rel="preconnect" href="https://fonts.bunny.net">
         <link href="https://fonts.bunny.net/css?family=figtree:400,500,600,700&display=swap" rel="stylesheet" />
         @vite(['resources/css/app.css', 'resources/js/app.js'])
@@ -68,20 +68,20 @@
                             </svg>
                         </div>
 
-                        <h2 class="text-2xl font-bold mb-2">Limit Reached</h2>
+                        <h2 class="text-2xl font-bold mb-2">Store temporarily unavailable</h2>
 
                         <p class="limit-body mb-4">
-                            <strong class="text-inherit">{{ $store->name }}</strong> has reached the free plan limit for new loyalty cards.
+                            <strong class="text-inherit">{{ $store->name }}</strong> is currently archived, so new joins are paused for now.
                         </p>
 
                         <p class="limit-soft text-sm mb-6">
-                            Please ask the staff to upgrade or free up capacity before you try again. Existing customers can still use their current cards.
+                            Existing customers can still talk to staff for help, but new card signups will stay paused until the store is restored.
                         </p>
 
                         <a href="{{ route('join.index', ['slug' => $store->slug, 't' => $token]) }}"
                            class="limit-btn w-full inline-flex justify-center py-3 px-4 rounded-xl text-sm font-semibold transition focus:outline-none focus:ring-2 focus:ring-offset-2"
                            style="--tw-ring-color: {{ $brand }};">
-                            Back to Join Page
+                            Back to Store Link
                         </a>
                     </div>
                 </div>

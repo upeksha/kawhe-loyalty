@@ -2,6 +2,8 @@
 
 namespace Tests\Feature;
 
+use App\Models\LoyaltyAccount;
+use App\Models\Store;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -25,6 +27,23 @@ class BillingDiagnosticsTest extends TestCase
         $response->assertSee('Recommended next step');
         $response->assertSee('Plan State');
         $response->assertSee('Recovery actions');
+    }
+
+    public function test_billing_page_surfaces_blocking_join_state(): void
+    {
+        $user = User::factory()->create();
+        $store = Store::factory()->for($user)->create();
+        LoyaltyAccount::factory()->count(50)->create([
+            'store_id' => $store->id,
+        ]);
+
+        $response = $this
+            ->actingAs($user)
+            ->get(route('billing.index'));
+
+        $response->assertOk();
+        $response->assertSee('New customer joins are blocked');
+        $response->assertSee('Sync Billing Status');
     }
 
     public function test_billing_cancel_page_explains_next_steps(): void
