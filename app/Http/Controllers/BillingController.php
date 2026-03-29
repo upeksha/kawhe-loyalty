@@ -29,15 +29,7 @@ class BillingController extends Controller
         // Refresh subscription from Stripe if needed
         if ($request->has('refresh')) {
             try {
-                if ($user->hasStripeId()) {
-                    $user->syncStripeCustomerDetails();
-                    $user->syncStripeSubscriptions();
-                } else {
-                    // If user doesn't have Stripe ID yet, try to create customer
-                    // This might happen if webhook hasn't processed yet
-                    $user->createAsStripeCustomer();
-                    $user->syncStripeSubscriptions();
-                }
+                $this->refreshStripeCustomerState($user);
             } catch (\Exception $e) {
                 Log::warning('Failed to sync subscription', [
                     'user_id' => $user->id,
@@ -155,15 +147,27 @@ class BillingController extends Controller
 
         try {
             $appUrl = config('app.url');
-            $checkout = $user->newSubscription('default', $priceId)
-                ->checkout([
-                    'success_url' => $appUrl . '/billing/success?session_id={CHECKOUT_SESSION_ID}',
-                    'cancel_url' => route('billing.cancel'),
-                    'client_reference_id' => (string) $user->id,
-                ]);
+            $checkout = $this->createCheckoutSession($user, $priceId, $appUrl);
 
             return redirect($checkout->url);
         } catch (\Exception $e) {
+            if ($this->isMissingStripeCustomer($e) && !empty($user->stripe_id)) {
+                Log::warning('Retrying Stripe checkout after clearing stale Stripe customer ID', [
+                    'user_id' => $user->id,
+                    'old_stripe_id' => $user->stripe_id,
+                ]);
+
+                $this->resetStripeCustomer($user);
+
+                try {
+                    $checkout = $this->createCheckoutSession($user->fresh(), $priceId, config('app.url'));
+
+                    return redirect($checkout->url);
+                } catch (\Exception $retryException) {
+                    $e = $retryException;
+                }
+            }
+
             Log::error('Stripe checkout failed', [
                 'user_id' => $user->id,
                 'error' => $e->getMessage(),
@@ -196,6 +200,19 @@ class BillingController extends Controller
 
             return redirect($portalUrl);
         } catch (\Exception $e) {
+            if ($this->isMissingStripeCustomer($e) && !empty($user->stripe_id)) {
+                Log::warning('Billing portal failed because stored Stripe customer is missing; clearing stale Stripe customer ID', [
+                    'user_id' => $user->id,
+                    'old_stripe_id' => $user->stripe_id,
+                ]);
+
+                $this->resetStripeCustomer($user);
+
+                return back()->withErrors([
+                    'error' => 'Your billing link was out of date after the Stripe account change. Please try again once more and a fresh billing profile will be created automatically.'
+                ]);
+            }
+
             Log::error('Stripe billing portal failed', [
                 'user_id' => $user->id,
                 'error' => $e->getMessage(),
@@ -781,5 +798,56 @@ class BillingController extends Controller
                 'Return to billing to review your current plan state.',
             ],
         };
+    }
+
+    protected function createCheckoutSession($user, string $priceId, string $appUrl)
+    {
+        return $user->newSubscription('default', $priceId)
+            ->checkout([
+                'success_url' => $appUrl . '/billing/success?session_id={CHECKOUT_SESSION_ID}',
+                'cancel_url' => route('billing.cancel'),
+                'client_reference_id' => (string) $user->id,
+            ]);
+    }
+
+    protected function refreshStripeCustomerState($user): void
+    {
+        try {
+            if ($user->hasStripeId()) {
+                $user->syncStripeCustomerDetails();
+                $user->syncStripeSubscriptions();
+
+                return;
+            }
+        } catch (\Exception $e) {
+            if (! $this->isMissingStripeCustomer($e)) {
+                throw $e;
+            }
+
+            Log::warning('Stored Stripe customer no longer exists in the active Stripe account; clearing stale Stripe ID before refresh', [
+                'user_id' => $user->id,
+                'old_stripe_id' => $user->stripe_id,
+            ]);
+
+            $this->resetStripeCustomer($user);
+        }
+
+        $user->createAsStripeCustomer();
+        $user->syncStripeSubscriptions();
+    }
+
+    protected function resetStripeCustomer($user): void
+    {
+        $user->forceFill([
+            'stripe_id' => null,
+            'pm_type' => null,
+            'pm_last_four' => null,
+            'trial_ends_at' => null,
+        ])->save();
+    }
+
+    protected function isMissingStripeCustomer(\Throwable $e): bool
+    {
+        return str_contains($e->getMessage(), 'No such customer:');
     }
 }
