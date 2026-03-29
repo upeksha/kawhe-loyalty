@@ -20,7 +20,7 @@ class VerificationController extends Controller
         }
 
         if (!$account->customer->email) {
-            return back()->withErrors(['email' => 'No email address associated with this card.']);
+            return back()->withErrors(['email' => 'This card does not have an email address yet. Ask the store to update your details first.']);
         }
 
         // Send notification (pseudo-anonymous verification)

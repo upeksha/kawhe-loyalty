@@ -37,9 +37,9 @@ class CustomerEmailVerificationController extends Controller
                 message: 'Verification send failed because no email is attached to the card.'
             );
             if ($request->expectsJson() || $request->wantsJson()) {
-                return response()->json(['message' => 'No email on this card.'], 422);
+                return response()->json(['message' => 'This card does not have an email address yet. Ask the store to update your details first.'], 422);
             }
-            return back()->withErrors(['email' => 'No email on this card.']);
+            return back()->withErrors(['email' => 'This card does not have an email address yet. Ask the store to update your details first.']);
         }
 
         // Check if already verified (store-specific verification)
@@ -66,7 +66,7 @@ class CustomerEmailVerificationController extends Controller
         $cooldownSeconds = $isMerchantRequest ? 10 : 60;
         if ($account->email_verification_sent_at && $account->email_verification_sent_at->diffInSeconds(now()) < $cooldownSeconds) {
             $secondsRemaining = $cooldownSeconds - $account->email_verification_sent_at->diffInSeconds(now());
-            $errorMessage = "Please wait {$secondsRemaining} more second(s) before requesting another verification email.";
+            $errorMessage = "Please wait {$secondsRemaining} more second(s) before asking for another verification email.";
             $this->supportAuditService->log(
                 eventType: 'verification_send',
                 status: 'blocked',
@@ -157,7 +157,7 @@ class CustomerEmailVerificationController extends Controller
         }
 
         // Always return success - email is queued and will be processed
-        $successMessage = 'Verification email sent! Please check your inbox.';
+        $successMessage = 'Verification email sent. Please check your inbox.';
         if ($request->expectsJson() || $request->wantsJson()) {
             return response()->json(['message' => $successMessage]);
         }

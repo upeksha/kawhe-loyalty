@@ -132,7 +132,7 @@ class BillingController extends Controller
                 message: 'Checkout blocked because Stripe keys are not configured.'
             );
             return back()->withErrors([
-                'error' => 'Stripe is not configured. Please contact support or check your environment variables (STRIPE_KEY, STRIPE_SECRET).'
+                'error' => 'Checkout is not ready yet for this account. Please try syncing billing first, and contact support if the problem continues.'
             ]);
         }
 
@@ -149,7 +149,7 @@ class BillingController extends Controller
                 message: 'Checkout blocked because Stripe price ID is not configured.'
             );
             return back()->withErrors([
-                'error' => 'Stripe price ID not configured. Please contact support or check STRIPE_PRICE_ID in your environment variables.'
+                'error' => 'The Pro plan checkout is not fully configured yet. Please contact support before trying again.'
             ]);
         }
 
@@ -179,7 +179,7 @@ class BillingController extends Controller
                 metadata: ['error' => $e->getMessage()]
             );
             return back()->withErrors([
-                'error' => 'Failed to create checkout session: ' . $e->getMessage() . ' Please check your Stripe configuration.'
+                'error' => 'We could not start checkout right now. Please try again, or use Sync Billing Status first if your account was recently upgraded.'
             ]);
         }
     }
@@ -201,7 +201,7 @@ class BillingController extends Controller
                 'error' => $e->getMessage(),
             ]);
 
-            return back()->withErrors(['error' => 'Failed to access billing portal. Please try again.']);
+            return back()->withErrors(['error' => 'We could not open the billing portal right now. Please try again shortly.']);
         }
     }
 

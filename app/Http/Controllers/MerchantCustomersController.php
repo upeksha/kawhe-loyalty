@@ -79,7 +79,7 @@ class MerchantCustomersController extends Controller
         
         // Check if the account's store belongs to the merchant
         if (!$storeIds->contains($loyaltyAccount->store_id)) {
-            abort(404, 'Loyalty account not found or you do not have access to it.');
+            return $this->supportAccessRedirect();
         }
         
         // Load relationships
@@ -186,7 +186,7 @@ class MerchantCustomersController extends Controller
         
         // Check if the account's store belongs to the merchant
         if (!$storeIds->contains($loyaltyAccount->store_id)) {
-            abort(404, 'Loyalty account not found or you do not have access to it.');
+            return $this->supportAccessRedirect();
         }
         
         // Load relationships
@@ -204,7 +204,7 @@ class MerchantCustomersController extends Controller
         
         // Check if the account's store belongs to the merchant
         if (!$storeIds->contains($loyaltyAccount->store_id)) {
-            abort(404, 'Loyalty account not found or you do not have access to it.');
+            return $this->supportAccessRedirect();
         }
         
         // Load customer
@@ -237,7 +237,7 @@ class MerchantCustomersController extends Controller
         $storeIds = Auth::user()->stores()->pluck('id');
 
         if (!$storeIds->contains($loyaltyAccount->store_id)) {
-            abort(404, 'Loyalty account not found or you do not have access to it.');
+            return $this->supportAccessRedirect();
         }
 
         $this->supportAuditService->log(
@@ -261,7 +261,7 @@ class MerchantCustomersController extends Controller
         $storeIds = Auth::user()->stores()->pluck('id');
 
         if (!$storeIds->contains($loyaltyAccount->store_id)) {
-            abort(404, 'Loyalty account not found or you do not have access to it.');
+            return $this->supportAccessRedirect();
         }
 
         try {
@@ -282,7 +282,7 @@ class MerchantCustomersController extends Controller
         $storeIds = Auth::user()->stores()->pluck('id');
 
         if (!$storeIds->contains($loyaltyAccount->store_id)) {
-            abort(404, 'Loyalty account not found or you do not have access to it.');
+            return $this->supportAccessRedirect();
         }
 
         UpdateWalletPassJob::dispatch($loyaltyAccount->id);
@@ -301,5 +301,14 @@ class MerchantCustomersController extends Controller
         );
 
         return back()->with('success', 'Wallet refresh queued. Apple and Google Wallet will update on the next sync cycle.');
+    }
+
+    private function supportAccessRedirect()
+    {
+        return redirect()
+            ->route('merchant.customers.index')
+            ->withErrors([
+                'support' => 'We could not open that customer record. It may belong to a different store, or it may no longer be available.',
+            ]);
     }
 }

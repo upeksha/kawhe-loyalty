@@ -81,7 +81,7 @@ class JoinController extends Controller
         }
 
         return back()->withErrors([
-            'email' => 'No card found for this email address at ' . $store->name . '.',
+            'email' => 'We could not find a card for that email address at ' . $store->name . '. Try a different email, or create a new card if you have not joined yet.',
         ])->withInput();
     }
 
@@ -184,7 +184,7 @@ class JoinController extends Controller
                 'store_id' => $store->id,
                 'store_name' => $store->name,
             ]);
-            abort(500, 'Store configuration error. Please contact support.');
+            abort(500, 'The store is not ready to accept new joins right now. Please ask staff for help.');
         }
         
         // Try to check usage limit, but allow card creation if check fails

@@ -19,12 +19,18 @@ class CardController extends Controller
             // Ensure relationships are loaded
             if (!$account->store) {
                 \Log::error('LoyaltyAccount has no store', ['account_id' => $account->id]);
-                abort(500, 'Card configuration error. Please contact support.');
+                return response()->view('card.unavailable', [
+                    'title' => 'Card temporarily unavailable',
+                    'message' => 'This loyalty card is missing store information right now. Please ask the store team for a fresh join link or try again shortly.',
+                ], 500);
             }
 
             if (!$account->customer) {
                 \Log::error('LoyaltyAccount has no customer', ['account_id' => $account->id]);
-                abort(500, 'Card configuration error. Please contact support.');
+                return response()->view('card.unavailable', [
+                    'title' => 'Card temporarily unavailable',
+                    'message' => 'This loyalty card is missing customer information right now. Please ask the store team for help or try again shortly.',
+                ], 500);
             }
 
             // Ensure redeem_token exists if reward_balance > 0 (but don't regenerate if it already exists)
@@ -65,7 +71,10 @@ class CardController extends Controller
 
             return view('card.show', compact('account'));
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
-            abort(404, 'Loyalty card not found.');
+            return response()->view('card.unavailable', [
+                'title' => 'Card not found',
+                'message' => 'This loyalty card link is no longer valid. If you already joined, ask the store to help you recover your card with your email address.',
+            ], 404);
         } catch (\Exception $e) {
             \Log::error('Error loading card', [
                 'public_token' => $public_token,
@@ -74,7 +83,10 @@ class CardController extends Controller
                 'line' => $e->getLine(),
                 'trace' => $e->getTraceAsString(),
             ]);
-            abort(500, 'Error loading card. Please try again later.');
+            return response()->view('card.unavailable', [
+                'title' => 'Card temporarily unavailable',
+                'message' => 'We could not load this loyalty card right now. Please try again shortly, or ask the store team for a fresh card link if the problem continues.',
+            ], 500);
         }
     }
 
