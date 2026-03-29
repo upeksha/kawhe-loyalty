@@ -29,6 +29,7 @@ test('send endpoint sends email and sets token in database', function () {
     $account->refresh();
     expect($account->email_verification_token_hash)->not->toBeNull();
     expect($account->email_verification_expires_at)->not->toBeNull();
+    expect($account->email_verification_sent_at->diffInMinutes($account->email_verification_expires_at))->toBeGreaterThanOrEqual(1439);
     expect($account->email_verification_sent_at)->not->toBeNull();
 });
 
@@ -45,7 +46,7 @@ test('verify endpoint sets verified_at and clears token', function () {
 
     $account->update([
         'email_verification_token_hash' => $tokenHash,
-        'email_verification_expires_at' => now()->addMinutes(60),
+        'email_verification_expires_at' => now()->addDay(),
     ]);
 
     $response = $this->get(route('customer.email.verification.verify', ['token' => $rawToken]) . '?card=' . $account->public_token);
@@ -147,7 +148,7 @@ test('verify redirects to card when card query param provided', function () {
 
     $account->update([
         'email_verification_token_hash' => $tokenHash,
-        'email_verification_expires_at' => now()->addMinutes(60),
+        'email_verification_expires_at' => now()->addDay(),
     ]);
 
     $response = $this->get(route('customer.email.verification.verify', ['token' => $rawToken]) . '?card=' . $account->public_token);
@@ -168,7 +169,7 @@ test('verify redirects to card when token is valid but no query param', function
 
     $account->update([
         'email_verification_token_hash' => $tokenHash,
-        'email_verification_expires_at' => now()->addMinutes(60),
+        'email_verification_expires_at' => now()->addDay(),
     ]);
 
     $response = $this->get(route('customer.email.verification.verify', ['token' => $rawToken]));
@@ -176,5 +177,3 @@ test('verify redirects to card when token is valid but no query param', function
     $response->assertRedirect(route('card.show', ['public_token' => $account->public_token]));
     $response->assertSessionHas('message');
 });
-
-

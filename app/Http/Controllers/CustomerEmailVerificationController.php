@@ -88,7 +88,7 @@ class CustomerEmailVerificationController extends Controller
         // Save verification data on the loyalty account (store-specific)
         $account->update([
             'email_verification_token_hash' => hash('sha256', $rawToken),
-            'email_verification_expires_at' => now()->addMinutes(60),
+            'email_verification_expires_at' => now()->addDay(),
             'email_verification_sent_at' => now(),
         ]);
 

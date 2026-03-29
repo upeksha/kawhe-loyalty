@@ -243,7 +243,7 @@ class JoinController extends Controller
             // Save verification data on the loyalty account (store-specific verification)
             $loyaltyAccount->update([
                 'email_verification_token_hash' => hash('sha256', $verificationToken),
-                'email_verification_expires_at' => now()->addMinutes(60),
+                'email_verification_expires_at' => now()->addDay(),
                 'email_verification_sent_at' => now(),
             ]);
 
