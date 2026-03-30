@@ -38,7 +38,6 @@
             [
                 'label' => 'Active customers',
                 'value' => number_format($analytics['active_customers']),
-                'caption' => 'Joined or used their card in the last 30 days',
                 'tone' => 'bg-[#f3efe7]',
                 'accent' => 'text-[#3a2a22]',
                 'chart' => [
@@ -68,7 +67,6 @@
             [
                 'label' => 'Rewards earned',
                 'value' => number_format($analytics['rewards_earned_last_window']),
-                'caption' => 'Completed reward cycles in the last 30 days',
                 'tone' => 'bg-[#edf4eb]',
                 'accent' => 'text-[#1f3b2c]',
                 'chart' => [
@@ -98,7 +96,6 @@
             [
                 'label' => 'Rewards redeemed',
                 'value' => number_format($analytics['rewards_redeemed_last_window']),
-                'caption' => 'Redeemed across your stores in the last 30 days',
                 'tone' => 'bg-[#fff4e9]',
                 'accent' => 'text-[#c96a3b]',
                 'chart' => [
@@ -292,9 +289,8 @@
                         <div>
                             <p class="text-sm font-medium text-stone-500">{{ $card['label'] }}</p>
                             <p class="mt-4 text-4xl font-semibold tracking-tight text-stone-950">{{ $card['value'] }}</p>
-                            <p class="mt-3 max-w-[16rem] text-sm leading-6 text-stone-600">{{ $card['caption'] }}</p>
                         </div>
-                        <div class="mt-1 h-[4.5rem] w-32 shrink-0">
+                        <div class="mt-0 h-[5.5rem] w-36 shrink-0">
                             <canvas class="h-full w-full" data-chart='@json($card["chart"])' aria-hidden="true"></canvas>
                         </div>
                     </div>
