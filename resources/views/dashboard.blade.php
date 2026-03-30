@@ -100,28 +100,28 @@
     @endphp
 
     <div class="space-y-6 sm:space-y-8">
-        <section class="rounded-[30px] border border-stone-200/70 bg-white p-5 shadow-sm shadow-stone-200/50 sm:p-8">
-            <div class="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
+        <section class="rounded-[28px] border border-stone-200/70 bg-white p-4 shadow-sm shadow-stone-200/50 sm:p-6">
+            <div class="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
                 <div class="max-w-2xl">
-                    <p class="text-sm font-semibold uppercase tracking-[0.24em] text-brand-600">Dashboard</p>
-                    <h2 class="mt-3 text-3xl font-semibold tracking-tight text-stone-900 sm:text-4xl">
+                    <p class="text-xs font-semibold uppercase tracking-[0.22em] text-brand-600">Dashboard</p>
+                    <h2 class="mt-2 text-2xl font-semibold tracking-tight text-stone-900 sm:text-3xl">
                         Welcome back, {{ request()->user()->name ?? 'Merchant' }}.
                     </h2>
-                    <p class="mt-3 max-w-xl text-base leading-7 text-stone-600">
+                    <p class="mt-2 max-w-xl text-sm leading-6 text-stone-600">
                         Here’s the clearest read on customer growth, reward usage, and store readiness across your loyalty program.
                     </p>
                 </div>
 
                 <div class="w-full max-w-[34rem]">
                     <p class="text-xs font-semibold uppercase tracking-[0.18em] text-stone-400">Quick Actions</p>
-                    <div class="mt-3 grid gap-3 sm:grid-cols-3">
-                        <x-ui.button href="{{ route('merchant.scanner') }}" variant="primary" size="sm" class="!justify-start !rounded-2xl !border-0 !bg-[#eef1ff] !px-4 !py-4 !text-[#5b6cff] !shadow-none hover:!bg-[#e5e9ff]">
+                    <div class="mt-2 grid gap-2 sm:grid-cols-3">
+                        <x-ui.button href="{{ route('merchant.scanner') }}" variant="primary" size="sm" class="!justify-start !rounded-xl !border-0 !bg-[#eef1ff] !px-3 !py-3 !text-[#5b6cff] !shadow-none hover:!bg-[#e5e9ff]">
                             Open Scanner
                         </x-ui.button>
-                        <x-ui.button href="{{ route('merchant.stores.index') }}" variant="secondary" size="sm" class="!justify-start !rounded-2xl !border-0 !bg-stone-100 !px-4 !py-4 !text-stone-700 !shadow-none hover:!bg-stone-200">
+                        <x-ui.button href="{{ route('merchant.stores.index') }}" variant="secondary" size="sm" class="!justify-start !rounded-xl !border-0 !bg-stone-100 !px-3 !py-3 !text-stone-700 !shadow-none hover:!bg-stone-200">
                             Store QR
                         </x-ui.button>
-                        <x-ui.button href="{{ route('merchant.customers.index') }}" variant="secondary" size="sm" class="!justify-start !rounded-2xl !border-0 !bg-stone-100 !px-4 !py-4 !text-stone-700 !shadow-none hover:!bg-stone-200">
+                        <x-ui.button href="{{ route('merchant.customers.index') }}" variant="secondary" size="sm" class="!justify-start !rounded-xl !border-0 !bg-stone-100 !px-3 !py-3 !text-stone-700 !shadow-none hover:!bg-stone-200">
                             Customers
                         </x-ui.button>
                     </div>
