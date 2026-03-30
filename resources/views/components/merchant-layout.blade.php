@@ -184,7 +184,7 @@
             ></div>
 
             <!-- Main Content -->
-            <div class="flex flex-1 flex-col overflow-hidden lg:ml-64">
+            <div class="flex min-w-0 flex-1 flex-col lg:ml-64">
                 <!-- Top Header -->
                 <header class="bg-white border-b border-stone-200">
                     <div class="flex items-center justify-between h-16 px-4 sm:px-6 lg:px-8">
@@ -207,7 +207,7 @@
                 </header>
 
                 <!-- Page Content -->
-                <main class="flex-1 overflow-y-auto">
+                <main class="flex-1 overflow-x-hidden overflow-y-auto">
                     <div class="py-6 px-4 sm:px-6 lg:px-8">
                         <x-flash-messages />
                         {{ $slot }}
