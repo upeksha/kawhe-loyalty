@@ -35,7 +35,7 @@
                                 href="{{ $appleStoreUrl }}"
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                class="flex flex-1 items-center justify-center rounded-2xl border border-stone-200 bg-white p-1.5 transition hover:border-[#4f7d54] hover:bg-[#edf4eb]"
+                                class="flex flex-1 items-center justify-center rounded-2xl bg-white p-1.5 transition hover:bg-[#edf4eb]"
                             >
                                 <img
                                     src="{{ asset('images/store-badges/app-store-light-en.png') }}"
@@ -50,7 +50,7 @@
                                 href="{{ $googlePlayUrl }}"
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                class="flex flex-1 items-center justify-center rounded-2xl border border-stone-200 bg-white p-1.5 transition hover:border-[#4f7d54] hover:bg-[#edf4eb]"
+                                class="flex flex-1 items-center justify-center rounded-2xl bg-white p-1.5 transition hover:bg-[#edf4eb]"
                             >
                                 <img
                                     src="{{ asset('images/store-badges/google-play-light-en.png') }}"
