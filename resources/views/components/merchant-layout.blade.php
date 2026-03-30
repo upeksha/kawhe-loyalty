@@ -18,6 +18,14 @@
         <!-- Scripts -->
         @vite(['resources/css/app.css', 'resources/js/app.js'])
         @stack('scripts')
+        <style>
+            @media (min-width: 1024px) {
+                .merchant-main-offset {
+                    margin-left: 256px;
+                    width: calc(100% - 256px);
+                }
+            }
+        </style>
     </head>
     <body class="font-sans antialiased bg-stone-50">
         <div x-data="{ sidebarOpen: false }" class="min-h-screen">
@@ -184,7 +192,7 @@
             ></div>
 
             <!-- Main Content -->
-            <div class="min-h-screen min-w-0 lg:ml-64">
+            <div class="merchant-main-offset min-h-screen min-w-0">
                 <!-- Top Header -->
                 <header class="bg-white border-b border-stone-200">
                     <div class="flex items-center justify-between h-16 px-4 sm:px-6 lg:px-8">
