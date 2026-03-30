@@ -46,7 +46,7 @@
         $billingBlocked = !($usageStats['can_create_card'] ?? false) && !($usageStats['is_subscribed'] ?? false);
     @endphp
 
-    <div class="max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div class="mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div class="lg:col-span-2">
         <x-ui.card class="p-8 flex flex-col items-center justify-center space-y-6">
             <div class="p-4 bg-white rounded-lg shadow-sm border border-stone-200">
