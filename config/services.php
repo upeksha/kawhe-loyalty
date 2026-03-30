@@ -52,7 +52,7 @@ return [
 
     'merchant_app' => [
         'apple_store_url' => env('MERCHANT_APP_APPLE_STORE_URL', 'https://apps.apple.com/nz/app/kawhe/id6759241473'),
-        'google_play_url' => env('MERCHANT_APP_GOOGLE_PLAY_URL'),
+        'google_play_url' => env('MERCHANT_APP_GOOGLE_PLAY_URL', 'https://play.google.com/store/apps/details?id=com.kaxfree&hl=en_NZ'),
     ],
 
 ];
