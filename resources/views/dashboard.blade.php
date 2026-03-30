@@ -65,24 +65,34 @@
         $redeemsChart = $buildChart($trendPoints->pluck('redeems')->all(), 760, 225);
         $joinOnlyChart = $buildChart($trendPoints->pluck('joins')->all(), 390, 225);
 
+        $joinCardChart = $buildChart($trendPoints->pluck('joins')->all(), 180, 58);
+        $earnedCardChart = $buildChart($trendPoints->map(fn ($day) => ($day['stamps'] ?? 0) + ($day['redeems'] ?? 0))->all(), 180, 58);
+        $redeemedCardChart = $buildChart($trendPoints->pluck('redeems')->all(), 180, 58);
+
         $summaryCards = [
             [
                 'label' => 'Active customers',
                 'value' => number_format($analytics['active_customers']),
-                'caption' => 'Joined or used their card in the last 30 days.',
-                'tone' => 'from-brand-50 via-white to-white text-brand-700',
+                'caption' => 'Joined or used their card in the last 30 days',
+                'tone' => 'bg-[#eef1ff]',
+                'accent' => 'text-[#5b6cff]',
+                'spark' => $joinCardChart['line'],
             ],
             [
                 'label' => 'Rewards earned',
                 'value' => number_format($analytics['rewards_earned_last_window']),
-                'caption' => 'Customers who completed a reward cycle in the last 30 days.',
-                'tone' => 'from-emerald-50 via-white to-white text-emerald-700',
+                'caption' => 'Completed reward cycles in the last 30 days',
+                'tone' => 'bg-[#eefcf6]',
+                'accent' => 'text-[#31b67a]',
+                'spark' => $earnedCardChart['line'],
             ],
             [
                 'label' => 'Rewards redeemed',
                 'value' => number_format($analytics['rewards_redeemed_last_window']),
-                'caption' => 'Rewards redeemed across your stores in the last 30 days.',
-                'tone' => 'from-accent-50 via-white to-white text-accent-700',
+                'caption' => 'Redeemed across your stores in the last 30 days',
+                'tone' => 'bg-[#f3fbf6]',
+                'accent' => 'text-[#39b980]',
+                'spark' => $redeemedCardChart['line'],
             ],
         ];
 
@@ -90,44 +100,54 @@
     @endphp
 
     <div class="space-y-6 sm:space-y-8">
-        <section class="rounded-[28px] border border-stone-200/80 bg-white p-5 shadow-sm shadow-stone-200/60 sm:p-8">
+        <section class="rounded-[30px] border border-stone-200/70 bg-white p-5 shadow-sm shadow-stone-200/50 sm:p-8">
             <div class="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
                 <div class="max-w-2xl">
-                    <p class="text-sm font-semibold uppercase tracking-[0.24em] text-brand-600">Merchant overview</p>
+                    <p class="text-sm font-semibold uppercase tracking-[0.24em] text-brand-600">Dashboard</p>
                     <h2 class="mt-3 text-3xl font-semibold tracking-tight text-stone-900 sm:text-4xl">
                         Welcome back, {{ request()->user()->name ?? 'Merchant' }}.
                     </h2>
                     <p class="mt-3 max-w-xl text-base leading-7 text-stone-600">
-                        This dashboard is now centered around customer growth and loyalty activity first, so you can see whether your program is moving before diving into operations.
+                        Here’s the clearest read on customer growth, reward usage, and store readiness across your loyalty program.
                     </p>
                 </div>
 
-                <div class="grid gap-3 sm:grid-cols-3 xl:w-[34rem]">
-                    <x-ui.button href="{{ route('merchant.scanner') }}" variant="primary" size="sm" class="!justify-start !rounded-2xl !px-4 !py-4">
-                        Open Scanner
-                    </x-ui.button>
-                    <x-ui.button href="{{ route('merchant.stores.index') }}" variant="secondary" size="sm" class="!justify-start !rounded-2xl !px-4 !py-4">
-                        Store QR
-                    </x-ui.button>
-                    <x-ui.button href="{{ route('merchant.customers.index') }}" variant="secondary" size="sm" class="!justify-start !rounded-2xl !px-4 !py-4">
-                        Customers
-                    </x-ui.button>
+                <div class="w-full max-w-[34rem]">
+                    <p class="text-xs font-semibold uppercase tracking-[0.18em] text-stone-400">Quick Actions</p>
+                    <div class="mt-3 grid gap-3 sm:grid-cols-3">
+                        <x-ui.button href="{{ route('merchant.scanner') }}" variant="primary" size="sm" class="!justify-start !rounded-2xl !border-0 !bg-[#eef1ff] !px-4 !py-4 !text-[#5b6cff] !shadow-none hover:!bg-[#e5e9ff]">
+                            Open Scanner
+                        </x-ui.button>
+                        <x-ui.button href="{{ route('merchant.stores.index') }}" variant="secondary" size="sm" class="!justify-start !rounded-2xl !border-0 !bg-stone-100 !px-4 !py-4 !text-stone-700 !shadow-none hover:!bg-stone-200">
+                            Store QR
+                        </x-ui.button>
+                        <x-ui.button href="{{ route('merchant.customers.index') }}" variant="secondary" size="sm" class="!justify-start !rounded-2xl !border-0 !bg-stone-100 !px-4 !py-4 !text-stone-700 !shadow-none hover:!bg-stone-200">
+                            Customers
+                        </x-ui.button>
+                    </div>
                 </div>
             </div>
         </section>
 
         <section class="grid gap-4 xl:grid-cols-3">
             @foreach($summaryCards as $card)
-                <article class="rounded-[26px] border border-stone-200/70 bg-gradient-to-br {{ $card['tone'] }} p-5 shadow-sm shadow-stone-200/70">
-                    <p class="text-sm font-medium text-stone-500">{{ $card['label'] }}</p>
-                    <p class="mt-4 text-4xl font-semibold tracking-tight text-stone-950">{{ $card['value'] }}</p>
-                    <p class="mt-3 max-w-[16rem] text-sm leading-6 text-stone-600">{{ $card['caption'] }}</p>
+                <article class="rounded-[26px] border border-stone-200/60 {{ $card['tone'] }} p-5 shadow-sm shadow-stone-200/40">
+                    <div class="flex items-start justify-between gap-4">
+                        <div>
+                            <p class="text-sm font-medium text-stone-500">{{ $card['label'] }}</p>
+                            <p class="mt-4 text-4xl font-semibold tracking-tight text-stone-950">{{ $card['value'] }}</p>
+                            <p class="mt-3 max-w-[16rem] text-sm leading-6 text-stone-600">{{ $card['caption'] }}</p>
+                        </div>
+                        <svg viewBox="0 0 180 58" class="mt-2 h-16 w-28 shrink-0" fill="none" preserveAspectRatio="none" aria-hidden="true">
+                            <path d="{{ $card['spark'] }}" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="{{ $card['accent'] }}" />
+                        </svg>
+                    </div>
                 </article>
             @endforeach
         </section>
 
         <section class="grid gap-6 xl:grid-cols-[1.75fr_1fr]">
-            <section class="rounded-[28px] border border-stone-200/80 bg-white p-5 shadow-sm shadow-stone-200/60 sm:p-6">
+            <section class="rounded-[30px] border border-stone-200/70 bg-white p-5 shadow-sm shadow-stone-200/50 sm:p-6">
                 <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                     <div>
                         <h3 class="text-xl font-semibold text-stone-900">Loyalty Activity</h3>
@@ -137,17 +157,17 @@
                 </div>
 
                 <div class="mt-6 grid gap-3 md:grid-cols-3">
-                    <div class="rounded-2xl bg-brand-50 p-4 text-brand-700">
+                    <div class="rounded-2xl bg-[#eaf1ff] p-4 text-[#5b6cff]">
                         <p class="text-xs font-semibold uppercase tracking-[0.18em] opacity-75">New cards</p>
                         <p class="mt-3 text-3xl font-semibold tracking-tight text-stone-950">{{ number_format($analytics['joins_last_window']) }}</p>
                     </div>
-                    <div class="rounded-2xl bg-emerald-50 p-4 text-emerald-700">
+                    <div class="rounded-2xl bg-[#ecfbf3] p-4 text-[#31b67a]">
                         <p class="text-xs font-semibold uppercase tracking-[0.18em] opacity-75">Stamp activity</p>
                         <p class="mt-3 text-3xl font-semibold tracking-tight text-stone-950">{{ number_format($trendPoints->sum('stamps')) }}</p>
                     </div>
-                    <div class="rounded-2xl bg-accent-50 p-4 text-accent-700">
-                        <p class="text-xs font-semibold uppercase tracking-[0.18em] opacity-75">Redeems</p>
-                        <p class="mt-3 text-3xl font-semibold tracking-tight text-stone-950">{{ number_format($trendPoints->sum('redeems')) }}</p>
+                    <div class="rounded-2xl bg-[#fff8df] p-4 text-[#d9a227]">
+                        <p class="text-xs font-semibold uppercase tracking-[0.18em] opacity-75">Avg per day</p>
+                        <p class="mt-3 text-3xl font-semibold tracking-tight text-stone-950">{{ number_format($trendPoints->sum('total') / max(1, $trendPoints->count()), 1) }}</p>
                     </div>
                 </div>
 
@@ -156,7 +176,7 @@
                         No recent join or card activity yet. As customers join and start collecting stamps, your activity graph will appear here.
                     </div>
                 @else
-                    <div class="mt-6 rounded-[24px] border border-stone-200 bg-stone-50/70 p-4 sm:p-5">
+                    <div class="mt-6 rounded-[24px] border border-stone-200/70 bg-stone-50/70 p-4 sm:p-5">
                         <svg viewBox="0 0 760 245" class="h-[20rem] w-full" fill="none" preserveAspectRatio="none" aria-hidden="true">
                             @foreach(range(1, 4) as $line)
                                 <line x1="0" y1="{{ $line * 49 }}" x2="760" y2="{{ $line * 49 }}" stroke="#e7e5e4" stroke-dasharray="4 6" />
@@ -185,7 +205,7 @@
             </section>
 
             <div class="space-y-6">
-                <section class="rounded-[28px] border border-stone-200/80 bg-white p-5 shadow-sm shadow-stone-200/60 sm:p-6">
+                <section class="rounded-[30px] border border-stone-200/70 bg-white p-5 shadow-sm shadow-stone-200/50 sm:p-6">
                     <div class="flex items-start justify-between gap-4">
                         <div>
                             <h3 class="text-xl font-semibold text-stone-900">Card Growth</h3>
@@ -195,7 +215,7 @@
                     </div>
 
                     <div class="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
-                        <div class="rounded-2xl bg-brand-50 p-4 text-brand-700">
+                        <div class="rounded-2xl bg-[#eaf1ff] p-4 text-[#5b6cff]">
                             <p class="text-xs font-semibold uppercase tracking-[0.18em] opacity-75">Cards added</p>
                             <p class="mt-3 text-3xl font-semibold tracking-tight text-stone-950">{{ number_format($analytics['joins_last_window']) }}</p>
                         </div>
@@ -223,7 +243,7 @@
                     @endif
                 </section>
 
-                <section class="rounded-[28px] border border-stone-200/80 bg-white p-5 shadow-sm shadow-stone-200/60 sm:p-6">
+                <section class="rounded-[30px] border border-stone-200/70 bg-white p-5 shadow-sm shadow-stone-200/50 sm:p-6">
                     <div class="flex items-start justify-between gap-4">
                         <div>
                             <h3 class="text-xl font-semibold text-stone-900">Recent Activity</h3>
@@ -233,7 +253,7 @@
 
                     <div class="mt-5 space-y-2.5">
                         @forelse($miniActivity as $day)
-                            <div class="flex items-center justify-between gap-3 rounded-2xl border border-stone-200 bg-stone-50/70 px-3 py-3">
+                            <div class="flex items-center justify-between gap-3 rounded-2xl border border-stone-200/70 bg-stone-50/70 px-3 py-3">
                                 <div>
                                     <p class="text-sm font-semibold text-stone-900">{{ $day['label'] }}</p>
                                     <p class="text-xs text-stone-500">{{ $day['joins'] }} joins, {{ $day['stamps'] }} stamps, {{ $day['redeems'] }} redeems</p>
@@ -253,7 +273,7 @@
 
         <section class="grid grid-cols-1 lg:grid-cols-3 gap-6">
             @if(isset($usageStats))
-                <x-ui.card class="p-5 sm:p-6">
+                <x-ui.card class="!rounded-[30px] !border-stone-200/70 p-5 sm:p-6">
                     <div class="flex items-start justify-between gap-3">
                         <div>
                             <h3 class="text-base sm:text-lg font-bold text-stone-900">Plan Health</h3>
@@ -301,7 +321,7 @@
                 </x-ui.card>
             @endif
 
-            <x-ui.card class="p-5 sm:p-6">
+            <x-ui.card class="!rounded-[30px] !border-stone-200/70 p-5 sm:p-6">
                 <div class="flex items-start justify-between gap-3">
                     <div>
                         <h3 class="text-base sm:text-lg font-bold text-stone-900">Wallet Readiness</h3>
@@ -328,7 +348,7 @@
                 </div>
             </x-ui.card>
 
-            <x-ui.card class="p-5 sm:p-6">
+            <x-ui.card class="!rounded-[30px] !border-stone-200/70 p-5 sm:p-6">
                 <div class="flex items-start justify-between gap-3">
                     <div>
                         <h3 class="text-base sm:text-lg font-bold text-stone-900">Manage Your Workspace</h3>
