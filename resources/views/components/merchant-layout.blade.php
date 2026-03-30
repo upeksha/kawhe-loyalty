@@ -207,7 +207,7 @@
                 </header>
 
                 <!-- Page Content -->
-                <main class="flex-1 overflow-x-hidden overflow-y-auto">
+                <main class="flex-1 overflow-visible">
                     <div class="py-6 px-4 sm:px-6 lg:px-8">
                         <x-flash-messages />
                         {{ $slot }}
