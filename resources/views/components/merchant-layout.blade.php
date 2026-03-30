@@ -20,7 +20,7 @@
         @stack('scripts')
     </head>
     <body class="font-sans antialiased bg-stone-50">
-        <div x-data="{ sidebarOpen: false }" class="min-h-screen flex">
+        <div x-data="{ sidebarOpen: false }" class="min-h-screen">
             <!-- Sidebar -->
             <aside 
                 :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'"
@@ -184,7 +184,7 @@
             ></div>
 
             <!-- Main Content -->
-            <div class="flex min-w-0 flex-1 flex-col lg:ml-64">
+            <div class="min-h-screen lg:pl-64">
                 <!-- Top Header -->
                 <header class="bg-white border-b border-stone-200">
                     <div class="flex items-center justify-between h-16 px-4 sm:px-6 lg:px-8">
@@ -207,7 +207,7 @@
                 </header>
 
                 <!-- Page Content -->
-                <main class="flex-1 overflow-visible">
+                <main class="overflow-visible">
                     <div class="py-6 px-4 sm:px-6 lg:px-8">
                         <x-flash-messages />
                         {{ $slot }}
