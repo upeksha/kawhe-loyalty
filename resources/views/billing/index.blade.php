@@ -3,386 +3,374 @@
         {{ __('Billing & Subscription') }}
     </x-slot>
 
-    <div class="max-w-4xl mx-auto space-y-4 sm:space-y-6">
+    <div class="mx-auto space-y-4 sm:space-y-6">
         @if (session('success'))
-            <x-ui.card class="p-4 bg-emerald-50 border border-emerald-200">
+            <x-ui.card class="border border-emerald-200 bg-emerald-50 p-4">
                 <p class="text-sm font-medium text-emerald-800">{{ session('success') }}</p>
             </x-ui.card>
         @endif
 
         @if (session('info'))
-            <x-ui.card class="p-4 bg-brand-50 border border-brand-200">
+            <x-ui.card class="border border-brand-200 bg-brand-50 p-4">
                 <p class="text-sm font-medium text-brand-800">{{ session('info') }}</p>
             </x-ui.card>
         @endif
 
-        <!-- Error Messages -->
         @if ($errors->any())
-            <x-ui.card class="p-4 bg-red-50 border border-red-200">
-                <div class="flex">
-                    <div class="flex-shrink-0">
-                        <svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
-                        </svg>
-                    </div>
-                    <div class="ml-3">
-                        <h3 class="text-sm font-medium text-red-800">Error</h3>
-                        <div class="mt-2 text-sm text-red-700">
-                            <ul class="list-disc list-inside">
-                                @foreach ($errors->all() as $error)
-                                    <li>{{ $error }}</li>
-                                @endforeach
-                            </ul>
-                        </div>
+            <x-ui.card class="border border-red-200 bg-red-50 p-4">
+                <div class="flex gap-3">
+                    <svg class="h-5 w-5 flex-shrink-0 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+                    </svg>
+                    <div>
+                        <h3 class="text-sm font-medium text-red-800">We couldn’t complete that billing action.</h3>
+                        <ul class="mt-2 list-disc list-inside text-sm text-red-700">
+                            @foreach ($errors->all() as $error)
+                                <li>{{ $error }}</li>
+                            @endforeach
+                        </ul>
                     </div>
                 </div>
             </x-ui.card>
         @endif
-        
+
         @php
             $remainingCards = max(0, (int) (($stats['limit'] ?? 0) - ($stats['non_grandfathered_count'] ?? 0)));
             $usagePercent = min(100, max(0, (int) ($stats['usage_percentage'] ?? 0)));
             $billingBlocked = !($stats['can_create_card'] ?? false) && !($stats['is_subscribed'] ?? false);
             $stripeConfigReady = !empty(config('cashier.key')) && !empty(config('cashier.secret')) && !empty(config('cashier.price_id'));
+
+            if ($stats['is_subscribed']) {
+                $heroTone = 'border-brand-200 bg-gradient-to-br from-brand-50 via-white to-emerald-50';
+                $heroBadgeTone = 'bg-brand-100 text-brand-800';
+                $heroTitle = 'Pro plan active';
+                $heroBody = 'New customer signups are open and your loyalty program can keep growing without a card limit.';
+                $heroActionLabel = 'Manage Subscription';
+                $heroActionRoute = route('billing.portal');
+                $heroActionMethod = 'post';
+            } elseif ($billingBlocked) {
+                $heroTone = 'border-red-200 bg-gradient-to-br from-red-50 via-white to-orange-50';
+                $heroBadgeTone = 'bg-red-100 text-red-800';
+                $heroTitle = 'New customer joins are blocked';
+                $heroBody = 'You have reached the free-plan join limit. Existing customer cards still work, but new joins will stay blocked until billing is updated.';
+                $heroActionLabel = 'Upgrade to Reopen Signups';
+                $heroActionRoute = route('billing.checkout');
+                $heroActionMethod = 'post';
+            } else {
+                $heroTone = 'border-stone-200 bg-gradient-to-br from-stone-50 via-white to-brand-50';
+                $heroBadgeTone = 'bg-stone-200 text-stone-700';
+                $heroTitle = 'You are on the free plan';
+                $heroBody = 'Your store can still accept new customer signups until you use all free-plan slots.';
+                $heroActionLabel = 'Upgrade to Pro';
+                $heroActionRoute = route('billing.checkout');
+                $heroActionMethod = 'post';
+            }
         @endphp
 
-        @if($billingBlocked)
-            <x-ui.card class="p-4 sm:p-6 border border-red-200 bg-red-50">
-                <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                    <div>
-                        <h2 class="text-base sm:text-lg font-bold text-red-900">New customer joins are blocked</h2>
-                        <p class="mt-1 text-sm leading-relaxed text-red-700">Your free-plan join capacity is full. Existing cards still work, but new signups and QR poster scans will keep hitting the limit screen until billing is updated.</p>
-                    </div>
-                    <div class="flex flex-wrap gap-2">
-                        @if($stripeConfigReady)
-                            <form method="POST" action="{{ route('billing.checkout') }}">
+        <x-ui.card class="border {{ $heroTone }} p-5 sm:p-6">
+            <div class="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+                <div class="max-w-2xl">
+                    <p class="text-xs font-semibold uppercase tracking-[0.18em] text-stone-500">Plan State</p>
+                    <span class="inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold {{ $heroBadgeTone }}">
+                        {{ $planState['label'] ?? ($stats['is_subscribed'] ? 'Pro' : 'Free') }}
+                    </span>
+                    <h2 class="mt-3 text-2xl font-semibold tracking-tight text-stone-900 sm:text-3xl">{{ $heroTitle }}</h2>
+                    <p class="mt-3 text-sm leading-6 text-stone-600 sm:text-base">
+                        {{ $heroBody }}
+                    </p>
+                    @if(isset($planState))
+                        <div class="mt-4 rounded-2xl border border-stone-200/80 bg-white/80 p-4">
+                            <p class="text-xs font-semibold uppercase tracking-[0.18em] text-stone-500">What changes next</p>
+                            <p class="mt-2 text-sm leading-6 text-stone-700">{{ $planState['transition'] }}</p>
+                        </div>
+                    @endif
+                </div>
+
+                <div class="w-full max-w-md rounded-[28px] border border-stone-200/80 bg-white/90 p-4 sm:p-5">
+                    <p class="text-xs font-semibold uppercase tracking-[0.18em] text-stone-500">Main action</p>
+                    <p class="mt-2 text-sm leading-6 text-stone-600">{{ $recommendedBillingAction }}</p>
+
+                    <div class="mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+                        @if($heroActionMethod === 'post')
+                            <form method="POST" action="{{ $heroActionRoute }}">
                                 @csrf
-                                <x-ui.button type="submit" variant="primary" size="sm">
-                                    Upgrade and Reopen Signups
+                                <x-ui.button type="submit" variant="primary" size="sm" class="w-full sm:w-auto">
+                                    {{ $heroActionLabel }}
+                                </x-ui.button>
+                            </form>
+                        @else
+                            <form method="POST" action="{{ $heroActionRoute }}">
+                                @csrf
+                                <x-ui.button type="submit" variant="primary" size="sm" class="w-full sm:w-auto">
+                                    {{ $heroActionLabel }}
                                 </x-ui.button>
                             </form>
                         @endif
-                        <form method="POST" action="{{ route('billing.sync') }}">
+
+                        @if(!$stats['is_subscribed'] || $billingBlocked || !empty($debugInfo['has_stripe_id']))
+                            <form method="POST" action="{{ route('billing.sync') }}">
+                                @csrf
+                                <x-ui.button type="submit" variant="secondary" size="sm" class="w-full sm:w-auto">
+                                    Sync Billing Status
+                                </x-ui.button>
+                            </form>
+                        @endif
+
+                        @if($stats['is_subscribed'])
+                            <x-ui.button href="{{ route('billing.index', ['refresh' => 1]) }}" variant="ghost" size="sm" class="w-full sm:w-auto">
+                                Refresh Status
+                            </x-ui.button>
+                        @endif
+                    </div>
+
+                    <div class="mt-4 rounded-2xl border border-stone-200 bg-stone-50/80 p-4">
+                        <p class="text-xs font-semibold uppercase tracking-[0.18em] text-stone-500">Quick answer</p>
+                        <ul class="mt-2 space-y-2 text-sm text-stone-700">
+                            <li>Existing customer cards keep working.</li>
+                            <li>{{ $stats['is_subscribed'] ? 'New customer signups are open.' : ($billingBlocked ? 'New customer signups are currently paused.' : 'New customer signups are still open.') }}</li>
+                            <li>{{ $stats['is_subscribed'] ? 'You can change or cancel later from the billing portal.' : 'Upgrading does not reset or remove any customer data.' }}</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </x-ui.card>
+
+        <x-ui.card class="p-5 sm:p-6">
+            <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                <div>
+                    <h3 class="text-lg font-semibold text-stone-900">Usage right now</h3>
+                    <p class="mt-1 text-sm text-stone-600">
+                        {{ $stats['is_subscribed'] ? 'Your Pro plan keeps new signups unlimited.' : 'Track how close you are to the free-plan signup limit.' }}
+                    </p>
+                </div>
+
+                @if(!$stats['is_subscribed'])
+                    <span class="inline-flex items-center rounded-full bg-stone-100 px-3 py-1 text-xs font-semibold text-stone-700">
+                        {{ $remainingCards }} signup slot{{ $remainingCards === 1 ? '' : 's' }} remaining
+                    </span>
+                @endif
+            </div>
+
+            <div class="mt-5 grid gap-4 lg:grid-cols-3">
+                <div class="rounded-2xl border border-stone-200 bg-stone-50/80 p-4">
+                    <p class="text-xs font-semibold uppercase tracking-[0.18em] text-stone-500">Current plan</p>
+                    <p class="mt-2 text-xl font-semibold text-stone-900">{{ $stats['is_subscribed'] ? 'Pro' : 'Free' }}</p>
+                    <p class="mt-1 text-sm text-stone-600">
+                        {{ $stats['is_subscribed'] ? 'Unlimited new signups' : 'Up to '.$stats['limit'].' new signups' }}
+                    </p>
+                </div>
+
+                <div class="rounded-2xl border border-stone-200 bg-stone-50/80 p-4">
+                    <p class="text-xs font-semibold uppercase tracking-[0.18em] text-stone-500">Cards issued</p>
+                    <p class="mt-2 text-xl font-semibold text-stone-900">
+                        {{ $stats['cards_count'] }}
+                        @unless($stats['is_subscribed'])
+                            <span class="text-base font-medium text-stone-500">/ {{ $stats['limit'] }}</span>
+                        @endunless
+                    </p>
+                    <p class="mt-1 text-sm text-stone-600">
+                        {{ $stats['grandfathered_count'] > 0 ? $stats['grandfathered_count'].' grandfathered excluded from limit' : 'All active customer cards counted here' }}
+                    </p>
+                </div>
+
+                <div class="rounded-2xl border border-stone-200 bg-stone-50/80 p-4">
+                    <p class="text-xs font-semibold uppercase tracking-[0.18em] text-stone-500">Signup status</p>
+                    <p class="mt-2 text-xl font-semibold text-stone-900">
+                        {{ $stats['is_subscribed'] ? 'Open' : ($billingBlocked ? 'Blocked' : 'Open') }}
+                    </p>
+                    <p class="mt-1 text-sm text-stone-600">
+                        {{ $stats['is_subscribed'] ? 'No free-plan cap applies while Pro is active.' : ($billingBlocked ? 'Upgrade or sync billing to accept new joins again.' : 'You can still accept new customers today.') }}
+                    </p>
+                </div>
+            </div>
+
+            @if(!$stats['is_subscribed'])
+                <div class="mt-5">
+                    <div class="mb-2 flex items-center justify-between text-sm">
+                        <span class="text-stone-600">Free-plan signup capacity used</span>
+                        <span class="font-semibold text-stone-900">{{ $usagePercent }}%</span>
+                    </div>
+                    <div class="h-3 w-full rounded-full bg-stone-200">
+                        <div class="h-3 rounded-full bg-brand-600 transition-all duration-300" style="width: {{ $usagePercent }}%"></div>
+                    </div>
+                    <p class="mt-2 text-xs text-stone-500">
+                        Upgrading immediately removes the signup limit. Existing customers and loyalty history stay untouched.
+                    </p>
+                </div>
+            @endif
+        </x-ui.card>
+
+        <x-ui.card class="p-5 sm:p-6">
+            <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                <div>
+                    <h3 class="text-lg font-semibold text-stone-900">Choose what to do next</h3>
+                    <p class="mt-1 text-sm text-stone-600">We’ve kept the actions to the essentials so this page stays easy to use.</p>
+                </div>
+            </div>
+
+            <div class="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                @if(!$stats['is_subscribed'])
+                    <div class="rounded-2xl border border-stone-200 bg-white p-4">
+                        <p class="text-sm font-semibold text-stone-900">Upgrade to Pro</p>
+                        <p class="mt-2 text-sm leading-6 text-stone-600">Best when you want to keep signups open without watching the free-plan limit.</p>
+                        <form method="POST" action="{{ route('billing.checkout') }}" class="mt-4">
                             @csrf
-                            <x-ui.button type="submit" variant="secondary" size="sm">
-                                Sync Billing Status
+                            <x-ui.button type="submit" variant="primary" size="sm" class="w-full">
+                                {{ $billingBlocked ? 'Upgrade and Reopen Signups' : 'Start Upgrade' }}
                             </x-ui.button>
                         </form>
                     </div>
-                </div>
-            </x-ui.card>
-        @endif
+                @endif
 
-        @if(isset($planState))
-            <x-ui.card class="p-4 sm:p-6">
-                <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                    <div>
-                        <h2 class="text-base sm:text-lg font-bold text-stone-900">Plan State</h2>
-                        <p class="mt-1 text-sm text-stone-600">A plain-language summary of where billing stands right now.</p>
+                @if($stats['is_subscribed'])
+                    <div class="rounded-2xl border border-stone-200 bg-white p-4">
+                        <p class="text-sm font-semibold text-stone-900">Manage billing</p>
+                        <p class="mt-2 text-sm leading-6 text-stone-600">Open Stripe’s billing portal to update payment details or manage your subscription.</p>
+                        <form method="POST" action="{{ route('billing.portal') }}" class="mt-4">
+                            @csrf
+                            <x-ui.button type="submit" variant="primary" size="sm" class="w-full">
+                                Open Billing Portal
+                            </x-ui.button>
+                        </form>
                     </div>
-                    <span class="inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold {{ $planState['tone'] }}">
-                        {{ $planState['label'] }}
-                    </span>
+                @endif
+
+                <div class="rounded-2xl border border-stone-200 bg-white p-4">
+                    <p class="text-sm font-semibold text-stone-900">Sync billing status</p>
+                    <p class="mt-2 text-sm leading-6 text-stone-600">Use this if you recently upgraded, changed billing in Stripe, or the page looks out of date.</p>
+                    <form method="POST" action="{{ route('billing.sync') }}" class="mt-4">
+                        @csrf
+                        <x-ui.button type="submit" variant="secondary" size="sm" class="w-full">
+                            Sync Billing Status
+                        </x-ui.button>
+                    </form>
                 </div>
 
-                <div class="mt-4 grid gap-4 md:grid-cols-2">
-                    <div class="rounded-xl border border-stone-200 bg-stone-50/70 p-4">
-                        <p class="text-xs font-semibold uppercase tracking-wide text-stone-500">Current state</p>
-                        <p class="mt-2 text-sm leading-relaxed text-stone-700">{{ $planState['summary'] }}</p>
-                    </div>
-                    <div class="rounded-xl border border-stone-200 bg-white p-4">
-                        <p class="text-xs font-semibold uppercase tracking-wide text-stone-500">What changes next</p>
-                        <p class="mt-2 text-sm leading-relaxed text-stone-700">{{ $planState['transition'] }}</p>
-                    </div>
+                <div class="rounded-2xl border border-stone-200 bg-white p-4">
+                    <p class="text-sm font-semibold text-stone-900">Refresh this page</p>
+                    <p class="mt-2 text-sm leading-6 text-stone-600">Run the latest billing checks again without leaving the dashboard.</p>
+                    <x-ui.button href="{{ route('billing.index', ['refresh' => 1]) }}" variant="ghost" size="sm" class="mt-4 w-full">
+                        Refresh Billing Checks
+                    </x-ui.button>
                 </div>
-            </x-ui.card>
-        @endif
+            </div>
+        </x-ui.card>
 
-        <x-ui.card class="p-4 sm:p-6">
-            @if(isset($billingDiagnostics))
-                @php
-                    $billingDiagnosticReady = collect($billingDiagnostics)->where('ready', true)->count();
-                    $billingDiagnosticTotal = count($billingDiagnostics);
-                    $billingDiagnosticLabel = $billingDiagnosticReady === $billingDiagnosticTotal
-                        ? 'Healthy'
-                        : ($billingDiagnosticReady >= 2 ? 'Needs attention' : 'Needs review');
-                    $billingDiagnosticTone = $billingDiagnosticReady === $billingDiagnosticTotal
-                        ? 'bg-emerald-100 text-emerald-700'
-                        : ($billingDiagnosticReady >= 2 ? 'bg-amber-100 text-amber-700' : 'bg-accent-100 text-accent-700');
-                @endphp
-
-                <div class="mb-6 rounded-xl border border-stone-200 bg-stone-50/70 p-5">
-                    <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <x-ui.card class="p-5 sm:p-6">
+            <details>
+                <summary class="cursor-pointer list-none">
+                    <div class="flex items-center justify-between gap-4">
                         <div>
-                            <h3 class="text-base sm:text-lg font-bold text-stone-900">Billing Support Diagnostics</h3>
-                            <p class="mt-1 text-sm text-stone-600">Use this when checkout, sync, or new-customer capacity looks wrong.</p>
+                            <h3 class="text-lg font-semibold text-stone-900">Billing Support Diagnostics</h3>
+                            <p class="mt-1 text-sm text-stone-600">Open this only if checkout, sync, or plan status looks wrong.</p>
                         </div>
-                        <span class="inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold {{ $billingDiagnosticTone }}">
-                            {{ $billingDiagnosticLabel }}
+                        <span class="inline-flex items-center rounded-full bg-stone-100 px-3 py-1 text-xs font-semibold text-stone-700">
+                            Show details
                         </span>
                     </div>
-                    <p class="mt-3 text-sm text-stone-600">{{ $billingDiagnosticReady }}/{{ $billingDiagnosticTotal }} billing checks are in a strong place.</p>
-                    <ul class="mt-4 space-y-3 text-sm">
-                        @foreach($billingDiagnostics as $diagnostic)
-                            <li class="rounded-xl border border-stone-200 bg-white px-4 py-3">
-                                <div class="flex items-center justify-between gap-3">
-                                    <span class="font-medium text-stone-800">{{ $diagnostic['label'] }}</span>
-                                    <span class="font-medium {{ $diagnostic['ready'] ? 'text-emerald-700' : 'text-amber-700' }}">
-                                        {{ $diagnostic['ready'] ? 'Ready' : 'Review' }}
-                                    </span>
+                </summary>
+
+                <div class="mt-5 space-y-4 border-t border-stone-200 pt-5">
+                    @if(isset($billingDiagnostics))
+                        @php
+                            $billingDiagnosticReady = collect($billingDiagnostics)->where('ready', true)->count();
+                            $billingDiagnosticTotal = count($billingDiagnostics);
+                            $billingDiagnosticLabel = $billingDiagnosticReady === $billingDiagnosticTotal
+                                ? 'Healthy'
+                                : ($billingDiagnosticReady >= 2 ? 'Needs attention' : 'Needs review');
+                            $billingDiagnosticTone = $billingDiagnosticReady === $billingDiagnosticTotal
+                                ? 'bg-emerald-100 text-emerald-700'
+                                : ($billingDiagnosticReady >= 2 ? 'bg-amber-100 text-amber-700' : 'bg-accent-100 text-accent-700');
+                        @endphp
+
+                        <div class="rounded-2xl border border-stone-200 bg-stone-50/70 p-4">
+                            <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                                <div>
+                                    <h4 class="text-sm font-semibold text-stone-900">Billing health checks</h4>
+                                    <p class="mt-1 text-sm text-stone-600">{{ $billingDiagnosticReady }}/{{ $billingDiagnosticTotal }} checks are currently in a good state.</p>
                                 </div>
-                                <p class="mt-1 text-xs leading-relaxed text-stone-500">{{ $diagnostic['hint'] }}</p>
-                            </li>
-                        @endforeach
-                    </ul>
-                    <div class="mt-4 rounded-xl border border-stone-200 bg-white p-4">
-                        <p class="text-sm font-semibold text-stone-800">Recommended next step</p>
-                        <p class="mt-2 text-sm leading-relaxed text-stone-600">{{ $recommendedBillingAction }}</p>
-                    </div>
+                                <span class="inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold {{ $billingDiagnosticTone }}">
+                                    {{ $billingDiagnosticLabel }}
+                                </span>
+                            </div>
+
+                            <ul class="mt-4 space-y-3 text-sm">
+                                @foreach($billingDiagnostics as $diagnostic)
+                                    <li class="rounded-xl border border-stone-200 bg-white px-4 py-3">
+                                        <div class="flex items-center justify-between gap-3">
+                                            <span class="font-medium text-stone-800">{{ $diagnostic['label'] }}</span>
+                                            <span class="font-medium {{ $diagnostic['ready'] ? 'text-emerald-700' : 'text-amber-700' }}">
+                                                {{ $diagnostic['ready'] ? 'Ready' : 'Review' }}
+                                            </span>
+                                        </div>
+                                        <p class="mt-1 text-xs leading-relaxed text-stone-500">{{ $diagnostic['hint'] }}</p>
+                                    </li>
+                                @endforeach
+                            </ul>
+                        </div>
+                    @endif
 
                     @if(!empty($recoveryActions))
-                        <div class="mt-4 rounded-xl border border-stone-200 bg-white p-4">
-                            <p class="text-sm font-semibold text-stone-800">Recovery actions</p>
-                            <ul class="mt-2 space-y-2 text-sm leading-relaxed text-stone-600 list-disc list-inside">
+                        <div class="rounded-2xl border border-stone-200 bg-stone-50/70 p-4">
+                            <p class="text-sm font-semibold text-stone-900">Recommended next step</p>
+                            <p class="mt-2 text-sm leading-6 text-stone-600">{{ $recommendedBillingAction }}</p>
+                        </div>
+
+                        <div class="rounded-2xl border border-stone-200 bg-stone-50/70 p-4">
+                            <p class="text-sm font-semibold text-stone-900">Recovery actions</p>
+                            <ul class="mt-2 list-disc list-inside space-y-2 text-sm leading-relaxed text-stone-600">
                                 @foreach($recoveryActions as $action)
                                     <li>{{ $action }}</li>
                                 @endforeach
                             </ul>
-                            <div class="mt-4 flex flex-wrap gap-2">
-                                <form method="POST" action="{{ route('billing.sync') }}">
-                                    @csrf
-                                    <x-ui.button type="submit" variant="secondary" size="sm">
-                                        Sync Billing Status
-                                    </x-ui.button>
-                                </form>
-                                @if(!empty($debugInfo['has_stripe_id']))
-                                    <x-ui.button href="{{ route('billing.index', ['refresh' => 1]) }}" variant="ghost" size="sm">
-                                        Refresh Billing Checks
-                                    </x-ui.button>
-                                @endif
-                                @if($stats['is_subscribed'])
-                                    <form method="POST" action="{{ route('billing.portal') }}">
-                                        @csrf
-                                        <x-ui.button type="submit" variant="ghost" size="sm">
-                                            Open Billing Portal
-                                        </x-ui.button>
-                                    </form>
-                                @endif
-                            </div>
                         </div>
                     @endif
-                </div>
-            @endif
 
-            <!-- Current Plan Status -->
-            <div class="mb-6">
-                <h3 class="text-base sm:text-lg font-bold text-stone-900 mb-3 sm:mb-4">Current Plan</h3>
-                @if($stats['is_subscribed'])
-                    <div class="p-4 bg-brand-50 border border-brand-200 rounded-lg">
-                        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                            <div>
-                                <p class="text-brand-800 font-semibold">✓ Pro Plan Active</p>
-                                <p class="text-sm text-brand-700 mt-1">Unlimited customer cards and uninterrupted signups.</p>
-                                <p class="text-xs text-brand-700 mt-2">If you cancel later, your current billing period stays active. New joins only fall back to the free-plan limit after the subscription actually ends.</p>
-                            </div>
-                            <form method="POST" action="{{ route('billing.portal') }}">
-                                @csrf
-                                <x-ui.button type="submit" variant="primary" size="sm">
-                                    Manage Subscription
-                                </x-ui.button>
-                            </form>
-                        </div>
-                    </div>
-                @else
-                    <div class="p-4 bg-stone-50 border border-stone-200 rounded-lg">
-                        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                            <div>
-                                <p class="text-stone-800 font-semibold">Free Plan</p>
-                                <p class="text-sm text-stone-600 mt-1">
-                                    {{ $stats['cards_count'] }} / {{ $stats['limit'] }} cards used for new signups
-                                    @if($stats['grandfathered_count'] > 0)
-                                        <span class="text-xs text-stone-500">({{ $stats['grandfathered_count'] }} grandfathered still active)</span>
-                                    @endif
-                                </p>
-                                <p class="text-xs text-stone-500 mt-1">Existing customers can always use their cards. Limit only affects new joins.</p>
-                                <p class="text-xs text-stone-500 mt-1">Upgrading does not remove or reset any customer cards. It only restores unlimited join capacity.</p>
-                                <p class="text-xs text-stone-600 mt-1"><strong>{{ $remainingCards }}</strong> new signup slot{{ $remainingCards === 1 ? '' : 's' }} remaining.</p>
-                            </div>
-                            @if($stats['non_grandfathered_count'] >= $stats['limit'])
-                                <div class="w-full sm:w-auto text-left sm:text-right">
-                                    <p class="text-sm text-red-600 font-semibold mb-2">Limit Reached</p>
-                                    <form method="POST" action="{{ route('billing.checkout') }}">
-                                        @csrf
-                                        <x-ui.button type="submit" variant="primary" size="sm" class="w-full sm:w-auto">
-                                            Upgrade to Resume Signups
-                                        </x-ui.button>
-                                    </form>
-                                </div>
-                            @else
-                                <form method="POST" action="{{ route('billing.checkout') }}" id="upgrade-form">
-                                    @csrf
-                                    <x-ui.button type="submit" variant="primary" size="sm" class="w-full sm:w-auto">
-                                        Upgrade Before Limit
-                                    </x-ui.button>
-                                </form>
-                            @endif
-                        </div>
-                    </div>
-                @endif
-            </div>
-
-            <!-- Usage Statistics -->
-            @if(!$stats['is_subscribed'])
-                <div class="mb-6">
-                    <h3 class="text-base sm:text-lg font-bold text-stone-900 mb-3 sm:mb-4">Usage Right Now</h3>
-                    <div class="space-y-2">
-                        <div class="flex justify-between text-sm">
-                            <span class="text-stone-600">Loyalty Cards Issued</span>
-                            <span class="font-semibold">{{ $stats['cards_count'] }} / {{ $stats['limit'] }}</span>
-                        </div>
-                        @if($stats['grandfathered_count'] > 0)
-                            <p class="text-xs text-brand-600">
-                                {{ $stats['grandfathered_count'] }} grandfathered card(s) are excluded from your free-plan limit.
-                            </p>
-                        @endif
-                        <div class="w-full bg-stone-200 rounded-full h-3">
-                            <div class="bg-brand-600 h-3 rounded-full transition-all duration-300"
-                                 style="width: {{ $stats['usage_percentage'] }}%"></div>
-                        </div>
-                        <p class="text-xs text-stone-500 mt-1">
-                            {{ $remainingCards }} cards remaining on free plan ({{ $usagePercent }}% used)
-                        </p>
-                    </div>
-                    <div class="mt-4 rounded-lg border border-stone-200 bg-stone-50 p-3">
-                        <p class="text-xs font-semibold text-stone-700">Upgrade impact</p>
-                        <p class="text-xs text-stone-600 mt-1">Upgrading immediately removes the join limit. No customer data is reset or removed.</p>
-                    </div>
-                    <div class="mt-3 rounded-lg border border-brand-200 bg-brand-50 p-3">
-                        <p class="text-xs font-semibold text-brand-800">Decision helper</p>
-                        <ul class="mt-1 space-y-1 text-xs text-brand-700">
-                            <li>If you are near 0 remaining slots, upgrade now to avoid join interruptions.</li>
-                            <li>If you have active campaigns running, upgrade before limit to keep QR onboarding continuous.</li>
-                            <li>If growth is low this week, you can stay on free and monitor this page.</li>
-                        </ul>
-                    </div>
-                </div>
-            @endif
-
-            <!-- Subscription Details -->
-            @if($subscription)
-                <div class="mb-6">
-                    <h3 class="text-base sm:text-lg font-bold text-stone-900 mb-3 sm:mb-4">Subscription Details</h3>
-                    <div class="bg-stone-50 p-4 rounded-lg">
-                        <p class="text-sm text-stone-600">
-                            <strong>Status:</strong> 
-                            <span class="capitalize">{{ $subscription->stripe_status }}</span>
-                        </p>
-                        @if($subscription->ends_at)
-                            <p class="text-sm text-stone-600 mt-2">
-                                <strong>Ends:</strong> {{ $subscription->ends_at->format('M d, Y') }}
-                            </p>
-                        @endif
-                        <div class="mt-3">
-                            <a href="{{ route('billing.index', ['refresh' => 1]) }}" 
-                               class="text-xs text-brand-600 hover:text-brand-700 underline">
-                                🔄 Refresh Subscription Status
-                            </a>
-                        </div>
-                        <div class="mt-4 rounded-lg border border-stone-200 bg-white p-3">
-                            <p class="text-xs font-semibold text-stone-700">Plan transition note</p>
-                            <p class="mt-1 text-xs leading-relaxed text-stone-600">
+                    @if($subscription)
+                        <div class="rounded-2xl border border-stone-200 bg-stone-50/70 p-4">
+                            <p class="text-sm font-semibold text-stone-900">Subscription details</p>
+                            <div class="mt-2 space-y-1 text-sm text-stone-600">
+                                <p><strong>Status:</strong> <span class="capitalize">{{ $subscription->stripe_status }}</span></p>
                                 @if($subscription->ends_at)
-                                    Your plan will keep working until {{ $subscription->ends_at->format('M d, Y') }}, then new joins return to the free-plan limit automatically.
-                                @else
-                                    Your plan stays active until you change it in the billing portal. Existing customers are never removed by plan changes.
+                                    <p><strong>Ends:</strong> {{ $subscription->ends_at->format('M d, Y') }}</p>
                                 @endif
+                            </div>
+                        </div>
+                    @elseif(isset($debugInfo) && $debugInfo['has_stripe_id'])
+                        <div class="rounded-2xl border border-accent-200 bg-accent-50 p-4">
+                            <p class="text-sm font-semibold text-accent-800">Subscription sync pending</p>
+                            <p class="mt-2 text-sm leading-6 text-accent-700">
+                                Your payment may already be complete, but plan status has not synced yet. Sync billing first, then refresh this page if needed.
                             </p>
                         </div>
-                    </div>
-                </div>
-            @elseif(isset($debugInfo) && $debugInfo['has_stripe_id'])
-                <div class="mb-6">
-                    <div class="bg-accent-50 border border-accent-200 rounded-lg p-4">
-                        <h3 class="text-sm font-semibold text-accent-800 mb-2">Subscription Sync Pending</h3>
-                        <p class="text-xs text-accent-700 mb-3">
-                            Your payment may be complete, but plan status has not synced yet. Use one of the actions below.
-                        </p>
-                        <div class="space-y-2">
-                            <form method="POST" action="{{ route('billing.sync') }}" class="inline">
-                                @csrf
-                                <x-ui.button type="submit" variant="primary" size="sm" class="w-full sm:w-auto">
-                                    Sync Billing Status
-                                </x-ui.button>
-                            </form>
-                            <x-ui.button href="{{ route('billing.index', ['refresh' => 1]) }}" variant="primary" size="sm" class="w-full sm:w-auto">
-                                Refresh Billing Checks
-                            </x-ui.button>
-                        </div>
-                        <p class="text-xs text-accent-600 mt-3">
-                            <strong>Note:</strong> If this persists, check Stripe Dashboard to verify the subscription exists, 
-                            then contact support with your Stripe customer ID: <code>{{ $debugInfo['stripe_id'] }}</code>
-                        </p>
-                    </div>
-                </div>
-            @endif
-            
-            <!-- Debug Info (only in development) -->
-            @if(isset($debugInfo) && (app()->environment('local') || config('app.debug')))
-                <div class="border-t pt-6 mt-6">
-                    <details class="bg-stone-50 p-4 rounded-lg">
-                        <summary class="text-sm font-semibold text-stone-700 cursor-pointer">🔍 Debug Info</summary>
-                        <div class="mt-3 text-xs text-stone-600 space-y-1">
-                            <p><strong>Has Stripe ID:</strong> {{ $debugInfo['has_stripe_id'] ? 'Yes' : 'No' }}</p>
-                            <p><strong>Stripe ID:</strong> {{ $debugInfo['stripe_id'] ?? 'N/A' }}</p>
-                            <p><strong>Subscription Exists:</strong> {{ $debugInfo['subscription_exists'] ? 'Yes' : 'No' }}</p>
-                            <p><strong>Subscription Status:</strong> {{ $debugInfo['subscription_status'] ?? 'N/A' }}</p>
-                            <p><strong>Is Subscribed (check):</strong> {{ $debugInfo['is_subscribed_check'] ? 'Yes' : 'No' }}</p>
-                            <p><strong>Subscriptions Count:</strong> {{ $debugInfo['subscriptions_count'] }}</p>
-                        </div>
-                    </details>
-                </div>
-            @endif
+                    @endif
 
-            <!-- Upgrade Benefits -->
-            @if(!$stats['is_subscribed'])
-                <div class="border-t pt-6">
-                    <h3 class="text-base sm:text-lg font-bold text-stone-900 mb-3 sm:mb-4">Why Upgrade</h3>
-                    <ul class="space-y-2 text-sm text-stone-600">
-                        <li class="flex items-start">
-                            <svg class="w-5 h-5 text-brand-500 mr-2 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                            </svg>
-                            Unlimited new customer signups
-                        </li>
-                        <li class="flex items-start">
-                            <svg class="w-5 h-5 text-brand-500 mr-2 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                            </svg>
-                            Existing cards continue without interruption
-                        </li>
-                        <li class="flex items-start">
-                            <svg class="w-5 h-5 text-brand-500 mr-2 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                            </svg>
-                            Cancel anytime from billing portal
-                        </li>
-                    </ul>
+                    @if(isset($debugInfo) && (app()->environment('local') || config('app.debug')))
+                        <details class="rounded-2xl border border-stone-200 bg-stone-50/70 p-4">
+                            <summary class="cursor-pointer text-sm font-semibold text-stone-800">Developer debug info</summary>
+                            <div class="mt-3 space-y-1 text-xs text-stone-600">
+                                <p><strong>Has Stripe ID:</strong> {{ $debugInfo['has_stripe_id'] ? 'Yes' : 'No' }}</p>
+                                <p><strong>Stripe ID:</strong> {{ $debugInfo['stripe_id'] ?? 'N/A' }}</p>
+                                <p><strong>Subscription Exists:</strong> {{ $debugInfo['subscription_exists'] ? 'Yes' : 'No' }}</p>
+                                <p><strong>Subscription Status:</strong> {{ $debugInfo['subscription_status'] ?? 'N/A' }}</p>
+                                <p><strong>Is Subscribed (check):</strong> {{ $debugInfo['is_subscribed_check'] ? 'Yes' : 'No' }}</p>
+                                <p><strong>Subscriptions Count:</strong> {{ $debugInfo['subscriptions_count'] }}</p>
+                            </div>
+                        </details>
+                    @endif
+
+                    @if((app()->environment('local') || config('app.debug')) && (empty(config('cashier.key')) || empty(config('cashier.secret')) || empty(config('cashier.price_id'))))
+                        <details class="rounded-2xl border border-accent-200 bg-accent-50 p-4">
+                            <summary class="cursor-pointer text-sm font-semibold text-accent-800">Stripe configuration status</summary>
+                            <ul class="mt-3 space-y-1 text-xs text-accent-700">
+                                <li>STRIPE_KEY: {{ empty(config('cashier.key')) ? 'Not set' : 'Set' }}</li>
+                                <li>STRIPE_SECRET: {{ empty(config('cashier.secret')) ? 'Not set' : 'Set' }}</li>
+                                <li>STRIPE_PRICE_ID: {{ empty(config('cashier.price_id')) ? 'Not set' : 'Set' }}</li>
+                            </ul>
+                        </details>
+                    @endif
                 </div>
-            @endif
-            
-            <!-- Stripe setup details (development only) -->
-            @if((app()->environment('local') || config('app.debug')) && (empty(config('cashier.key')) || empty(config('cashier.secret')) || empty(config('cashier.price_id'))))
-                <div class="border-t pt-6 mt-6">
-                    <details class="bg-accent-50 border border-accent-200 rounded-lg p-4">
-                        <summary class="text-sm font-semibold text-accent-800 cursor-pointer">⚠️ Stripe Configuration Status</summary>
-                        <ul class="text-xs text-accent-700 space-y-1 mt-3">
-                            <li>STRIPE_KEY: {{ empty(config('cashier.key')) ? '❌ Not set' : '✅ Set' }}</li>
-                            <li>STRIPE_SECRET: {{ empty(config('cashier.secret')) ? '❌ Not set' : '✅ Set' }}</li>
-                            <li>STRIPE_PRICE_ID: {{ empty(config('cashier.price_id')) ? '❌ Not set' : '✅ Set' }}</li>
-                        </ul>
-                    </details>
-                </div>
-            @endif
+            </details>
         </x-ui.card>
     </div>
 </x-merchant-layout>
