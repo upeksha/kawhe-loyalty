@@ -3,6 +3,11 @@
         {{ __('Scanner') }}
     </x-slot>
 
+    @php
+        $appleStoreUrl = config('services.merchant_app.apple_store_url');
+        $googlePlayUrl = config('services.merchant_app.google_play_url');
+    @endphp
+
     <div class="max-w-2xl mx-auto">
         @if($stores->isEmpty())
             <x-ui.card class="p-6 text-center">
@@ -12,6 +17,65 @@
                 </x-ui.button>
             </x-ui.card>
         @else
+            <x-ui.card class="mb-6 overflow-hidden border border-stone-200/80 bg-gradient-to-br from-[#f3efe7] via-white to-[#edf4eb] p-5 sm:p-6">
+                <div class="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+                    <div class="max-w-xl">
+                        <p class="text-xs font-semibold uppercase tracking-[0.22em] text-[#4f7d54]">Merchant App</p>
+                        <h2 class="mt-2 text-xl font-semibold tracking-tight text-stone-900 sm:text-2xl">
+                            Scan and redeem faster with the Kawhe Merchant app
+                        </h2>
+                        <p class="mt-3 text-sm leading-6 text-stone-600">
+                            Give your team the quickest way to scan loyalty cards, switch stores, and redeem rewards on the go. The mobile app is the easiest setup for busy counter staff.
+                        </p>
+                    </div>
+
+                    <div class="flex w-full max-w-md flex-col gap-3 sm:flex-row">
+                        @if($appleStoreUrl)
+                            <a
+                                href="{{ $appleStoreUrl }}"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                class="flex flex-1 items-center gap-3 rounded-2xl border border-stone-900 bg-stone-950 px-4 py-3 text-left text-white transition hover:bg-stone-800"
+                            >
+                                <svg class="h-8 w-8 flex-shrink-0" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                                    <path d="M16.365 12.253c.03 3.193 2.802 4.256 2.833 4.27-.023.075-.442 1.506-1.455 2.985-.875 1.278-1.783 2.55-3.214 2.577-1.406.026-1.858-.833-3.468-.833-1.61 0-2.11.807-3.443.859-1.383.052-2.437-1.389-3.319-2.662C2.505 16.705 1.43 12.31 3.27 9.113c.913-1.587 2.544-2.59 4.314-2.616 1.358-.026 2.641.912 3.468.912.825 0 2.372-1.128 3.996-.963.68.028 2.59.274 3.815 2.066-.099.061-2.478 1.444-2.498 4.741Zm-2.341-6.395c.733-.889 1.228-2.126 1.092-3.355-1.058.043-2.34.704-3.099 1.592-.68.782-1.276 2.04-1.115 3.241 1.181.091 2.389-.599 3.122-1.478Z"/>
+                                </svg>
+                                <span class="min-w-0">
+                                    <span class="block text-[11px] font-medium uppercase tracking-[0.18em] text-white/70">Download on the</span>
+                                    <span class="block truncate text-sm font-semibold">App Store</span>
+                                </span>
+                            </a>
+                        @endif
+
+                        @if($googlePlayUrl)
+                            <a
+                                href="{{ $googlePlayUrl }}"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                class="flex flex-1 items-center gap-3 rounded-2xl border border-stone-200 bg-white px-4 py-3 text-left text-stone-900 transition hover:border-[#4f7d54] hover:bg-[#edf4eb]"
+                            >
+                                <svg class="h-8 w-8 flex-shrink-0" viewBox="0 0 24 24" aria-hidden="true">
+                                    <path fill="#34A853" d="M3.5 2.75 13.74 13 3.51 23.25a1.8 1.8 0 0 1-.26-.94V3.69c0-.34.1-.66.25-.94Z"/>
+                                    <path fill="#4285F4" d="M16.78 16.04 6.16 22.1 14.28 14l2.5 2.04Z"/>
+                                    <path fill="#FBBC04" d="M19.57 10.43c.9.5.9 1.64 0 2.14l-2.79 1.47L14.28 12l2.5-2.04 2.79 1.47Z"/>
+                                    <path fill="#EA4335" d="M6.16 3.9 16.78 9.96 14.28 12 6.16 3.9Z"/>
+                                </svg>
+                                <span class="min-w-0">
+                                    <span class="block text-[11px] font-medium uppercase tracking-[0.18em] text-stone-500">Get it on</span>
+                                    <span class="block truncate text-sm font-semibold">Google Play</span>
+                                </span>
+                            </a>
+                        @endif
+                    </div>
+                </div>
+
+                @if(!$appleStoreUrl || !$googlePlayUrl)
+                    <p class="mt-4 text-xs text-stone-500">
+                        Set <code>MERCHANT_APP_APPLE_STORE_URL</code> and <code>MERCHANT_APP_GOOGLE_PLAY_URL</code> in production to show both live store links here.
+                    </p>
+                @endif
+            </x-ui.card>
+
             <x-ui.card class="p-4 sm:p-6">
                 <div class="max-w-md mx-auto" x-data="scannerApp()" @keydown.escape.window="handleEscape()">
                     <!-- Store Selector -->

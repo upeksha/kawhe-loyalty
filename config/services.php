@@ -50,4 +50,9 @@ return [
         'pass_type' => env('GOOGLE_WALLET_PASS_TYPE', 'loyalty'),
     ],
 
+    'merchant_app' => [
+        'apple_store_url' => env('MERCHANT_APP_APPLE_STORE_URL', 'https://apps.apple.com/nz/app/kawhe/id6759241473'),
+        'google_play_url' => env('MERCHANT_APP_GOOGLE_PLAY_URL'),
+    ],
+
 ];
