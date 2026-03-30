@@ -512,6 +512,8 @@ class BillingController extends Controller
         
         $sessionId = $request->input('session_id');
         $user = $request->user();
+        $session = null;
+        $resetStaleCustomer = false;
         
         try {
             Stripe::setApiKey(config('cashier.secret'));
@@ -571,6 +573,16 @@ class BillingController extends Controller
                         ]);
                     }
                 } catch (\Exception $e) {
+                    if ($this->isMissingStripeCustomer($e) && !empty($user->stripe_id)) {
+                        Log::warning('Stored Stripe customer no longer exists during manual sync; clearing stale Stripe ID', [
+                            'user_id' => $user->id,
+                            'old_stripe_id' => $user->stripe_id,
+                        ]);
+
+                        $this->resetStripeCustomer($user);
+                        $resetStaleCustomer = true;
+                    }
+
                     Log::warning('Failed to retrieve subscriptions from Stripe customer', [
                         'user_id' => $user->id,
                         'stripe_id' => $user->stripe_id,
@@ -580,11 +592,8 @@ class BillingController extends Controller
             }
             
             if ($subscriptionId) {
-                // Get subscription ID (handle both string and object)
-                $subscriptionId = is_string($session->subscription) ? $session->subscription : $session->subscription->id;
-                
-                // Ensure user has Stripe customer ID
-                if (!$user->hasStripeId()) {
+                // Ensure user has Stripe customer ID when session data supplied one
+                if (!$user->hasStripeId() && $session && $session->customer) {
                     $user->stripe_id = is_string($session->customer) ? $session->customer : $session->customer->id;
                     $user->save();
                 }
@@ -669,6 +678,10 @@ class BillingController extends Controller
                 return redirect()->route('billing.index')
                     ->with('success', 'Subscription status has been synced.');
             } else {
+                if ($resetStaleCustomer) {
+                    return back()->with('info', 'Your billing profile was refreshed after a Stripe account change. If you have not completed checkout yet, start checkout again to create a fresh billing profile.');
+                }
+
                 if ($request->expectsJson()) {
                     return response()->json([
                         'success' => false,
