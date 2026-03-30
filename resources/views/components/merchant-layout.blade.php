@@ -24,7 +24,7 @@
             <!-- Sidebar -->
             <aside 
                 :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'"
-                class="fixed lg:static inset-y-0 left-0 z-50 h-screen w-64 bg-white border-r border-stone-200 transform transition-transform duration-200 ease-in-out lg:translate-x-0 overflow-visible"
+                class="fixed inset-y-0 left-0 z-50 h-screen w-64 bg-white border-r border-stone-200 transform transition-transform duration-200 ease-in-out lg:translate-x-0 overflow-visible"
             >
                 <div class="flex h-full min-h-0 flex-col overflow-visible">
                     <!-- Logo -->
@@ -184,7 +184,7 @@
             ></div>
 
             <!-- Main Content -->
-            <div class="flex-1 flex flex-col overflow-hidden">
+            <div class="flex flex-1 flex-col overflow-hidden lg:ml-64">
                 <!-- Top Header -->
                 <header class="bg-white border-b border-stone-200">
                     <div class="flex items-center justify-between h-16 px-4 sm:px-6 lg:px-8">
