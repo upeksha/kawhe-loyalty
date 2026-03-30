@@ -48,18 +48,18 @@
                         'datasets' => [[
                             'label' => 'Active customers trend',
                             'data' => $joinSeries,
-                            'borderWidth' => 2.5,
+                            'borderWidth' => 1.8,
                             'pointRadius' => 0,
-                            'tension' => 0.42,
-                            'borderColor' => '#3a2a22',
+                            'tension' => 0.5,
+                            'borderColor' => 'rgba(58, 42, 34, 0.82)',
                         ]],
                     ],
                     'options' => [
-                        'layout' => ['padding' => ['top' => 6, 'right' => 4, 'bottom' => 6, 'left' => 4]],
+                        'layout' => ['padding' => ['top' => 8, 'right' => 6, 'bottom' => 8, 'left' => 6]],
                         'plugins' => ['tooltip' => ['enabled' => false]],
                         'scales' => [
                             'x' => ['display' => false, 'offset' => true],
-                            'y' => ['display' => false, 'grace' => '18%'],
+                            'y' => ['display' => false, 'grace' => '24%'],
                         ],
                         'elements' => ['line' => ['capBezierPoints' => true]],
                     ],
@@ -78,18 +78,18 @@
                         'datasets' => [[
                             'label' => 'Rewards earned trend',
                             'data' => $earnedSeries,
-                            'borderWidth' => 2.5,
+                            'borderWidth' => 1.8,
                             'pointRadius' => 0,
-                            'tension' => 0.42,
-                            'borderColor' => '#1f3b2c',
+                            'tension' => 0.5,
+                            'borderColor' => 'rgba(31, 59, 44, 0.82)',
                         ]],
                     ],
                     'options' => [
-                        'layout' => ['padding' => ['top' => 6, 'right' => 4, 'bottom' => 6, 'left' => 4]],
+                        'layout' => ['padding' => ['top' => 8, 'right' => 6, 'bottom' => 8, 'left' => 6]],
                         'plugins' => ['tooltip' => ['enabled' => false]],
                         'scales' => [
                             'x' => ['display' => false, 'offset' => true],
-                            'y' => ['display' => false, 'grace' => '18%'],
+                            'y' => ['display' => false, 'grace' => '24%'],
                         ],
                         'elements' => ['line' => ['capBezierPoints' => true]],
                     ],
@@ -108,18 +108,18 @@
                         'datasets' => [[
                             'label' => 'Rewards redeemed trend',
                             'data' => $redeemSeries,
-                            'borderWidth' => 2.5,
+                            'borderWidth' => 1.8,
                             'pointRadius' => 0,
-                            'tension' => 0.42,
-                            'borderColor' => '#c96a3b',
+                            'tension' => 0.5,
+                            'borderColor' => 'rgba(201, 106, 59, 0.82)',
                         ]],
                     ],
                     'options' => [
-                        'layout' => ['padding' => ['top' => 6, 'right' => 4, 'bottom' => 6, 'left' => 4]],
+                        'layout' => ['padding' => ['top' => 8, 'right' => 6, 'bottom' => 8, 'left' => 6]],
                         'plugins' => ['tooltip' => ['enabled' => false]],
                         'scales' => [
                             'x' => ['display' => false, 'offset' => true],
-                            'y' => ['display' => false, 'grace' => '18%'],
+                            'y' => ['display' => false, 'grace' => '24%'],
                         ],
                         'elements' => ['line' => ['capBezierPoints' => true]],
                     ],
@@ -294,7 +294,7 @@
                             <p class="mt-4 text-4xl font-semibold tracking-tight text-stone-950">{{ $card['value'] }}</p>
                             <p class="mt-3 max-w-[16rem] text-sm leading-6 text-stone-600">{{ $card['caption'] }}</p>
                         </div>
-                        <div class="mt-2 h-16 w-28 shrink-0">
+                        <div class="mt-1 h-[4.5rem] w-32 shrink-0">
                             <canvas class="h-full w-full" data-chart='@json($card["chart"])' aria-hidden="true"></canvas>
                         </div>
                     </div>
