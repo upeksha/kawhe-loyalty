@@ -122,16 +122,16 @@
                             @click="profileMenuOpen = !profileMenuOpen"
                             class="flex w-full items-center rounded-lg px-3 py-2 text-sm font-medium text-stone-700 transition-colors hover:bg-stone-100"
                         >
-                            <div class="flex flex-1 items-center">
+                            <div class="flex min-w-0 flex-1 items-center">
                                 <div class="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-brand-100">
                                     <span class="text-sm font-semibold text-brand-700">{{ substr(Auth::user()->name, 0, 1) }}</span>
                                 </div>
-                                <div class="ml-3 min-w-0 text-left">
+                                <div class="ml-3 min-w-0 flex-1 overflow-hidden text-left">
                                     <div class="truncate text-sm font-medium text-stone-900">{{ Auth::user()->name }}</div>
                                     <div class="truncate text-xs text-stone-500">{{ Auth::user()->email }}</div>
                                 </div>
                             </div>
-                            <svg class="ml-2 h-4 w-4 text-stone-500 transition-transform duration-200" :class="{ 'rotate-180': profileMenuOpen }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg class="ml-2 h-4 w-4 flex-shrink-0 text-stone-500 transition-transform duration-200" :class="{ 'rotate-180': profileMenuOpen }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
                             </svg>
                         </button>
