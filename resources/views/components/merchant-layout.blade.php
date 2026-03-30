@@ -24,9 +24,9 @@
             <!-- Sidebar -->
             <aside 
                 :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'"
-                class="fixed lg:static inset-y-0 left-0 z-50 w-64 bg-white border-r border-stone-200 transform transition-transform duration-200 ease-in-out lg:translate-x-0 overflow-visible"
+                class="fixed lg:static inset-y-0 left-0 z-50 h-screen w-64 bg-white border-r border-stone-200 transform transition-transform duration-200 ease-in-out lg:translate-x-0 overflow-visible"
             >
-                <div class="flex flex-col h-full overflow-visible">
+                <div class="flex h-full min-h-0 flex-col overflow-visible">
                     <!-- Logo -->
                     <div class="flex items-center justify-between h-16 px-6 border-b border-stone-200">
                         <a href="{{ route('merchant.dashboard') }}" class="flex items-center">
@@ -43,7 +43,7 @@
                     </div>
 
                     <!-- Navigation -->
-                    <nav class="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
+                    <nav class="flex-1 min-h-0 overflow-y-auto px-4 py-6 space-y-1">
                         <a 
                             href="{{ route('merchant.dashboard') }}" 
                             class="flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors {{ request()->routeIs('merchant.dashboard') ? 'bg-brand-50 text-brand-700' : 'text-stone-700 hover:bg-stone-100' }}"
