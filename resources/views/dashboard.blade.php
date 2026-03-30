@@ -28,46 +28,11 @@
         ];
 
         $trendPoints = collect($analytics['recent_activity_trend'] ?? [])->values();
-        $trendMax = max(1, $trendPoints->max('total') ?? 0);
-        $joinMax = max(1, $trendPoints->max('joins') ?? 0);
-
-        $buildChart = function ($values, $width, $height) {
-            $values = collect($values)->map(fn ($value) => (int) $value)->values();
-            $count = $values->count();
-
-            if ($count === 0) {
-                return ['line' => '', 'area' => ''];
-            }
-
-            $max = max(1, $values->max());
-            $stepX = $count > 1 ? $width / ($count - 1) : $width;
-            $baseline = $height;
-            $points = [];
-
-            foreach ($values as $index => $value) {
-                $x = round($index * $stepX, 2);
-                $y = round($height - (($value / $max) * ($height - 18)) - 9, 2);
-                $points[] = [$x, $y];
-            }
-
-            $line = collect($points)
-                ->map(fn ($point, $index) => ($index === 0 ? 'M' : 'L') . $point[0] . ' ' . $point[1])
-                ->implode(' ');
-
-            return [
-                'line' => $line,
-                'area' => $line . ' L ' . $points[$count - 1][0] . ' ' . $baseline . ' L 0 ' . $baseline . ' Z',
-            ];
-        };
-
-        $platformChart = $buildChart($trendPoints->pluck('joins')->all(), 760, 225);
-        $stampsChart = $buildChart($trendPoints->pluck('stamps')->all(), 760, 225);
-        $redeemsChart = $buildChart($trendPoints->pluck('redeems')->all(), 760, 225);
-        $joinOnlyChart = $buildChart($trendPoints->pluck('joins')->all(), 390, 225);
-
-        $joinCardChart = $buildChart($trendPoints->pluck('joins')->all(), 180, 58);
-        $earnedCardChart = $buildChart($trendPoints->map(fn ($day) => ($day['stamps'] ?? 0) + ($day['redeems'] ?? 0))->all(), 180, 58);
-        $redeemedCardChart = $buildChart($trendPoints->pluck('redeems')->all(), 180, 58);
+        $trendLabels = $trendPoints->pluck('label')->all();
+        $joinSeries = $trendPoints->pluck('joins')->map(fn ($value) => (int) $value)->all();
+        $stampSeries = $trendPoints->pluck('stamps')->map(fn ($value) => (int) $value)->all();
+        $redeemSeries = $trendPoints->pluck('redeems')->map(fn ($value) => (int) $value)->all();
+        $earnedSeries = $trendPoints->map(fn ($day) => (int) (($day['stamps'] ?? 0) + ($day['redeems'] ?? 0)))->all();
 
         $summaryCards = [
             [
@@ -76,7 +41,24 @@
                 'caption' => 'Joined or used their card in the last 30 days',
                 'tone' => 'bg-[#eef1ff]',
                 'accent' => 'text-[#5b6cff]',
-                'spark' => $joinCardChart['line'],
+                'chart' => [
+                    'type' => 'line',
+                    'data' => [
+                        'labels' => $trendLabels,
+                        'datasets' => [[
+                            'data' => $joinSeries,
+                            'borderWidth' => 2.5,
+                            'pointRadius' => 0,
+                            'tension' => 0.42,
+                            'borderGradient' => ['#6e7dff', '#5b6cff'],
+                        ]],
+                    ],
+                    'options' => [
+                        'plugins' => ['tooltip' => ['enabled' => false]],
+                        'scales' => ['x' => ['display' => false], 'y' => ['display' => false]],
+                        'elements' => ['line' => ['capBezierPoints' => true]],
+                    ],
+                ],
             ],
             [
                 'label' => 'Rewards earned',
@@ -84,7 +66,24 @@
                 'caption' => 'Completed reward cycles in the last 30 days',
                 'tone' => 'bg-[#eefcf6]',
                 'accent' => 'text-[#31b67a]',
-                'spark' => $earnedCardChart['line'],
+                'chart' => [
+                    'type' => 'line',
+                    'data' => [
+                        'labels' => $trendLabels,
+                        'datasets' => [[
+                            'data' => $earnedSeries,
+                            'borderWidth' => 2.5,
+                            'pointRadius' => 0,
+                            'tension' => 0.42,
+                            'borderGradient' => ['#43c788', '#31b67a'],
+                        ]],
+                    ],
+                    'options' => [
+                        'plugins' => ['tooltip' => ['enabled' => false]],
+                        'scales' => ['x' => ['display' => false], 'y' => ['display' => false]],
+                        'elements' => ['line' => ['capBezierPoints' => true]],
+                    ],
+                ],
             ],
             [
                 'label' => 'Rewards redeemed',
@@ -92,7 +91,149 @@
                 'caption' => 'Redeemed across your stores in the last 30 days',
                 'tone' => 'bg-[#f3fbf6]',
                 'accent' => 'text-[#39b980]',
-                'spark' => $redeemedCardChart['line'],
+                'chart' => [
+                    'type' => 'line',
+                    'data' => [
+                        'labels' => $trendLabels,
+                        'datasets' => [[
+                            'data' => $redeemSeries,
+                            'borderWidth' => 2.5,
+                            'pointRadius' => 0,
+                            'tension' => 0.42,
+                            'borderGradient' => ['#57c797', '#39b980'],
+                        ]],
+                    ],
+                    'options' => [
+                        'plugins' => ['tooltip' => ['enabled' => false]],
+                        'scales' => ['x' => ['display' => false], 'y' => ['display' => false]],
+                        'elements' => ['line' => ['capBezierPoints' => true]],
+                    ],
+                ],
+            ],
+        ];
+
+        $loyaltyActivityChart = [
+            'type' => 'line',
+            'data' => [
+                'labels' => $trendLabels,
+                'datasets' => [
+                    [
+                        'label' => 'Joins',
+                        'data' => $joinSeries,
+                        'borderWidth' => 3,
+                        'pointRadius' => 0,
+                        'tension' => 0.42,
+                        'fill' => true,
+                        'backgroundGradient' => ['rgba(91, 108, 255, 0.18)', 'rgba(91, 108, 255, 0.02)'],
+                        'borderGradient' => ['#7986ff', '#5b6cff'],
+                    ],
+                    [
+                        'label' => 'Stamps',
+                        'data' => $stampSeries,
+                        'borderWidth' => 3,
+                        'pointRadius' => 0,
+                        'tension' => 0.42,
+                        'fill' => true,
+                        'backgroundGradient' => ['rgba(49, 182, 122, 0.14)', 'rgba(49, 182, 122, 0.01)'],
+                        'borderGradient' => ['#4cc88d', '#31b67a'],
+                    ],
+                    [
+                        'label' => 'Redeems',
+                        'data' => $redeemSeries,
+                        'borderWidth' => 3,
+                        'pointRadius' => 0,
+                        'tension' => 0.42,
+                        'fill' => false,
+                        'borderGradient' => ['#e4b950', '#d9a227'],
+                    ],
+                ],
+            ],
+            'options' => [
+                'plugins' => [
+                    'legend' => [
+                        'display' => true,
+                        'position' => 'bottom',
+                        'labels' => [
+                            'usePointStyle' => true,
+                            'pointStyle' => 'circle',
+                            'boxWidth' => 8,
+                            'boxHeight' => 8,
+                            'padding' => 18,
+                            'color' => '#57534e',
+                        ],
+                    ],
+                ],
+                'scales' => [
+                    'x' => [
+                        'grid' => ['display' => false],
+                        'ticks' => ['color' => '#a8a29e', 'font' => ['size' => 11]],
+                        'border' => ['display' => false],
+                    ],
+                    'y' => [
+                        'beginAtZero' => true,
+                        'ticks' => [
+                            'display' => false,
+                            'precision' => 0,
+                        ],
+                        'grid' => [
+                            'color' => '#e7e5e4',
+                            'drawTicks' => false,
+                        ],
+                        'border' => ['display' => false],
+                    ],
+                ],
+            ],
+        ];
+
+        $cardGrowthChart = [
+            'type' => 'line',
+            'data' => [
+                'labels' => $trendLabels,
+                'datasets' => [[
+                    'label' => 'New cards',
+                    'data' => $joinSeries,
+                    'borderWidth' => 3,
+                    'pointRadius' => 0,
+                    'tension' => 0.44,
+                    'fill' => true,
+                    'backgroundGradient' => ['rgba(91, 108, 255, 0.20)', 'rgba(91, 108, 255, 0.03)'],
+                    'borderGradient' => ['#7a88ff', '#5b6cff'],
+                ]],
+            ],
+            'options' => [
+                'plugins' => [
+                    'legend' => [
+                        'display' => true,
+                        'position' => 'bottom',
+                        'labels' => [
+                            'usePointStyle' => true,
+                            'pointStyle' => 'circle',
+                            'boxWidth' => 8,
+                            'boxHeight' => 8,
+                            'padding' => 18,
+                            'color' => '#57534e',
+                        ],
+                    ],
+                ],
+                'scales' => [
+                    'x' => [
+                        'grid' => ['display' => false],
+                        'ticks' => ['color' => '#a8a29e', 'font' => ['size' => 11]],
+                        'border' => ['display' => false],
+                    ],
+                    'y' => [
+                        'beginAtZero' => true,
+                        'ticks' => [
+                            'display' => false,
+                            'precision' => 0,
+                        ],
+                        'grid' => [
+                            'color' => '#e7e5e4',
+                            'drawTicks' => false,
+                        ],
+                        'border' => ['display' => false],
+                    ],
+                ],
             ],
         ];
 
@@ -138,9 +279,9 @@
                             <p class="mt-4 text-4xl font-semibold tracking-tight text-stone-950">{{ $card['value'] }}</p>
                             <p class="mt-3 max-w-[16rem] text-sm leading-6 text-stone-600">{{ $card['caption'] }}</p>
                         </div>
-                        <svg viewBox="0 0 180 58" class="mt-2 h-16 w-28 shrink-0" fill="none" preserveAspectRatio="none" aria-hidden="true">
-                            <path d="{{ $card['spark'] }}" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="{{ $card['accent'] }}" />
-                        </svg>
+                        <div class="mt-2 h-16 w-28 shrink-0">
+                            <canvas class="h-full w-full" data-chart='@json($card["chart"])' aria-hidden="true"></canvas>
+                        </div>
                     </div>
                 </article>
             @endforeach
@@ -177,29 +318,9 @@
                     </div>
                 @else
                     <div class="mt-6 rounded-[24px] border border-stone-200/70 bg-stone-50/70 p-4 sm:p-5">
-                        <svg viewBox="0 0 760 245" class="h-[20rem] w-full" fill="none" preserveAspectRatio="none" aria-hidden="true">
-                            @foreach(range(1, 4) as $line)
-                                <line x1="0" y1="{{ $line * 49 }}" x2="760" y2="{{ $line * 49 }}" stroke="#e7e5e4" stroke-dasharray="4 6" />
-                            @endforeach
-
-                            <path d="{{ $stampsChart['area'] }}" fill="#e7faf0" fill-opacity="0.95" />
-                            <path d="{{ $platformChart['area'] }}" fill="#eef1ff" fill-opacity="0.9" />
-                            <path d="{{ $redeemsChart['line'] }}" stroke="#d9a227" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
-                            <path d="{{ $stampsChart['line'] }}" stroke="#31b67a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
-                            <path d="{{ $platformChart['line'] }}" stroke="#5b6cff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
-                        </svg>
-
-                        <div class="mt-4 grid grid-cols-7 gap-2 text-[11px] font-medium text-stone-400 sm:grid-cols-14">
-                            @foreach($trendPoints as $point)
-                                <div class="text-center">{{ $point['label'] }}</div>
-                            @endforeach
+                        <div class="h-[20rem] w-full">
+                            <canvas class="h-full w-full" data-chart='@json($loyaltyActivityChart)' aria-label="Loyalty activity chart"></canvas>
                         </div>
-                    </div>
-
-                    <div class="mt-4 flex flex-wrap gap-4 text-xs text-stone-600">
-                        <span class="inline-flex items-center gap-2"><span class="h-2.5 w-2.5 rounded-full bg-brand-500"></span>Joins</span>
-                        <span class="inline-flex items-center gap-2"><span class="h-2.5 w-2.5 rounded-full bg-emerald-500"></span>Stamps</span>
-                        <span class="inline-flex items-center gap-2"><span class="h-2.5 w-2.5 rounded-full bg-amber-500"></span>Redeems</span>
                     </div>
                 @endif
             </section>
@@ -230,14 +351,9 @@
                     </div>
                 @else
                     <div class="mt-6 rounded-[24px] border border-stone-200 bg-stone-50/70 p-4">
-                        <svg viewBox="0 0 390 245" class="h-64 w-full" fill="none" preserveAspectRatio="none" aria-hidden="true">
-                            @foreach(range(1, 4) as $line)
-                                <line x1="0" y1="{{ $line * 49 }}" x2="390" y2="{{ $line * 49 }}" stroke="#e7e5e4" stroke-dasharray="4 6" />
-                            @endforeach
-
-                                <path d="{{ $joinOnlyChart['area'] }}" fill="#eef1ff" fill-opacity="0.95" />
-                                <path d="{{ $joinOnlyChart['line'] }}" stroke="#5b6cff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
-                        </svg>
+                        <div class="h-64 w-full">
+                            <canvas class="h-full w-full" data-chart='@json($cardGrowthChart)' aria-label="Card growth chart"></canvas>
+                        </div>
                     </div>
                 @endif
             </section>

@@ -1,9 +1,11 @@
 import './bootstrap';
 import 'flowbite';
+import Chart from 'chart.js/auto';
 
 import Alpine from 'alpinejs';
 
 window.Alpine = Alpine;
+window.Chart = Chart;
 
 Alpine.start();
 
@@ -44,3 +46,110 @@ if ('serviceWorker' in navigator) {
             });
     });
 }
+
+const dashboardCharts = [];
+
+function buildGradient(ctx, chartArea, colors = []) {
+    if (!ctx || !chartArea || colors.length === 0) {
+        return colors[0] ?? '#5b6cff';
+    }
+
+    const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
+
+    colors.forEach((colorStop, index) => {
+        const stop = colors.length === 1 ? 1 : index / (colors.length - 1);
+        gradient.addColorStop(stop, colorStop);
+    });
+
+    return gradient;
+}
+
+function createDashboardChart(canvas) {
+    if (!(canvas instanceof HTMLCanvasElement)) return null;
+
+    const rawConfig = canvas.dataset.chart;
+    if (!rawConfig) return null;
+
+    let parsed;
+    try {
+        parsed = JSON.parse(rawConfig);
+    } catch (error) {
+        console.error('Invalid chart config', error);
+        return null;
+    }
+
+    const chart = new Chart(canvas, {
+        type: parsed.type ?? 'line',
+        data: parsed.data,
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            resizeDelay: 100,
+            animation: {
+                duration: 700,
+                easing: 'easeOutQuart',
+            },
+            plugins: {
+                legend: parsed.options?.plugins?.legend ?? { display: false },
+                tooltip: {
+                    backgroundColor: '#1c1917',
+                    titleColor: '#fafaf9',
+                    bodyColor: '#fafaf9',
+                    displayColors: true,
+                    padding: 12,
+                    cornerRadius: 12,
+                    intersect: false,
+                    mode: 'index',
+                    ...parsed.options?.plugins?.tooltip,
+                },
+            },
+            interaction: {
+                intersect: false,
+                mode: 'index',
+            },
+            scales: parsed.options?.scales ?? {},
+            elements: parsed.options?.elements ?? {},
+            ...parsed.options,
+        },
+    });
+
+    return chart;
+}
+
+function initializeDashboardCharts() {
+    dashboardCharts.splice(0).forEach((chart) => chart.destroy());
+
+    document.querySelectorAll('[data-chart]').forEach((canvas) => {
+        const chart = createDashboardChart(canvas);
+        if (chart) {
+            dashboardCharts.push(chart);
+        }
+    });
+}
+
+Chart.defaults.font.family = 'Figtree, sans-serif';
+Chart.defaults.color = '#78716c';
+Chart.defaults.borderColor = '#e7e5e4';
+
+Chart.register({
+    id: 'kawheGradients',
+    beforeDatasetsDraw(chart) {
+        const { ctx, chartArea } = chart;
+        if (!chartArea) return;
+
+        chart.data.datasets.forEach((dataset) => {
+            const fillColors = dataset.backgroundGradient;
+            const strokeColors = dataset.borderGradient;
+
+            if (Array.isArray(fillColors) && fillColors.length > 0) {
+                dataset.backgroundColor = buildGradient(ctx, chartArea, fillColors);
+            }
+
+            if (Array.isArray(strokeColors) && strokeColors.length > 0) {
+                dataset.borderColor = buildGradient(ctx, chartArea, strokeColors);
+            }
+        });
+    },
+});
+
+document.addEventListener('DOMContentLoaded', initializeDashboardCharts);
