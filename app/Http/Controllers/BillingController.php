@@ -803,6 +803,7 @@ class BillingController extends Controller
     protected function createCheckoutSession($user, string $priceId, string $appUrl)
     {
         return $user->newSubscription('default', $priceId)
+            ->allowPromotionCodes()
             ->checkout([
                 'success_url' => $appUrl . '/billing/success?session_id={CHECKOUT_SESSION_ID}',
                 'cancel_url' => route('billing.cancel'),
