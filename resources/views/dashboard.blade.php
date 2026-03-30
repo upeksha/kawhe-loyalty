@@ -129,7 +129,7 @@
             </div>
         </section>
 
-        <section class="grid gap-4 xl:grid-cols-3">
+        <section class="grid gap-4 lg:grid-cols-3">
             @foreach($summaryCards as $card)
                 <article class="rounded-[26px] border border-stone-200/60 {{ $card['tone'] }} p-5 shadow-sm shadow-stone-200/40">
                     <div class="flex items-start justify-between gap-4">
@@ -146,7 +146,7 @@
             @endforeach
         </section>
 
-        <section class="grid gap-6 xl:grid-cols-2">
+        <section class="grid gap-6 lg:grid-cols-2">
             <section class="rounded-[30px] border border-stone-200/70 bg-white p-5 shadow-sm shadow-stone-200/50 sm:p-6">
                 <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                     <div>
