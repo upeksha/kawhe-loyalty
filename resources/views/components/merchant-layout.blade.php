@@ -108,40 +108,63 @@
                     </nav>
 
                     <!-- User Menu -->
-                    <div class="px-4 py-4 border-t border-stone-200 relative" style="overflow: visible;">
-                        <x-dropdown align="left" width="48" direction="up">
-                            <x-slot name="trigger">
-                                <button class="flex items-center w-full px-3 py-2 text-sm font-medium text-stone-700 rounded-lg hover:bg-stone-100 transition-colors">
-                                    <div class="flex items-center flex-1">
-                                        <div class="flex-shrink-0 w-8 h-8 rounded-full bg-brand-100 flex items-center justify-center">
-                                            <span class="text-brand-700 font-semibold text-sm">{{ substr(Auth::user()->name, 0, 1) }}</span>
-                                        </div>
-                                        <div class="ml-3 text-left">
-                                            <div class="text-sm font-medium text-stone-900">{{ Auth::user()->name }}</div>
-                                            <div class="text-xs text-stone-500">{{ Auth::user()->email }}</div>
-                                        </div>
-                                    </div>
-                                    <svg class="w-4 h-4 ml-2 text-stone-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                                    </svg>
+                    <div class="relative z-[70] border-t border-stone-200 px-4 py-4" x-data="{ profileMenuOpen: false }" @keydown.escape.window="profileMenuOpen = false">
+                        <div
+                            x-show="profileMenuOpen"
+                            x-transition.opacity
+                            class="fixed inset-0 z-[60] lg:hidden"
+                            @click="profileMenuOpen = false"
+                            style="display: none;"
+                        ></div>
+
+                        <button
+                            type="button"
+                            @click="profileMenuOpen = !profileMenuOpen"
+                            class="flex w-full items-center rounded-lg px-3 py-2 text-sm font-medium text-stone-700 transition-colors hover:bg-stone-100"
+                        >
+                            <div class="flex flex-1 items-center">
+                                <div class="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-brand-100">
+                                    <span class="text-sm font-semibold text-brand-700">{{ substr(Auth::user()->name, 0, 1) }}</span>
+                                </div>
+                                <div class="ml-3 min-w-0 text-left">
+                                    <div class="truncate text-sm font-medium text-stone-900">{{ Auth::user()->name }}</div>
+                                    <div class="truncate text-xs text-stone-500">{{ Auth::user()->email }}</div>
+                                </div>
+                            </div>
+                            <svg class="ml-2 h-4 w-4 text-stone-500 transition-transform duration-200" :class="{ 'rotate-180': profileMenuOpen }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                            </svg>
+                        </button>
+
+                        <div
+                            x-show="profileMenuOpen"
+                            x-transition:enter="transition ease-out duration-150"
+                            x-transition:enter-start="opacity-0 translate-y-2"
+                            x-transition:enter-end="opacity-100 translate-y-0"
+                            x-transition:leave="transition ease-in duration-100"
+                            x-transition:leave-start="opacity-100 translate-y-0"
+                            x-transition:leave-end="opacity-0 translate-y-2"
+                            @click.outside="profileMenuOpen = false"
+                            class="absolute inset-x-4 bottom-full mb-2 z-[80] overflow-visible rounded-2xl border border-stone-200 bg-white p-2 shadow-xl shadow-stone-900/10"
+                            style="display: none;"
+                        >
+                            <a
+                                href="{{ route('profile.edit') }}"
+                                class="flex w-full items-center rounded-xl px-3 py-2 text-sm font-medium text-stone-700 transition hover:bg-stone-100"
+                            >
+                                {{ __('Profile') }}
+                            </a>
+
+                            <form method="POST" action="{{ route('logout') }}" class="mt-1">
+                                @csrf
+                                <button
+                                    type="submit"
+                                    class="flex w-full items-center rounded-xl px-3 py-2 text-sm font-medium text-stone-700 transition hover:bg-stone-100"
+                                >
+                                    {{ __('Log Out') }}
                                 </button>
-                            </x-slot>
-
-                            <x-slot name="content">
-                                <x-dropdown-link :href="route('profile.edit')">
-                                    {{ __('Profile') }}
-                                </x-dropdown-link>
-
-                                <form method="POST" action="{{ route('logout') }}">
-                                    @csrf
-                                    <x-dropdown-link :href="route('logout')"
-                                            onclick="event.preventDefault();
-                                                        this.closest('form').submit();">
-                                        {{ __('Log Out') }}
-                                    </x-dropdown-link>
-                                </form>
-                            </x-slot>
-                        </x-dropdown>
+                            </form>
+                        </div>
                     </div>
                 </div>
             </aside>
@@ -194,4 +217,3 @@
         </div>
     </body>
 </html>
-
