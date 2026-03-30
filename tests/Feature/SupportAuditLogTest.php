@@ -65,6 +65,6 @@ class SupportAuditLogTest extends TestCase
 
         $response->assertOk();
         $response->assertSee('Merchant Issue Diagnostics');
-        $response->assertSee('Recent Support Events');
+        $response->assertSee('Recent Activity');
     }
 }
