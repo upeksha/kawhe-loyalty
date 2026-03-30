@@ -55,8 +55,12 @@
                         ]],
                     ],
                     'options' => [
+                        'layout' => ['padding' => ['top' => 6, 'right' => 4, 'bottom' => 6, 'left' => 4]],
                         'plugins' => ['tooltip' => ['enabled' => false]],
-                        'scales' => ['x' => ['display' => false], 'y' => ['display' => false]],
+                        'scales' => [
+                            'x' => ['display' => false, 'offset' => true],
+                            'y' => ['display' => false, 'grace' => '18%'],
+                        ],
                         'elements' => ['line' => ['capBezierPoints' => true]],
                     ],
                 ],
@@ -81,8 +85,12 @@
                         ]],
                     ],
                     'options' => [
+                        'layout' => ['padding' => ['top' => 6, 'right' => 4, 'bottom' => 6, 'left' => 4]],
                         'plugins' => ['tooltip' => ['enabled' => false]],
-                        'scales' => ['x' => ['display' => false], 'y' => ['display' => false]],
+                        'scales' => [
+                            'x' => ['display' => false, 'offset' => true],
+                            'y' => ['display' => false, 'grace' => '18%'],
+                        ],
                         'elements' => ['line' => ['capBezierPoints' => true]],
                     ],
                 ],
@@ -107,8 +115,12 @@
                         ]],
                     ],
                     'options' => [
+                        'layout' => ['padding' => ['top' => 6, 'right' => 4, 'bottom' => 6, 'left' => 4]],
                         'plugins' => ['tooltip' => ['enabled' => false]],
-                        'scales' => ['x' => ['display' => false], 'y' => ['display' => false]],
+                        'scales' => [
+                            'x' => ['display' => false, 'offset' => true],
+                            'y' => ['display' => false, 'grace' => '18%'],
+                        ],
                         'elements' => ['line' => ['capBezierPoints' => true]],
                     ],
                 ],
