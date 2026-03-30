@@ -343,6 +343,7 @@ class AppleWalletPassService
             $sourceHeight
         );
 
+        imagealphablending($canvas, false);
         $radius = $size / 2;
         for ($x = 0; $x < $size; $x++) {
             for ($y = 0; $y < $size; $y++) {
