@@ -8,7 +8,7 @@
         $googlePlayUrl = config('services.merchant_app.google_play_url');
     @endphp
 
-    <div class="max-w-2xl mx-auto">
+    <div class="mx-auto">
         @if($stores->isEmpty())
             <x-ui.card class="p-6 text-center">
                 <p class="mb-4 text-stone-600">You need to create a store before you can scan cards.</p>
@@ -52,18 +52,13 @@
                                 href="{{ $googlePlayUrl }}"
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                class="flex flex-1 items-center gap-3 rounded-2xl border border-stone-200 bg-white px-4 py-3 text-left text-stone-900 transition hover:border-[#4f7d54] hover:bg-[#edf4eb]"
+                                class="flex flex-1 items-center justify-center rounded-2xl border border-stone-200 bg-white p-1.5 transition hover:border-[#4f7d54] hover:bg-[#edf4eb]"
                             >
-                                <svg class="h-8 w-8 flex-shrink-0" viewBox="0 0 24 24" aria-hidden="true">
-                                    <path fill="#34A853" d="M3.5 2.75 13.74 13 3.51 23.25a1.8 1.8 0 0 1-.26-.94V3.69c0-.34.1-.66.25-.94Z"/>
-                                    <path fill="#4285F4" d="M16.78 16.04 6.16 22.1 14.28 14l2.5 2.04Z"/>
-                                    <path fill="#FBBC04" d="M19.57 10.43c.9.5.9 1.64 0 2.14l-2.79 1.47L14.28 12l2.5-2.04 2.79 1.47Z"/>
-                                    <path fill="#EA4335" d="M6.16 3.9 16.78 9.96 14.28 12 6.16 3.9Z"/>
-                                </svg>
-                                <span class="min-w-0">
-                                    <span class="block text-[11px] font-medium uppercase tracking-[0.18em] text-stone-500">Get it on</span>
-                                    <span class="block truncate text-sm font-semibold">Google Play</span>
-                                </span>
+                                <img
+                                    src="{{ asset('images/store-badges/google-play-light-en.png') }}"
+                                    alt="Get it on Google Play"
+                                    class="h-14 w-auto"
+                                >
                             </a>
                         @endif
                     </div>
