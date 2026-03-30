@@ -170,9 +170,8 @@ class AppleWalletPassService
         if ($store->pass_logo_path && StoreAssets::exists($store->pass_logo_path)) {
             $passLogoPath = StoreAssets::localTempPath($store->pass_logo_path, pathinfo($store->pass_logo_path, PATHINFO_EXTENSION) ?: 'img');
             if ($passLogoPath && file_exists($passLogoPath)) {
-                // Copy to temp file with exact name (logo.png) so PassGenerator recognizes it
                 $tempLogoPath = $tempDir . '/logo.png';
-                if (copy($passLogoPath, $tempLogoPath)) {
+                if ($this->createCircularLogoPng($passLogoPath, $tempLogoPath) || copy($passLogoPath, $tempLogoPath)) {
                     $pass->addAsset($tempLogoPath);
                     $assetsAdded[] = 'logo (store)';
                 }
@@ -289,6 +288,78 @@ class AppleWalletPassService
         
         // Unicode circles: filled = ● (U+25CF), empty = ○ (U+25CB)
         return str_repeat('●', $filled) . str_repeat('○', $empty);
+    }
+
+    /**
+     * Convert an uploaded logo into a circular transparent PNG so Apple Wallet
+     * renders it consistently even when the merchant uploads a square asset.
+     */
+    protected function createCircularLogoPng(string $sourcePath, string $destinationPath, int $size = 160): bool
+    {
+        if (!function_exists('imagecreatetruecolor') || !function_exists('imagecreatefromstring')) {
+            return false;
+        }
+
+        $raw = @file_get_contents($sourcePath);
+        if ($raw === false) {
+            return false;
+        }
+
+        $source = @imagecreatefromstring($raw);
+        if (!$source) {
+            return false;
+        }
+
+        $sourceWidth = imagesx($source);
+        $sourceHeight = imagesy($source);
+        if ($sourceWidth <= 0 || $sourceHeight <= 0) {
+            imagedestroy($source);
+            return false;
+        }
+
+        $canvas = imagecreatetruecolor($size, $size);
+        imagealphablending($canvas, false);
+        imagesavealpha($canvas, true);
+        $transparent = imagecolorallocatealpha($canvas, 0, 0, 0, 127);
+        imagefill($canvas, 0, 0, $transparent);
+
+        $scale = max($size / $sourceWidth, $size / $sourceHeight);
+        $resizedWidth = (int) ceil($sourceWidth * $scale);
+        $resizedHeight = (int) ceil($sourceHeight * $scale);
+        $destinationX = (int) floor(($size - $resizedWidth) / 2);
+        $destinationY = (int) floor(($size - $resizedHeight) / 2);
+
+        imagealphablending($canvas, true);
+        imagecopyresampled(
+            $canvas,
+            $source,
+            $destinationX,
+            $destinationY,
+            0,
+            0,
+            $resizedWidth,
+            $resizedHeight,
+            $sourceWidth,
+            $sourceHeight
+        );
+
+        $radius = $size / 2;
+        for ($x = 0; $x < $size; $x++) {
+            for ($y = 0; $y < $size; $y++) {
+                $dx = $x - $radius + 0.5;
+                $dy = $y - $radius + 0.5;
+                if (($dx * $dx) + ($dy * $dy) > ($radius * $radius)) {
+                    imagesetpixel($canvas, $x, $y, $transparent);
+                }
+            }
+        }
+
+        $written = imagepng($canvas, $destinationPath);
+
+        imagedestroy($source);
+        imagedestroy($canvas);
+
+        return (bool) $written;
     }
 
     /**
