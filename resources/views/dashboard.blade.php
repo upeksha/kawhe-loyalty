@@ -146,7 +146,7 @@
             @endforeach
         </section>
 
-        <section class="grid gap-6 lg:grid-cols-2">
+        <section class="grid gap-6 md:grid-cols-2">
             <section class="rounded-[30px] border border-stone-200/70 bg-white p-5 shadow-sm shadow-stone-200/50 sm:p-6">
                 <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                     <div>
@@ -182,11 +182,11 @@
                                 <line x1="0" y1="{{ $line * 49 }}" x2="760" y2="{{ $line * 49 }}" stroke="#e7e5e4" stroke-dasharray="4 6" />
                             @endforeach
 
-                            <path d="{{ $stampsChart['area'] }}" fill="#d1fae5" fill-opacity="0.5" />
-                            <path d="{{ $platformChart['area'] }}" fill="#dbeafe" fill-opacity="0.7" />
-                            <path d="{{ $redeemsChart['line'] }}" stroke="#f59e0b" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
-                            <path d="{{ $stampsChart['line'] }}" stroke="#10b981" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
-                            <path d="{{ $platformChart['line'] }}" stroke="#4f46e5" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+                            <path d="{{ $stampsChart['area'] }}" fill="#e7faf0" fill-opacity="0.95" />
+                            <path d="{{ $platformChart['area'] }}" fill="#eef1ff" fill-opacity="0.9" />
+                            <path d="{{ $redeemsChart['line'] }}" stroke="#d9a227" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+                            <path d="{{ $stampsChart['line'] }}" stroke="#31b67a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+                            <path d="{{ $platformChart['line'] }}" stroke="#5b6cff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
                         </svg>
 
                         <div class="mt-4 grid grid-cols-7 gap-2 text-[11px] font-medium text-stone-400 sm:grid-cols-14">
@@ -235,8 +235,8 @@
                                 <line x1="0" y1="{{ $line * 49 }}" x2="390" y2="{{ $line * 49 }}" stroke="#e7e5e4" stroke-dasharray="4 6" />
                             @endforeach
 
-                            <path d="{{ $joinOnlyChart['area'] }}" fill="#dbeafe" fill-opacity="0.75" />
-                            <path d="{{ $joinOnlyChart['line'] }}" stroke="#4f46e5" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+                                <path d="{{ $joinOnlyChart['area'] }}" fill="#eef1ff" fill-opacity="0.95" />
+                                <path d="{{ $joinOnlyChart['line'] }}" stroke="#5b6cff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
                         </svg>
                     </div>
                 @endif
