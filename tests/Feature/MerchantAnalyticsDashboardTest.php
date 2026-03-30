@@ -84,11 +84,11 @@ class MerchantAnalyticsDashboardTest extends TestCase
             ->get(route('merchant.dashboard'));
 
         $response->assertOk();
-        $response->assertSee('Merchant Analytics');
-        $response->assertSee('Recent Activity Trend');
+        $response->assertSee('Loyalty Activity');
+        $response->assertSee('Card Growth');
         $response->assertSee('Active customers');
         $response->assertSee('2');
-        $response->assertSee('Joins over time');
+        $response->assertSee('New cards');
         $response->assertSee('Rewards earned');
         $response->assertSee('Rewards redeemed');
         $response->assertSee('Mar');
