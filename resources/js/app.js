@@ -49,21 +49,6 @@ if ('serviceWorker' in navigator) {
 
 const dashboardCharts = [];
 
-function buildGradient(ctx, chartArea, colors = []) {
-    if (!ctx || !chartArea || colors.length === 0) {
-        return colors[0] ?? '#5b6cff';
-    }
-
-    const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
-
-    colors.forEach((colorStop, index) => {
-        const stop = colors.length === 1 ? 1 : index / (colors.length - 1);
-        gradient.addColorStop(stop, colorStop);
-    });
-
-    return gradient;
-}
-
 function createDashboardChart(canvas) {
     if (!(canvas instanceof HTMLCanvasElement)) return null;
 
@@ -130,26 +115,5 @@ function initializeDashboardCharts() {
 Chart.defaults.font.family = 'Figtree, sans-serif';
 Chart.defaults.color = '#78716c';
 Chart.defaults.borderColor = '#e7e5e4';
-
-Chart.register({
-    id: 'kawheGradients',
-    beforeDatasetsDraw(chart) {
-        const { ctx, chartArea } = chart;
-        if (!chartArea) return;
-
-        chart.data.datasets.forEach((dataset) => {
-            const fillColors = dataset.backgroundGradient;
-            const strokeColors = dataset.borderGradient;
-
-            if (Array.isArray(fillColors) && fillColors.length > 0) {
-                dataset.backgroundColor = buildGradient(ctx, chartArea, fillColors);
-            }
-
-            if (Array.isArray(strokeColors) && strokeColors.length > 0) {
-                dataset.borderColor = buildGradient(ctx, chartArea, strokeColors);
-            }
-        });
-    },
-});
 
 document.addEventListener('DOMContentLoaded', initializeDashboardCharts);

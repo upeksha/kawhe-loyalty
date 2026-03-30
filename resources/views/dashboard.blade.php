@@ -46,11 +46,12 @@
                     'data' => [
                         'labels' => $trendLabels,
                         'datasets' => [[
+                            'label' => 'Active customers trend',
                             'data' => $joinSeries,
                             'borderWidth' => 2.5,
                             'pointRadius' => 0,
                             'tension' => 0.42,
-                            'borderGradient' => ['#6e7dff', '#5b6cff'],
+                            'borderColor' => '#5b6cff',
                         ]],
                     ],
                     'options' => [
@@ -71,11 +72,12 @@
                     'data' => [
                         'labels' => $trendLabels,
                         'datasets' => [[
+                            'label' => 'Rewards earned trend',
                             'data' => $earnedSeries,
                             'borderWidth' => 2.5,
                             'pointRadius' => 0,
                             'tension' => 0.42,
-                            'borderGradient' => ['#43c788', '#31b67a'],
+                            'borderColor' => '#31b67a',
                         ]],
                     ],
                     'options' => [
@@ -96,11 +98,12 @@
                     'data' => [
                         'labels' => $trendLabels,
                         'datasets' => [[
+                            'label' => 'Rewards redeemed trend',
                             'data' => $redeemSeries,
                             'borderWidth' => 2.5,
                             'pointRadius' => 0,
                             'tension' => 0.42,
-                            'borderGradient' => ['#57c797', '#39b980'],
+                            'borderColor' => '#39b980',
                         ]],
                     ],
                     'options' => [
@@ -124,8 +127,8 @@
                         'pointRadius' => 0,
                         'tension' => 0.42,
                         'fill' => true,
-                        'backgroundGradient' => ['rgba(91, 108, 255, 0.18)', 'rgba(91, 108, 255, 0.02)'],
-                        'borderGradient' => ['#7986ff', '#5b6cff'],
+                        'backgroundColor' => 'rgba(91, 108, 255, 0.12)',
+                        'borderColor' => '#5b6cff',
                     ],
                     [
                         'label' => 'Stamps',
@@ -134,8 +137,8 @@
                         'pointRadius' => 0,
                         'tension' => 0.42,
                         'fill' => true,
-                        'backgroundGradient' => ['rgba(49, 182, 122, 0.14)', 'rgba(49, 182, 122, 0.01)'],
-                        'borderGradient' => ['#4cc88d', '#31b67a'],
+                        'backgroundColor' => 'rgba(49, 182, 122, 0.10)',
+                        'borderColor' => '#31b67a',
                     ],
                     [
                         'label' => 'Redeems',
@@ -144,7 +147,7 @@
                         'pointRadius' => 0,
                         'tension' => 0.42,
                         'fill' => false,
-                        'borderGradient' => ['#e4b950', '#d9a227'],
+                        'borderColor' => '#d9a227',
                     ],
                 ],
             ],
@@ -196,8 +199,8 @@
                     'pointRadius' => 0,
                     'tension' => 0.44,
                     'fill' => true,
-                    'backgroundGradient' => ['rgba(91, 108, 255, 0.20)', 'rgba(91, 108, 255, 0.03)'],
-                    'borderGradient' => ['#7a88ff', '#5b6cff'],
+                    'backgroundColor' => 'rgba(91, 108, 255, 0.12)',
+                    'borderColor' => '#5b6cff',
                 ]],
             ],
             'options' => [
