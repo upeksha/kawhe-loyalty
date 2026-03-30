@@ -20,11 +20,11 @@
         @stack('scripts')
     </head>
     <body class="font-sans antialiased bg-stone-50">
-        <div x-data="{ sidebarOpen: false }" class="min-h-screen lg:grid lg:grid-cols-[16rem_minmax(0,1fr)]">
+        <div x-data="{ sidebarOpen: false }" class="min-h-screen">
             <!-- Sidebar -->
             <aside 
                 :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'"
-                class="fixed inset-y-0 left-0 z-50 h-screen w-64 bg-white border-r border-stone-200 transform transition-transform duration-200 ease-in-out overflow-visible lg:sticky lg:top-0 lg:z-auto lg:w-auto lg:translate-x-0"
+                class="fixed inset-y-0 left-0 z-50 h-screen w-64 bg-white border-r border-stone-200 transform transition-transform duration-200 ease-in-out overflow-visible lg:translate-x-0"
             >
                 <div class="flex h-full min-h-0 flex-col overflow-visible">
                     <!-- Logo -->
@@ -184,7 +184,7 @@
             ></div>
 
             <!-- Main Content -->
-            <div class="min-h-screen min-w-0">
+            <div class="min-h-screen min-w-0 lg:ml-[328px]">
                 <!-- Top Header -->
                 <header class="bg-white border-b border-stone-200">
                     <div class="flex items-center justify-between h-16 px-4 sm:px-6 lg:px-8">
