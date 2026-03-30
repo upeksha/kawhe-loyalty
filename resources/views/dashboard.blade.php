@@ -146,7 +146,7 @@
             @endforeach
         </section>
 
-        <section class="grid gap-6 xl:grid-cols-[1.75fr_1fr]">
+        <section class="grid gap-6 xl:grid-cols-2">
             <section class="rounded-[30px] border border-stone-200/70 bg-white p-5 shadow-sm shadow-stone-200/50 sm:p-6">
                 <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                     <div>
@@ -204,71 +204,43 @@
                 @endif
             </section>
 
-            <div class="space-y-6">
-                <section class="rounded-[30px] border border-stone-200/70 bg-white p-5 shadow-sm shadow-stone-200/50 sm:p-6">
-                    <div class="flex items-start justify-between gap-4">
-                        <div>
-                            <h3 class="text-xl font-semibold text-stone-900">Card Growth</h3>
-                            <p class="mt-2 text-sm leading-6 text-stone-600">New customer cards added over the last two weeks.</p>
-                        </div>
-                        <span class="rounded-full bg-brand-50 px-3 py-1 text-xs font-semibold text-brand-700">Live</span>
+            <section class="rounded-[30px] border border-stone-200/70 bg-white p-5 shadow-sm shadow-stone-200/50 sm:p-6">
+                <div class="flex items-start justify-between gap-4">
+                    <div>
+                        <h3 class="text-xl font-semibold text-stone-900">Card Growth</h3>
+                        <p class="mt-2 text-sm leading-6 text-stone-600">New customer cards added over the last two weeks.</p>
                     </div>
+                    <span class="rounded-full bg-brand-50 px-3 py-1 text-xs font-semibold text-brand-700">Live</span>
+                </div>
 
-                    <div class="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
-                        <div class="rounded-2xl bg-[#eaf1ff] p-4 text-[#5b6cff]">
-                            <p class="text-xs font-semibold uppercase tracking-[0.18em] opacity-75">Cards added</p>
-                            <p class="mt-3 text-3xl font-semibold tracking-tight text-stone-950">{{ number_format($analytics['joins_last_window']) }}</p>
-                        </div>
-                        <div class="rounded-2xl bg-stone-100 p-4 text-stone-700">
-                            <p class="text-xs font-semibold uppercase tracking-[0.18em] opacity-75">Daily average</p>
-                            <p class="mt-3 text-3xl font-semibold tracking-tight text-stone-950">{{ number_format($analytics['joins_last_window'] / max(1, $trendPoints->count()), 1) }}</p>
-                        </div>
+                <div class="mt-5 grid gap-3 sm:grid-cols-2">
+                    <div class="rounded-2xl bg-[#eaf1ff] p-4 text-[#5b6cff]">
+                        <p class="text-xs font-semibold uppercase tracking-[0.18em] opacity-75">Cards added</p>
+                        <p class="mt-3 text-3xl font-semibold tracking-tight text-stone-950">{{ number_format($analytics['joins_last_window']) }}</p>
                     </div>
-
-                    @if($trendPoints->every(fn ($day) => ($day['joins'] ?? 0) === 0))
-                        <div class="mt-6 rounded-2xl border border-dashed border-stone-200 bg-stone-50/70 p-5 text-sm text-stone-600">
-                            No new customer cards in the last 14 days yet.
-                        </div>
-                    @else
-                        <div class="mt-6 rounded-[24px] border border-stone-200 bg-stone-50/70 p-4">
-                            <svg viewBox="0 0 390 245" class="h-64 w-full" fill="none" preserveAspectRatio="none" aria-hidden="true">
-                                @foreach(range(1, 4) as $line)
-                                    <line x1="0" y1="{{ $line * 49 }}" x2="390" y2="{{ $line * 49 }}" stroke="#e7e5e4" stroke-dasharray="4 6" />
-                                @endforeach
-
-                                <path d="{{ $joinOnlyChart['area'] }}" fill="#dbeafe" fill-opacity="0.75" />
-                                <path d="{{ $joinOnlyChart['line'] }}" stroke="#4f46e5" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
-                            </svg>
-                        </div>
-                    @endif
-                </section>
-
-                <section class="rounded-[30px] border border-stone-200/70 bg-white p-5 shadow-sm shadow-stone-200/50 sm:p-6">
-                    <div class="flex items-start justify-between gap-4">
-                        <div>
-                            <h3 class="text-xl font-semibold text-stone-900">Recent Activity</h3>
-                            <p class="mt-2 text-sm leading-6 text-stone-600">A small daily snapshot so the page stays focused on analytics.</p>
-                        </div>
+                    <div class="rounded-2xl bg-stone-100 p-4 text-stone-700">
+                        <p class="text-xs font-semibold uppercase tracking-[0.18em] opacity-75">Daily average</p>
+                        <p class="mt-3 text-3xl font-semibold tracking-tight text-stone-950">{{ number_format($analytics['joins_last_window'] / max(1, $trendPoints->count()), 1) }}</p>
                     </div>
+                </div>
 
-                    <div class="mt-5 space-y-2.5">
-                        @forelse($miniActivity as $day)
-                            <div class="flex items-center justify-between gap-3 rounded-2xl border border-stone-200/70 bg-stone-50/70 px-3 py-3">
-                                <div>
-                                    <p class="text-sm font-semibold text-stone-900">{{ $day['label'] }}</p>
-                                    <p class="text-xs text-stone-500">{{ $day['joins'] }} joins, {{ $day['stamps'] }} stamps, {{ $day['redeems'] }} redeems</p>
-                                </div>
-                                <div class="text-right">
-                                    <p class="text-sm font-semibold text-stone-900">{{ $day['total'] }}</p>
-                                    <p class="text-[11px] text-stone-400">events</p>
-                                </div>
-                            </div>
-                        @empty
-                            <div class="rounded-2xl border border-dashed border-stone-200 bg-stone-50/70 p-4 text-sm text-stone-500">No recent activity yet.</div>
-                        @endforelse
+                @if($trendPoints->every(fn ($day) => ($day['joins'] ?? 0) === 0))
+                    <div class="mt-6 rounded-2xl border border-dashed border-stone-200 bg-stone-50/70 p-5 text-sm text-stone-600">
+                        No new customer cards in the last 14 days yet.
                     </div>
-                </section>
-            </div>
+                @else
+                    <div class="mt-6 rounded-[24px] border border-stone-200 bg-stone-50/70 p-4">
+                        <svg viewBox="0 0 390 245" class="h-64 w-full" fill="none" preserveAspectRatio="none" aria-hidden="true">
+                            @foreach(range(1, 4) as $line)
+                                <line x1="0" y1="{{ $line * 49 }}" x2="390" y2="{{ $line * 49 }}" stroke="#e7e5e4" stroke-dasharray="4 6" />
+                            @endforeach
+
+                            <path d="{{ $joinOnlyChart['area'] }}" fill="#dbeafe" fill-opacity="0.75" />
+                            <path d="{{ $joinOnlyChart['line'] }}" stroke="#4f46e5" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+                        </svg>
+                    </div>
+                @endif
+            </section>
         </section>
 
         <section class="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -351,16 +323,26 @@
             <x-ui.card class="!rounded-[30px] !border-stone-200/70 p-5 sm:p-6">
                 <div class="flex items-start justify-between gap-3">
                     <div>
-                        <h3 class="text-base sm:text-lg font-bold text-stone-900">Manage Your Workspace</h3>
-                        <p class="mt-1 text-sm text-stone-600">Quick links for your main operational tools.</p>
+                        <h3 class="text-base sm:text-lg font-bold text-stone-900">Recent Activity</h3>
+                        <p class="mt-1 text-sm text-stone-600">A compact summary of your latest customer activity.</p>
                     </div>
                 </div>
 
                 <div class="mt-5 space-y-3">
-                    <x-ui.button href="{{ route('merchant.scanner') }}" variant="primary" size="sm" class="!w-full !justify-start">Open Scanner</x-ui.button>
-                    <x-ui.button href="{{ route('merchant.stores.index') }}" variant="secondary" size="sm" class="!w-full !justify-start">Manage Stores</x-ui.button>
-                    <x-ui.button href="{{ route('merchant.stores.create') }}" variant="secondary" size="sm" class="!w-full !justify-start">Add Store</x-ui.button>
-                    <x-ui.button href="{{ route('merchant.customers.index') }}" variant="secondary" size="sm" class="!w-full !justify-start">View Customers</x-ui.button>
+                    @forelse($miniActivity as $day)
+                        <div class="flex items-center justify-between gap-3 rounded-2xl border border-stone-200/70 bg-stone-50/70 px-3 py-3">
+                            <div>
+                                <p class="text-sm font-semibold text-stone-900">{{ $day['label'] }}</p>
+                                <p class="text-xs text-stone-500">{{ $day['joins'] }} joins, {{ $day['stamps'] }} stamps, {{ $day['redeems'] }} redeems</p>
+                            </div>
+                            <div class="text-right">
+                                <p class="text-sm font-semibold text-stone-900">{{ $day['total'] }}</p>
+                                <p class="text-[11px] text-stone-400">events</p>
+                            </div>
+                        </div>
+                    @empty
+                        <div class="rounded-2xl border border-dashed border-stone-200 bg-stone-50/70 p-4 text-sm text-stone-500">No recent activity yet.</div>
+                    @endforelse
                 </div>
             </x-ui.card>
         </section>
