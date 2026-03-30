@@ -35,15 +35,13 @@
                                 href="{{ $appleStoreUrl }}"
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                class="flex flex-1 items-center gap-3 rounded-2xl border border-stone-900 bg-stone-950 px-4 py-3 text-left text-white transition hover:bg-stone-800"
+                                class="flex flex-1 items-center justify-center rounded-2xl border border-stone-200 bg-white p-1.5 transition hover:border-[#4f7d54] hover:bg-[#edf4eb]"
                             >
-                                <svg class="h-8 w-8 flex-shrink-0" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                                    <path d="M16.365 12.253c.03 3.193 2.802 4.256 2.833 4.27-.023.075-.442 1.506-1.455 2.985-.875 1.278-1.783 2.55-3.214 2.577-1.406.026-1.858-.833-3.468-.833-1.61 0-2.11.807-3.443.859-1.383.052-2.437-1.389-3.319-2.662C2.505 16.705 1.43 12.31 3.27 9.113c.913-1.587 2.544-2.59 4.314-2.616 1.358-.026 2.641.912 3.468.912.825 0 2.372-1.128 3.996-.963.68.028 2.59.274 3.815 2.066-.099.061-2.478 1.444-2.498 4.741Zm-2.341-6.395c.733-.889 1.228-2.126 1.092-3.355-1.058.043-2.34.704-3.099 1.592-.68.782-1.276 2.04-1.115 3.241 1.181.091 2.389-.599 3.122-1.478Z"/>
-                                </svg>
-                                <span class="min-w-0">
-                                    <span class="block text-[11px] font-medium uppercase tracking-[0.18em] text-white/70">Download on the</span>
-                                    <span class="block truncate text-sm font-semibold">App Store</span>
-                                </span>
+                                <img
+                                    src="{{ asset('images/store-badges/app-store-light-en.png') }}"
+                                    alt="Download on the App Store"
+                                    class="h-14 w-auto"
+                                >
                             </a>
                         @endif
 
