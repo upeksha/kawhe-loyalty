@@ -184,7 +184,7 @@
             ></div>
 
             <!-- Main Content -->
-            <div class="min-h-screen lg:ml-64 lg:w-[calc(100%-16rem)]">
+            <div class="min-h-screen lg:ml-64">
                 <!-- Top Header -->
                 <header class="bg-white border-b border-stone-200">
                     <div class="flex items-center justify-between h-16 px-4 sm:px-6 lg:px-8">
