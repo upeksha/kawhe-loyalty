@@ -39,8 +39,8 @@
                 'label' => 'Active customers',
                 'value' => number_format($analytics['active_customers']),
                 'caption' => 'Joined or used their card in the last 30 days',
-                'tone' => 'bg-[#eef1ff]',
-                'accent' => 'text-[#5b6cff]',
+                'tone' => 'bg-[#f3efe7]',
+                'accent' => 'text-[#3a2a22]',
                 'chart' => [
                     'type' => 'line',
                     'data' => [
@@ -51,7 +51,7 @@
                             'borderWidth' => 2.5,
                             'pointRadius' => 0,
                             'tension' => 0.42,
-                            'borderColor' => '#5b6cff',
+                            'borderColor' => '#3a2a22',
                         ]],
                     ],
                     'options' => [
@@ -65,8 +65,8 @@
                 'label' => 'Rewards earned',
                 'value' => number_format($analytics['rewards_earned_last_window']),
                 'caption' => 'Completed reward cycles in the last 30 days',
-                'tone' => 'bg-[#eefcf6]',
-                'accent' => 'text-[#31b67a]',
+                'tone' => 'bg-[#edf4eb]',
+                'accent' => 'text-[#1f3b2c]',
                 'chart' => [
                     'type' => 'line',
                     'data' => [
@@ -77,7 +77,7 @@
                             'borderWidth' => 2.5,
                             'pointRadius' => 0,
                             'tension' => 0.42,
-                            'borderColor' => '#31b67a',
+                            'borderColor' => '#1f3b2c',
                         ]],
                     ],
                     'options' => [
@@ -91,8 +91,8 @@
                 'label' => 'Rewards redeemed',
                 'value' => number_format($analytics['rewards_redeemed_last_window']),
                 'caption' => 'Redeemed across your stores in the last 30 days',
-                'tone' => 'bg-[#f3fbf6]',
-                'accent' => 'text-[#39b980]',
+                'tone' => 'bg-[#fff4e9]',
+                'accent' => 'text-[#c96a3b]',
                 'chart' => [
                     'type' => 'line',
                     'data' => [
@@ -103,7 +103,7 @@
                             'borderWidth' => 2.5,
                             'pointRadius' => 0,
                             'tension' => 0.42,
-                            'borderColor' => '#39b980',
+                            'borderColor' => '#c96a3b',
                         ]],
                     ],
                     'options' => [
@@ -127,8 +127,8 @@
                         'pointRadius' => 0,
                         'tension' => 0.42,
                         'fill' => true,
-                        'backgroundColor' => 'rgba(91, 108, 255, 0.12)',
-                        'borderColor' => '#5b6cff',
+                        'backgroundColor' => 'rgba(58, 42, 34, 0.12)',
+                        'borderColor' => '#3a2a22',
                     ],
                     [
                         'label' => 'Stamps',
@@ -137,8 +137,8 @@
                         'pointRadius' => 0,
                         'tension' => 0.42,
                         'fill' => true,
-                        'backgroundColor' => 'rgba(49, 182, 122, 0.10)',
-                        'borderColor' => '#31b67a',
+                        'backgroundColor' => 'rgba(79, 125, 84, 0.12)',
+                        'borderColor' => '#4f7d54',
                     ],
                     [
                         'label' => 'Redeems',
@@ -147,7 +147,7 @@
                         'pointRadius' => 0,
                         'tension' => 0.42,
                         'fill' => false,
-                        'borderColor' => '#d9a227',
+                        'borderColor' => '#d6a24a',
                     ],
                 ],
             ],
@@ -199,8 +199,8 @@
                     'pointRadius' => 0,
                     'tension' => 0.44,
                     'fill' => true,
-                    'backgroundColor' => 'rgba(91, 108, 255, 0.12)',
-                    'borderColor' => '#5b6cff',
+                    'backgroundColor' => 'rgba(167, 199, 161, 0.18)',
+                    'borderColor' => '#4f7d54',
                 ]],
             ],
             'options' => [
@@ -247,7 +247,7 @@
         <section class="rounded-[28px] border border-stone-200/70 bg-white p-4 shadow-sm shadow-stone-200/50 sm:p-6">
             <div class="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
                 <div class="max-w-2xl">
-                    <p class="text-xs font-semibold uppercase tracking-[0.22em] text-brand-600">Dashboard</p>
+                    <p class="text-xs font-semibold uppercase tracking-[0.22em] text-[#4f7d54]">Dashboard</p>
                     <h2 class="mt-2 text-2xl font-semibold tracking-tight text-stone-900 sm:text-3xl">
                         Welcome back, {{ request()->user()->name ?? 'Merchant' }}.
                     </h2>
@@ -259,13 +259,13 @@
                 <div class="w-full max-w-[34rem]">
                     <p class="text-xs font-semibold uppercase tracking-[0.18em] text-stone-400">Quick Actions</p>
                     <div class="mt-2 grid gap-2 sm:grid-cols-3">
-                        <x-ui.button href="{{ route('merchant.scanner') }}" variant="primary" size="sm" class="!justify-start !rounded-xl !border-0 !bg-[#eef1ff] !px-3 !py-3 !text-[#5b6cff] !shadow-none hover:!bg-[#e5e9ff]">
+                        <x-ui.button href="{{ route('merchant.scanner') }}" variant="primary" size="sm" class="!justify-start !rounded-xl !border-0 !bg-[#f3efe7] !px-3 !py-3 !text-[#3a2a22] !shadow-none hover:!bg-[#ece4d6]">
                             Open Scanner
                         </x-ui.button>
-                        <x-ui.button href="{{ route('merchant.stores.index') }}" variant="secondary" size="sm" class="!justify-start !rounded-xl !border-0 !bg-stone-100 !px-3 !py-3 !text-stone-700 !shadow-none hover:!bg-stone-200">
+                        <x-ui.button href="{{ route('merchant.stores.index') }}" variant="secondary" size="sm" class="!justify-start !rounded-xl !border-0 !bg-[#edf4eb] !px-3 !py-3 !text-[#1f3b2c] !shadow-none hover:!bg-[#deebda]">
                             Store QR
                         </x-ui.button>
-                        <x-ui.button href="{{ route('merchant.customers.index') }}" variant="secondary" size="sm" class="!justify-start !rounded-xl !border-0 !bg-stone-100 !px-3 !py-3 !text-stone-700 !shadow-none hover:!bg-stone-200">
+                        <x-ui.button href="{{ route('merchant.customers.index') }}" variant="secondary" size="sm" class="!justify-start !rounded-xl !border-0 !bg-[#fff4e9] !px-3 !py-3 !text-[#c96a3b] !shadow-none hover:!bg-[#fde8d7]">
                             Customers
                         </x-ui.button>
                     </div>
@@ -301,15 +301,15 @@
                 </div>
 
                 <div class="mt-6 grid gap-3 md:grid-cols-3">
-                    <div class="rounded-2xl bg-[#eaf1ff] p-4 text-[#5b6cff]">
+                    <div class="rounded-2xl bg-[#f3efe7] p-4 text-[#3a2a22]">
                         <p class="text-xs font-semibold uppercase tracking-[0.18em] opacity-75">New cards</p>
                         <p class="mt-3 text-3xl font-semibold tracking-tight text-stone-950">{{ number_format($analytics['joins_last_window']) }}</p>
                     </div>
-                    <div class="rounded-2xl bg-[#ecfbf3] p-4 text-[#31b67a]">
+                    <div class="rounded-2xl bg-[#edf4eb] p-4 text-[#1f3b2c]">
                         <p class="text-xs font-semibold uppercase tracking-[0.18em] opacity-75">Stamp activity</p>
                         <p class="mt-3 text-3xl font-semibold tracking-tight text-stone-950">{{ number_format($trendPoints->sum('stamps')) }}</p>
                     </div>
-                    <div class="rounded-2xl bg-[#fff8df] p-4 text-[#d9a227]">
+                    <div class="rounded-2xl bg-[#fff5df] p-4 text-[#d6a24a]">
                         <p class="text-xs font-semibold uppercase tracking-[0.18em] opacity-75">Avg per day</p>
                         <p class="mt-3 text-3xl font-semibold tracking-tight text-stone-950">{{ number_format($trendPoints->sum('total') / max(1, $trendPoints->count()), 1) }}</p>
                     </div>
@@ -334,11 +334,11 @@
                         <h3 class="text-xl font-semibold text-stone-900">Card Growth</h3>
                         <p class="mt-2 text-sm leading-6 text-stone-600">New customer cards added over the last two weeks.</p>
                     </div>
-                    <span class="rounded-full bg-brand-50 px-3 py-1 text-xs font-semibold text-brand-700">Live</span>
+                    <span class="rounded-full bg-[#edf4eb] px-3 py-1 text-xs font-semibold text-[#1f3b2c]">Live</span>
                 </div>
 
                 <div class="mt-5 grid gap-3 sm:grid-cols-2">
-                    <div class="rounded-2xl bg-[#eaf1ff] p-4 text-[#5b6cff]">
+                    <div class="rounded-2xl bg-[#f3efe7] p-4 text-[#3a2a22]">
                         <p class="text-xs font-semibold uppercase tracking-[0.18em] opacity-75">Cards added</p>
                         <p class="mt-3 text-3xl font-semibold tracking-tight text-stone-950">{{ number_format($analytics['joins_last_window']) }}</p>
                     </div>
@@ -390,7 +390,7 @@
                         @if(!$usageStats['is_subscribed'])
                             <p class="mt-1 text-xs text-stone-500">Remaining on free plan: {{ $cardsRemaining }}</p>
                             <div class="mt-3 w-full bg-stone-200 rounded-full h-2">
-                                <div class="bg-brand-600 h-2 rounded-full transition-all duration-300" style="width: {{ $usagePercent }}%"></div>
+                                <div class="h-2 rounded-full bg-[#4f7d54] transition-all duration-300" style="width: {{ $usagePercent }}%"></div>
                             </div>
                         @endif
                         @if($usageStats['grandfathered_count'] > 0)
@@ -479,15 +479,15 @@
                     </p>
                 </x-ui.card>
             @elseif($usageStats['has_cancelled_subscription'] && $usageStats['grandfathered_count'] > 0)
-                <x-ui.card class="p-4 border border-brand-200 bg-brand-50">
-                    <p class="text-sm text-brand-800">
+                <x-ui.card class="p-4 border border-[#d6a24a]/40 bg-[#fff5df]">
+                    <p class="text-sm text-[#7c5a1c]">
                         <strong>Grandfathered Cards:</strong> You have {{ $usageStats['grandfathered_count'] }} active from your previous Pro subscription.
                         You can create {{ $usageStats['limit'] - $usageStats['non_grandfathered_count'] }} more card(s) on free.
                     </p>
                 </x-ui.card>
             @elseif($usageStats['cards_count'] >= ($usageStats['limit'] * 0.8))
-                <x-ui.card class="p-4 border border-brand-200 bg-brand-50">
-                    <p class="text-sm text-brand-800">
+                <x-ui.card class="p-4 border border-[#d6a24a]/40 bg-[#fff5df]">
+                    <p class="text-sm text-[#7c5a1c]">
                         <strong>Almost there:</strong> You’re using {{ $usageStats['cards_count'] }} of {{ $usageStats['limit'] }} free cards.
                         Consider upgrading to keep adding customers.
                     </p>
