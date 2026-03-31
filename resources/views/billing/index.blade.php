@@ -201,68 +201,12 @@
         </x-ui.card>
 
         <x-ui.card class="p-5 sm:p-6">
-            <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                <div>
-                    <h3 class="text-lg font-semibold text-stone-900">Choose what to do next</h3>
-                    <p class="mt-1 text-sm text-stone-600">We’ve kept the actions to the essentials so this page stays easy to use.</p>
-                </div>
-            </div>
-
-            <div class="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                @if(!$stats['is_subscribed'])
-                    <div class="rounded-2xl border border-stone-200 bg-white p-4">
-                        <p class="text-sm font-semibold text-stone-900">Upgrade to Pro</p>
-                        <p class="mt-2 text-sm leading-6 text-stone-600">Best when you want to keep signups open without watching the free-plan limit.</p>
-                        <form method="POST" action="{{ route('billing.checkout') }}" class="mt-4">
-                            @csrf
-                            <x-ui.button type="submit" variant="primary" size="sm" class="w-full">
-                                {{ $billingBlocked ? 'Upgrade and Reopen Signups' : 'Start Upgrade' }}
-                            </x-ui.button>
-                        </form>
-                    </div>
-                @endif
-
-                @if($stats['is_subscribed'])
-                    <div class="rounded-2xl border border-stone-200 bg-white p-4">
-                        <p class="text-sm font-semibold text-stone-900">Manage billing</p>
-                        <p class="mt-2 text-sm leading-6 text-stone-600">Open Stripe’s billing portal to update payment details or manage your subscription.</p>
-                        <form method="POST" action="{{ route('billing.portal') }}" class="mt-4">
-                            @csrf
-                            <x-ui.button type="submit" variant="primary" size="sm" class="w-full">
-                                Open Billing Portal
-                            </x-ui.button>
-                        </form>
-                    </div>
-                @endif
-
-                <div class="rounded-2xl border border-stone-200 bg-white p-4">
-                    <p class="text-sm font-semibold text-stone-900">Sync billing status</p>
-                    <p class="mt-2 text-sm leading-6 text-stone-600">Use this if you recently upgraded, changed billing in Stripe, or the page looks out of date.</p>
-                    <form method="POST" action="{{ route('billing.sync') }}" class="mt-4">
-                        @csrf
-                        <x-ui.button type="submit" variant="secondary" size="sm" class="w-full">
-                            Sync Billing Status
-                        </x-ui.button>
-                    </form>
-                </div>
-
-                <div class="rounded-2xl border border-stone-200 bg-white p-4">
-                    <p class="text-sm font-semibold text-stone-900">Refresh this page</p>
-                    <p class="mt-2 text-sm leading-6 text-stone-600">Run the latest billing checks again without leaving the dashboard.</p>
-                    <x-ui.button href="{{ route('billing.index', ['refresh' => 1]) }}" variant="ghost" size="sm" class="mt-4 w-full">
-                        Refresh Billing Checks
-                    </x-ui.button>
-                </div>
-            </div>
-        </x-ui.card>
-
-        <x-ui.card class="p-5 sm:p-6">
             <details>
                 <summary class="cursor-pointer list-none">
                     <div class="flex items-center justify-between gap-4">
                         <div>
-                            <h3 class="text-lg font-semibold text-stone-900">Billing Support Diagnostics</h3>
-                            <p class="mt-1 text-sm text-stone-600">Open this only if checkout, sync, or plan status looks wrong.</p>
+                            <h3 class="text-base font-semibold text-stone-900">Advanced billing help</h3>
+                            <p class="mt-1 text-sm text-stone-600">Only open this if checkout, sync, or plan status looks wrong.</p>
                         </div>
                         <span class="inline-flex items-center rounded-full bg-stone-100 px-3 py-1 text-xs font-semibold text-stone-700">
                             Show details
@@ -286,7 +230,7 @@
                         <div class="rounded-2xl border border-stone-200 bg-stone-50/70 p-4">
                             <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                                 <div>
-                                    <h4 class="text-sm font-semibold text-stone-900">Billing health checks</h4>
+                                    <h4 class="text-sm font-semibold text-stone-900">Billing Support Diagnostics</h4>
                                     <p class="mt-1 text-sm text-stone-600">{{ $billingDiagnosticReady }}/{{ $billingDiagnosticTotal }} checks are currently in a good state.</p>
                                 </div>
                                 <span class="inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold {{ $billingDiagnosticTone }}">
