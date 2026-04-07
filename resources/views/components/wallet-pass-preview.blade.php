@@ -1,5 +1,5 @@
 @php
-    $fallbackHeroUrl = asset('images/wallet-preview-hero.svg');
+    $fallbackHeroUrl = asset('images/wallet-preview-pattern.jpg');
 @endphp
 
 <div class="space-y-3" role="status" aria-live="polite" x-data="{ previewMode: 'collecting' }">
@@ -33,7 +33,9 @@
 
             <div
                 class="relative h-[124px] overflow-hidden"
-                :style="`background-image: url('${passHeroPreview || @js($fallbackHeroUrl)}'); background-size: cover; background-position: center; background-repeat: no-repeat;`"
+                :style="passHeroPreview
+                    ? `background-image: url('${passHeroPreview}'); background-size: cover; background-position: center; background-repeat: no-repeat;`
+                    : `background-image: url('{{ $fallbackHeroUrl }}'); background-size: 140px auto; background-position: center; background-repeat: repeat;`"
             >
                 <div class="absolute inset-x-0 bottom-4 z-[1] flex gap-[9px] px-4">
                     <template x-for="stamp in Array.from({ length: Math.min(Math.max(Number(rewardTarget) || 1, 1), 5) }, (_, index) => index + 1)" :key="`preview-stamp-${stamp}`">
@@ -58,7 +60,7 @@
 
             <div class="pb-[18px] pt-[28px]">
                 <div class="mx-auto w-[150px] rounded-[6px] bg-[#f3f3f3] px-[13px] pb-[10px] pt-[14px] text-center text-[#242424]">
-                    <img src="{{ asset('images/qr-preview-sample.svg') }}" alt="Sample QR code preview" class="mx-auto mb-[10px] h-[124px] w-[124px] rounded-[2px] object-contain" />
+                    <img src="{{ asset('images/qr-preview-sample.png') }}" alt="Sample QR code preview" class="mx-auto mb-[10px] h-[124px] w-[124px] rounded-[2px] object-contain" />
                     <p class="m-0 text-[12px]">Manual code: J7LU</p>
                 </div>
             </div>
