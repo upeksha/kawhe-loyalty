@@ -1,5 +1,6 @@
 @php
     $fallbackHeroUrl = asset('images/wallet-preview-pattern.jpg');
+    $fallbackLogoUrl = asset('images/wallet-preview-pattern.jpg');
 @endphp
 
 <div class="space-y-3" role="status" aria-live="polite" x-data="{ previewMode: 'collecting' }">
@@ -22,10 +23,7 @@
                         <img :src="passLogoPreview || logoPreview" alt="" class="h-full w-full object-contain p-1">
                     </template>
                     <template x-if="!(passLogoPreview || logoPreview)">
-                        <span class="absolute left-[6px] top-[9px] h-[7px] w-[11px] rounded-b-[5px] bg-[#5a2a08]">
-                            <span class="absolute -right-[4px] top-[1px] h-[7px] w-[5px] rounded-r-[3px] border-2 border-l-0 border-[#5a2a08]"></span>
-                            <span class="absolute left-[2px] top-[-3px] h-[1.5px] w-[7px] bg-[#5a2a08] opacity-70"></span>
-                        </span>
+                        <img src="{{ $fallbackLogoUrl }}" alt="" class="h-full w-full object-cover">
                     </template>
                 </div>
                 <h1 class="m-0 min-w-0 truncate text-[28px] font-[200] leading-none tracking-[0.2px]" x-text="storeName || 'Coffee card'"></h1>
