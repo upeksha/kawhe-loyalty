@@ -15,9 +15,12 @@
     </div>
 
     <section class="rounded-2xl border border-stone-200 bg-white p-4 shadow-lg shadow-stone-200/40">
-        <div class="mx-auto w-full max-w-[20rem] overflow-hidden rounded-[28px] border border-stone-900/10 shadow-2xl shadow-stone-300/40" :style="{ backgroundColor: bgColor || '#1F2937' }">
-            <div class="px-4 py-4 text-white">
-                <div class="flex items-center gap-3">
+        <div class="mx-auto w-full max-w-[21rem] overflow-hidden rounded-[28px] border border-stone-900/10 bg-white shadow-2xl shadow-stone-300/30">
+            <div class="relative px-5 py-5" :style="{ backgroundColor: bgColor || '#1F2937' }">
+                <div class="absolute inset-x-0 top-0 h-24 opacity-20">
+                    <img :src="passHeroPreview || @js($fallbackHeroUrl)" alt="" class="h-full w-full object-cover" />
+                </div>
+                <div class="relative flex items-center gap-3 text-white">
                     <div class="flex h-14 w-14 items-center justify-center overflow-hidden rounded-full bg-white shadow-sm ring-1 ring-black/5">
                         <template x-if="passLogoPreview || logoPreview">
                             <img :src="passLogoPreview || logoPreview" alt="" class="h-full w-full object-contain p-1.5">
@@ -26,37 +29,46 @@
                             <span class="text-[10px] font-semibold uppercase tracking-[0.2em] text-stone-700">Logo</span>
                         </template>
                     </div>
-                    <p class="min-w-0 truncate text-[2.15rem] font-semibold leading-none" x-text="storeName || 'Your store'"></p>
-                </div>
-            </div>
-
-            <div class="relative h-44 overflow-hidden border-t border-white/10 border-b border-white/10">
-                <img :src="passHeroPreview || @js($fallbackHeroUrl)" alt="" class="absolute inset-0 h-full w-full object-cover" />
-                <div class="absolute inset-0 bg-[linear-gradient(to_bottom,rgba(15,23,42,0.04),rgba(15,23,42,0.16))]"></div>
-                <div class="absolute inset-x-0 top-9 z-10 flex items-center justify-center gap-3 px-5">
-                    <template x-for="stamp in Array.from({ length: Math.max(Number(rewardTarget) || 1, 1) }, (_, index) => index + 1)" :key="`apple-stamp-${stamp}`">
-                        <span class="h-10 w-10 rounded-full border-[4px] shadow-[0_1px_8px_rgba(0,0,0,0.08)]" :class="previewMode === 'ready' || stamp <= Math.min(2, Math.max(Number(rewardTarget) || 1, 1)) ? 'bg-white border-white' : 'bg-transparent border-white/95'"></span>
-                    </template>
-                </div>
-            </div>
-
-            <div class="border-b border-white/10 px-4 py-4 text-white">
-                <div class="grid grid-cols-2 gap-3">
                     <div class="min-w-0">
-                        <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/65">Customer</p>
-                        <p class="truncate pt-1 text-[2.9rem] font-light leading-none">John Doe</p>
-                    </div>
-                    <div class="min-w-0 text-left">
-                        <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/65">Status</p>
-                        <p class="truncate pt-1 text-[2.35rem] font-light leading-none" x-text="previewMode === 'ready' ? 'Reward ready' : `${Math.min(2, Math.max(Number(rewardTarget) || 1, 1))}/${Math.max(Number(rewardTarget) || 1, 1)} stamps`"></p>
+                        <p class="truncate text-lg font-semibold leading-tight" x-text="storeName || 'Your store'"></p>
+                        <p class="mt-1 text-xs uppercase tracking-[0.18em] text-white/70">Loyalty card</p>
                     </div>
                 </div>
             </div>
 
-            <div class="px-4 py-7">
-                <div class="mx-auto w-full max-w-[165px] rounded-2xl bg-transparent p-3 shadow-none">
-                    <img src="{{ asset('images/qr-preview-sample.svg') }}" alt="Sample QR code preview" class="mx-auto h-[80px] w-[80px] rounded-lg object-contain" />
-                    <p class="pt-2.5 text-center text-[1.55rem] font-medium leading-none text-black">Manual code: J7LU</p>
+            <div class="px-5 py-5" :style="{ backgroundColor: bgColor || '#1F2937' }">
+                <div class="rounded-[24px] border border-white/12 bg-white/[0.08] p-4 text-white backdrop-blur-[2px]">
+                    <div class="flex items-start justify-between gap-4">
+                        <div class="min-w-0">
+                            <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/60">Customer</p>
+                            <p class="mt-1 truncate text-xl font-medium">John Doe</p>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/60">Reward</p>
+                            <p class="mt-1 text-sm font-medium" x-text="rewardTitle || 'Free coffee'"></p>
+                        </div>
+                    </div>
+
+                    <div class="mt-4 flex items-center justify-between gap-3">
+                        <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/60">Progress</p>
+                        <p class="text-sm font-medium" x-text="previewMode === 'ready' ? 'Reward ready' : `${Math.min(2, Math.max(Number(rewardTarget) || 1, 1))} of ${Math.max(Number(rewardTarget) || 1, 1)} stamps`"></p>
+                    </div>
+
+                    <div class="mt-3 grid grid-cols-5 gap-2">
+                        <template x-for="stamp in Array.from({ length: Math.min(Math.max(Number(rewardTarget) || 1, 1), 10) }, (_, index) => index + 1)" :key="`preview-stamp-${stamp}`">
+                            <span class="flex h-9 items-center justify-center rounded-full border text-xs font-semibold" :class="previewMode === 'ready' || stamp <= Math.min(2, Math.max(Number(rewardTarget) || 1, 1)) ? 'border-white bg-white text-stone-900' : 'border-white/70 text-white/80'">
+                                <span x-text="stamp"></span>
+                            </span>
+                        </template>
+                    </div>
+                </div>
+            </div>
+
+            <div class="border-t border-stone-200 bg-stone-50 px-5 py-5">
+                <div class="mx-auto max-w-[12rem] rounded-[24px] border border-stone-200 bg-white p-4 shadow-sm shadow-stone-200/60">
+                    <img src="{{ asset('images/qr-preview-sample.svg') }}" alt="Sample QR code preview" class="mx-auto h-28 w-28 object-contain" />
+                    <p class="mt-3 text-center text-[11px] font-semibold uppercase tracking-[0.18em] text-stone-500">Scan to collect</p>
+                    <p class="mt-1 text-center text-sm font-semibold text-stone-900">Manual code: J7LU</p>
                 </div>
             </div>
         </div>
