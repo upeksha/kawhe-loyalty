@@ -33,14 +33,8 @@
 
             <div
                 class="relative h-[124px] overflow-hidden"
-                :style="`background-image:
-                    linear-gradient(120deg, rgba(7,25,44,0.88) 6%, rgba(14,43,76,0.6) 45%, rgba(58,30,21,0.55) 100%),
-                    radial-gradient(circle at 18% 65%, rgba(254,214,153,0.45), rgba(254,214,153,0) 22%),
-                    radial-gradient(circle at 52% 72%, rgba(232,195,132,0.9), rgba(232,195,132,0) 24%),
-                    url('${passHeroPreview || @js($fallbackHeroUrl)}')`"
-                style="background-size: cover; background-position: center;"
+                :style="`background-image: url('${passHeroPreview || @js($fallbackHeroUrl)}'); background-size: cover; background-position: center; background-repeat: no-repeat;`"
             >
-                <div class="absolute inset-0 bg-[linear-gradient(to_top,rgba(0,0,0,0.08),rgba(0,0,0,0.18))]"></div>
                 <div class="absolute inset-x-0 bottom-4 z-[1] flex gap-[9px] px-4">
                     <template x-for="stamp in Array.from({ length: Math.min(Math.max(Number(rewardTarget) || 1, 1), 5) }, (_, index) => index + 1)" :key="`preview-stamp-${stamp}`">
                         <span
