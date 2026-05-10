@@ -42,8 +42,10 @@
         </x-ui.button>
     </form>
 
-    <p class="mt-6 text-center text-sm text-stone-500">
-        Don't have an account?
-        <a href="{{ route('register') }}" class="text-brand-600 hover:text-brand-700 font-medium">Create one</a>
-    </p>
+    @if (Route::has('register'))
+        <p class="mt-6 text-center text-sm text-stone-500">
+            Don't have an account?
+            <a href="{{ route('register') }}" class="text-brand-600 hover:text-brand-700 font-medium">Create one</a>
+        </p>
+    @endif
 </x-guest-layout>
