@@ -34,19 +34,26 @@
                     </div>
 
                     <div class="pt-6 space-y-4">
-                        <a href="{{ route('register') }}" class="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-base font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition duration-150 ease-in-out">
-                            Create Free Account
-                        </a>
-                        <a href="{{ route('login') }}" class="w-full flex justify-center py-3 px-4 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm text-base font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition duration-150 ease-in-out">
-                            Log In
-                        </a>
+                        @if (Route::has('register'))
+                            <a href="{{ route('register') }}" class="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-base font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition duration-150 ease-in-out">
+                                Create Free Account
+                            </a>
+                        @endif
+
+                        @if (Route::has('login'))
+                            <a href="{{ route('login') }}" class="w-full flex justify-center py-3 px-4 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm text-base font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition duration-150 ease-in-out">
+                                Log In
+                            </a>
+                        @endif
                     </div>
                 </div>
             </div>
 
-            <p class="mt-8 text-center text-sm text-gray-500 dark:text-gray-400">
-                Already have an account? <a href="{{ route('login') }}" class="font-medium text-blue-600 hover:text-blue-500">Sign in here</a>
-            </p>
+            @if (Route::has('login'))
+                <p class="mt-8 text-center text-sm text-gray-500 dark:text-gray-400">
+                    Already have an account? <a href="{{ route('login') }}" class="font-medium text-blue-600 hover:text-blue-500">Sign in here</a>
+                </p>
+            @endif
         </div>
     </div>
 </x-guest-layout>
