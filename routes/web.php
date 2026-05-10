@@ -19,7 +19,7 @@ use Illuminate\Support\Facades\Route;
 Route::get('/start', [PublicStartController::class, 'index'])->name('start');
 
 Route::get('/', function () {
-    return view('welcome');
+    return redirect()->route('start');
 });
 
 // Dashboard route - conditional redirect for merchants with stores
