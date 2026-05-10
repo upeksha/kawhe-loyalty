@@ -97,7 +97,7 @@
                             <div>
                                 <label for="brand_color" class="block text-sm font-medium text-stone-700 mb-1.5">Brand color</label>
                                 <div class="flex gap-3 mt-1.5">
-                                    <input type="color" id="brand_color" name="brand_color" x-ref="brandColor" value="{{ $brandColor }}" class="h-11 w-11 rounded-full border-2 border-stone-300 cursor-pointer flex-shrink-0 overflow-hidden p-0 bg-transparent appearance-none" />
+                                    <input type="color" id="brand_color" name="brand_color" x-ref="brandColor" value="{{ $brandColor }}" class="color-swatch-input h-11 w-11 rounded-full border-2 border-stone-300 cursor-pointer flex-shrink-0 overflow-hidden p-0 bg-transparent appearance-none" />
                                     <input type="text" id="brand_color_text" x-ref="brandColorText" value="{{ $brandColor }}" placeholder="#0EA5E9" aria-label="Brand color hex value" aria-describedby="brand_color_note" autocapitalize="off" spellcheck="false" class="{{ $inputClass }}" />
                                 </div>
                                 <x-onboarding-helper-note id="brand_color_note">Used for buttons and accents on the customer card.</x-onboarding-helper-note>
@@ -106,7 +106,7 @@
                             <div>
                                 <label for="background_color" class="block text-sm font-medium text-stone-700 mb-1.5">Background color</label>
                                 <div class="flex gap-3 mt-1.5">
-                                    <input type="color" id="background_color" name="background_color" x-ref="bgColor" value="{{ $bgColor }}" class="h-11 w-11 rounded-full border-2 border-stone-300 cursor-pointer flex-shrink-0 overflow-hidden p-0 bg-transparent appearance-none" />
+                                    <input type="color" id="background_color" name="background_color" x-ref="bgColor" value="{{ $bgColor }}" class="color-swatch-input h-11 w-11 rounded-full border-2 border-stone-300 cursor-pointer flex-shrink-0 overflow-hidden p-0 bg-transparent appearance-none" />
                                     <input type="text" id="background_color_text" x-ref="bgColorText" value="{{ $bgColor }}" placeholder="#1F2937" aria-label="Background color hex value" aria-describedby="background_color_note" autocapitalize="off" spellcheck="false" class="{{ $inputClass }}" />
                                 </div>
                                 <x-onboarding-helper-note id="background_color_note">Background of the join page and card.</x-onboarding-helper-note>

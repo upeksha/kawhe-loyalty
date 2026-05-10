@@ -1,3 +1,24 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Ensure color input swatches render as true circles, not inner rectangles. */
+.color-swatch-input {
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+.color-swatch-input::-webkit-color-swatch-wrapper {
+    padding: 0;
+    border-radius: 9999px;
+}
+
+.color-swatch-input::-webkit-color-swatch {
+    border: 0;
+    border-radius: 9999px;
+}
+
+.color-swatch-input::-moz-color-swatch {
+    border: 0;
+    border-radius: 9999px;
+}
