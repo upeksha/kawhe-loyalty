@@ -24,6 +24,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'superadmin' => \App\Http\Middleware\SuperAdmin::class,
             'merchant.has.store' => \App\Http\Middleware\EnsureMerchantHasStore::class,
         ]);
+        $middleware->redirectGuestsTo('/start');
         
         // Exclude Stripe webhook and Apple Wallet web service from CSRF verification
         $middleware->validateCsrfTokens(except: [
