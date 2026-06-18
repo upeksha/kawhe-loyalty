@@ -1,5 +1,7 @@
 <?php
 
+use App\Models\Customer;
+use App\Models\LoyaltyAccount;
 use App\Models\Store;
 use App\Models\User;
 
@@ -63,4 +65,49 @@ test('owner can view their store qr', function () {
 
     $response->assertOk();
     $response->assertViewHas('joinUrl');
+});
+
+test('merchant can change reward target before any customers join', function () {
+    $owner = User::factory()->create();
+    $store = Store::factory()->create([
+        'user_id' => $owner->id,
+        'reward_target' => 9,
+    ]);
+
+    $response = $this->actingAs($owner)->put(route('merchant.stores.update', $store), [
+        'name' => $store->name,
+        'address' => $store->address,
+        'reward_target' => 12,
+        'reward_title' => $store->reward_title,
+    ]);
+
+    $response->assertRedirect(route('merchant.stores.index'));
+    expect($store->fresh()->reward_target)->toBe(12);
+});
+
+test('merchant cannot change reward target after customers have joined', function () {
+    $owner = User::factory()->create();
+    $store = Store::factory()->create([
+        'user_id' => $owner->id,
+        'reward_target' => 9,
+    ]);
+    $customer = Customer::factory()->create();
+
+    LoyaltyAccount::factory()->create([
+        'store_id' => $store->id,
+        'customer_id' => $customer->id,
+    ]);
+
+    $response = $this->from(route('merchant.stores.edit', $store))
+        ->actingAs($owner)
+        ->put(route('merchant.stores.update', $store), [
+            'name' => $store->name,
+            'address' => $store->address,
+            'reward_target' => 12,
+            'reward_title' => $store->reward_title,
+        ]);
+
+    $response->assertRedirect(route('merchant.stores.edit', $store));
+    $response->assertSessionHasErrors('reward_target');
+    expect($store->fresh()->reward_target)->toBe(9);
 });

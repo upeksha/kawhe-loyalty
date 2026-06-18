@@ -45,26 +45,22 @@
                             </a>
                         @endif
 
-                        @if($googlePlayUrl)
-                            <a
-                                href="{{ $googlePlayUrl }}"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                class="flex flex-1 items-center justify-center rounded-2xl bg-white p-1.5 transition hover:bg-[#edf4eb]"
+                        <div
+                            class="flex flex-1 items-center justify-center rounded-2xl bg-white p-1.5"
+                            aria-label="Google Play badge"
+                        >
+                            <img
+                                src="{{ asset('images/store-badges/google-play-light-en.png') }}"
+                                alt="Get it on Google Play"
+                                class="h-14 w-auto"
                             >
-                                <img
-                                    src="{{ asset('images/store-badges/google-play-light-en.png') }}"
-                                    alt="Get it on Google Play"
-                                    class="h-14 w-auto"
-                                >
-                            </a>
-                        @endif
+                        </div>
                     </div>
                 </div>
 
-                @if(!$appleStoreUrl || !$googlePlayUrl)
+                @if(!$appleStoreUrl)
                     <p class="mt-4 text-xs text-stone-500">
-                        Set <code>MERCHANT_APP_APPLE_STORE_URL</code> and <code>MERCHANT_APP_GOOGLE_PLAY_URL</code> in production to show both live store links here.
+                        Set <code>MERCHANT_APP_APPLE_STORE_URL</code> in production to show the live App Store link here.
                     </p>
                 @endif
             </x-ui.card>

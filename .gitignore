@@ -16,10 +16,12 @@
 /public/build
 /public/hot
 /public/storage
+/output
 /storage/*.key
 /storage/pail
 /storage/app/private/google-wallet/*.json
 /storage/app/private/passgenerator/certs/*
+/tmp
 /passgenerator/certs/*.p12
 /passgenerator/certs/*.pfx
 /vendor

@@ -13,6 +13,7 @@ use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use Illuminate\Validation\Rule;
 use SimpleSoftwareIO\QrCode\Facades\QrCode;
 
@@ -95,8 +96,9 @@ class StoreController extends Controller
     {
         $store = Store::queryForUser(Auth::user(), includeArchived: true)->whereKey($store->id)->firstOrFail();
         $walletHealth = $this->walletHealth($store);
+        $hasIssuedCards = LoyaltyAccount::where('store_id', $store->id)->exists();
 
-        return view('stores.edit', compact('store', 'walletHealth'));
+        return view('stores.edit', compact('store', 'walletHealth', 'hasIssuedCards'));
     }
 
     /**
@@ -105,6 +107,7 @@ class StoreController extends Controller
     public function update(Request $request, Store $store)
     {
         $store = Store::queryForUser(Auth::user(), includeArchived: true)->whereKey($store->id)->firstOrFail();
+        $hasIssuedCards = LoyaltyAccount::where('store_id', $store->id)->exists();
 
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
@@ -120,6 +123,12 @@ class StoreController extends Controller
         ]);
 
         $validated['require_verification_for_redemption'] = $request->boolean('require_verification_for_redemption');
+
+        if ($hasIssuedCards && (int) $validated['reward_target'] !== (int) $store->reward_target) {
+            throw ValidationException::withMessages([
+                'reward_target' => 'Stamps needed for reward is locked after customers have joined this loyalty program. Create a new program if you need a different threshold.',
+            ]);
+        }
 
         // Handle logo upload
         if ($request->hasFile('logo')) {
