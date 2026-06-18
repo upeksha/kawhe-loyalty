@@ -43,6 +43,7 @@ php artisan reverb:start
 
 - **[TECHNICAL_DOCUMENTATION.md](TECHNICAL_DOCUMENTATION.md)** - Complete technical documentation covering architecture, features, API endpoints, and more
 - **[RUN_PROJECT.md](RUN_PROJECT.md)** - Setup and running instructions
+- **[RELEASE_WORKFLOW.md](docs/RELEASE_WORKFLOW.md)** - Required local -> testing -> production release process
 - **[SENDGRID_SETUP.md](SENDGRID_SETUP.md)** - Email configuration guide
 - **[PRODUCTION_EMAIL_SETUP.md](PRODUCTION_EMAIL_SETUP.md)** - Production email setup with SendGrid and queue workers
 - **[BILLING_SETUP.md](BILLING_SETUP.md)** - Stripe billing and subscription setup guide

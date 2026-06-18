@@ -17,6 +17,7 @@
 /public/hot
 /public/storage
 /output
+/storage/backups
 /storage/*.key
 /storage/pail
 /storage/app/private/google-wallet/*.json
