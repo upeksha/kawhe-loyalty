@@ -19,15 +19,23 @@
         $brandG = hexdec(substr($brandHex, 2, 2));
         $brandB = hexdec(substr($brandHex, 4, 2));
         $brandLum = (0.299 * $brandR + 0.587 * $brandG + 0.114 * $brandB) / 255;
-        $brandRgb = $brandR . ', ' . $brandG . ', ' . $brandB;
+        $brandLight = sprintf('#%02X%02X%02X',
+            min(255, (int) round($brandR + ((255 - $brandR) * 0.18))),
+            min(255, (int) round($brandG + ((255 - $brandG) * 0.18))),
+            min(255, (int) round($brandB + ((255 - $brandB) * 0.18)))
+        );
+        $brandDark = sprintf('#%02X%02X%02X',
+            max(0, (int) round($brandR * 0.72)),
+            max(0, (int) round($brandG * 0.72)),
+            max(0, (int) round($brandB * 0.72))
+        );
     } else {
         $brandLum = 0.5;
-        $brandRgb = '14, 165, 233';
+        $brandLight = '#3DB7ED';
+        $brandDark = '#0A769F';
     }
     $brandIsVeryLight = $brandLum > 0.9;
-    $joinCardBg = $brandIsVeryLight
-        ? 'linear-gradient(145deg, rgba(17,24,39,0.94), rgba(' . $brandRgb . ',0.22))'
-        : 'linear-gradient(145deg, rgba(255,255,255,0.98), rgba(' . $brandRgb . ',0.18))';
+    $joinCardBg = 'linear-gradient(145deg, ' . $brandLight . ', ' . $brandDark . ')';
     $joinCardText = $brandIsVeryLight ? '#F8FAFC' : '#111827';
     $joinCardMuted = $brandIsVeryLight ? 'rgba(248,250,252,0.76)' : '#4B5563';
     $joinCardStrong = $brandIsVeryLight ? '#FFFFFF' : '#111827';
