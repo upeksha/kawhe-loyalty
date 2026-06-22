@@ -72,7 +72,7 @@
                         <!-- Reward Target -->
                         <div class="mb-5">
                             <label for="reward_target" class="block mb-2 text-sm font-medium text-stone-700">Stamps needed for reward</label>
-                            <x-ui.input type="number" id="reward_target" name="reward_target" value="{{ old('reward_target', $store->reward_target) }}" min="1" required @disabled($hasIssuedCards ?? false) />
+                            <x-ui.input type="number" id="reward_target" name="reward_target" value="{{ old('reward_target', $store->reward_target) }}" min="1" required @readonly($hasIssuedCards ?? false) class="{{ ($hasIssuedCards ?? false) ? 'bg-stone-100 text-stone-500 cursor-not-allowed' : '' }}" />
                             @if($hasIssuedCards ?? false)
                                 <p class="mt-1 text-xs text-stone-500">
                                     This setting is locked because customers have already joined this loyalty program. Their existing progress and rewards stay unchanged.

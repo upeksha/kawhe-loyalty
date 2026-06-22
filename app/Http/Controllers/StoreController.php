@@ -112,7 +112,7 @@ class StoreController extends Controller
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'address' => ['nullable', 'string', 'max:255'],
-            'reward_target' => ['required', 'integer', 'min:1'],
+            'reward_target' => $hasIssuedCards ? ['nullable', 'integer', 'min:1'] : ['required', 'integer', 'min:1'],
             'reward_title' => ['required', 'string', 'max:255'],
             'brand_color' => ['nullable', 'string', 'regex:/^#[0-9A-Fa-f]{6}$/'],
             'background_color' => ['nullable', 'string', 'regex:/^#[0-9A-Fa-f]{6}$/'],
@@ -124,10 +124,14 @@ class StoreController extends Controller
 
         $validated['require_verification_for_redemption'] = $request->boolean('require_verification_for_redemption');
 
-        if ($hasIssuedCards && (int) $validated['reward_target'] !== (int) $store->reward_target) {
-            throw ValidationException::withMessages([
-                'reward_target' => 'Stamps needed for reward is locked after customers have joined this loyalty program. Create a new program if you need a different threshold.',
-            ]);
+        if ($hasIssuedCards) {
+            if (array_key_exists('reward_target', $validated) && $validated['reward_target'] !== null && (int) $validated['reward_target'] !== (int) $store->reward_target) {
+                throw ValidationException::withMessages([
+                    'reward_target' => 'Stamps needed for reward is locked after customers have joined this loyalty program. Create a new program if you need a different threshold.',
+                ]);
+            }
+
+            $validated['reward_target'] = $store->reward_target;
         }
 
         // Handle logo upload

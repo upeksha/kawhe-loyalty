@@ -111,3 +111,36 @@ test('merchant cannot change reward target after customers have joined', functio
     $response->assertSessionHasErrors('reward_target');
     expect($store->fresh()->reward_target)->toBe(9);
 });
+
+test('merchant can still update other store details after customers have joined', function () {
+    $owner = User::factory()->create();
+    $store = Store::factory()->create([
+        'user_id' => $owner->id,
+        'reward_target' => 9,
+        'brand_color' => '#0EA5E9',
+        'background_color' => '#1F2937',
+    ]);
+    $customer = Customer::factory()->create();
+
+    LoyaltyAccount::factory()->create([
+        'store_id' => $store->id,
+        'customer_id' => $customer->id,
+    ]);
+
+    $response = $this->actingAs($owner)->put(route('merchant.stores.update', $store), [
+        'name' => 'Updated Store Name',
+        'address' => '99 Harbour Street',
+        'reward_title' => $store->reward_title,
+        'brand_color' => '#111827',
+        'background_color' => '#F5F5F4',
+    ]);
+
+    $response->assertRedirect(route('merchant.stores.index'));
+
+    $updated = $store->fresh();
+    expect($updated->name)->toBe('Updated Store Name');
+    expect($updated->address)->toBe('99 Harbour Street');
+    expect($updated->brand_color)->toBe('#111827');
+    expect($updated->background_color)->toBe('#F5F5F4');
+    expect($updated->reward_target)->toBe(9);
+});
