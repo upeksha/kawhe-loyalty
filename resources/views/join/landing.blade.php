@@ -8,9 +8,21 @@
         $g = hexdec(substr($hex, 2, 2));
         $b = hexdec(substr($hex, 4, 2));
         $lum = (0.299 * $r + 0.587 * $g + 0.114 * $b) / 255;
+        $bgLight = sprintf('#%02X%02X%02X',
+            min(255, (int) round($r + ((255 - $r) * 0.12))),
+            min(255, (int) round($g + ((255 - $g) * 0.12))),
+            min(255, (int) round($b + ((255 - $b) * 0.12)))
+        );
+        $bgDark = sprintf('#%02X%02X%02X',
+            max(0, (int) round($r * 0.78)),
+            max(0, (int) round($g * 0.78)),
+            max(0, (int) round($b * 0.78))
+        );
         $textOnBg = $lum < 0.5 ? '#ffffff' : '#111827';
         $mutedOnBg = $lum < 0.5 ? 'rgba(255,255,255,0.85)' : 'rgba(17,24,39,0.75)';
     } else {
+        $bgLight = '#374151';
+        $bgDark = '#111827';
         $textOnBg = '#ffffff';
         $mutedOnBg = 'rgba(255,255,255,0.85)';
     }
@@ -35,7 +47,7 @@
         $brandDark = '#0A769F';
     }
     $brandIsVeryLight = $brandLum > 0.9;
-    $joinCardBg = 'linear-gradient(145deg, ' . $brandLight . ', ' . $brandDark . ')';
+    $joinCardBg = 'linear-gradient(145deg, ' . $bgLight . ', ' . $bgDark . ')';
     $joinCardText = $brandIsVeryLight ? '#F8FAFC' : '#111827';
     $joinCardMuted = $brandIsVeryLight ? 'rgba(248,250,252,0.76)' : '#4B5563';
     $joinCardStrong = $brandIsVeryLight ? '#FFFFFF' : '#111827';
