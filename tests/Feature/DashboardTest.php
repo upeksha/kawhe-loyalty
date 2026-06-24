@@ -8,11 +8,10 @@ test('unauthenticated user redirected to login for dashboard', function () {
     $response->assertRedirect('/login');
 });
 
-test('authenticated user can access dashboard', function () {
+test('authenticated user without a store is redirected to setup wizard from dashboard', function () {
     $user = User::factory()->create();
 
     $response = $this->actingAs($user)->get('/dashboard');
 
-    $response->assertStatus(200);
-    $response->assertSeeText('Today’s Quick Actions');
+    $response->assertRedirect(route('merchant.onboarding.wizard.store-basics'));
 });

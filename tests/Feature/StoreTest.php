@@ -6,8 +6,16 @@ use App\Models\Store;
 use App\Models\User;
 use Laravel\Cashier\Subscription;
 
-test('authenticated user can create a store', function () {
-    $user = User::factory()->create();
+test('authenticated merchant with an existing store can create another store', function () {
+    $user = User::factory()->create(['stripe_id' => 'sub_123']);
+    Store::factory()->create(['user_id' => $user->id]);
+    Subscription::create([
+        'user_id' => $user->id,
+        'name' => 'default',
+        'stripe_id' => 'si_create_store_123',
+        'stripe_status' => 'active',
+        'quantity' => 1,
+    ]);
 
     $response = $this->actingAs($user)->post('/merchant/stores', [
         'name' => 'My Awesome Coffee Shop',
@@ -27,8 +35,30 @@ test('authenticated user can create a store', function () {
     expect($store->join_token)->not->toBeNull();
 });
 
+test('merchant without a store is redirected to the setup wizard from stores index', function () {
+    $user = User::factory()->create();
+
+    $response = $this->actingAs($user)->get(route('merchant.stores.index'));
+
+    $response->assertRedirect(route('merchant.onboarding.wizard.store-basics'));
+});
+
+test('merchant with onboarding in progress is redirected back to the wizard from stores index', function () {
+    $user = User::factory()->create();
+    $store = Store::factory()->create([
+        'user_id' => $user->id,
+        'onboarding_step' => Store::ONBOARDING_STEP_CARD_DESIGN,
+        'onboarding_completed_at' => null,
+    ]);
+
+    $response = $this->actingAs($user)->get(route('merchant.stores.index'));
+
+    $response->assertRedirect(route('merchant.onboarding.wizard.index'));
+});
+
 test('slug is unique', function () {
     $user = User::factory()->create(['stripe_id' => 'sub_123']);
+    Store::factory()->create(['user_id' => $user->id]);
     Subscription::create([
         'user_id' => $user->id,
         'name' => 'default',
@@ -59,6 +89,7 @@ test('user cannot view another users store qr', function () {
     $store = Store::factory()->create(['user_id' => $owner->id]);
 
     $otherUser = User::factory()->create();
+    Store::factory()->create(['user_id' => $otherUser->id]);
 
     $response = $this->actingAs($otherUser)->get(route('merchant.stores.qr', $store));
 

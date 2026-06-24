@@ -37,8 +37,8 @@ Route::middleware(['auth'])->get('/dashboard', function (Request $request) {
         return redirect()->route('merchant.dashboard');
     }
     
-    // Others (new merchants without stores) see the dashboard view
-    return view('dashboard');
+    // New merchants without stores go straight into the setup wizard
+    return redirect()->route('merchant.onboarding.wizard.store-basics');
 })->name('dashboard');
 
 // Legacy route redirects for merchant onboarding test

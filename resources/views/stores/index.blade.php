@@ -1,9 +1,9 @@
 <x-merchant-layout>
     <x-slot name="header">
         <div class="flex justify-between items-center">
-            <span>{{ __('My Stores') }}</span>
+            <span>{{ __('Stores') }}</span>
             <x-ui.button href="{{ route('merchant.stores.create') }}" variant="primary" size="sm" class="ml-5">
-                Add Store With Default Card
+                Add Another Store
             </x-ui.button>
         </div>
     </x-slot>
@@ -11,11 +11,11 @@
     <div class="space-y-6">
         @if($stores->isEmpty() && ($archivedStores ?? collect())->isEmpty())
             <x-ui.card class="p-12 text-center">
-                <h3 class="text-lg font-semibold text-stone-900">No stores yet</h3>
-                <p class="text-stone-500 mt-2">Create your first store and default loyalty card to start collecting customers.</p>
+                <h3 class="text-lg font-semibold text-stone-900">No active stores</h3>
+                <p class="text-stone-500 mt-2">Use the setup wizard for your first store. Come back here later to manage stores and add extra locations.</p>
                 <div class="mt-6 flex flex-wrap justify-center gap-2">
-                    <x-ui.button href="{{ route('merchant.stores.create') }}" variant="primary">
-                        Create Your First Store
+                    <x-ui.button href="{{ route('merchant.onboarding.wizard.store-basics') }}" variant="primary">
+                        Open Setup Wizard
                     </x-ui.button>
                     <x-ui.button href="{{ route('merchant.dashboard') }}" variant="secondary">
                         Back to Dashboard

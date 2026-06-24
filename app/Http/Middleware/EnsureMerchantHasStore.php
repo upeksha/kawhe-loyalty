@@ -17,11 +17,7 @@ class EnsureMerchantHasStore
     {
         $user = auth()->user();
 
-        // Exempt store management routes so merchants can create/view their first store
         $routeName = $request->route()?->getName();
-        if ($routeName && (str_starts_with($routeName, 'merchant.stores.') || $routeName === 'merchant.stores.qr')) {
-            return $next($request);
-        }
 
         // Exempt onboarding v2 wizard routes
         if ($routeName && str_starts_with($routeName, 'merchant.onboarding.wizard.')) {

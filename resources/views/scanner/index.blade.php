@@ -11,9 +11,9 @@
     <div class="mx-auto">
         @if($stores->isEmpty())
             <x-ui.card class="p-6 text-center">
-                <p class="mb-4 text-stone-600">You need to create a store before you can scan cards.</p>
-                <x-ui.button href="{{ route('merchant.stores.create') }}" variant="primary">
-                    Create Store
+                <p class="mb-4 text-stone-600">You need to finish setting up your first store before you can scan cards.</p>
+                <x-ui.button href="{{ route('merchant.onboarding.wizard.store-basics') }}" variant="primary">
+                    Finish Setup
                 </x-ui.button>
             </x-ui.card>
         @else

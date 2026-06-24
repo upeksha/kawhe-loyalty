@@ -8,7 +8,7 @@
 @endphp
 
 <x-merchant-layout>
-    <x-slot name="header">Create Store</x-slot>
+    <x-slot name="header">Add Another Store</x-slot>
 
     <div class="min-h-[calc(100vh-4rem)] bg-gradient-to-b from-stone-100 to-stone-50/80 -mx-4 sm:-mx-6 lg:-mx-8 -mb-6 px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
         <div class="max-w-5xl mx-auto">
@@ -21,8 +21,8 @@
                                 Back to stores
                             </a>
                         </div>
-                        <h2 class="text-2xl sm:text-3xl font-bold text-stone-900 tracking-tight">Create a new store</h2>
-                        <p class="mt-3 text-base text-stone-600 leading-relaxed">Each new store starts with one default loyalty card. You can add extra cards later from the Loyalty Cards screen if your plan allows it.</p>
+                        <h2 class="text-2xl sm:text-3xl font-bold text-stone-900 tracking-tight">Add another store</h2>
+                        <p class="mt-3 text-base text-stone-600 leading-relaxed">Use this after your first setup is complete when you need a separate location. Each additional store starts with its own default loyalty card, and you can add more cards later if your plan allows it.</p>
                     </header>
 
                     <form method="POST" action="{{ route('merchant.stores.store') }}" enctype="multipart/form-data" id="store-create-form"
