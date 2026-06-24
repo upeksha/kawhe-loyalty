@@ -104,6 +104,7 @@ class MerchantOnboardingWizardController extends Controller
         $store = Auth::user()->stores()->create(array_merge($validated, [
             'onboarding_step' => Store::ONBOARDING_STEP_CARD_DESIGN,
         ]));
+        $store->ensureDefaultProgramExists();
 
         return redirect()->route('merchant.onboarding.wizard.card-design')
             ->with('success', 'Store created. Now add your branding.');

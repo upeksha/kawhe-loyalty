@@ -15,30 +15,7 @@ class StoreFactory extends Factory
     public function configure(): static
     {
         return $this->afterCreating(function (\App\Models\Store $store) {
-            if ($store->default_loyalty_program_id) {
-                return;
-            }
-
-            $program = LoyaltyProgram::create([
-                'store_id' => $store->id,
-                'name' => $store->reward_title,
-                'slug' => $store->slug,
-                'reward_target' => $store->reward_target,
-                'reward_title' => $store->reward_title,
-                'join_token' => $store->join_token,
-                'join_short_code' => $store->join_short_code,
-                'brand_color' => $store->brand_color,
-                'background_color' => $store->background_color,
-                'logo_path' => $store->logo_path,
-                'pass_logo_path' => $store->pass_logo_path,
-                'pass_hero_image_path' => $store->pass_hero_image_path,
-                'require_verification_for_redemption' => $store->require_verification_for_redemption ?? true,
-                'registration_form_config' => $store->registration_form_config,
-                'is_default' => true,
-                'sort_order' => 1,
-            ]);
-
-            $store->forceFill(['default_loyalty_program_id' => $program->id])->save();
+            $store->ensureDefaultProgramExists();
         });
     }
 

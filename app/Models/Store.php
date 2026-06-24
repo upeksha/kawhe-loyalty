@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 class Store extends Model
@@ -193,7 +194,60 @@ class Store extends Model
             return $this->defaultLoyaltyProgram()->first();
         }
 
-        return $this->defaultProgram()->first();
+        return $this->defaultProgram()->first() ?? $this->ensureDefaultProgramExists();
+    }
+
+    public function ensureDefaultProgramExists(): ?LoyaltyProgram
+    {
+        if (! $this->exists) {
+            return null;
+        }
+
+        return DB::transaction(function () {
+            $store = self::query()->lockForUpdate()->find($this->id);
+
+            if (! $store) {
+                return null;
+            }
+
+            if ($store->default_loyalty_program_id) {
+                $program = $store->defaultLoyaltyProgram()->first();
+                if ($program) {
+                    return $program;
+                }
+            }
+
+            $program = $store->defaultProgram()->first();
+            if ($program) {
+                if ($store->default_loyalty_program_id !== $program->id) {
+                    $store->forceFill(['default_loyalty_program_id' => $program->id])->save();
+                }
+
+                return $program;
+            }
+
+            $program = $store->loyaltyPrograms()->create([
+                'name' => $store->reward_title,
+                'slug' => $store->slug,
+                'reward_target' => $store->reward_target,
+                'reward_title' => $store->reward_title,
+                'join_token' => $store->join_token,
+                'join_short_code' => $store->join_short_code,
+                'brand_color' => $store->brand_color,
+                'background_color' => $store->background_color,
+                'logo_path' => $store->logo_path,
+                'pass_logo_path' => $store->pass_logo_path,
+                'pass_hero_image_path' => $store->pass_hero_image_path,
+                'require_verification_for_redemption' => $store->require_verification_for_redemption ?? true,
+                'registration_form_config' => $store->registration_form_config,
+                'is_default' => true,
+                'sort_order' => 1,
+            ]);
+
+            $store->forceFill(['default_loyalty_program_id' => $program->id])->save();
+
+            return $program;
+        });
     }
 
     public function getIsArchivedAttribute(): bool

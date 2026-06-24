@@ -21,11 +21,14 @@ test('onboarding wizard can create and advance a first store with safe defaults'
         ->assertRedirect(route('merchant.onboarding.wizard.card-design'));
 
     $store = $user->stores()->firstOrFail();
+    $defaultProgram = $store->resolvedDefaultProgram();
 
     expect($store->brand_color)->toBe(Store::DEFAULT_BRAND_COLOR)
         ->and($store->background_color)->toBe(Store::DEFAULT_BACKGROUND_COLOR)
         ->and($store->registration_form_config['email']['enabled'])->toBeTrue()
-        ->and($store->onboarding_step)->toBe(Store::ONBOARDING_STEP_CARD_DESIGN);
+        ->and($store->onboarding_step)->toBe(Store::ONBOARDING_STEP_CARD_DESIGN)
+        ->and($defaultProgram)->not->toBeNull()
+        ->and($defaultProgram->slug)->toBe($store->slug);
 
     $this->actingAs($user)
         ->post(route('merchant.onboarding.wizard.card-design.store'), [
@@ -110,6 +113,35 @@ test('customer can join and repeated join by same email returns existing card', 
 
     expect(LoyaltyAccount::count())->toBe(1)
         ->and(Customer::count())->toBe(1);
+});
+
+test('short join link self-heals legacy store without a default loyalty program', function () {
+    $user = User::factory()->create();
+
+    $store = $user->stores()->create([
+        'name' => 'Legacy Join Store',
+        'reward_target' => 9,
+        'reward_title' => 'Free coffee',
+        'join_token' => 'legacy-store-join-token-1234567890',
+        'join_short_code' => 'W37Y3V',
+    ]);
+
+    expect($store->default_loyalty_program_id)->toBeNull()
+        ->and($store->loyaltyPrograms()->count())->toBe(0);
+
+    $response = $this->get(route('join.short', ['code' => $store->join_short_code]));
+
+    $store->refresh();
+    $program = $store->resolvedDefaultProgram();
+
+    $response->assertRedirect(route('join.index', [
+        'slug' => $program->slug,
+        't' => $program->join_token,
+    ]));
+
+    expect($program)->not->toBeNull()
+        ->and($store->default_loyalty_program_id)->toBe($program->id)
+        ->and($program->slug)->toBe($store->slug);
 });
 
 test('stamp route earns reward and dispatches wallet update job', function () {
