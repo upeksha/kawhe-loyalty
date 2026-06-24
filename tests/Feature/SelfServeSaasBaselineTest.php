@@ -6,6 +6,7 @@ use App\Models\LoyaltyAccount;
 use App\Models\Store;
 use App\Models\User;
 use Illuminate\Support\Facades\Queue;
+use Laravel\Cashier\Subscription;
 
 test('onboarding wizard can create and advance a first store with safe defaults', function () {
     $user = User::factory()->create();
@@ -58,8 +59,15 @@ test('onboarding wizard can create and advance a first store with safe defaults'
 });
 
 test('create store applies safe brand defaults when merchant skips branding fields', function () {
-    $user = User::factory()->create();
+    $user = User::factory()->create(['stripe_id' => 'sub_123']);
     Store::factory()->create(['user_id' => $user->id]);
+    Subscription::create([
+        'user_id' => $user->id,
+        'name' => 'default',
+        'stripe_id' => 'si_123',
+        'stripe_status' => 'active',
+        'quantity' => 1,
+    ]);
 
     $this->actingAs($user)
         ->post(route('merchant.stores.store'), [

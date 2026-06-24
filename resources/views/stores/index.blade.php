@@ -3,7 +3,7 @@
         <div class="flex justify-between items-center">
             <span>{{ __('My Stores') }}</span>
             <x-ui.button href="{{ route('merchant.stores.create') }}" variant="primary" size="sm" class="ml-5">
-                Add Store
+                Add Store With Default Card
             </x-ui.button>
         </div>
     </x-slot>
@@ -12,7 +12,7 @@
         @if($stores->isEmpty() && ($archivedStores ?? collect())->isEmpty())
             <x-ui.card class="p-12 text-center">
                 <h3 class="text-lg font-semibold text-stone-900">No stores yet</h3>
-                <p class="text-stone-500 mt-2">Create your first store to generate a join QR code and start collecting customers.</p>
+                <p class="text-stone-500 mt-2">Create your first store and default loyalty card to start collecting customers.</p>
                 <div class="mt-6 flex flex-wrap justify-center gap-2">
                     <x-ui.button href="{{ route('merchant.stores.create') }}" variant="primary">
                         Create Your First Store
@@ -41,7 +41,8 @@
                                 </div>
                                 <div class="mt-4 flex items-center gap-3">
                                     <a href="{{ route('merchant.stores.edit', $store) }}" class="text-brand-600 hover:text-brand-700 font-medium text-sm">Edit</a>
-                                    <a href="{{ route('merchant.stores.qr', $store) }}" class="text-brand-600 hover:text-brand-700 font-medium text-sm">QR Code</a>
+                                    <a href="{{ route('merchant.stores.programs.index', $store) }}" class="text-brand-600 hover:text-brand-700 font-medium text-sm">Loyalty Cards</a>
+                                    <a href="{{ route('merchant.stores.qr', $store) }}" class="text-brand-600 hover:text-brand-700 font-medium text-sm">Default Card QR</a>
                                 </div>
                             </x-ui.card>
                         @endforeach
@@ -53,7 +54,7 @@
                                 <tr>
                                     <x-ui.table-header-cell>Store Name</x-ui.table-header-cell>
                                     <x-ui.table-header-cell>Address</x-ui.table-header-cell>
-                                    <x-ui.table-header-cell>Reward Target</x-ui.table-header-cell>
+                                    <x-ui.table-header-cell>Default Card</x-ui.table-header-cell>
                                     <x-ui.table-header-cell class="text-right">Actions</x-ui.table-header-cell>
                                 </tr>
                             </x-ui.table-head>
@@ -72,7 +73,8 @@
                                         <x-ui.table-cell class="text-right">
                                             <div class="flex justify-end gap-3">
                                                 <a href="{{ route('merchant.stores.edit', $store) }}" class="text-brand-600 hover:text-brand-700 font-medium text-sm">Edit</a>
-                                                <a href="{{ route('merchant.stores.qr', $store) }}" class="text-brand-600 hover:text-brand-700 font-medium text-sm">QR Code</a>
+                                                <a href="{{ route('merchant.stores.programs.index', $store) }}" class="text-brand-600 hover:text-brand-700 font-medium text-sm">Loyalty Cards</a>
+                                                <a href="{{ route('merchant.stores.qr', $store) }}" class="text-brand-600 hover:text-brand-700 font-medium text-sm">Default Card QR</a>
                                             </div>
                                         </x-ui.table-cell>
                                     </tr>

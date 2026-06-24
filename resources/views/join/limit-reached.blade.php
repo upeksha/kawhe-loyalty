@@ -1,6 +1,6 @@
 @php
-    $bg = $store->background_color ?? '#1F2937';
-    $brand = $store->brand_color ?? '#0EA5E9';
+    $bg = $program->background_color ?? '#1F2937';
+    $brand = $program->brand_color ?? '#0EA5E9';
     $hex = ltrim($bg, '#');
     $brandHex = ltrim($brand, '#');
     if (strlen($hex) === 6) {
@@ -78,7 +78,7 @@
                             Please ask the staff to upgrade or free up capacity before you try again. Existing customers can still use their current cards.
                         </p>
 
-                        <a href="{{ route('join.index', ['slug' => $store->slug, 't' => $token]) }}"
+                        <a href="{{ route('join.index', ['slug' => $program->slug, 't' => $token]) }}"
                            class="limit-btn w-full inline-flex justify-center py-3 px-4 rounded-xl text-sm font-semibold transition focus:outline-none focus:ring-2 focus:ring-offset-2"
                            style="--tw-ring-color: {{ $brand }};">
                             Back to Join Page

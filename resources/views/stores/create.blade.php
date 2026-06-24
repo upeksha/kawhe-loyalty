@@ -22,7 +22,7 @@
                             </a>
                         </div>
                         <h2 class="text-2xl sm:text-3xl font-bold text-stone-900 tracking-tight">Create a new store</h2>
-                        <p class="mt-3 text-base text-stone-600 leading-relaxed">Use the same setup flow as onboarding to add another store without changing how the app works.</p>
+                        <p class="mt-3 text-base text-stone-600 leading-relaxed">Each new store starts with one default loyalty card. You can add extra cards later from the Loyalty Cards screen if your plan allows it.</p>
                     </header>
 
                     <form method="POST" action="{{ route('merchant.stores.store') }}" enctype="multipart/form-data" id="store-create-form"
@@ -119,7 +119,7 @@
                                     </div>
                                 </x-onboarding-form-section>
 
-                                <x-onboarding-form-section title="Reward setup">
+                                <x-onboarding-form-section title="Default card setup">
                                     <div class="space-y-5">
                                         <div>
                                             <label for="reward_target" class="block text-sm font-medium text-stone-700 mb-1.5">Stamps needed for reward</label>

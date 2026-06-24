@@ -4,6 +4,7 @@ use App\Models\Customer;
 use App\Models\LoyaltyAccount;
 use App\Models\Store;
 use App\Models\User;
+use Laravel\Cashier\Subscription;
 
 test('authenticated user can create a store', function () {
     $user = User::factory()->create();
@@ -27,7 +28,14 @@ test('authenticated user can create a store', function () {
 });
 
 test('slug is unique', function () {
-    $user = User::factory()->create();
+    $user = User::factory()->create(['stripe_id' => 'sub_123']);
+    Subscription::create([
+        'user_id' => $user->id,
+        'name' => 'default',
+        'stripe_id' => 'si_123',
+        'stripe_status' => 'active',
+        'quantity' => 1,
+    ]);
 
     $this->actingAs($user)->post('/merchant/stores', [
         'name' => 'Coffee Shop',
@@ -143,4 +151,20 @@ test('merchant can still update other store details after customers have joined'
     expect($updated->brand_color)->toBe('#111827');
     expect($updated->background_color)->toBe('#F5F5F4');
     expect($updated->reward_target)->toBe(9);
+});
+
+test('free merchant cannot create a second store because it would add another default card', function () {
+    $owner = User::factory()->create();
+    Store::factory()->create(['user_id' => $owner->id]);
+
+    $response = $this->actingAs($owner)->post('/merchant/stores', [
+        'name' => 'Second Store',
+        'address' => '2 Queen Street',
+        'reward_target' => 9,
+        'reward_title' => 'Free Coffee',
+    ]);
+
+    $response->assertRedirect(route('billing.index'));
+    $response->assertSessionHasErrors('error');
+    expect(Store::where('user_id', $owner->id)->count())->toBe(1);
 });

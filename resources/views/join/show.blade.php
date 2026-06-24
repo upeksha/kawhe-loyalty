@@ -1,6 +1,6 @@
 @php
-    $bg = $store->background_color ?? '#1F2937';
-    $brand = $store->brand_color ?? '#0EA5E9';
+    $bg = $program->background_color ?? '#1F2937';
+    $brand = $program->brand_color ?? '#0EA5E9';
     $hex = ltrim($bg, '#');
     $brandHex = ltrim($brand, '#');
     if (strlen($hex) === 6) {
@@ -95,25 +95,25 @@
     <body class="font-sans antialiased join-page min-h-screen min-h-[100dvh] flex flex-col">
         <div class="flex flex-col flex-1 w-full max-w-md mx-auto px-4 py-6 sm:px-6 sm:py-8 lg:py-10">
             <div class="text-center mb-4 sm:mb-6">
-                <a href="{{ route('join.index', ['slug' => $store->slug, 't' => $token]) }}" class="inline-flex items-center text-sm join-muted hover:opacity-90">
+                <a href="{{ route('join.index', ['slug' => $program->slug, 't' => $token]) }}" class="inline-flex items-center text-sm join-muted hover:opacity-90">
                     <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
                     Back
                 </a>
             </div>
 
             <div class="join-card rounded-2xl shadow-xl p-6 sm:p-8 w-full">
-                @if($store->logo_path)
-                    <img src="{{ $store->logo_url }}" alt="{{ $store->name }}" class="h-12 w-auto mx-auto mb-4 sm:h-14 object-contain">
+                @if($program->logo_path)
+                    <img src="{{ $program->logo_url }}" alt="{{ $program->name }}" class="h-12 w-auto mx-auto mb-4 sm:h-14 object-contain">
                 @endif
                 <h2 class="join-card-title text-xl sm:text-2xl font-bold text-center mb-2">Join {{ $store->name }}</h2>
                 <p class="join-card-body text-center text-sm sm:text-base mb-6">
-                    Collect stamps and earn {{ $store->reward_title }}!
+                    Collect stamps and earn {{ $program->reward_title }}!
                 </p>
 
                 @php
-                    $formConfig = $store->registration_form_config;
+                    $formConfig = $program->registration_form_config;
                 @endphp
-                <form method="POST" action="{{ route('join.store', ['slug' => $store->slug, 't' => $token]) }}" class="space-y-4 sm:space-y-5">
+                <form method="POST" action="{{ route('join.store', ['slug' => $program->slug, 't' => $token]) }}" class="space-y-4 sm:space-y-5">
                     @csrf
 
                     <div>
@@ -166,7 +166,7 @@
         <script>
             function prefillEmail() {
                 try {
-                    var savedEmail = localStorage.getItem('kawhe_last_email_{{ $store->id }}');
+                    var savedEmail = localStorage.getItem('kawhe_last_email_{{ $program->id }}');
                     var oldEmail = @json(old('email'));
                     if (savedEmail && !oldEmail) {
                         var emailInput = document.getElementById('email');

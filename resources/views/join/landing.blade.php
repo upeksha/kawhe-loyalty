@@ -1,6 +1,6 @@
 @php
-    $bg = $store->background_color ?? '#1F2937';
-    $brand = $store->brand_color ?? '#0EA5E9';
+    $bg = $program->background_color ?? '#1F2937';
+    $brand = $program->brand_color ?? '#0EA5E9';
     $hex = ltrim($bg, '#');
     $brandHex = ltrim($brand, '#');
     if (strlen($hex) === 6) {
@@ -89,13 +89,13 @@
     <body class="font-sans antialiased join-page min-h-screen min-h-[100dvh] flex flex-col" x-data="joinLanding()">
         <div class="flex flex-col flex-1 justify-center w-full max-w-md mx-auto px-4 py-8 sm:px-6 sm:py-10 lg:py-12">
             <div class="text-center mb-6 sm:mb-8">
-                @if($store->logo_path)
-                    <img src="{{ $store->logo_url }}" alt="{{ $store->name }}" class="h-16 w-auto mx-auto object-contain sm:h-20" style="max-height: 5rem;">
+                @if($program->logo_path)
+                    <img src="{{ $program->logo_url }}" alt="{{ $program->name }}" class="h-16 w-auto mx-auto object-contain sm:h-20" style="max-height: 5rem;">
                 @else
                     <h1 class="text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight">{{ $store->name }}</h1>
                 @endif
                 <p class="mt-2 sm:mt-3 text-sm sm:text-base join-muted">
-                    Join our loyalty program and start earning {{ strtolower($store->reward_title ?: 'rewards') }}.
+                    Join our loyalty program and start earning {{ strtolower($program->reward_title ?: 'rewards') }}.
                 </p>
                 <p class="mt-1 text-xs sm:text-sm join-muted">
                     Most customers finish signup in under a minute.
@@ -116,13 +116,13 @@
                     </template>
 
                     <div>
-                        <a href="{{ route('join.existing', ['slug' => $store->slug, 't' => $token]) }}" class="join-btn-secondary w-full flex justify-center items-center py-3.5 px-4 rounded-xl border-2 text-sm sm:text-base font-semibold bg-transparent transition focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white" style="--tw-ring-color: {{ $brand }};">
+                        <a href="{{ route('join.existing', ['slug' => $program->slug, 't' => $token]) }}" class="join-btn-secondary w-full flex justify-center items-center py-3.5 px-4 rounded-xl border-2 text-sm sm:text-base font-semibold bg-transparent transition focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white" style="--tw-ring-color: {{ $brand }};">
                             I already have a card
                         </a>
                     </div>
 
                     <div>
-                        <a href="{{ route('join.show', ['slug' => $store->slug, 't' => $token]) }}" class="join-btn-primary w-full flex justify-center items-center py-3.5 px-4 rounded-xl text-sm sm:text-base font-semibold transition focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white" style="--tw-ring-color: {{ $brand }};">
+                        <a href="{{ route('join.show', ['slug' => $program->slug, 't' => $token]) }}" class="join-btn-primary w-full flex justify-center items-center py-3.5 px-4 rounded-xl text-sm sm:text-base font-semibold transition focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white" style="--tw-ring-color: {{ $brand }};">
                             Create a new card
                         </a>
                         <p class="join-card-body mt-2 text-center text-xs sm:text-sm">
@@ -151,9 +151,9 @@
         <script>
             document.addEventListener('alpine:init', () => {
                 Alpine.data('joinLanding', () => ({
-                    lastToken: localStorage.getItem('kawhe_last_card_{{ $store->id }}'),
+                    lastToken: localStorage.getItem('kawhe_last_card_{{ $program->id }}'),
                     clearLastCard() {
-                        localStorage.removeItem('kawhe_last_card_{{ $store->id }}');
+                        localStorage.removeItem('kawhe_last_card_{{ $program->id }}');
                         this.lastToken = null;
                     }
                 }));

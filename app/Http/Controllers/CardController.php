@@ -12,7 +12,7 @@ class CardController extends Controller
     public function show(string $public_token)
     {
         try {
-            $account = LoyaltyAccount::with(['store', 'customer'])
+            $account = LoyaltyAccount::with(['store', 'customer', 'loyaltyProgram'])
                 ->where('public_token', $public_token)
                 ->firstOrFail();
 
@@ -57,7 +57,7 @@ class CardController extends Controller
             // Fix for accounts stuck in "Redeemed" state but have started a new cycle
             // Only clear reward_redeemed_at if they've started earning stamps again (old logic for backward compatibility)
             try {
-                if (!is_null($account->reward_redeemed_at) && $account->stamp_count > 0 && $account->stamp_count < $account->store->reward_target && $rewardBalance == 0) {
+                if (!is_null($account->reward_redeemed_at) && $account->stamp_count > 0 && $account->stamp_count < $account->reward_target && $rewardBalance == 0) {
                     $account->reward_redeemed_at = null;
                     $account->save();
                 }
@@ -92,7 +92,7 @@ class CardController extends Controller
 
     public function api(string $public_token)
     {
-        $account = LoyaltyAccount::with(['store', 'customer'])
+        $account = LoyaltyAccount::with(['store', 'customer', 'loyaltyProgram'])
             ->where('public_token', $public_token)
             ->firstOrFail();
 
@@ -111,7 +111,7 @@ class CardController extends Controller
 
         // Fix for accounts stuck in "Redeemed" state but have started a new cycle
         // Only clear reward_redeemed_at if they've started earning stamps again (old logic for backward compatibility)
-        if (!is_null($account->reward_redeemed_at) && $account->stamp_count > 0 && $account->stamp_count < $account->store->reward_target && $rewardBalance == 0) {
+        if (!is_null($account->reward_redeemed_at) && $account->stamp_count > 0 && $account->stamp_count < $account->reward_target && $rewardBalance == 0) {
             $account->reward_redeemed_at = null;
             $account->save();
         }
@@ -123,7 +123,7 @@ class CardController extends Controller
 
         return response()->json([
             'stamp_count' => $account->stamp_count,
-            'reward_target' => $account->store->reward_target,
+            'reward_target' => $account->reward_target,
             'reward_balance' => $rewardBalance,
             'reward_available' => $rewardBalance > 0,
             'reward_available_at' => $account->reward_available_at?->toIso8601String(),
@@ -131,7 +131,7 @@ class CardController extends Controller
             'redeem_token' => $account->redeem_token,
             'public_token' => $account->public_token,
             'store_name' => $account->store->name,
-            'reward_title' => $account->store->reward_title,
+            'reward_title' => $account->reward_title,
             'customer_name' => $account->customer->name ?? 'Valued Customer',
         ]);
     }
@@ -167,12 +167,12 @@ class CardController extends Controller
 
     public function manifest(string $public_token)
     {
-        $account = LoyaltyAccount::with(['store'])->where('public_token', $public_token)->firstOrFail();
+        $account = LoyaltyAccount::with(['store', 'loyaltyProgram'])->where('public_token', $public_token)->firstOrFail();
         
         $cardUrl = route('card.show', ['public_token' => $public_token]);
         $baseUrl = rtrim(config('app.url'), '/');
-        $backgroundColor = $account->store->background_color ?? '#1F2937';
-        $themeColor = $account->store->brand_color ?? $backgroundColor;
+        $backgroundColor = $account->program_background_color ?? '#1F2937';
+        $themeColor = $account->program_brand_color ?? $backgroundColor;
         
         $manifest = [
             'name' => $account->store->name . ' - My Card',

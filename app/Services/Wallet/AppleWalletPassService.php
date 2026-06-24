@@ -19,8 +19,9 @@ class AppleWalletPassService
      */
     public function generatePass(LoyaltyAccount $account): string
     {
-        $account->load(['store', 'customer']);
+        $account->load(['store', 'customer', 'loyaltyProgram']);
         $store = $account->store;
+        $program = $account->resolvedProgram() ?? $store;
         $customer = $account->customer;
 
         // Ensure 4-char manual entry code exists (e.g. for accounts created before migration or pass never updated)
@@ -29,16 +30,16 @@ class AppleWalletPassService
             $account->saveQuietly();
         }
 
-        $programName = $this->programName($store);
-        $statusText = $this->statusText($account, $store);
-        $frontStatusText = $this->frontStatusText($account, $store);
+        $programName = $this->programName($program);
+        $statusText = $this->statusText($account, $program);
+        $frontStatusText = $this->frontStatusText($account, $program);
         $customerDisplayName = $this->frontCustomerName($customer->name ?? $customer->email ?? 'Valued Customer');
         $manualCode = $account->manual_entry_code ?? $this->formatTokenForManualEntry(
             ($account->reward_balance ?? 0) > 0 && $account->redeem_token
                 ? $account->redeem_token
                 : $account->public_token
         );
-        $rewardTarget = max(1, (int) ($store->reward_target ?? 10));
+        $rewardTarget = max(1, (int) ($program->reward_target ?? 10));
 
         // Build pass definition
         $passDefinition = [
@@ -96,7 +97,7 @@ class AppleWalletPassService
                     [
                         'key' => 'progress',
                         'label' => 'Progress',
-                        'value' => $this->progressText($account, $store),
+                        'value' => $this->progressText($account, $program),
                     ],
                     [
                         'key' => 'status_back',
@@ -111,12 +112,12 @@ class AppleWalletPassService
                     [
                         'key' => 'reward_rule',
                         'label' => 'How it works',
-                        'value' => $this->rewardRuleText($store),
+                        'value' => $this->rewardRuleText($program),
                     ],
                     [
                         'key' => 'verification',
                         'label' => 'Redemption',
-                        'value' => $store->require_verification_for_redemption
+                        'value' => ($program->require_verification_for_redemption ?? $store->require_verification_for_redemption)
                             ? 'Email verification is required before rewards can be redeemed.'
                             : 'Rewards can be redeemed without email verification.',
                     ],
@@ -135,7 +136,7 @@ class AppleWalletPassService
         ];
 
         // Add colors from store branding (with fallbacks)
-        $backgroundColor = $store->background_color ?? '#1F2937';
+        $backgroundColor = $program->background_color ?? '#1F2937';
         $foregroundColor = $this->bestContrastTextColor($backgroundColor);
         
         $passDefinition['backgroundColor'] = $this->hexToRgb($backgroundColor);
@@ -155,8 +156,8 @@ class AppleWalletPassService
         // Add assets (images) - addAsset() expects file paths, not file contents
         // Apple Wallet requires specific filenames: logo.png, strip.png, icon.png, background.png
         $assetsPath = resource_path('wallet/apple/default');
-        $brandColor = $store->brand_color ?? '#8B4513';
-        $backgroundColor = $store->background_color ?? '#FBF8F4';
+        $brandColor = $program->brand_color ?? '#8B4513';
+        $backgroundColor = $program->background_color ?? '#FBF8F4';
         
         // Create unique temp directory for this pass generation to avoid filename conflicts
         $tempDir = sys_get_temp_dir() . '/apple_wallet_' . uniqid();
@@ -167,8 +168,8 @@ class AppleWalletPassService
         $assetsAdded = [];
         
         // Use store pass logo if available, otherwise fallback to default
-        if ($store->pass_logo_path && StoreAssets::exists($store->pass_logo_path)) {
-            $passLogoPath = StoreAssets::localTempPath($store->pass_logo_path, pathinfo($store->pass_logo_path, PATHINFO_EXTENSION) ?: 'img');
+        if ($program->pass_logo_path && StoreAssets::exists($program->pass_logo_path)) {
+            $passLogoPath = StoreAssets::localTempPath($program->pass_logo_path, pathinfo($program->pass_logo_path, PATHINFO_EXTENSION) ?: 'img');
             if ($passLogoPath && file_exists($passLogoPath)) {
                 $tempLogoPath = $tempDir . '/logo.png';
                 if ($this->createCircularLogoPng($passLogoPath, $tempLogoPath) || copy($passLogoPath, $tempLogoPath)) {
@@ -188,8 +189,8 @@ class AppleWalletPassService
         }
         
         // Use store pass hero image if available, otherwise fallback to default strip
-        if ($store->pass_hero_image_path && StoreAssets::exists($store->pass_hero_image_path)) {
-            $passHeroPath = StoreAssets::localTempPath($store->pass_hero_image_path, pathinfo($store->pass_hero_image_path, PATHINFO_EXTENSION) ?: 'img');
+        if ($program->pass_hero_image_path && StoreAssets::exists($program->pass_hero_image_path)) {
+            $passHeroPath = StoreAssets::localTempPath($program->pass_hero_image_path, pathinfo($program->pass_hero_image_path, PATHINFO_EXTENSION) ?: 'img');
             if ($passHeroPath && file_exists($passHeroPath)) {
                 // Copy to temp file with exact name (strip.png) so PassGenerator recognizes it
                 $tempStripPath = $tempDir . '/strip.png';
@@ -236,8 +237,8 @@ class AppleWalletPassService
             'account_id' => $account->id,
             'store_id' => $store->id,
             'assets' => $assetsAdded,
-            'has_store_logo' => !empty($store->pass_logo_path),
-            'has_store_hero' => !empty($store->pass_hero_image_path),
+            'has_store_logo' => !empty($program->pass_logo_path),
+            'has_store_hero' => !empty($program->pass_hero_image_path),
         ]);
         
         // Clean up temp directory after pass generation

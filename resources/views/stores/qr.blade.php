@@ -30,11 +30,6 @@
                 'ready' => $walletReady,
                 'hint' => 'Recommended if you expect customers to save cards to Apple Wallet or Google Wallet.',
             ],
-            [
-                'label' => 'Plan capacity',
-                'ready' => (bool) ($usageStats['can_create_card'] ?? false),
-                'hint' => 'New customers can only join while your current plan still allows more cards.',
-            ],
         ];
         $launchScore = collect($launchChecks)->where('ready', true)->count();
         $launchLabel = $launchScore >= count($launchChecks)
@@ -43,7 +38,6 @@
         $launchTone = $launchScore >= count($launchChecks)
             ? 'bg-emerald-100 text-emerald-700'
             : ($launchScore >= 3 ? 'bg-amber-100 text-amber-700' : 'bg-accent-100 text-accent-700');
-        $billingBlocked = !($usageStats['can_create_card'] ?? false) && !($usageStats['is_subscribed'] ?? false);
     @endphp
 
     <div class="mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -113,7 +107,7 @@
                     <ol class="mt-2 space-y-2 text-sm leading-relaxed text-stone-600 list-decimal list-inside">
                         <li>Open the join page once yourself and check the logo, colors, and reward copy.</li>
                         <li>Save one test card to Apple Wallet or Google Wallet to confirm the brand feels right.</li>
-                        <li>Make sure your plan still has room for new joins so customers are not blocked.</li>
+                        <li>Confirm the default card reward and branding look right before you print posters.</li>
                     </ol>
                 </div>
 
@@ -160,18 +154,6 @@
                     <p class="mt-2 text-sm leading-relaxed text-stone-600">
                         Poster and join page previews are always generated from your current branding, so there is no manual rebuild step. If cards already in customer wallets look stale, you can queue a refresh for every card in this store.
                     </p>
-                    @if($billingBlocked)
-                    <div class="mt-4 rounded-xl border border-red-200 bg-red-50 p-4">
-                        <p class="text-sm font-semibold text-red-800">New joins are blocked right now</p>
-                        <p class="mt-2 text-sm leading-relaxed text-red-700">This store has reached the free-plan join limit. Existing customers can still use their current cards, but new customers will see a blocked join message until billing is updated.</p>
-                        <div class="mt-3">
-                            <x-ui.button href="{{ route('billing.index') }}" variant="primary" size="sm">
-                                Fix Billing Before Sharing
-                            </x-ui.button>
-                        </div>
-                    </div>
-                @endif
-
                 <div class="mt-4 flex flex-wrap gap-2">
                         <x-ui.button href="{{ route('merchant.stores.qr.pdf', ['store' => $store, 'preview' => 1]) }}" variant="ghost" size="sm" target="_blank">
                             Open Poster Preview

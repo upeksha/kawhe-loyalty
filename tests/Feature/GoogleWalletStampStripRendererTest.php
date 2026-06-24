@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Storage;
 
 uses(RefreshDatabase::class);
 
-test('generates stamp strip image using store settings and account progress', function () {
+test('generates stamp strip image using loyalty program settings and account progress', function () {
     if (! function_exists('imagecreatetruecolor')) {
         $this->markTestSkipped('GD extension not available in test environment.');
     }
@@ -23,6 +23,7 @@ test('generates stamp strip image using store settings and account progress', fu
 
     $account = LoyaltyAccount::factory()->create([
         'store_id' => $store->id,
+        'loyalty_program_id' => $store->resolvedDefaultProgram()->id,
         'stamp_count' => 3,
     ]);
 
@@ -48,6 +49,7 @@ test('changes stamp strip filename when progress or branding changes', function 
 
     $account = LoyaltyAccount::factory()->create([
         'store_id' => $store->id,
+        'loyalty_program_id' => $store->resolvedDefaultProgram()->id,
         'stamp_count' => 2,
     ]);
 
@@ -58,8 +60,9 @@ test('changes stamp strip filename when progress or branding changes', function 
     $account->save();
     $secondPath = $renderer->generateForAccount($account->fresh());
 
-    $store->background_color = '#1F2937';
-    $store->save();
+    $program = $store->resolvedDefaultProgram();
+    $program->background_color = '#1F2937';
+    $program->save();
     $thirdPath = $renderer->generateForAccount($account->fresh());
 
     expect($firstPath)->not->toEqual($secondPath);

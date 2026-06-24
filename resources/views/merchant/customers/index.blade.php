@@ -120,7 +120,7 @@
                         </div>
                         <div class="mt-3 text-sm text-stone-600 space-y-1">
                             <p>Manual code: <span class="font-mono font-semibold tracking-wider">{{ $account->manual_entry_code ?? '-' }}</span></p>
-                            <p>Stamps: {{ $account->stamp_count }} / {{ $account->store->reward_target }}</p>
+                            <p>Stamps: {{ $account->stamp_count }} / {{ $account->reward_target }}</p>
                             <p>Joined: {{ $account->created_at->format('M d, Y') }}</p>
                             <p>Last stamped: {{ $account->last_stamped_at ? $account->last_stamped_at->format('M d, Y') : '-' }}</p>
                         </div>
@@ -173,7 +173,7 @@
                                     <span class="font-mono text-xs tracking-wider text-stone-700">{{ $account->manual_entry_code ?? '-' }}</span>
                                 </x-ui.table-cell>
                                 <x-ui.table-cell>
-                                    {{ $account->stamp_count }} / {{ $account->store->reward_target }}
+                                    {{ $account->stamp_count }} / {{ $account->reward_target }}
                                 </x-ui.table-cell>
                                 <x-ui.table-cell>
                                     @if($account->reward_redeemed_at)

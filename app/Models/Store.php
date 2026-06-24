@@ -6,6 +6,8 @@ use App\Support\StoreAssets;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
 
@@ -50,6 +52,7 @@ class Store extends Model
 
     protected $fillable = [
         'name',
+        'default_loyalty_program_id',
         'slug',
         'address',
         'reward_target',
@@ -163,6 +166,34 @@ class Store extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function loyaltyPrograms(): HasMany
+    {
+        return $this->hasMany(LoyaltyProgram::class)->orderBy('sort_order')->orderBy('id');
+    }
+
+    public function defaultLoyaltyProgram(): BelongsTo
+    {
+        return $this->belongsTo(LoyaltyProgram::class, 'default_loyalty_program_id')->withTrashed();
+    }
+
+    public function defaultProgram(): HasOne
+    {
+        return $this->hasOne(LoyaltyProgram::class)->where('is_default', true)->withTrashed();
+    }
+
+    public function resolvedDefaultProgram(): ?LoyaltyProgram
+    {
+        if ($this->relationLoaded('defaultLoyaltyProgram') && $this->defaultLoyaltyProgram) {
+            return $this->defaultLoyaltyProgram;
+        }
+
+        if ($this->default_loyalty_program_id) {
+            return $this->defaultLoyaltyProgram()->first();
+        }
+
+        return $this->defaultProgram()->first();
     }
 
     public function getIsArchivedAttribute(): bool

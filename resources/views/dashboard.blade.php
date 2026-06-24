@@ -6,7 +6,7 @@
     @php
         $usagePercent = isset($usageStats) ? min(100, max(0, (int) ($usageStats['usage_percentage'] ?? 0))) : 0;
         $cardsRemaining = isset($usageStats) && !($usageStats['is_subscribed'] ?? false)
-            ? max(0, (int) (($usageStats['limit'] ?? 0) - ($usageStats['non_grandfathered_count'] ?? 0)))
+            ? max(0, (int) (($usageStats['limit'] ?? 0) - ($usageStats['non_grandfathered_programs_count'] ?? 0)))
             : null;
         $merchantStores = request()->user()?->stores()->get() ?? collect();
         $storesCount = $merchantStores->count();
@@ -392,8 +392,8 @@
                     </div>
                     <div class="mt-4 rounded-xl border border-stone-200 bg-stone-50/80 p-4">
                         <p class="text-sm text-stone-700">
-                            Cards issued:
-                            <strong>{{ $usageStats['cards_count'] }} / {{ $usageStats['is_subscribed'] ? '∞' : $usageStats['limit'] }}</strong>
+                            Loyalty cards:
+                            <strong>{{ $usageStats['programs_count'] }} / {{ $usageStats['limit'] }}</strong>
                         </p>
                         @if(!$usageStats['is_subscribed'])
                             <p class="mt-1 text-xs text-stone-500">Remaining on free plan: {{ $cardsRemaining }}</p>
@@ -401,8 +401,8 @@
                                 <div class="h-2 rounded-full bg-[#4f7d54] transition-all duration-300" style="width: {{ $usagePercent }}%"></div>
                             </div>
                         @endif
-                        @if($usageStats['grandfathered_count'] > 0)
-                            <p class="mt-2 text-xs text-stone-500">{{ $usageStats['grandfathered_count'] }} grandfathered card(s) active</p>
+                        @if($usageStats['grandfathered_programs_count'] > 0)
+                            <p class="mt-2 text-xs text-stone-500">{{ $usageStats['grandfathered_programs_count'] }} grandfathered card(s) active</p>
                         @endif
                     </div>
                 </x-ui.card>
@@ -475,29 +475,29 @@
         </section>
 
         @if(isset($usageStats) && !$usageStats['is_subscribed'])
-            @if($usageStats['non_grandfathered_count'] >= $usageStats['limit'])
+            @if($usageStats['non_grandfathered_programs_count'] >= $usageStats['limit'])
                 <x-ui.card class="p-4 border border-accent-200 bg-accent-50">
                     <p class="text-sm text-accent-800">
-                        <strong>Limit Reached:</strong> You’ve reached the free plan limit of {{ $usageStats['limit'] }} cards.
-                        @if($usageStats['grandfathered_count'] > 0)
-                            {{ $usageStats['grandfathered_count'] }} grandfathered card(s) remain active, but new customers cannot join until you upgrade.
+                        <strong>Limit Reached:</strong> You’ve reached the free plan limit of {{ $usageStats['limit'] }} loyalty card.
+                        @if($usageStats['grandfathered_programs_count'] > 0)
+                            {{ $usageStats['grandfathered_programs_count'] }} grandfathered card(s) remain active, but you cannot add another card until you upgrade.
                         @else
-                            Existing customers can still use their cards, but new customers cannot join until you upgrade.
+                            Existing customers can still use their cards, but you cannot add another card until you upgrade.
                         @endif
                     </p>
                 </x-ui.card>
-            @elseif($usageStats['has_cancelled_subscription'] && $usageStats['grandfathered_count'] > 0)
+            @elseif($usageStats['has_cancelled_subscription'] && $usageStats['grandfathered_programs_count'] > 0)
                 <x-ui.card class="p-4 border border-[#d6a24a]/40 bg-[#fff5df]">
                     <p class="text-sm text-[#7c5a1c]">
-                        <strong>Grandfathered Cards:</strong> You have {{ $usageStats['grandfathered_count'] }} active from your previous Pro subscription.
-                        You can create {{ $usageStats['limit'] - $usageStats['non_grandfathered_count'] }} more card(s) on free.
+                        <strong>Grandfathered Cards:</strong> You have {{ $usageStats['grandfathered_programs_count'] }} active from your previous Pro subscription.
+                        You can create {{ $usageStats['limit'] - $usageStats['non_grandfathered_programs_count'] }} more card(s) on free.
                     </p>
                 </x-ui.card>
-            @elseif($usageStats['cards_count'] >= ($usageStats['limit'] * 0.8))
+            @elseif($usageStats['programs_count'] >= ($usageStats['limit'] * 0.8))
                 <x-ui.card class="p-4 border border-[#d6a24a]/40 bg-[#fff5df]">
                     <p class="text-sm text-[#7c5a1c]">
-                        <strong>Almost there:</strong> You’re using {{ $usageStats['cards_count'] }} of {{ $usageStats['limit'] }} free cards.
-                        Consider upgrading to keep adding customers.
+                        <strong>Almost there:</strong> You’re using {{ $usageStats['programs_count'] }} of {{ $usageStats['limit'] }} free card slots.
+                        Consider upgrading to keep adding loyalty cards.
                     </p>
                 </x-ui.card>
             @endif

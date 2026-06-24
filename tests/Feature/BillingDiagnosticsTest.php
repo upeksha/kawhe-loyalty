@@ -23,26 +23,23 @@ class BillingDiagnosticsTest extends TestCase
         $response->assertOk();
         $response->assertSee('Billing Support Diagnostics');
         $response->assertSee('Stripe customer linked');
-        $response->assertSee('Plan allows new joins');
+        $response->assertSee('Plan allows another loyalty card');
         $response->assertSee('Recommended next step');
         $response->assertSee('Plan State');
         $response->assertSee('Recovery actions');
     }
 
-    public function test_billing_page_surfaces_blocking_join_state(): void
+    public function test_billing_page_surfaces_blocking_card_limit_state(): void
     {
         $user = User::factory()->create();
-        $store = Store::factory()->for($user)->create();
-        LoyaltyAccount::factory()->count(50)->create([
-            'store_id' => $store->id,
-        ]);
+        Store::factory()->for($user)->create();
 
         $response = $this
             ->actingAs($user)
             ->get(route('billing.index'));
 
         $response->assertOk();
-        $response->assertSee('New customer joins are blocked');
+        $response->assertSee('You have used all free plan card slots');
         $response->assertSee('Sync Billing Status');
     }
 

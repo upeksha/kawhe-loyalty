@@ -47,7 +47,7 @@ class StampLoyaltyService
 
         // Get store and reward target
         $store = $account->store;
-        $rewardTarget = $store->reward_target ?? config('loyalty.reward_target', 10);
+        $rewardTarget = $account->reward_target ?: config('loyalty.reward_target', 10);
 
         // Perform stamping in transaction
         return DB::transaction(function () use (
@@ -70,7 +70,7 @@ class StampLoyaltyService
                 return new StampResultDTO(
                     stampCount: $existingAccount->stamp_count,
                     rewardBalance: $existingAccount->reward_balance ?? 0,
-                    rewardTarget: $existingAccount->store->reward_target ?? $rewardTarget,
+                    rewardTarget: $existingAccount->reward_target ?? $rewardTarget,
                     lastStampedAt: $existingAccount->last_stamped_at,
                     rewardEarned: false,
                     isDuplicate: true
@@ -128,6 +128,7 @@ class StampLoyaltyService
                 $stampEvent = StampEvent::create([
                     'loyalty_account_id' => $account->id,
                     'store_id' => $store->id,
+                    'loyalty_program_id' => $account->loyalty_program_id,
                     'user_id' => $staff->id,
                     'type' => 'stamp', // Use lowercase to match existing convention
                     'count' => $count,
@@ -151,7 +152,7 @@ class StampLoyaltyService
                         return new StampResultDTO(
                             stampCount: $existingAccount->stamp_count,
                             rewardBalance: $existingAccount->reward_balance ?? 0,
-                            rewardTarget: $existingAccount->store->reward_target ?? $rewardTarget,
+                            rewardTarget: $existingAccount->reward_target ?? $rewardTarget,
                             lastStampedAt: $existingAccount->last_stamped_at,
                             rewardEarned: false,
                             isDuplicate: true

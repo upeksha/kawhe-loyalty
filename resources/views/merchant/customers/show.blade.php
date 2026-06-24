@@ -19,8 +19,9 @@
                     @if($account->store->address)
                         <p><strong class="text-stone-700">Address:</strong> <span class="text-stone-600">{{ $account->store->address }}</span></p>
                     @endif
-                    <p><strong class="text-stone-700">Reward Target:</strong> <span class="text-stone-600">{{ $account->store->reward_target }} stamps</span></p>
-                    <p><strong class="text-stone-700">Reward:</strong> <span class="text-stone-600">{{ $account->store->reward_title }}</span></p>
+                    <p><strong class="text-stone-700">Card:</strong> <span class="text-stone-600">{{ $account->program_name }}</span></p>
+                    <p><strong class="text-stone-700">Reward Target:</strong> <span class="text-stone-600">{{ $account->reward_target }} stamps</span></p>
+                    <p><strong class="text-stone-700">Reward:</strong> <span class="text-stone-600">{{ $account->reward_title }}</span></p>
                 </div>
             </x-ui.card>
 
@@ -107,7 +108,7 @@
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div>
                     <p class="text-sm text-stone-500 mb-1">Stamps</p>
-                    <p class="text-2xl font-bold text-stone-900">{{ $account->stamp_count }} / {{ $account->store->reward_target }}</p>
+                    <p class="text-2xl font-bold text-stone-900">{{ $account->stamp_count }} / {{ $account->reward_target }}</p>
                 </div>
                 <div>
                     <p class="text-sm text-stone-500 mb-1">Reward Status</p>
@@ -119,7 +120,7 @@
                         <p class="text-xs text-stone-400">Since {{ $account->reward_available_at->format('M d, Y') }}</p>
                     @else
                         <p class="text-lg font-semibold text-stone-400">Not yet</p>
-                        <p class="text-xs text-stone-400">{{ max(0, $account->store->reward_target - $account->stamp_count) }} more needed</p>
+                        <p class="text-xs text-stone-400">{{ max(0, $account->reward_target - $account->stamp_count) }} more needed</p>
                     @endif
                 </div>
                 <div>

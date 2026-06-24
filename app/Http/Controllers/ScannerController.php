@@ -384,9 +384,9 @@ class ScannerController extends Controller
             'success' => true,
             'has_rewards' => $rewardBalance > 0,
             'reward_balance' => $rewardBalance,
-            'reward_title' => $store->reward_title,
+            'reward_title' => $account->reward_title,
             'stamp_count' => $account->stamp_count,
-            'reward_target' => $store->reward_target ?? 10,
+            'reward_target' => $account->reward_target ?? 10,
             'customer_name' => $account->customer->name ?? 'Customer',
             'store_name' => $store->name,
             'store_id' => $store->id,
@@ -428,7 +428,7 @@ class ScannerController extends Controller
         // Find loyalty account by redeem_token
         $account = LoyaltyAccount::where('redeem_token', $token)
             ->where('store_id', $storeId)
-            ->with(['customer', 'store'])
+            ->with(['customer', 'store', 'loyaltyProgram'])
             ->first();
 
         if (!$account) {
@@ -450,14 +450,14 @@ class ScannerController extends Controller
             || ($customer && is_null($customer->email));
         
         // Check if store requires verification
-        $requiresVerification = $accountStore->require_verification_for_redemption ?? true;
+        $requiresVerification = $account->requires_verification_for_redemption;
         
         $rewardBalance = $account->reward_balance ?? 0;
 
         return response()->json([
             'success' => true,
             'reward_balance' => $rewardBalance,
-            'reward_title' => $store->reward_title,
+            'reward_title' => $account->reward_title,
             'customer_name' => $account->customer->name ?? 'Customer',
             'customer_email' => $customer->email ?? null,
             'is_verified' => $isVerified,
@@ -511,7 +511,7 @@ class ScannerController extends Controller
         // Find account first to check verification status
         $preAccount = LoyaltyAccount::where('redeem_token', $token)
             ->where('store_id', $storeId)
-            ->with(['customer', 'store'])
+            ->with(['customer', 'store', 'loyaltyProgram'])
             ->first();
         
         if ($preAccount) {
@@ -526,7 +526,7 @@ class ScannerController extends Controller
                 || ($customer && is_null($customer->email));
             
             // Check if store requires verification for redemption (default: true for security)
-            $requiresVerification = $accountStore->require_verification_for_redemption ?? true;
+            $requiresVerification = $preAccount->requires_verification_for_redemption;
             
             // Only block if store requires verification AND customer has email AND is not verified
             // Return 422 with status + public_token so Flutter app can show verification modal and call verify-email / stamp instead
@@ -647,7 +647,7 @@ class ScannerController extends Controller
             $isVerified = !is_null($account->verified_at) 
                 || ($customer && is_null($customer->email));
             
-            if (!$store->require_verification_for_redemption && $customer && !is_null($customer->email) && !$isVerified) {
+            if (!$account->requires_verification_for_redemption && $customer && !is_null($customer->email) && !$isVerified) {
                 \Log::warning('Unverified redemption processed', [
                     'loyalty_account_id' => $account->id,
                     'store_id' => $storeId,
@@ -669,7 +669,7 @@ class ScannerController extends Controller
                 'store_id' => $store->id,
                 'user_id' => Auth::id(),
                 'type' => 'redeem',
-                'points' => -($store->reward_target * $quantity), // Negative for redemption (quantity * target stamps)
+                'points' => -($account->reward_target * $quantity), // Negative for redemption (quantity * target stamps)
                 'idempotency_key' => $idempotencyKey,
                 'metadata' => [
                     'reward_balance_before' => $rewardBalanceBefore,
@@ -751,8 +751,8 @@ class ScannerController extends Controller
             }
             
             $message = $quantity > 1 
-                ? "Successfully redeemed {$quantity} rewards! Enjoy your {$store->reward_title}!"
-                : "Reward redeemed successfully! Enjoy your {$store->reward_title}!";
+                ? "Successfully redeemed {$quantity} rewards! Enjoy your {$account->reward_title}!"
+                : "Reward redeemed successfully! Enjoy your {$account->reward_title}!";
             
             try {
                 \Log::info('Redeem processed', [
@@ -772,7 +772,7 @@ class ScannerController extends Controller
                     'receipt' => [
                         'transaction_id' => $transaction->id ?? null,
                         'timestamp' => now()->toIso8601String(),
-                        'reward_title' => $store->reward_title,
+                        'reward_title' => $account->reward_title,
                         'rewards_redeemed' => $quantity,
                         'remaining_rewards' => $account->reward_balance ?? 0,
                         'remaining_stamps' => $account->stamp_count,

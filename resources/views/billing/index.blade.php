@@ -35,32 +35,32 @@
         @endif
 
         @php
-            $remainingCards = max(0, (int) (($stats['limit'] ?? 0) - ($stats['non_grandfathered_count'] ?? 0)));
+            $remainingCards = max(0, (int) (($stats['limit'] ?? 0) - ($stats['non_grandfathered_programs_count'] ?? 0)));
             $usagePercent = min(100, max(0, (int) ($stats['usage_percentage'] ?? 0)));
-            $billingBlocked = !($stats['can_create_card'] ?? false) && !($stats['is_subscribed'] ?? false);
+            $billingBlocked = !($stats['can_create_program'] ?? false) && !($stats['is_subscribed'] ?? false);
             $stripeConfigReady = !empty(config('cashier.key')) && !empty(config('cashier.secret')) && !empty(config('cashier.price_id'));
 
             if ($stats['is_subscribed']) {
                 $heroTone = 'border-brand-200 bg-gradient-to-br from-brand-50 via-white to-emerald-50';
                 $heroBadgeTone = 'bg-brand-100 text-brand-800';
                 $heroTitle = 'Pro plan active';
-                $heroBody = 'New customer signups are open and your loyalty program can keep growing without a card limit.';
+                $heroBody = 'Your Pro plan supports up to 3 loyalty cards across your account.';
                 $heroActionLabel = 'Manage Subscription';
                 $heroActionRoute = route('billing.portal');
                 $heroActionMethod = 'post';
             } elseif ($billingBlocked) {
                 $heroTone = 'border-red-200 bg-gradient-to-br from-red-50 via-white to-orange-50';
                 $heroBadgeTone = 'bg-red-100 text-red-800';
-                $heroTitle = 'New customer joins are blocked';
-                $heroBody = 'You have reached the free-plan join limit. Existing customer cards still work, but new joins will stay blocked until billing is updated.';
-                $heroActionLabel = 'Upgrade to Reopen Signups';
+                $heroTitle = 'You have used all free plan card slots';
+                $heroBody = 'Free includes 1 loyalty card. Existing cards keep working, but you cannot add another card until billing is updated.';
+                $heroActionLabel = 'Upgrade to Add Another Card';
                 $heroActionRoute = route('billing.checkout');
                 $heroActionMethod = 'post';
             } else {
                 $heroTone = 'border-stone-200 bg-gradient-to-br from-stone-50 via-white to-brand-50';
                 $heroBadgeTone = 'bg-stone-200 text-stone-700';
                 $heroTitle = 'You are on the free plan';
-                $heroBody = 'Your store can still accept new customer signups until you use all free-plan slots.';
+                $heroBody = 'Free includes 1 loyalty card. Upgrade when you want to run multiple cards under your store.';
                 $heroActionLabel = 'Upgrade to Pro';
                 $heroActionRoute = route('billing.checkout');
                 $heroActionMethod = 'post';
@@ -127,7 +127,7 @@
                         <p class="text-xs font-semibold uppercase tracking-[0.18em] text-stone-500">Quick answer</p>
                         <ul class="mt-2 space-y-2 text-sm text-stone-700">
                             <li>Existing customer cards keep working.</li>
-                            <li>{{ $stats['is_subscribed'] ? 'New customer signups are open.' : ($billingBlocked ? 'New customer signups are currently paused.' : 'New customer signups are still open.') }}</li>
+                            <li>{{ $stats['is_subscribed'] ? 'You can run up to 3 loyalty cards.' : ($billingBlocked ? 'You cannot add another loyalty card right now.' : 'You still have room for another loyalty card.') }}</li>
                             <li>{{ $stats['is_subscribed'] ? 'You can change or cancel later from the billing portal.' : 'Upgrading does not reset or remove any customer data.' }}</li>
                         </ul>
                     </div>
@@ -140,13 +140,13 @@
                 <div>
                     <h3 class="text-lg font-semibold text-stone-900">Usage right now</h3>
                     <p class="mt-1 text-sm text-stone-600">
-                        {{ $stats['is_subscribed'] ? 'Your Pro plan keeps new signups unlimited.' : 'Track how close you are to the free-plan signup limit.' }}
+                        {{ $stats['is_subscribed'] ? 'Your Pro plan supports up to 3 loyalty cards.' : 'Track how close you are to the free-plan loyalty card limit.' }}
                     </p>
                 </div>
 
                 @if(!$stats['is_subscribed'])
                     <span class="inline-flex items-center rounded-full bg-stone-100 px-3 py-1 text-xs font-semibold text-stone-700">
-                        {{ $remainingCards }} signup slot{{ $remainingCards === 1 ? '' : 's' }} remaining
+                        {{ $remainingCards }} card slot{{ $remainingCards === 1 ? '' : 's' }} remaining
                     </span>
                 @endif
             </div>
@@ -156,30 +156,30 @@
                     <p class="text-xs font-semibold uppercase tracking-[0.18em] text-stone-500">Current plan</p>
                     <p class="mt-2 text-xl font-semibold text-stone-900">{{ $stats['is_subscribed'] ? 'Pro' : 'Free' }}</p>
                     <p class="mt-1 text-sm text-stone-600">
-                        {{ $stats['is_subscribed'] ? 'Unlimited new signups' : 'Up to '.$stats['limit'].' new signups' }}
+                        {{ $stats['is_subscribed'] ? 'Up to '.$stats['paid_limit'].' loyalty cards' : 'Up to '.$stats['limit'].' loyalty card' . ($stats['limit'] === 1 ? '' : 's') }}
                     </p>
                 </div>
 
                 <div class="rounded-2xl border border-stone-200 bg-stone-50/80 p-4">
-                    <p class="text-xs font-semibold uppercase tracking-[0.18em] text-stone-500">Cards issued</p>
+                    <p class="text-xs font-semibold uppercase tracking-[0.18em] text-stone-500">Loyalty cards in use</p>
                     <p class="mt-2 text-xl font-semibold text-stone-900">
-                        {{ $stats['cards_count'] }}
+                        {{ $stats['programs_count'] }}
                         @unless($stats['is_subscribed'])
                             <span class="text-base font-medium text-stone-500">/ {{ $stats['limit'] }}</span>
                         @endunless
                     </p>
                     <p class="mt-1 text-sm text-stone-600">
-                        {{ $stats['grandfathered_count'] > 0 ? $stats['grandfathered_count'].' grandfathered excluded from limit' : 'All active customer cards counted here' }}
+                        {{ $stats['grandfathered_programs_count'] > 0 ? $stats['grandfathered_programs_count'].' grandfathered excluded from limit' : 'Active default and additional cards count here' }}
                     </p>
                 </div>
 
                 <div class="rounded-2xl border border-stone-200 bg-stone-50/80 p-4">
-                    <p class="text-xs font-semibold uppercase tracking-[0.18em] text-stone-500">Signup status</p>
+                    <p class="text-xs font-semibold uppercase tracking-[0.18em] text-stone-500">Add-card status</p>
                     <p class="mt-2 text-xl font-semibold text-stone-900">
                         {{ $stats['is_subscribed'] ? 'Open' : ($billingBlocked ? 'Blocked' : 'Open') }}
                     </p>
                     <p class="mt-1 text-sm text-stone-600">
-                        {{ $stats['is_subscribed'] ? 'No free-plan cap applies while Pro is active.' : ($billingBlocked ? 'Upgrade or sync billing to accept new joins again.' : 'You can still accept new customers today.') }}
+                        {{ $stats['is_subscribed'] ? 'You can add cards until you reach the Pro limit.' : ($billingBlocked ? 'Upgrade or sync billing to add another loyalty card.' : 'You can still add another loyalty card today.') }}
                     </p>
                 </div>
             </div>
@@ -187,14 +187,14 @@
             @if(!$stats['is_subscribed'])
                 <div class="mt-5">
                     <div class="mb-2 flex items-center justify-between text-sm">
-                        <span class="text-stone-600">Free-plan signup capacity used</span>
+                        <span class="text-stone-600">Free-plan card capacity used</span>
                         <span class="font-semibold text-stone-900">{{ $usagePercent }}%</span>
                     </div>
                     <div class="h-3 w-full rounded-full bg-stone-200">
                         <div class="h-3 rounded-full bg-brand-600 transition-all duration-300" style="width: {{ $usagePercent }}%"></div>
                     </div>
                     <p class="mt-2 text-xs text-stone-500">
-                        Upgrading immediately removes the signup limit. Existing customers and loyalty history stay untouched.
+                        Upgrading increases your limit to {{ $stats['paid_limit'] }} loyalty cards. Existing customers and loyalty history stay untouched.
                     </p>
                 </div>
             @endif

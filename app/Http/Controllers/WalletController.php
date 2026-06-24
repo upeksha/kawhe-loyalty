@@ -28,7 +28,7 @@ class WalletController extends Controller
      */
     public function downloadApplePass(string $public_token)
     {
-        $account = LoyaltyAccount::with(['store', 'customer'])
+        $account = LoyaltyAccount::with(['store', 'customer', 'loyaltyProgram'])
             ->where('public_token', $public_token)
             ->firstOrFail();
 
@@ -121,7 +121,7 @@ class WalletController extends Controller
         try {
             \Log::info('Google Wallet: Loading account', ['public_token' => $public_token]);
             
-            $account = LoyaltyAccount::with(['store', 'customer'])
+            $account = LoyaltyAccount::with(['store', 'customer', 'loyaltyProgram'])
                 ->where('public_token', $public_token)
                 ->firstOrFail();
             

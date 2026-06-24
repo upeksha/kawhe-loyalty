@@ -10,7 +10,7 @@
             && !empty($store->background_color)
             && (!empty($store->logo_path) || !empty($store->pass_logo_path));
         $billingReady = isset($usageStats)
-            ? (bool) ($usageStats['can_create_card'] ?? false)
+            ? (bool) ($usageStats['can_create_program'] ?? false)
             : true;
         $launchChecks = [
             !empty($store->reward_title) && (int) ($store->reward_target ?? 0) > 0,
@@ -69,6 +69,11 @@
                             <x-input-error :messages="$errors->get('address')" class="mt-2" />
                         </div>
 
+                        <div class="mb-6 rounded-2xl border border-stone-200 bg-stone-50/70 p-4">
+                            <p class="text-sm font-semibold text-stone-900">Default loyalty card</p>
+                            <p class="mt-1 text-sm text-stone-600">These settings control the default card for this store. Additional cards are managed separately from the Loyalty Cards screen.</p>
+                        </div>
+
                         <!-- Reward Target -->
                         <div class="mb-5">
                             <label for="reward_target" class="block mb-2 text-sm font-medium text-stone-700">Stamps needed for reward</label>
@@ -88,7 +93,7 @@
 
                         <!-- Reward Title -->
                         <div class="mb-5">
-                            <label for="reward_title" class="block mb-2 text-sm font-medium text-stone-700">Reward Title</label>
+                            <label for="reward_title" class="block mb-2 text-sm font-medium text-stone-700">Default card reward title</label>
                             <x-ui.input type="text" id="reward_title" name="reward_title" value="{{ old('reward_title', $store->reward_title) }}" required />
                             <x-input-error :messages="$errors->get('reward_title')" class="mt-2" />
                         </div>
@@ -476,7 +481,7 @@
                 <div class="flex items-start justify-between gap-3">
                     <div>
                         <h3 class="text-base font-bold text-stone-900">Billing Readiness</h3>
-                        <p class="mt-1 text-sm text-stone-600">Check that plan limits will not block new customer signups for this store.</p>
+                        <p class="mt-1 text-sm text-stone-600">Check whether your current plan still allows another loyalty card for this store.</p>
                     </div>
                     <span class="inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold {{ $billingReady ? 'bg-emerald-100 text-emerald-700' : 'bg-accent-100 text-accent-700' }}">
                         {{ $billingReady ? 'Ready' : 'Review plan' }}
@@ -504,7 +509,10 @@
                     </x-ui.button>
                     @if(!$store->trashed())
                         <x-ui.button href="{{ route('merchant.stores.qr', $store) }}" variant="ghost" size="sm">
-                            Open QR page
+                            Open default QR
+                        </x-ui.button>
+                        <x-ui.button href="{{ route('merchant.stores.programs.index', $store) }}" variant="ghost" size="sm">
+                            Loyalty Cards
                         </x-ui.button>
                     @endif
                 </div>

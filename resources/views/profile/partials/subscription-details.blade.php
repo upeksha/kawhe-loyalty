@@ -70,36 +70,36 @@
                             Free Plan
                         </h3>
                         <p class="text-xs text-stone-600 mt-1">
-                            Cards issued: <strong>{{ $usageStats['cards_count'] }} / {{ $usageStats['limit'] }}</strong>
-                            @if($usageStats['grandfathered_count'] > 0)
-                                <span class="text-xs text-stone-500">({{ $usageStats['grandfathered_count'] }} grandfathered)</span>
+                            Loyalty cards: <strong>{{ $usageStats['programs_count'] }} / {{ $usageStats['limit'] }}</strong>
+                            @if($usageStats['grandfathered_programs_count'] > 0)
+                                <span class="text-xs text-stone-500">({{ $usageStats['grandfathered_programs_count'] }} grandfathered)</span>
                             @endif
                         </p>
-                        @if($usageStats['non_grandfathered_count'] >= $usageStats['limit'])
+                        @if($usageStats['non_grandfathered_programs_count'] >= $usageStats['limit'])
                             <p class="text-xs text-red-600 mt-1 font-semibold">
                                 ⚠ Limit reached
                             </p>
                         @else
                             <p class="text-xs text-stone-600 mt-1">
-                                {{ $usageStats['limit'] - $usageStats['non_grandfathered_count'] }} cards remaining
+                                {{ $usageStats['limit'] - $usageStats['non_grandfathered_programs_count'] }} card slot(s) remaining
                             </p>
                         @endif
-                        @if($usageStats['has_cancelled_subscription'] && $usageStats['grandfathered_count'] > 0)
+                        @if($usageStats['has_cancelled_subscription'] && $usageStats['grandfathered_programs_count'] > 0)
                             <p class="text-xs text-brand-600 mt-1">
-                                ℹ️ {{ $usageStats['grandfathered_count'] }} card(s) remain active from your previous Pro subscription
+                                ℹ️ {{ $usageStats['grandfathered_programs_count'] }} card(s) remain active from your previous Pro subscription
                             </p>
                         @endif
                     </div>
                 </div>
 
-                @if($usageStats['non_grandfathered_count'] >= $usageStats['limit'])
+                @if($usageStats['non_grandfathered_programs_count'] >= $usageStats['limit'])
                     <div class="mt-4 p-3 bg-accent-50 border border-accent-200 rounded">
                         <p class="text-xs text-accent-800 mb-2">
                             You've reached the free plan limit. 
-                            @if($usageStats['grandfathered_count'] > 0)
-                                Your {{ $usageStats['grandfathered_count'] }} grandfathered card(s) remain active, but you cannot create new cards. 
+                            @if($usageStats['grandfathered_programs_count'] > 0)
+                                Your {{ $usageStats['grandfathered_programs_count'] }} grandfathered card(s) remain active, but you cannot create new cards. 
                             @endif
-                            Upgrade to Pro for unlimited cards.
+                            Upgrade to Pro for up to {{ $usageStats['paid_limit'] }} loyalty cards.
                         </p>
                         <x-ui.button href="{{ route('billing.index') }}" variant="primary" size="sm">
                             Upgrade to Pro

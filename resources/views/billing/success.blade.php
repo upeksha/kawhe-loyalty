@@ -54,7 +54,7 @@
                         </div>
                         <h2 class="text-2xl font-bold text-stone-900 mb-2">Subscription Activated!</h2>
                         <p class="text-stone-600 mb-6">
-                            Your Pro plan subscription has been successfully activated. You can now create unlimited loyalty cards.
+                            Your Pro plan subscription has been successfully activated. You can now create up to 3 loyalty cards.
                         </p>
                     @endif
 

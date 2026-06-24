@@ -1,6 +1,6 @@
 @php
-    $bg    = $account->store->background_color ?? '#1F2937';
-    $brand = $account->store->brand_color ?? '#0EA5E9';
+    $bg    = $account->program_background_color ?? '#1F2937';
+    $brand = $account->program_brand_color ?? '#0EA5E9';
     $hex   = ltrim($bg, '#');
     if (strlen($hex) === 6) {
         $r = hexdec(substr($hex, 0, 2));
@@ -133,7 +133,7 @@
                                     <h2 class="text-2xl font-bold mb-1">Reward{{ ($account->reward_balance ?? 0) > 1 ? 's' : '' }} Unlocked!</h2>
                                     <p class="text-sm opacity-90">
                                         <span id="reward-balance-banner" class="font-semibold text-lg">{{ $account->reward_balance ?? 0 }}</span> 
-                                        <span id="reward-title-available" class="font-semibold">{{ $account->store->reward_title }}</span>
+                                        <span id="reward-title-available" class="font-semibold">{{ $account->reward_title }}</span>
                                         @if(($account->reward_balance ?? 0) > 1)
                                             <span> available</span>
                                         @endif
@@ -170,9 +170,9 @@
                     
                     <div class="p-6 relative">
                         <!-- Store Logo (if available) -->
-                        @if($account->store->logo_path)
+                        @if($account->program_logo_url)
                             <div class="flex justify-center mb-4">
-                                <img src="{{ $account->store->logo_url }}" alt="{{ $account->store->name }} logo" class="h-20 w-20 object-contain rounded-lg bg-white/10 backdrop-blur-sm p-2 border-2" style="border-color: {{ $brand }};">
+                                <img src="{{ $account->program_logo_url }}" alt="{{ $account->store->name }} logo" class="h-20 w-20 object-contain rounded-lg bg-white/10 backdrop-blur-sm p-2 border-2" style="border-color: {{ $brand }};">
                             </div>
                         @endif
                         
@@ -214,14 +214,14 @@
                         
                         <!-- Reward Title (hidden when reward unlocked) -->
                         @if(($account->reward_balance ?? 0) == 0)
-                            <p id="reward-title" class="card-muted text-xs text-center mb-4">{{ $account->store->reward_title }} at {{ $account->store->reward_target }} stamps</p>
+                            <p id="reward-title" class="card-muted text-xs text-center mb-4">{{ $account->reward_title }} at {{ $account->reward_target }} stamps</p>
                         @endif
 
                         <!-- Progress Section -->
                         <div class="mb-6">
                             <div class="flex justify-between items-center mb-3">
                                 <span class="card-muted text-sm font-medium">Progress</span>
-                                <span id="stamp-count" class="card-text text-sm font-bold">{{ $account->stamp_count }} / {{ $account->store->reward_target }}</span>
+                                <span id="stamp-count" class="card-text text-sm font-bold">{{ $account->stamp_count }} / {{ $account->reward_target }}</span>
                             </div>
                             @if(($account->reward_balance ?? 0) > 0)
                                 <p id="reward-balance-display" class="text-yellow-400 text-center text-sm font-semibold mb-2">
@@ -230,7 +230,7 @@
                             @endif
                             <!-- Circular Checkmarks Row -->
                             <div id="stamp-circles-container" class="flex gap-2 justify-center flex-wrap">
-                                @for ($i = 1; $i <= $account->store->reward_target; $i++)
+                                @for ($i = 1; $i <= $account->reward_target; $i++)
                                     @if($i <= $account->stamp_count)
                                         <div class="stamp-circle w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold text-white"
                                             style="background-color: {{ $brand }};">
@@ -587,7 +587,7 @@
                                 </div>
 
                                 <p class="card-muted text-sm mb-4">
-                                    Present this QR code to claim your <span class="font-semibold text-yellow-400">{{ $account->store->reward_title }}</span>
+                                    Present this QR code to claim your <span class="font-semibold text-yellow-400">{{ $account->reward_title }}</span>
                                 </p>
                                 @if(($account->reward_balance ?? 0) > 1)
                                     <p class="text-yellow-400 text-xs text-center mb-2">

@@ -1,6 +1,6 @@
 <?php
 
-use App\Models\LoyaltyAccount;
+use App\Models\LoyaltyProgram;
 use App\Models\Store;
 use App\Models\User;
 use App\Services\Billing\UsageService;
@@ -14,44 +14,49 @@ function makeStore(User $user): Store
     return Store::factory()->create(['user_id' => $user->id]);
 }
 
-function makeAccount(Store $store, array $attributes = []): LoyaltyAccount
+function makeProgram(Store $store, array $attributes = []): LoyaltyProgram
 {
-    return LoyaltyAccount::factory()->create(array_merge([
+    $timestamps = array_intersect_key($attributes, array_flip(['created_at', 'updated_at']));
+    unset($attributes['created_at'], $attributes['updated_at']);
+
+    $program = LoyaltyProgram::create(array_merge([
         'store_id' => $store->id,
+        'name' => 'Program '.fake()->word(),
+        'reward_target' => 8,
+        'reward_title' => 'Free coffee',
+        'brand_color' => '#0EA5E9',
+        'background_color' => '#1F2937',
+        'registration_form_config' => Store::defaultRegistrationFormConfig(),
+        'sort_order' => 2,
     ], $attributes));
+
+    if ($timestamps !== []) {
+        $program->forceFill($timestamps)->saveQuietly();
+    }
+
+    return $program;
 }
 
-test('free user under limit can create card', function () {
+test('free user with only the default card cannot create another card', function () {
     $user = User::factory()->create();
-    $store = makeStore($user);
-    makeAccount($store); // 1 card
+    makeStore($user); // store factory creates the default program
 
     $service = new UsageService();
-    expect($service->canCreateCard($user))->toBeTrue();
+    expect($service->canCreateProgram($user))->toBeFalse();
+    expect($service->programLimitForUser($user))->toBe(1);
 });
 
-test('free user at limit cannot create card', function () {
+test('free user with no stores can create a first card', function () {
     $user = User::factory()->create();
-    $store = makeStore($user);
-    // create exactly freeLimit cards after cancellation window (non-grandfathered)
-    $service = new UsageService();
-    $limit = $service->freeLimit();
-    LoyaltyAccount::factory()->count($limit)->create([
-        'store_id' => $store->id,
-    ]);
 
-    expect($service->canCreateCard($user))->toBeFalse();
+    $service = new UsageService();
+    expect($service->canCreateProgram($user))->toBeTrue();
 });
 
-test('active subscriber bypasses limits', function () {
+test('active subscriber can create up to three cards', function () {
     $user = User::factory()->create(['stripe_id' => 'sub_123']);
     $store = makeStore($user);
-    // large number of cards
-    LoyaltyAccount::factory()->count(200)->create([
-        'store_id' => $store->id,
-    ]);
 
-    // create an active subscription record
     Subscription::create([
         'user_id' => $user->id,
         'name' => 'default',
@@ -60,17 +65,19 @@ test('active subscriber bypasses limits', function () {
         'quantity' => 1,
     ]);
 
+    makeProgram($store);
+    makeProgram($store);
+
     $service = new UsageService();
-    expect($service->canCreateCard($user))->toBeTrue();
-    $stats = $service->getUsageStats($user);
-    expect($stats['is_subscribed'])->toBeTrue();
+    expect($service->canCreateProgram($user))->toBeFalse();
+    expect($service->programLimitForUser($user))->toBe(3);
+    expect($service->getUsageStats($user)['is_subscribed'])->toBeTrue();
 });
 
-test('grandfathered cards excluded after cancellation', function () {
+test('grandfathered loyalty cards are excluded after cancellation', function () {
     $user = User::factory()->create(['stripe_id' => 'sub_123']);
     $store = makeStore($user);
 
-    // subscription that ended yesterday
     $endsAt = now()->subDay();
     Subscription::create([
         'user_id' => $user->id,
@@ -81,14 +88,20 @@ test('grandfathered cards excluded after cancellation', function () {
         'ends_at' => $endsAt,
     ]);
 
-    // grandfathered: before ends_at
-    makeAccount($store, ['created_at' => $endsAt->copy()->subDay()]);
-    // non-grandfathered: after ends_at
-    makeAccount($store, ['created_at' => $endsAt->copy()->addDay()]);
+    makeProgram($store, [
+        'name' => 'Grandfathered Card',
+        'created_at' => $endsAt->copy()->subDay(),
+        'updated_at' => $endsAt->copy()->subDay(),
+    ]);
+
+    makeProgram($store, [
+        'name' => 'Recent Card',
+        'created_at' => $endsAt->copy()->addDay(),
+        'updated_at' => $endsAt->copy()->addDay(),
+    ]);
 
     $service = new UsageService();
-    expect($service->grandfatheredCardsCount($user))->toBe(1);
-    expect($service->cardsCountForUser($user, includeGrandfathered: false))->toBe(1);
-    expect($service->canCreateCard($user))->toBeTrue(); // only one non-grandfathered card
+    expect($service->grandfatheredProgramsCount($user))->toBe(1);
+    expect($service->programsCountForUser($user, includeGrandfathered: false))->toBe(2);
+    expect($service->canCreateProgram($user))->toBeFalse();
 });
-

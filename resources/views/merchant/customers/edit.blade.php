@@ -118,7 +118,7 @@
                         <div class="grid grid-cols-2 gap-4">
                             <div>
                                 <p class="text-xs text-stone-500">Stamps</p>
-                                <p class="text-lg font-semibold text-stone-900">{{ $account->stamp_count }} / {{ $account->store->reward_target }}</p>
+                                <p class="text-lg font-semibold text-stone-900">{{ $account->stamp_count }} / {{ $account->reward_target }}</p>
                             </div>
                             <div>
                                 <p class="text-xs text-stone-500">Reward Balance</p>

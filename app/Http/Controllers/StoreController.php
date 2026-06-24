@@ -4,8 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Models\AppleWalletRegistration;
 use App\Models\LoyaltyAccount;
+use App\Models\LoyaltyProgram;
 use App\Models\Store;
 use App\Models\SupportAuditLog;
+use App\Services\Billing\UsageService;
 use App\Services\Support\MerchantRecoveryService;
 use App\Support\StoreAssets;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -51,6 +53,15 @@ class StoreController extends Controller
      */
     public function store(Request $request)
     {
+        $usageService = app(UsageService::class);
+
+        if (! $usageService->canCreateProgram(Auth::user())) {
+            return redirect()->route('billing.index')
+                ->withErrors([
+                    'error' => 'Your current plan already uses all loyalty card slots. Free includes 1 card, and Pro includes up to 3 cards.',
+                ]);
+        }
+
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'address' => ['nullable', 'string', 'max:255'],
@@ -84,7 +95,27 @@ class StoreController extends Controller
         // Remove file inputs from validated array
         unset($validated['logo'], $validated['pass_logo'], $validated['pass_hero_image']);
 
-        Auth::user()->stores()->create($validated);
+        $store = Auth::user()->stores()->create($validated);
+
+        $program = $store->loyaltyPrograms()->create([
+            'name' => $validated['reward_title'],
+            'slug' => $store->slug,
+            'reward_target' => $validated['reward_target'],
+            'reward_title' => $validated['reward_title'],
+            'join_token' => $store->join_token,
+            'join_short_code' => $store->join_short_code,
+            'brand_color' => $validated['brand_color'] ?? $store->brand_color,
+            'background_color' => $validated['background_color'] ?? $store->background_color,
+            'logo_path' => $validated['logo_path'] ?? $store->logo_path,
+            'pass_logo_path' => $validated['pass_logo_path'] ?? $store->pass_logo_path,
+            'pass_hero_image_path' => $validated['pass_hero_image_path'] ?? $store->pass_hero_image_path,
+            'require_verification_for_redemption' => true,
+            'registration_form_config' => Store::defaultRegistrationFormConfig(),
+            'is_default' => true,
+            'sort_order' => 1,
+        ]);
+
+        $store->forceFill(['default_loyalty_program_id' => $program->id])->save();
 
         return redirect()->route('merchant.stores.index')->with('success', 'Store created successfully.');
     }
@@ -96,7 +127,10 @@ class StoreController extends Controller
     {
         $store = Store::queryForUser(Auth::user(), includeArchived: true)->whereKey($store->id)->firstOrFail();
         $walletHealth = $this->walletHealth($store);
-        $hasIssuedCards = LoyaltyAccount::where('store_id', $store->id)->exists();
+        $defaultProgram = $store->resolvedDefaultProgram();
+        $hasIssuedCards = $defaultProgram
+            ? LoyaltyAccount::where('loyalty_program_id', $defaultProgram->id)->exists()
+            : LoyaltyAccount::where('store_id', $store->id)->exists();
 
         return view('stores.edit', compact('store', 'walletHealth', 'hasIssuedCards'));
     }
@@ -107,7 +141,10 @@ class StoreController extends Controller
     public function update(Request $request, Store $store)
     {
         $store = Store::queryForUser(Auth::user(), includeArchived: true)->whereKey($store->id)->firstOrFail();
-        $hasIssuedCards = LoyaltyAccount::where('store_id', $store->id)->exists();
+        $defaultProgram = $store->resolvedDefaultProgram();
+        $hasIssuedCards = $defaultProgram
+            ? LoyaltyAccount::where('loyalty_program_id', $defaultProgram->id)->exists()
+            : LoyaltyAccount::where('store_id', $store->id)->exists();
 
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
@@ -181,6 +218,21 @@ class StoreController extends Controller
         $validated['registration_form_config'] = $formConfig;
 
         $store->update($validated);
+
+        if ($defaultProgram) {
+            $defaultProgram->update([
+                'name' => $validated['reward_title'],
+                'reward_target' => $validated['reward_target'],
+                'reward_title' => $validated['reward_title'],
+                'brand_color' => $validated['brand_color'] ?? $store->brand_color,
+                'background_color' => $validated['background_color'] ?? $store->background_color,
+                'logo_path' => $validated['logo_path'] ?? $defaultProgram->logo_path,
+                'pass_logo_path' => $validated['pass_logo_path'] ?? $defaultProgram->pass_logo_path,
+                'pass_hero_image_path' => $validated['pass_hero_image_path'] ?? $defaultProgram->pass_hero_image_path,
+                'require_verification_for_redemption' => $validated['require_verification_for_redemption'],
+                'registration_form_config' => $formConfig,
+            ]);
+        }
 
         return redirect()->route('merchant.stores.index')->with('success', 'Store updated successfully.');
     }

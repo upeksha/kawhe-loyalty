@@ -13,6 +13,23 @@ use Illuminate\Support\Str;
  */
 class LoyaltyAccountFactory extends Factory
 {
+    public function configure(): static
+    {
+        return $this
+            ->afterMaking(function (LoyaltyAccount $account) {
+                if (! $account->loyalty_program_id && $account->store_id) {
+                    $account->loyalty_program_id = $account->store?->resolvedDefaultProgram()?->id;
+                }
+            })
+            ->afterCreating(function (LoyaltyAccount $account) {
+                if (! $account->loyalty_program_id && $account->store_id) {
+                    $account->forceFill([
+                        'loyalty_program_id' => $account->store?->resolvedDefaultProgram()?->id,
+                    ])->saveQuietly();
+                }
+            });
+    }
+
     /**
      * Define the model's default state.
      *
@@ -22,6 +39,7 @@ class LoyaltyAccountFactory extends Factory
     {
         return [
             'store_id' => Store::factory(),
+            'loyalty_program_id' => null,
             'customer_id' => Customer::factory(),
             'stamp_count' => 0,
             'public_token' => Str::random(40),

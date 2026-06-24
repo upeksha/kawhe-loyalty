@@ -57,6 +57,7 @@ test('returning lookup is store-scoped and redirects directly', function () {
     $customer = Customer::factory()->create(['email' => 'returning@example.com']);
     $accountA = LoyaltyAccount::factory()->create([
         'store_id' => $storeA->id,
+        'loyalty_program_id' => $storeA->resolvedDefaultProgram()->id,
         'customer_id' => $customer->id,
         'public_token' => 'token-a'
     ]);

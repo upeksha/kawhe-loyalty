@@ -63,9 +63,9 @@ class BillingController extends Controller
                 'hint' => 'If missing after checkout, run a sync from Stripe.',
             ],
             [
-                'label' => 'Plan allows new joins',
-                'ready' => (bool) ($stats['can_create_card'] ?? false),
-                'hint' => 'New customer joins pause when free-plan capacity is full.',
+                'label' => 'Plan allows another loyalty card',
+                'ready' => (bool) ($stats['can_create_program'] ?? false),
+                'hint' => 'Free includes 1 loyalty card. Pro includes up to 3.',
             ],
             [
                 'label' => 'Stripe configuration available',
@@ -80,8 +80,8 @@ class BillingController extends Controller
         $recommendedBillingAction = !empty(config('cashier.key')) && !empty(config('cashier.secret')) && !empty(config('cashier.price_id'))
             ? ($subscription === null && !empty($user->stripe_id)
                 ? 'Stripe knows this merchant, but no local subscription is visible yet. Run a sync from Stripe before escalating.'
-                : ((!($stats['can_create_card'] ?? false) && !($stats['is_subscribed'] ?? false))
-                    ? 'New joins are blocked by the free-plan cap. Upgrading is the fastest way to restore signups.'
+                : ((!($stats['can_create_program'] ?? false) && !($stats['is_subscribed'] ?? false))
+                    ? 'You have used all loyalty card slots on this plan. Upgrading is the fastest way to add another card.'
                     : 'Billing looks healthy. If a merchant still reports issues, refresh subscription status first, then check Stripe Dashboard.'))
             : 'Stripe configuration is incomplete. Fix configuration first before testing checkout or sync behaviour.';
 
@@ -402,7 +402,7 @@ class BillingController extends Controller
                             'subscription_status' => $subscription->stripe_status,
                         ]);
                         return redirect()->route('merchant.dashboard')
-                            ->with('success', 'Your Pro plan subscription has been activated! You can now create unlimited loyalty cards.');
+                            ->with('success', 'Your Pro plan subscription has been activated! You can now create up to 3 loyalty cards.');
                     }
                     
                     Log::warning('Subscription synced but status not active/trialing', [
@@ -722,9 +722,9 @@ class BillingController extends Controller
             'stats' => $stats,
             'nextSteps' => [
                 'Nothing has been charged. Your current plan stays exactly as it was.',
-                ($stats['can_create_card'] ?? false)
-                    ? 'You still have room to add customers on your current plan if you want to wait before upgrading.'
-                    : 'If new joins are already blocked, you can return to billing anytime and restart checkout when you are ready.',
+                ($stats['can_create_program'] ?? false)
+                    ? 'You still have room to add another loyalty card on your current plan if you want to wait before upgrading.'
+                    : 'If you need another loyalty card later, you can return to billing anytime and restart checkout when you are ready.',
                 'You can review usage and plan limits on the billing page before deciding again.',
             ],
         ]);
@@ -736,7 +736,7 @@ class BillingController extends Controller
             return [
                 'label' => 'Pro active',
                 'tone' => 'bg-emerald-100 text-emerald-700',
-                'summary' => 'Unlimited joins are active and your customers can keep signing up without plan-based interruptions.',
+                'summary' => 'Your Pro plan is active and you can run up to 3 loyalty cards across your account.',
                 'transition' => 'If you cancel later, your current subscription stays active until the end of the billing period.',
             ];
         }
@@ -746,24 +746,24 @@ class BillingController extends Controller
                 'label' => 'Pro ending',
                 'tone' => 'bg-amber-100 text-amber-700',
                 'summary' => 'Your Pro plan is still active for now, but it is scheduled to end on ' . $subscription->ends_at->format('M d, Y') . '.',
-                'transition' => 'After the billing period ends, new joins will fall back to your free-plan limit while existing customers keep their cards.',
+                'transition' => 'After the billing period ends, your plan falls back to 1 loyalty card slot. Existing cards stay active.',
             ];
         }
 
-        if (! ($stats['can_create_card'] ?? false)) {
+        if (! ($stats['can_create_program'] ?? false)) {
             return [
                 'label' => 'Free plan full',
                 'tone' => 'bg-accent-100 text-accent-700',
-                'summary' => 'Your free-plan join limit is full, so new customers are currently blocked from joining.',
-                'transition' => 'Upgrading restores new joins immediately. Existing customers and cards are not reset.',
+                'summary' => 'Your free plan already uses its 1 loyalty card slot.',
+                'transition' => 'Upgrading increases your allowance to 3 loyalty cards. Existing customers and cards are not reset.',
             ];
         }
 
         return [
             'label' => 'Free plan active',
             'tone' => 'bg-stone-100 text-stone-700',
-            'summary' => 'Your free plan is active and existing customers can continue using their cards normally.',
-            'transition' => 'If you outgrow the free limit later, upgrading only changes join capacity. It does not remove existing customer data.',
+            'summary' => 'Your free plan is active and includes 1 loyalty card slot.',
+            'transition' => 'If you need more than 1 card later, upgrading expands the slot limit without removing customer data.',
         ];
     }
 
@@ -775,8 +775,8 @@ class BillingController extends Controller
             $actions[] = 'Run a Stripe sync if checkout completed but your plan still looks unchanged.';
         }
 
-        if (! ($stats['can_create_card'] ?? false) && ! ($stats['is_subscribed'] ?? false)) {
-            $actions[] = 'Upgrade to Pro to reopen new customer signups right away.';
+        if (! ($stats['can_create_program'] ?? false) && ! ($stats['is_subscribed'] ?? false)) {
+            $actions[] = 'Upgrade to Pro to add another loyalty card right away.';
         }
 
         if ($subscription && $subscription->ends_at) {

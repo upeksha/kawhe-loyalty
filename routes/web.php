@@ -3,6 +3,7 @@
 use App\Http\Controllers\AdminDashboardController;
 use App\Http\Controllers\CardController;
 use App\Http\Controllers\JoinController;
+use App\Http\Controllers\LoyaltyProgramController;
 use App\Http\Controllers\MerchantCustomersController;
 use App\Http\Controllers\MerchantOnboardingWizardController;
 use App\Http\Controllers\OnboardingController;
@@ -124,6 +125,14 @@ Route::middleware(['auth', App\Http\Middleware\EnsureMerchantHasStore::class])->
     Route::get('/stores/{store}/qr', [StoreController::class, 'qr'])->withTrashed()->name('stores.qr');
     Route::get('/stores/{store}/qr/pdf', [StoreController::class, 'qrPdf'])->withTrashed()->name('stores.qr.pdf');
     Route::post('/stores/{store}/refresh-wallets', [StoreController::class, 'refreshWallets'])->withTrashed()->name('stores.refresh-wallets');
+    Route::get('/stores/{store}/programs', [LoyaltyProgramController::class, 'index'])->withTrashed()->name('stores.programs.index');
+    Route::get('/stores/{store}/programs/create', [LoyaltyProgramController::class, 'create'])->withTrashed()->name('stores.programs.create');
+    Route::post('/stores/{store}/programs', [LoyaltyProgramController::class, 'store'])->withTrashed()->name('stores.programs.store');
+    Route::get('/stores/{store}/programs/{program}/edit', [LoyaltyProgramController::class, 'edit'])->withTrashed()->name('stores.programs.edit');
+    Route::put('/stores/{store}/programs/{program}', [LoyaltyProgramController::class, 'update'])->withTrashed()->name('stores.programs.update');
+    Route::delete('/stores/{store}/programs/{program}', [LoyaltyProgramController::class, 'destroy'])->withTrashed()->name('stores.programs.destroy');
+    Route::post('/stores/{store}/programs/{program}/restore', [LoyaltyProgramController::class, 'restore'])->withTrashed()->name('stores.programs.restore');
+    Route::get('/stores/{store}/programs/{program}/qr', [LoyaltyProgramController::class, 'qr'])->withTrashed()->name('stores.programs.qr');
 
     Route::get('/scanner', [ScannerController::class, 'index'])->name('scanner');
     

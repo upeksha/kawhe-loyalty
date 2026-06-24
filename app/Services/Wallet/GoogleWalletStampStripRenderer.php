@@ -15,8 +15,9 @@ class GoogleWalletStampStripRenderer
      */
     public function generateForAccount(LoyaltyAccount $account): ?string
     {
-        $account->loadMissing('store');
+        $account->loadMissing(['store', 'loyaltyProgram']);
         $store = $account->store;
+        $program = $account->resolvedProgram() ?? $store;
         if (! $store) {
             return null;
         }
@@ -29,14 +30,14 @@ class GoogleWalletStampStripRenderer
             return null;
         }
 
-        $target = max(1, (int) ($store->reward_target ?? 10));
+        $target = max(1, (int) ($program->reward_target ?? 10));
         $stamps = max(0, min((int) $account->stamp_count, $target));
 
-        $background = $this->normalizeHexColor($store->background_color)
-            ?? $this->normalizeHexColor($store->brand_color)
+        $background = $this->normalizeHexColor($program->background_color)
+            ?? $this->normalizeHexColor($program->brand_color)
             ?? '#1F2937';
 
-        $accent = $this->normalizeHexColor($store->brand_color) ?? '#FFFFFF';
+        $accent = $this->normalizeHexColor($program->brand_color) ?? '#FFFFFF';
         $foreground = $this->bestContrastTextColor($background);
 
         $stateHash = substr(sha1(implode('|', [
@@ -46,17 +47,17 @@ class GoogleWalletStampStripRenderer
             $background,
             $accent,
             $foreground,
-            (string) ($store->updated_at?->timestamp ?? 0),
+            (string) ($program->updated_at?->timestamp ?? $store->updated_at?->timestamp ?? 0),
         ])), 0, 16);
 
-        $relativePath = sprintf('wallet/google/stamp-strips/store_%d_account_%d_%s.png', $store->id, $account->id, $stateHash);
+        $relativePath = sprintf('wallet/google/stamp-strips/program_%d_account_%d_%s.png', $program->id ?? 0, $account->id, $stateHash);
         if (StoreAssets::exists($relativePath)) {
             return $relativePath;
         }
 
         $heroBinary = null;
-        if (! empty($store->pass_hero_image_path) && StoreAssets::exists($store->pass_hero_image_path)) {
-            $heroBinary = StoreAssets::get($store->pass_hero_image_path);
+        if (! empty($program->pass_hero_image_path) && StoreAssets::exists($program->pass_hero_image_path)) {
+            $heroBinary = StoreAssets::get($program->pass_hero_image_path);
         }
 
         $pngBinary = $this->renderPng($target, $stamps, $background, $accent, $foreground, $heroBinary);
