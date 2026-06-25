@@ -6,7 +6,6 @@ use App\Http\Controllers\JoinController;
 use App\Http\Controllers\LoyaltyProgramController;
 use App\Http\Controllers\MerchantCustomersController;
 use App\Http\Controllers\MerchantOnboardingWizardController;
-use App\Http\Controllers\OnboardingController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PublicStartController;
 use App\Http\Controllers\ScannerController;
@@ -26,17 +25,27 @@ Route::get('/', function () {
 // Dashboard route - conditional redirect for merchants with stores
 Route::middleware(['auth'])->get('/dashboard', function (Request $request) {
     $user = $request->user();
-    
+
     // Super admin goes to admin dashboard
     if ($user->is_super_admin) {
         return redirect()->route('admin.dashboard');
     }
-    
+
+    $onboardingStore = $user->stores()
+        ->whereNotNull('onboarding_step')
+        ->whereNull('onboarding_completed_at')
+        ->orderBy('id')
+        ->first();
+
+    if ($onboardingStore) {
+        return redirect()->route('merchant.onboarding.wizard.index');
+    }
+
     // Merchants with stores go to merchant dashboard
     if ($user->stores()->count() > 0) {
         return redirect()->route('merchant.dashboard');
     }
-    
+
     // New merchants without stores go straight into the setup wizard
     return redirect()->route('merchant.onboarding.wizard.store-basics');
 })->name('dashboard');
@@ -46,7 +55,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/stores', function () {
         return redirect()->route('merchant.stores.index');
     });
-    
+
     Route::get('/scanner', function () {
         return redirect()->route('merchant.scanner');
     });
@@ -84,9 +93,10 @@ Route::get('/verify-email/{token}', [App\Http\Controllers\CustomerEmailVerificat
 
 // Merchant onboarding routes (no EnsureMerchantHasStore middleware)
 Route::middleware(['auth'])->prefix('merchant/onboarding')->name('merchant.onboarding.')->group(function () {
-    // Legacy single-page onboarding: redirect GET to new wizard step 1; keep POST for backward compat
+    // Legacy single-page onboarding: redirect to wizard
     Route::get('/store', fn () => redirect()->route('merchant.onboarding.wizard.store-basics'))->name('store');
-    Route::post('/store', [OnboardingController::class, 'storeStore'])->name('store.store');
+    Route::post('/store', fn () => redirect()->route('merchant.onboarding.wizard.store-basics')
+        ->with('info', 'Please complete setup using the onboarding wizard.'))->name('store.store');
 
     // Onboarding v2 wizard
     Route::get('/wizard', [MerchantOnboardingWizardController::class, 'index'])->name('wizard.index');
@@ -97,8 +107,8 @@ Route::middleware(['auth'])->prefix('merchant/onboarding')->name('merchant.onboa
     Route::get('/wizard/customer-form', [MerchantOnboardingWizardController::class, 'customerForm'])->name('wizard.customer-form');
     Route::post('/wizard/customer-form', [MerchantOnboardingWizardController::class, 'storeCustomerForm'])->name('wizard.customer-form.store');
     Route::get('/wizard/card-ready', [MerchantOnboardingWizardController::class, 'cardReady'])->name('wizard.card-ready');
-    Route::post('/wizard/card-ready', [MerchantOnboardingWizardController::class, 'advanceToContinueTrial'])->name('wizard.card-ready.advance');
-    Route::get('/wizard/continue-trial', [MerchantOnboardingWizardController::class, 'continueTrial'])->name('wizard.continue-trial');
+    Route::post('/wizard/card-ready', [MerchantOnboardingWizardController::class, 'completeOnboarding'])->name('wizard.card-ready.advance');
+    Route::get('/wizard/continue-trial', fn () => redirect()->route('merchant.onboarding.wizard.card-ready'))->name('wizard.continue-trial');
     Route::post('/wizard/complete', [MerchantOnboardingWizardController::class, 'completeOnboarding'])->name('wizard.complete');
 });
 
@@ -114,7 +124,7 @@ Route::middleware(['auth', App\Http\Middleware\EnsureMerchantHasStore::class])->
             'analytics' => $analytics,
         ]);
     })->name('dashboard');
-    
+
     Route::get('/stores', [StoreController::class, 'index'])->name('stores.index');
     Route::get('/stores/create', [StoreController::class, 'create'])->name('stores.create');
     Route::post('/stores', [StoreController::class, 'store'])->name('stores.store');
@@ -124,6 +134,7 @@ Route::middleware(['auth', App\Http\Middleware\EnsureMerchantHasStore::class])->
     Route::post('/stores/{store}/restore', [StoreController::class, 'restore'])->withTrashed()->name('stores.restore');
     Route::get('/stores/{store}/qr', [StoreController::class, 'qr'])->withTrashed()->name('stores.qr');
     Route::get('/stores/{store}/qr/pdf', [StoreController::class, 'qrPdf'])->withTrashed()->name('stores.qr.pdf');
+    Route::get('/stores/{store}/qr/image', [StoreController::class, 'qrImage'])->withTrashed()->name('stores.qr.image');
     Route::post('/stores/{store}/refresh-wallets', [StoreController::class, 'refreshWallets'])->withTrashed()->name('stores.refresh-wallets');
     Route::get('/stores/{store}/programs', [LoyaltyProgramController::class, 'index'])->withTrashed()->name('stores.programs.index');
     Route::get('/stores/{store}/programs/create', [LoyaltyProgramController::class, 'create'])->withTrashed()->name('stores.programs.create');
@@ -133,9 +144,11 @@ Route::middleware(['auth', App\Http\Middleware\EnsureMerchantHasStore::class])->
     Route::delete('/stores/{store}/programs/{program}', [LoyaltyProgramController::class, 'destroy'])->withTrashed()->name('stores.programs.destroy');
     Route::post('/stores/{store}/programs/{program}/restore', [LoyaltyProgramController::class, 'restore'])->withTrashed()->name('stores.programs.restore');
     Route::get('/stores/{store}/programs/{program}/qr', [LoyaltyProgramController::class, 'qr'])->withTrashed()->name('stores.programs.qr');
+    Route::get('/stores/{store}/programs/{program}/qr/pdf', [LoyaltyProgramController::class, 'qrPdf'])->withTrashed()->name('stores.programs.qr.pdf');
+    Route::get('/stores/{store}/programs/{program}/qr/image', [LoyaltyProgramController::class, 'qrImage'])->withTrashed()->name('stores.programs.qr.image');
 
     Route::get('/scanner', [ScannerController::class, 'index'])->name('scanner');
-    
+
     Route::get('/customers', [MerchantCustomersController::class, 'index'])->name('customers.index');
     Route::get('/customers/{loyaltyAccount}', [MerchantCustomersController::class, 'show'])->name('customers.show');
     Route::get('/customers/{loyaltyAccount}/edit', [MerchantCustomersController::class, 'edit'])->name('customers.edit');
@@ -164,7 +177,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
-    
+
     // Billing routes
     Route::get('/billing', [App\Http\Controllers\BillingController::class, 'index'])->name('billing.index');
     Route::post('/billing/checkout', [App\Http\Controllers\BillingController::class, 'checkout'])->name('billing.checkout');
@@ -182,21 +195,21 @@ Route::post('/stripe/webhook', [\Laravel\Cashier\Http\Controllers\WebhookControl
 // They must be excluded from CSRF verification (handled in bootstrap/app.php)
 Route::prefix('wallet/v1')->middleware([App\Http\Middleware\ApplePassAuthMiddleware::class])->group(function () {
     // Register device for pass updates
-    Route::post('/devices/{deviceLibraryIdentifier}/registrations/{passTypeIdentifier}/{serialNumber}', 
+    Route::post('/devices/{deviceLibraryIdentifier}/registrations/{passTypeIdentifier}/{serialNumber}',
         [App\Http\Controllers\Wallet\AppleWalletController::class, 'registerDevice']);
-    
+
     // Unregister device
-    Route::delete('/devices/{deviceLibraryIdentifier}/registrations/{passTypeIdentifier}/{serialNumber}', 
+    Route::delete('/devices/{deviceLibraryIdentifier}/registrations/{passTypeIdentifier}/{serialNumber}',
         [App\Http\Controllers\Wallet\AppleWalletController::class, 'unregisterDevice']);
-    
+
     // Get updated pass file
-    Route::get('/passes/{passTypeIdentifier}/{serialNumber}', 
+    Route::get('/passes/{passTypeIdentifier}/{serialNumber}',
         [App\Http\Controllers\Wallet\AppleWalletController::class, 'getPass']);
-    
+
     // Get list of updated serial numbers for a device
-    Route::get('/devices/{deviceLibraryIdentifier}/registrations/{passTypeIdentifier}', 
+    Route::get('/devices/{deviceLibraryIdentifier}/registrations/{passTypeIdentifier}',
         [App\Http\Controllers\Wallet\AppleWalletController::class, 'getUpdatedSerials']);
-    
+
     // Log endpoint
     Route::post('/log', [App\Http\Controllers\Wallet\AppleWalletController::class, 'log']);
 });

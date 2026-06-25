@@ -1,0 +1,383 @@
+/* Customer-facing pages (join flow, card) — uses CSS variables from ProgramTheme */
+
+.customer-page {
+    background-color: var(--program-bg);
+    color: var(--program-text-on-bg);
+}
+
+.customer-shell {
+    width: 100%;
+    max-width: 28rem;
+    margin-inline: auto;
+    padding-inline: max(1rem, env(safe-area-inset-left, 0px)) max(1rem, env(safe-area-inset-right, 0px));
+}
+
+.customer-shell--centered {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.customer-muted {
+    color: var(--program-muted-on-bg);
+}
+
+.customer-card {
+    border-radius: 1rem;
+    box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+}
+
+.customer-card--gradient {
+    background: var(--program-card-bg);
+    color: var(--program-card-text);
+}
+
+.customer-card--plain {
+    background: rgba(255, 255, 255, 0.97);
+    color: #111827;
+}
+
+.customer-card--status {
+    background: var(--program-status-card-bg);
+    color: var(--program-status-card-text);
+}
+
+.customer-card-title {
+    color: var(--program-card-strong);
+}
+
+.customer-card-body {
+    color: var(--program-card-muted);
+}
+
+.customer-card-label {
+    color: var(--program-card-label);
+}
+
+.customer-status-body {
+    color: var(--program-status-card-muted);
+}
+
+.customer-status-soft {
+    color: var(--program-status-card-soft);
+}
+
+.customer-btn {
+    display: inline-flex;
+    width: 100%;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.75rem;
+    padding: 0.875rem 1rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    line-height: 1.25rem;
+    transition: filter 150ms ease, background-color 150ms ease, color 150ms ease;
+}
+
+@media (min-width: 640px) {
+    .customer-btn {
+        font-size: 1rem;
+        line-height: 1.5rem;
+    }
+}
+
+.customer-btn:focus {
+    outline: 2px solid transparent;
+    outline-offset: 2px;
+    box-shadow: 0 0 0 2px var(--program-bg), 0 0 0 4px var(--program-brand);
+}
+
+.customer-btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
+.customer-btn-primary {
+    background-color: var(--program-brand);
+    color: var(--program-text-on-brand);
+}
+
+.customer-btn-primary:hover {
+    filter: brightness(1.08);
+}
+
+.customer-btn-secondary {
+    border: 2px solid var(--program-secondary-border);
+    background: transparent;
+    color: var(--program-secondary-text);
+}
+
+.customer-btn-secondary:hover {
+    background-color: var(--program-secondary-hover-bg);
+    color: var(--program-secondary-hover-text);
+}
+
+.customer-btn-outline {
+    border: 2px solid var(--program-secondary-border);
+    background: transparent;
+    color: var(--program-secondary-text);
+}
+
+.customer-btn-outline:hover {
+    background-color: var(--program-secondary-hover-bg);
+    color: var(--program-secondary-hover-text);
+}
+
+.customer-btn-status {
+    border: 2px solid var(--program-status-outline-border);
+    background: transparent;
+    color: var(--program-status-outline-text);
+}
+
+.customer-btn-status:hover {
+    background-color: var(--program-status-outline-hover-bg);
+    color: var(--program-status-outline-hover-text);
+}
+
+.customer-page input.customer-input,
+.customer-page textarea.customer-input,
+.customer-page select.customer-input {
+    width: 100%;
+    border-radius: 0.75rem;
+    border-width: 1px;
+    border-style: solid;
+    background-color: var(--program-input-bg);
+    color: var(--program-input-text);
+    -webkit-text-fill-color: var(--program-input-text);
+    caret-color: var(--program-input-text);
+    border-color: var(--program-input-border);
+    padding: 0.75rem 1rem;
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    transition: border-color 150ms ease, box-shadow 150ms ease, background-color 150ms ease;
+}
+
+@media (min-width: 640px) {
+    .customer-page input.customer-input,
+    .customer-page textarea.customer-input,
+    .customer-page select.customer-input {
+        font-size: 1rem;
+        line-height: 1.5rem;
+    }
+}
+
+.customer-page input.customer-input::placeholder,
+.customer-page textarea.customer-input::placeholder {
+    color: var(--program-input-placeholder);
+    opacity: 1;
+}
+
+.customer-page input.customer-input:focus,
+.customer-page textarea.customer-input:focus,
+.customer-page select.customer-input:focus {
+    outline: none;
+    border-color: var(--program-brand);
+    box-shadow: 0 0 0 3px var(--program-brand-focus);
+}
+
+.customer-page input.customer-input:-webkit-autofill,
+.customer-page input.customer-input:-webkit-autofill:hover,
+.customer-page input.customer-input:-webkit-autofill:focus,
+.customer-page textarea.customer-input:-webkit-autofill,
+.customer-page textarea.customer-input:-webkit-autofill:hover,
+.customer-page textarea.customer-input:-webkit-autofill:focus {
+    -webkit-box-shadow: 0 0 0 1000px var(--program-input-bg) inset;
+    -webkit-text-fill-color: var(--program-input-text);
+    caret-color: var(--program-input-text);
+    transition: background-color 99999s ease-out;
+}
+
+.customer-icon-badge {
+    background-color: var(--program-brand-muted-bg);
+    color: var(--program-brand);
+}
+
+.customer-divider {
+    border-top: 1px solid var(--program-divider);
+}
+
+.customer-shell--card {
+    padding-top: 1.5rem;
+    padding-bottom: 2rem;
+}
+
+[x-cloak] {
+    display: none !important;
+}
+
+/* Loyalty card page (customer card view) */
+.card-surface {
+    background-color: var(--program-loyalty-surface);
+}
+
+.card-inner {
+    background-color: var(--program-loyalty-inner);
+}
+
+.card-text {
+    color: var(--program-text-on-bg);
+}
+
+.card-muted {
+    color: var(--program-card-muted-on-bg);
+}
+
+.card-divider {
+    border-color: var(--program-loyalty-divider);
+}
+
+.card-btn {
+    background-color: var(--program-brand);
+    color: var(--program-text-on-brand);
+}
+
+.card-btn:hover {
+    filter: brightness(1.1);
+}
+
+.card-btn-icon {
+    background-color: var(--program-brand);
+}
+
+.card-badge {
+    background-color: var(--program-brand);
+    color: var(--program-text-on-brand);
+}
+
+.card-qr-border {
+    border-color: var(--program-brand);
+}
+
+.card-accent {
+    color: var(--program-brand);
+}
+
+.loyalty-card {
+    background: var(--program-loyalty-card-bg);
+    border: 3px solid var(--program-brand);
+    position: relative;
+    overflow: hidden;
+}
+
+.loyalty-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+        radial-gradient(ellipse at 15% 20%, var(--program-brand-glow-28) 0%, transparent 55%),
+        radial-gradient(ellipse at 85% 80%, var(--program-brand-glow-20) 0%, transparent 50%);
+    pointer-events: none;
+}
+
+@keyframes glow-pulse {
+    0%, 100% { opacity: 0.5; transform: translate(-50%, -50%) scale(1); }
+    50% { opacity: 0.9; transform: translate(-50%, -50%) scale(1.15); }
+}
+
+.card-glow {
+    position: absolute;
+    top: 38%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 260px;
+    height: 260px;
+    background: radial-gradient(circle, var(--program-brand-glow-28) 0%, transparent 70%);
+    animation: glow-pulse 4s ease-in-out infinite;
+    pointer-events: none;
+}
+
+.stamp-circle--filled {
+    background-color: var(--program-brand);
+    color: #fff;
+}
+
+.stamp-circle--empty {
+    background-color: var(--program-loyalty-inner);
+    color: var(--program-card-muted-on-bg);
+    border: 2px solid var(--program-loyalty-divider);
+}
+
+.customer-welcome-banner {
+    background: var(--program-loyalty-surface);
+    border-color: var(--program-brand);
+    color: var(--program-text-on-bg);
+}
+
+.customer-welcome-icon {
+    background: var(--program-brand-muted-bg);
+}
+
+.wallet-sheet {
+    background: var(--program-wallet-sheet-bg);
+}
+
+.wallet-sheet-accent {
+    background: linear-gradient(90deg, var(--program-brand), var(--program-brand-border-88));
+}
+
+.wallet-sheet-handle {
+    background: var(--program-text-on-bg);
+}
+
+.wallet-sheet-close {
+    background: var(--program-brand-muted-bg);
+}
+
+.wallet-sheet-icon-wrap {
+    background: var(--program-brand-muted-bg);
+    border: 2px solid var(--program-brand-border-44);
+    color: var(--program-brand);
+}
+
+.wallet-benefit-pill {
+    background: var(--program-brand-glow-15);
+}
+
+.wallet-benefit-icon {
+    background: var(--program-brand-glow-25);
+    color: var(--program-brand);
+}
+
+.program-logo-frame {
+    border-color: var(--program-brand);
+}
+
+.tx-history-item {
+    background-color: var(--program-loyalty-inner);
+}
+
+.tx-history-icon {
+    background-color: var(--program-brand-muted-bg);
+    color: var(--program-brand);
+}
+
+.tx-history-title {
+    color: var(--program-text-on-bg);
+}
+
+.tx-history-date {
+    color: var(--program-card-muted-on-bg);
+}
+
+.tx-history-points {
+    color: var(--program-brand);
+}
+
+/* Backward-compatible join-* aliases used during migration */
+.join-page { @apply customer-page; }
+.join-muted { @apply customer-muted; }
+.join-card { @apply customer-card customer-card--gradient; }
+.join-card-title { @apply customer-card-title; }
+.join-card-body { @apply customer-card-body; }
+.join-card-label { @apply customer-card-label; }
+.join-btn { @apply customer-btn customer-btn-primary; }
+.join-btn-primary { @apply customer-btn customer-btn-primary; }
+.join-btn-secondary { @apply customer-btn customer-btn-secondary; }
+.join-btn-outline { @apply customer-btn customer-btn-outline; }
+.join-input { @apply customer-input; }
+.limit-card { @apply customer-card customer-card--status; }
+.limit-body { @apply customer-status-body; }
+.limit-soft { @apply customer-status-soft; }
+.limit-btn { @apply customer-btn customer-btn-status; }

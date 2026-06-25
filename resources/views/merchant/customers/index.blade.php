@@ -4,20 +4,20 @@
     </x-slot>
 
     <div class="space-y-6">
-        <x-ui.card class="p-5">
+        <x-ui.section-panel class="p-5">
             <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div>
                     <h3 class="text-base font-bold text-stone-900">Customer support lookup</h3>
                     <p class="mt-1 text-sm text-stone-600">Search by customer name, email, phone, manual code, or public token when you need to help someone quickly.</p>
                 </div>
-                <div class="rounded-xl border border-stone-200 bg-stone-50 px-4 py-3 text-sm text-stone-600">
-                    Fastest support path: ask the customer for their <span class="font-semibold text-stone-800">manual code</span> or email.
-                </div>
+                <x-ui.alert variant="info" class="max-w-sm">
+                    Fastest support path: ask the customer for their <strong>manual code</strong> or email.
+                </x-ui.alert>
             </div>
-        </x-ui.card>
+        </x-ui.section-panel>
 
         <!-- Controls Row -->
-        <x-ui.card class="p-6" x-data="{ searching: false, filtering: false }">
+        <x-ui.section-panel class="p-6" x-data="{ searching: false, filtering: false }">
             <div class="flex flex-col sm:flex-row gap-4">
                 <!-- Search Input -->
                 <div class="flex-1">
@@ -26,7 +26,6 @@
                             type="text" 
                             name="q" 
                             value="{{ $q }}" 
-                            placeholder="Search by name, email, or phone..."
                             placeholder="Search by name, email, phone, manual code, or public token..."
                             class="flex-1"
                             :error="$errors->has('q')"
@@ -52,11 +51,10 @@
                         @if($q)
                             <input type="hidden" name="q" value="{{ $q }}">
                         @endif
-                        <select 
-                            name="store_id" 
+                        <x-ui.select
+                            name="store_id"
                             @change="$el.form.requestSubmit()"
-                            :disabled="filtering"
-                            class="block w-full rounded-lg border border-stone-300 shadow-sm px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
+                            x-bind:disabled="filtering"
                         >
                             <option value="">All Stores</option>
                             @foreach($stores as $store)
@@ -64,19 +62,20 @@
                                     {{ $store->name }}
                                 </option>
                             @endforeach
-                        </select>
+                        </x-ui.select>
                     </form>
                 </div>
             </div>
-        </x-ui.card>
+        </x-ui.section-panel>
 
         <!-- Table -->
         @if($accounts->isEmpty())
-            <x-ui.card class="p-12 text-center">
+            <x-ui.empty-state
+                :heading="$q || $activeStoreId ? 'No matching customers' : 'No customers yet'"
+                :description="$q || $activeStoreId ? 'Try a different search term or clear your filters.' : 'Share your store join link or QR code and customers will appear here automatically.'"
+            >
                 @if($q || $activeStoreId)
-                    <h3 class="text-lg font-semibold text-stone-900">No matching customers</h3>
-                    <p class="text-stone-500 mt-2">Try a different search term or clear your filters.</p>
-                    <div class="mt-6 flex flex-wrap justify-center gap-2">
+                    <div class="flex flex-wrap justify-center gap-2">
                         <x-ui.button href="{{ route('merchant.customers.index') }}" variant="primary" size="sm">
                             Clear Filters
                         </x-ui.button>
@@ -85,9 +84,7 @@
                         </x-ui.button>
                     </div>
                 @else
-                    <h3 class="text-lg font-semibold text-stone-900">No customers yet</h3>
-                    <p class="text-stone-500 mt-2">Share your store join link or QR code and customers will appear here automatically.</p>
-                    <div class="mt-6 flex flex-wrap justify-center gap-2">
+                    <div class="flex flex-wrap justify-center gap-2">
                         <x-ui.button href="{{ route('merchant.stores.index') }}" variant="primary" size="sm">
                             View Store QR
                         </x-ui.button>
@@ -96,7 +93,7 @@
                         </x-ui.button>
                     </div>
                 @endif
-            </x-ui.card>
+            </x-ui.empty-state>
         @else
             <div class="grid grid-cols-1 gap-4 md:hidden">
                 @foreach($accounts as $account)

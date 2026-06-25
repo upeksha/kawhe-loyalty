@@ -3,16 +3,22 @@
 namespace App\Http\Controllers;
 
 use App\Models\Store;
+use App\Support\RegistrationFormConfig;
 use App\Support\StoreAssets;
+use App\Support\StoreBrandingRules;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class MerchantOnboardingWizardController extends Controller
 {
     public const STEP_STORE_BASICS = 'store_basics';
+
     public const STEP_CARD_DESIGN = 'card_design';
+
     public const STEP_CUSTOMER_FORM = 'customer_form';
+
     public const STEP_CARD_READY = 'card_ready';
+
     public const STEP_CONTINUE_TRIAL = 'continue_trial';
 
     /**
@@ -24,6 +30,7 @@ class MerchantOnboardingWizardController extends Controller
         if (! $user) {
             return null;
         }
+
         return $user->stores()
             ->whereNull('onboarding_completed_at')
             ->orderBy('id')
@@ -51,10 +58,11 @@ class MerchantOnboardingWizardController extends Controller
         }
 
         $routes = [
+            self::STEP_STORE_BASICS => 'merchant.onboarding.wizard.store-basics',
             Store::ONBOARDING_STEP_CARD_DESIGN => 'merchant.onboarding.wizard.card-design',
             Store::ONBOARDING_STEP_CUSTOMER_FORM => 'merchant.onboarding.wizard.customer-form',
             Store::ONBOARDING_STEP_CARD_READY => 'merchant.onboarding.wizard.card-ready',
-            Store::ONBOARDING_STEP_CONTINUE_TRIAL => 'merchant.onboarding.wizard.continue-trial',
+            Store::ONBOARDING_STEP_CONTINUE_TRIAL => 'merchant.onboarding.wizard.card-ready',
         ];
 
         if (isset($routes[$step])) {
@@ -76,6 +84,7 @@ class MerchantOnboardingWizardController extends Controller
         if (Auth::user()->stores()->count() > 0) {
             return $this->index();
         }
+
         return view('merchant.onboarding.wizard.store-basics', ['store' => null]);
     }
 
@@ -93,6 +102,8 @@ class MerchantOnboardingWizardController extends Controller
             $existing->update(array_merge($validated, [
                 'onboarding_step' => Store::ONBOARDING_STEP_CARD_DESIGN,
             ]));
+            $existing->syncDefaultProgramFromStore();
+
             return redirect()->route('merchant.onboarding.wizard.card-design')
                 ->with('success', 'Store updated. Continue with branding.');
         }
@@ -105,6 +116,7 @@ class MerchantOnboardingWizardController extends Controller
             'onboarding_step' => Store::ONBOARDING_STEP_CARD_DESIGN,
         ]));
         $store->ensureDefaultProgramExists();
+        $store->syncDefaultProgramFromStore();
 
         return redirect()->route('merchant.onboarding.wizard.card-design')
             ->with('success', 'Store created. Now add your branding.');
@@ -128,6 +140,7 @@ class MerchantOnboardingWizardController extends Controller
         if (! in_array($store->onboarding_step, $allowedSteps)) {
             return $this->index();
         }
+
         return view('merchant.onboarding.wizard.card-design', compact('store'));
     }
 
@@ -138,18 +151,12 @@ class MerchantOnboardingWizardController extends Controller
             return redirect()->route('merchant.onboarding.wizard.index');
         }
 
-        $validated = $request->validate([
-            'brand_color' => ['nullable', 'string', 'regex:/^#[0-9A-Fa-f]{6}$/'],
-            'background_color' => ['nullable', 'string', 'regex:/^#[0-9A-Fa-f]{6}$/'],
-            'logo' => ['nullable', 'image', 'mimes:png,jpg,jpeg,webp', 'max:2048'],
-            'pass_logo' => ['nullable', 'image', 'mimes:png,jpg,jpeg,webp', 'max:2048'],
-            'pass_hero_image' => ['nullable', 'image', 'mimes:png,jpg,jpeg,webp', 'max:2048'],
-        ]);
+        $validated = $request->validate(StoreBrandingRules::validationRules($store));
 
-        $updates = array_filter([
-            'brand_color' => $validated['brand_color'] ?? null,
-            'background_color' => $validated['background_color'] ?? null,
-        ], fn ($v) => $v !== null);
+        $updates = [
+            'brand_color' => $validated['brand_color'],
+            'background_color' => $validated['background_color'],
+        ];
 
         if ($request->hasFile('logo')) {
             StoreAssets::delete($store->logo_path);
@@ -166,6 +173,7 @@ class MerchantOnboardingWizardController extends Controller
 
         $updates['onboarding_step'] = Store::ONBOARDING_STEP_CUSTOMER_FORM;
         $store->update($updates);
+        $store->syncDefaultProgramFromStore();
 
         return redirect()->route('merchant.onboarding.wizard.customer-form')
             ->with('success', 'Branding saved. Configure which fields to collect from customers.');
@@ -189,6 +197,7 @@ class MerchantOnboardingWizardController extends Controller
             return $this->index();
         }
         $config = $store->registration_form_config ?? [];
+
         return view('merchant.onboarding.wizard.customer-form', compact('store', 'config'));
     }
 
@@ -199,36 +208,11 @@ class MerchantOnboardingWizardController extends Controller
             return redirect()->route('merchant.onboarding.wizard.index');
         }
 
-        $config = [
-            'email' => ['enabled' => true, 'required' => true],
-            'first_name' => [
-                'enabled' => $request->boolean('first_name_enabled'),
-                'required' => $request->boolean('first_name_required'),
-            ],
-            'last_name' => [
-                'enabled' => $request->boolean('last_name_enabled'),
-                'required' => $request->boolean('last_name_required'),
-            ],
-            'phone' => [
-                'enabled' => $request->boolean('phone_enabled'),
-                'required' => $request->boolean('phone_required'),
-            ],
-            'birthday' => [
-                'enabled' => $request->boolean('birthday_enabled'),
-                'required' => $request->boolean('birthday_required'),
-            ],
-        ];
-
-        foreach (['first_name', 'last_name', 'phone', 'birthday'] as $field) {
-            if (! $config[$field]['enabled']) {
-                $config[$field]['required'] = false;
-            }
-        }
-
         $store->update([
-            'registration_form_config' => $config,
+            'registration_form_config' => RegistrationFormConfig::fromRequest($request),
             'onboarding_step' => Store::ONBOARDING_STEP_CARD_READY,
         ]);
+        $store->syncDefaultProgramFromStore();
 
         return redirect()->route('merchant.onboarding.wizard.card-ready')
             ->with('success', 'Form configured. Share your join link with customers.');
@@ -250,33 +234,10 @@ class MerchantOnboardingWizardController extends Controller
         if (! in_array($store->onboarding_step, $allowedSteps)) {
             return $this->index();
         }
-        $joinUrl = $store->join_url;
-        return view('merchant.onboarding.wizard.card-ready', compact('store', 'joinUrl'));
-    }
+        $program = $store->resolvedDefaultProgram();
+        $joinUrl = $program?->join_url ?? $store->join_url;
 
-    public function advanceToContinueTrial()
-    {
-        $store = $this->getOnboardingStore();
-        if (! $store) {
-            return redirect()->route('merchant.onboarding.wizard.index');
-        }
-        $store->update(['onboarding_step' => Store::ONBOARDING_STEP_CONTINUE_TRIAL]);
-        return redirect()->route('merchant.onboarding.wizard.continue-trial');
-    }
-
-    // --- Step 5: Continue Trial ---
-
-    public function continueTrial()
-    {
-        $store = $this->getOnboardingStore();
-        if (! $store) {
-            return $this->index();
-        }
-        // Allow viewing when user has reached this step (so Back button works)
-        if ($store->onboarding_step !== Store::ONBOARDING_STEP_CONTINUE_TRIAL) {
-            return $this->index();
-        }
-        return view('merchant.onboarding.wizard.continue-trial', compact('store'));
+        return view('merchant.onboarding.wizard.card-ready', compact('store', 'program', 'joinUrl'));
     }
 
     public function completeOnboarding()
@@ -289,7 +250,8 @@ class MerchantOnboardingWizardController extends Controller
             'onboarding_step' => null,
             'onboarding_completed_at' => now(),
         ]);
+
         return redirect()->route('merchant.stores.qr', $store)
-            ->with('success', 'You\'re all set! You have 50 free cards to start. Share your QR code with customers.');
+            ->with('success', 'You\'re all set. Share your QR code or join link with customers to start collecting signups.');
     }
 }

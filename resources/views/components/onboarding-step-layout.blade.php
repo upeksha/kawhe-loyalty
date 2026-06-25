@@ -8,21 +8,22 @@
 
 @php
     $stepLabels = [
-        1 => 'Store basics',
+        1 => 'Reward setup',
         2 => 'Card design',
         3 => 'Customer form',
         4 => 'Card ready',
         5 => 'Get started',
     ];
+    $visibleStepLabels = array_slice($stepLabels, 0, $totalSteps, true);
 @endphp
 
-<div class="min-h-[calc(100vh-4rem)] bg-gradient-to-b from-stone-100 to-stone-50/80 -mx-4 sm:-mx-6 lg:-mx-8 -mb-6 px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
+<div class="min-h-[calc(100vh-5rem)] bg-gradient-to-b from-stone-100 to-stone-50/80 -mx-4 sm:-mx-6 -mb-6 px-4 sm:px-6 py-8 sm:py-10">
     <div class="max-w-5xl mx-auto">
         {{-- Step progress bar --}}
         <nav class="mb-6 lg:mb-8" aria-label="Onboarding steps">
             <div class="rounded-2xl px-5 py-5 sm:px-6 sm:py-6 overflow-visible">
                 <ol class="flex items-center w-full list-none p-0 m-0 gap-0">
-                    @foreach ($stepLabels as $i => $label)
+                    @foreach ($visibleStepLabels as $i => $label)
                         @php
                             $isCompleted = $i < $step;
                             $isCurrent = $i === $step;
@@ -51,8 +52,7 @@
         </nav>
 
         {{-- Main content --}}
-        <div>
-            <div class="bg-white rounded-2xl shadow-xl shadow-stone-200/50 border border-stone-200/80 overflow-hidden">
+        <x-ui.section-panel class="overflow-hidden rounded-[28px] border-stone-200/80 p-0 shadow-xl shadow-stone-200/50">
                     <div class="p-6 sm:p-8 lg:p-10">
                         <header class="mb-8">
                             @if($backUrl)
@@ -75,11 +75,10 @@
                     </div>
 
                     @isset($actions)
-                        <div class="px-6 sm:px-8 lg:px-10 py-5 bg-stone-50/90 border-t border-stone-200">
+                        <div class="border-t border-stone-200 bg-stone-50/90 px-6 py-5 sm:px-8 lg:px-10">
                             {{ $actions }}
                         </div>
                     @endisset
-                </div>
-        </div>
+                </x-ui.section-panel>
     </div>
 </div>

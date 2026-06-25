@@ -1,3 +1,7 @@
+@php
+    $navCardStore = Auth::user()?->stores()->whereNull('deleted_at')->orderBy('id')->first();
+@endphp
+
 <nav x-data="{ open: false }" class="bg-white border-b border-gray-100">
     <!-- Primary Navigation Menu -->
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -15,9 +19,14 @@
                     <x-nav-link :href="route('merchant.dashboard')" :active="request()->routeIs('merchant.dashboard')">
                         {{ __('Dashboard') }}
                     </x-nav-link>
-                    <x-nav-link :href="route('merchant.stores.index')" :active="request()->routeIs('merchant.stores.*')">
-                        {{ __('Stores') }}
+                    <x-nav-link :href="route('merchant.stores.index')" :active="request()->routeIs('merchant.stores.*') && ! request()->routeIs('merchant.stores.programs.*')">
+                        {{ __('Stores & Cards') }}
                     </x-nav-link>
+                    @if($navCardStore)
+                    <x-nav-link :href="route('merchant.stores.programs.index', $navCardStore)" :active="request()->routeIs('merchant.stores.programs.*')">
+                        {{ __('Cards') }}
+                    </x-nav-link>
+                    @endif
                     <x-nav-link :href="route('merchant.customers.index')" :active="request()->routeIs('merchant.customers.*')">
                         {{ __('Customers') }}
                     </x-nav-link>
@@ -81,9 +90,14 @@
             <x-responsive-nav-link :href="route('merchant.dashboard')" :active="request()->routeIs('merchant.dashboard')">
                 {{ __('Dashboard') }}
             </x-responsive-nav-link>
-            <x-responsive-nav-link :href="route('merchant.stores.index')" :active="request()->routeIs('merchant.stores.*')">
-                {{ __('Stores') }}
+            <x-responsive-nav-link :href="route('merchant.stores.index')" :active="request()->routeIs('merchant.stores.*') && ! request()->routeIs('merchant.stores.programs.*')">
+                {{ __('Stores & Cards') }}
             </x-responsive-nav-link>
+            @if($navCardStore)
+            <x-responsive-nav-link :href="route('merchant.stores.programs.index', $navCardStore)" :active="request()->routeIs('merchant.stores.programs.*')">
+                {{ __('Cards') }}
+            </x-responsive-nav-link>
+            @endif
             <x-responsive-nav-link :href="route('merchant.customers.index')" :active="request()->routeIs('merchant.customers.*')">
                 {{ __('Customers') }}
             </x-responsive-nav-link>

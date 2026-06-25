@@ -35,32 +35,38 @@
         @endif
 
         @php
-            $remainingCards = max(0, (int) (($stats['limit'] ?? 0) - ($stats['non_grandfathered_programs_count'] ?? 0)));
-            $usagePercent = min(100, max(0, (int) ($stats['usage_percentage'] ?? 0)));
-            $billingBlocked = !($stats['can_create_program'] ?? false) && !($stats['is_subscribed'] ?? false);
+            $billingBlocked = !($stats['can_accept_new_customer'] ?? true) && !($stats['is_subscribed'] ?? false);
             $stripeConfigReady = !empty(config('cashier.key')) && !empty(config('cashier.secret')) && !empty(config('cashier.price_id'));
+            $proStores = config('billing.plans.pro.stores');
+            $proCards = config('billing.plans.pro.programs_per_store');
+            $storesUsed = (int) ($stats['stores_count'] ?? 0);
+            $storesLimit = $stats['stores_limit'] ?? null;
+            $cardsUsed = (int) ($stats['primary_store_programs_count'] ?? $stats['programs_count'] ?? 0);
+            $cardsLimit = $stats['programs_per_store_limit'] ?? null;
+            $customersUsed = (int) ($stats['primary_program_customers_count'] ?? 0);
+            $customersLimit = $stats['customers_per_program_limit'] ?? null;
 
             if ($stats['is_subscribed']) {
                 $heroTone = 'border-brand-200 bg-gradient-to-br from-brand-50 via-white to-emerald-50';
                 $heroBadgeTone = 'bg-brand-100 text-brand-800';
                 $heroTitle = 'Pro plan active';
-                $heroBody = 'Your Pro plan supports up to 3 loyalty cards across your account.';
+                $heroBody = "Pro includes up to {$proStores} stores, {$proCards} loyalty cards per store, and unlimited customers per card.";
                 $heroActionLabel = 'Manage Subscription';
                 $heroActionRoute = route('billing.portal');
                 $heroActionMethod = 'post';
             } elseif ($billingBlocked) {
                 $heroTone = 'border-red-200 bg-gradient-to-br from-red-50 via-white to-orange-50';
                 $heroBadgeTone = 'bg-red-100 text-red-800';
-                $heroTitle = 'You have used all free plan card slots';
-                $heroBody = 'Free includes 1 loyalty card. Existing cards keep working, but you cannot add another card until billing is updated.';
-                $heroActionLabel = 'Upgrade to Add Another Card';
+                $heroTitle = 'You have reached the free customer limit';
+                $heroBody = 'Free includes 1 store, 1 loyalty card, and up to 100 customers on that card. Existing customers keep working — upgrade to accept new joins.';
+                $heroActionLabel = 'Upgrade to Pro';
                 $heroActionRoute = route('billing.checkout');
                 $heroActionMethod = 'post';
             } else {
                 $heroTone = 'border-stone-200 bg-gradient-to-br from-stone-50 via-white to-brand-50';
                 $heroBadgeTone = 'bg-stone-200 text-stone-700';
                 $heroTitle = 'You are on the free plan';
-                $heroBody = 'Free includes 1 loyalty card. Upgrade when you want to run multiple cards under your store.';
+                $heroBody = 'Free includes 1 store, 1 loyalty card, and up to 100 customers on that card.';
                 $heroActionLabel = 'Upgrade to Pro';
                 $heroActionRoute = route('billing.checkout');
                 $heroActionMethod = 'post';
@@ -127,7 +133,7 @@
                         <p class="text-xs font-semibold uppercase tracking-[0.18em] text-stone-500">Quick answer</p>
                         <ul class="mt-2 space-y-2 text-sm text-stone-700">
                             <li>Existing customer cards keep working.</li>
-                            <li>{{ $stats['is_subscribed'] ? 'You can run up to 3 loyalty cards.' : ($billingBlocked ? 'You cannot add another loyalty card right now.' : 'You still have room for another loyalty card.') }}</li>
+                            <li>{{ $stats['is_subscribed'] ? "Up to {$proStores} stores and {$proCards} cards per store." : ($billingBlocked ? 'New customer joins are paused until you upgrade or free up capacity.' : 'You still have room to grow customers on the free plan.') }}</li>
                             <li>{{ $stats['is_subscribed'] ? 'You can change or cancel later from the billing portal.' : 'Upgrading does not reset or remove any customer data.' }}</li>
                         </ul>
                     </div>
@@ -135,68 +141,70 @@
             </div>
         </x-ui.card>
 
+        <x-billing.plan-comparison :stats="$stats" :current-plan="$stats['plan'] ?? 'free'" />
+
         <x-ui.card class="p-5 sm:p-6">
             <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                 <div>
                     <h3 class="text-lg font-semibold text-stone-900">Usage right now</h3>
                     <p class="mt-1 text-sm text-stone-600">
-                        {{ $stats['is_subscribed'] ? 'Your Pro plan supports up to 3 loyalty cards.' : 'Track how close you are to the free-plan loyalty card limit.' }}
+                        {{ $stats['is_subscribed'] ? 'Pro limits: stores, cards per store, and customers.' : 'Free limits: 1 store, 1 card, 100 customers per card.' }}
                     </p>
                 </div>
 
                 @if(!$stats['is_subscribed'])
                     <span class="inline-flex items-center rounded-full bg-stone-100 px-3 py-1 text-xs font-semibold text-stone-700">
-                        {{ $remainingCards }} card slot{{ $remainingCards === 1 ? '' : 's' }} remaining
+                        {{ max(0, (int) (($stats['stores_limit'] ?? 1) - ($stats['stores_count'] ?? 0))) }} store slot{{ max(0, (int) (($stats['stores_limit'] ?? 1) - ($stats['stores_count'] ?? 0))) === 1 ? '' : 's' }} left
                     </span>
                 @endif
             </div>
 
             <div class="mt-5 grid gap-4 lg:grid-cols-3">
                 <div class="rounded-2xl border border-stone-200 bg-stone-50/80 p-4">
-                    <p class="text-xs font-semibold uppercase tracking-[0.18em] text-stone-500">Current plan</p>
-                    <p class="mt-2 text-xl font-semibold text-stone-900">{{ $stats['is_subscribed'] ? 'Pro' : 'Free' }}</p>
-                    <p class="mt-1 text-sm text-stone-600">
-                        {{ $stats['is_subscribed'] ? 'Up to '.$stats['paid_limit'].' loyalty cards' : 'Up to '.$stats['limit'].' loyalty card' . ($stats['limit'] === 1 ? '' : 's') }}
+                    <p class="text-xs font-semibold uppercase tracking-[0.18em] text-stone-500">Stores</p>
+                    <p class="mt-2 text-xl font-semibold text-stone-900">
+                        {{ $storesUsed }}
+                        @if($storesLimit)
+                            <span class="text-base font-medium text-stone-500">/ {{ $storesLimit }}</span>
+                        @endif
                     </p>
+                    <p class="mt-1 text-sm text-stone-600">{{ ($stats['can_create_store'] ?? false) ? 'Room for another store' : 'Store limit reached' }}</p>
+                    <x-ui.usage-meter class="mt-3" :used="$storesUsed" :limit="$storesLimit" />
                 </div>
 
                 <div class="rounded-2xl border border-stone-200 bg-stone-50/80 p-4">
-                    <p class="text-xs font-semibold uppercase tracking-[0.18em] text-stone-500">Loyalty cards in use</p>
+                    <p class="text-xs font-semibold uppercase tracking-[0.18em] text-stone-500">Cards (primary store)</p>
                     <p class="mt-2 text-xl font-semibold text-stone-900">
-                        {{ $stats['programs_count'] }}
-                        @unless($stats['is_subscribed'])
-                            <span class="text-base font-medium text-stone-500">/ {{ $stats['limit'] }}</span>
-                        @endunless
+                        {{ $cardsUsed }}
+                        @if($cardsLimit)
+                            <span class="text-base font-medium text-stone-500">/ {{ $cardsLimit }}</span>
+                        @else
+                            <span class="text-base font-medium text-stone-500">/ store</span>
+                        @endif
                     </p>
-                    <p class="mt-1 text-sm text-stone-600">
-                        {{ $stats['grandfathered_programs_count'] > 0 ? $stats['grandfathered_programs_count'].' grandfathered excluded from limit' : 'Active default and additional cards count here' }}
-                    </p>
+                    <p class="mt-1 text-sm text-stone-600">{{ ($stats['can_create_program'] ?? false) ? 'Can add another card' : 'Card limit reached on this store' }}</p>
+                    <x-ui.usage-meter class="mt-3" :used="$cardsUsed" :limit="$cardsLimit" />
                 </div>
 
                 <div class="rounded-2xl border border-stone-200 bg-stone-50/80 p-4">
-                    <p class="text-xs font-semibold uppercase tracking-[0.18em] text-stone-500">Add-card status</p>
+                    <p class="text-xs font-semibold uppercase tracking-[0.18em] text-stone-500">Customers (primary card)</p>
                     <p class="mt-2 text-xl font-semibold text-stone-900">
-                        {{ $stats['is_subscribed'] ? 'Open' : ($billingBlocked ? 'Blocked' : 'Open') }}
+                        {{ $customersUsed }}
+                        @if($customersLimit)
+                            <span class="text-base font-medium text-stone-500">/ {{ $customersLimit }}</span>
+                        @else
+                            <span class="text-base font-medium text-stone-500"> unlimited</span>
+                        @endif
                     </p>
-                    <p class="mt-1 text-sm text-stone-600">
-                        {{ $stats['is_subscribed'] ? 'You can add cards until you reach the Pro limit.' : ($billingBlocked ? 'Upgrade or sync billing to add another loyalty card.' : 'You can still add another loyalty card today.') }}
-                    </p>
+                    <p class="mt-1 text-sm text-stone-600">{{ $stats['is_subscribed'] ? 'Unlimited new joins on Pro' : 'New joins blocked at 100 on Free' }}</p>
+                    <x-ui.usage-meter class="mt-3" :used="$customersUsed" :limit="$customersLimit" />
                 </div>
             </div>
 
-            @if(!$stats['is_subscribed'])
-                <div class="mt-5">
-                    <div class="mb-2 flex items-center justify-between text-sm">
-                        <span class="text-stone-600">Free-plan card capacity used</span>
-                        <span class="font-semibold text-stone-900">{{ $usagePercent }}%</span>
-                    </div>
-                    <div class="h-3 w-full rounded-full bg-stone-200">
-                        <div class="h-3 rounded-full bg-brand-600 transition-all duration-300" style="width: {{ $usagePercent }}%"></div>
-                    </div>
-                    <p class="mt-2 text-xs text-stone-500">
-                        Upgrading increases your limit to {{ $stats['paid_limit'] }} loyalty cards. Existing customers and loyalty history stay untouched.
-                    </p>
-                </div>
+            @if(!$stats['is_subscribed'] && ($billingBlocked || ($stats['stores_usage_percentage'] ?? 0) >= 80 || ($stats['programs_usage_percentage'] ?? 0) >= 80 || ($stats['customers_usage_percentage'] ?? 0) >= 80))
+                <p class="mt-5 text-sm text-stone-600">
+                    Pro unlocks {{ $proStores }} stores, {{ $proCards }} cards per store, and unlimited customers. Existing customers and cards are never removed.
+                </p>
             @endif
         </x-ui.card>
 

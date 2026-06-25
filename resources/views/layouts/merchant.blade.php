@@ -18,6 +18,11 @@
         @stack('scripts')
     </head>
     <body class="font-sans antialiased bg-stone-50">
+        @php
+            $navCardStore = Auth::user()?->stores()->whereNull('deleted_at')->orderBy('id')->first();
+            $storesNavActive = request()->routeIs('merchant.stores.*');
+            $cardsNavActive = request()->routeIs('merchant.stores.programs.*');
+        @endphp
         <div x-data="{ sidebarOpen: false }" class="min-h-screen flex">
             <!-- Sidebar -->
             <aside 
@@ -54,13 +59,24 @@
                         
                         <a 
                             href="{{ route('merchant.stores.index') }}" 
-                            class="flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors {{ request()->routeIs('merchant.stores.*') ? 'bg-brand-50 text-brand-700' : 'text-stone-700 hover:bg-stone-100' }}"
+                            class="flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors {{ $storesNavActive && ! $cardsNavActive ? 'bg-brand-50 text-brand-700' : 'text-stone-700 hover:bg-stone-100' }}"
                         >
-                            <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg class="w-5 h-5 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                             </svg>
-                            Stores
+                            <span>Stores</span>
                         </a>
+                        @if($navCardStore)
+                        <a
+                            href="{{ route('merchant.stores.programs.index', $navCardStore) }}"
+                            class="ml-11 flex items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors {{ $cardsNavActive ? 'bg-brand-50 text-brand-700' : 'text-stone-600 hover:bg-stone-100 hover:text-stone-900' }}"
+                        >
+                            <svg class="mr-3 h-4 w-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7h16M4 12h16M4 17h10M6 5h12a2 2 0 012 2v10a2 2 0 01-2 2H6a2 2 0 01-2-2V7a2 2 0 012-2z" />
+                            </svg>
+                            Cards
+                        </a>
+                        @endif
                         
                         <a 
                             href="{{ route('merchant.customers.index') }}" 

@@ -1,5 +1,7 @@
 <?php
 
+use App\Models\Customer;
+use App\Models\LoyaltyAccount;
 use App\Models\LoyaltyProgram;
 use App\Models\Store;
 use App\Models\User;
@@ -37,44 +39,130 @@ function makeProgram(Store $store, array $attributes = []): LoyaltyProgram
     return $program;
 }
 
-test('free user with only the default card cannot create another card', function () {
-    $user = User::factory()->create();
-    makeStore($user); // store factory creates the default program
-
-    $service = new UsageService();
-    expect($service->canCreateProgram($user))->toBeFalse();
-    expect($service->programLimitForUser($user))->toBe(1);
-});
-
-test('free user with no stores can create a first card', function () {
-    $user = User::factory()->create();
-
-    $service = new UsageService();
-    expect($service->canCreateProgram($user))->toBeTrue();
-});
-
-test('active subscriber can create up to three cards', function () {
-    $user = User::factory()->create(['stripe_id' => 'sub_123']);
-    $store = makeStore($user);
+function makeSubscriber(User $user): void
+{
+    $user->forceFill(['stripe_id' => 'cus_'.fake()->uuid()])->save();
 
     Subscription::create([
         'user_id' => $user->id,
         'name' => 'default',
-        'stripe_id' => 'si_123',
+        'stripe_id' => 'sub_'.fake()->uuid(),
         'stripe_status' => 'active',
         'quantity' => 1,
     ]);
+}
 
-    makeProgram($store);
-    makeProgram($store);
+test('free user with only the default card cannot create another card on the same store', function () {
+    $user = User::factory()->create();
+    $store = makeStore($user);
 
-    $service = new UsageService();
-    expect($service->canCreateProgram($user))->toBeFalse();
-    expect($service->programLimitForUser($user))->toBe(3);
-    expect($service->getUsageStats($user)['is_subscribed'])->toBeTrue();
+    $service = new UsageService;
+    expect($service->canCreateProgram($user, $store))->toBeFalse();
+    expect($service->canCreateStore($user))->toBeFalse();
+    expect($service->programsPerStoreLimitForUser($user))->toBe(1);
 });
 
-test('grandfathered loyalty cards are excluded after cancellation', function () {
+test('free user with no stores can create a first store', function () {
+    $user = User::factory()->create();
+
+    $service = new UsageService;
+    expect($service->canCreateStore($user))->toBeTrue();
+    expect($service->canCreateProgram($user))->toBeTrue();
+});
+
+test('active subscriber can create multiple cards per store up to the pro cap', function () {
+    $user = User::factory()->create();
+    $store = makeStore($user);
+    makeSubscriber($user);
+
+    for ($i = 0; $i < 4; $i++) {
+        makeProgram($store);
+    }
+
+    $service = new UsageService;
+    expect($service->programsCountForStore($store))->toBe(5);
+    expect($service->canCreateProgram($user, $store))->toBeFalse();
+    expect($service->programsPerStoreLimitForUser($user))->toBe(5);
+});
+
+test('active subscriber can create up to three stores', function () {
+    $user = User::factory()->create();
+    makeSubscriber($user);
+
+    makeStore($user);
+    makeStore($user);
+    makeStore($user);
+
+    $service = new UsageService;
+    expect($service->storesCountForUser($user))->toBe(3);
+    expect($service->canCreateStore($user))->toBeFalse();
+    expect($service->storesLimitForUser($user))->toBe(3);
+});
+
+test('free plan blocks new customer joins at one hundred per program', function () {
+    $user = User::factory()->create();
+    $store = makeStore($user);
+    $program = $store->loyaltyPrograms()->first();
+
+    for ($i = 0; $i < 100; $i++) {
+        LoyaltyAccount::create([
+            'store_id' => $store->id,
+            'loyalty_program_id' => $program->id,
+            'customer_id' => Customer::factory()->create()->id,
+        ]);
+    }
+
+    $service = new UsageService;
+    expect($service->customersCountForProgram($program))->toBe(100);
+    expect($service->canAcceptNewCustomer($program))->toBeFalse();
+});
+
+test('pro plan allows unlimited new customers per program', function () {
+    $user = User::factory()->create();
+    makeSubscriber($user);
+    $store = makeStore($user);
+    $program = $store->loyaltyPrograms()->first();
+
+    for ($i = 0; $i < 120; $i++) {
+        LoyaltyAccount::create([
+            'store_id' => $store->id,
+            'loyalty_program_id' => $program->id,
+            'customer_id' => Customer::factory()->create()->id,
+        ]);
+    }
+
+    $service = new UsageService;
+    expect($service->canAcceptNewCustomer($program))->toBeTrue();
+    expect($service->customersPerProgramLimitForUser($user))->toBeNull();
+});
+
+test('get usage stats exposes customer join capacity', function () {
+    $user = User::factory()->create();
+    $store = Store::factory()->create(['user_id' => $user->id]);
+    $program = $store->loyaltyPrograms()->first();
+
+    $service = new UsageService;
+    $stats = $service->getUsageStats($user);
+
+    expect($stats)->toHaveKey('can_accept_new_customer')
+        ->and($stats['can_accept_new_customer'])->toBeTrue()
+        ->and($stats['can_create_store'])->toBeFalse()
+        ->and($stats['can_create_program'])->toBeFalse();
+
+    for ($i = 0; $i < 100; $i++) {
+        LoyaltyAccount::create([
+            'store_id' => $store->id,
+            'loyalty_program_id' => $program->id,
+            'customer_id' => Customer::factory()->create()->id,
+        ]);
+    }
+
+    $statsAtLimit = $service->getUsageStats($user);
+
+    expect($statsAtLimit['can_accept_new_customer'])->toBeFalse();
+});
+
+test('grandfathered loyalty cards remain after cancellation but new cards are gated on free limits', function () {
     $user = User::factory()->create(['stripe_id' => 'sub_123']);
     $store = makeStore($user);
 
@@ -100,8 +188,7 @@ test('grandfathered loyalty cards are excluded after cancellation', function () 
         'updated_at' => $endsAt->copy()->addDay(),
     ]);
 
-    $service = new UsageService();
+    $service = new UsageService;
     expect($service->grandfatheredProgramsCount($user))->toBe(1);
-    expect($service->programsCountForUser($user, includeGrandfathered: false))->toBe(2);
-    expect($service->canCreateProgram($user))->toBeFalse();
+    expect($service->canCreateProgram($user, $store))->toBeFalse();
 });

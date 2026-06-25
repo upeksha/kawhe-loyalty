@@ -5,6 +5,7 @@ use App\Models\Customer;
 use App\Models\LoyaltyAccount;
 use App\Models\Store;
 use App\Models\User;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Queue;
 use Laravel\Cashier\Subscription;
 
@@ -28,20 +29,34 @@ test('onboarding wizard can create and advance a first store with safe defaults'
         ->and($store->registration_form_config['email']['enabled'])->toBeTrue()
         ->and($store->onboarding_step)->toBe(Store::ONBOARDING_STEP_CARD_DESIGN)
         ->and($defaultProgram)->not->toBeNull()
-        ->and($defaultProgram->slug)->toBe($store->slug);
+        ->and($defaultProgram->slug)->toBe($store->slug)
+        ->and($defaultProgram->reward_target)->toBe(8)
+        ->and($defaultProgram->reward_title)->toBe('Free flat white');
 
     $this->actingAs($user)
         ->post(route('merchant.onboarding.wizard.card-design.store'), [
             'brand_color' => '#123456',
             'background_color' => '#654321',
+            'logo' => UploadedFile::fake()->image('logo.png', 200, 200),
+            'pass_logo' => UploadedFile::fake()->image('pass-logo.png', 160, 50),
+            'pass_hero_image' => UploadedFile::fake()->image('pass-hero.png', 640, 180),
         ])
         ->assertRedirect(route('merchant.onboarding.wizard.customer-form'));
 
     $store->refresh();
+    $defaultProgram->refresh();
 
     expect($store->brand_color)->toBe('#123456')
         ->and($store->background_color)->toBe('#654321')
-        ->and($store->onboarding_step)->toBe(Store::ONBOARDING_STEP_CUSTOMER_FORM);
+        ->and($store->logo_path)->not->toBeNull()
+        ->and($store->pass_logo_path)->not->toBeNull()
+        ->and($store->pass_hero_image_path)->not->toBeNull()
+        ->and($store->onboarding_step)->toBe(Store::ONBOARDING_STEP_CUSTOMER_FORM)
+        ->and($defaultProgram->brand_color)->toBe('#123456')
+        ->and($defaultProgram->background_color)->toBe('#654321')
+        ->and($defaultProgram->logo_path)->not->toBeNull()
+        ->and($defaultProgram->pass_logo_path)->not->toBeNull()
+        ->and($defaultProgram->pass_hero_image_path)->not->toBeNull();
 
     $this->actingAs($user)
         ->post(route('merchant.onboarding.wizard.customer-form.store'), [
@@ -53,15 +68,39 @@ test('onboarding wizard can create and advance a first store with safe defaults'
         ->assertRedirect(route('merchant.onboarding.wizard.card-ready'));
 
     $store->refresh();
+    $defaultProgram->refresh();
 
     expect($store->registration_form_config['first_name']['enabled'])->toBeTrue()
         ->and($store->registration_form_config['first_name']['required'])->toBeTrue()
         ->and($store->registration_form_config['phone']['enabled'])->toBeTrue()
         ->and($store->registration_form_config['phone']['required'])->toBeFalse()
-        ->and($store->onboarding_step)->toBe(Store::ONBOARDING_STEP_CARD_READY);
+        ->and($store->onboarding_step)->toBe(Store::ONBOARDING_STEP_CARD_READY)
+        ->and($defaultProgram->registration_form_config['first_name']['enabled'])->toBeTrue()
+        ->and($defaultProgram->registration_form_config['phone']['enabled'])->toBeTrue();
 });
 
-test('create store applies safe brand defaults when merchant skips branding fields', function () {
+test('onboarding card design requires store logo and wallet assets', function () {
+    $user = User::factory()->create();
+
+    $this->actingAs($user)
+        ->post(route('merchant.onboarding.wizard.store-basics.store'), [
+            'name' => 'Branding Test Cafe',
+            'reward_target' => 8,
+            'reward_title' => 'Free coffee',
+        ]);
+
+    $response = $this->actingAs($user)
+        ->from(route('merchant.onboarding.wizard.card-design'))
+        ->post(route('merchant.onboarding.wizard.card-design.store'), [
+            'brand_color' => '#123456',
+            'background_color' => '#654321',
+        ]);
+
+    $response->assertRedirect(route('merchant.onboarding.wizard.card-design'));
+    $response->assertSessionHasErrors(['logo', 'pass_logo', 'pass_hero_image']);
+});
+
+test('create store requires branding assets and saves them on the default card', function () {
     $user = User::factory()->create(['stripe_id' => 'sub_123']);
     Store::factory()->create(['user_id' => $user->id]);
     Subscription::create([
@@ -73,21 +112,46 @@ test('create store applies safe brand defaults when merchant skips branding fiel
     ]);
 
     $this->actingAs($user)
+        ->from(route('merchant.stores.create'))
         ->post(route('merchant.stores.store'), [
             'name' => 'Second Store',
             'address' => '22 Market Street',
             'reward_target' => 9,
             'reward_title' => 'Free pastry',
+            'brand_color' => '#123456',
+            'background_color' => '#654321',
+        ])
+        ->assertRedirect(route('merchant.stores.create'))
+        ->assertSessionHasErrors(['logo', 'pass_logo', 'pass_hero_image']);
+
+    $this->actingAs($user)
+        ->post(route('merchant.stores.store'), [
+            'name' => 'Second Store',
+            'address' => '22 Market Street',
+            'reward_target' => 9,
+            'reward_title' => 'Free pastry',
+            'brand_color' => '#123456',
+            'background_color' => '#654321',
+            'logo' => UploadedFile::fake()->image('logo.png', 200, 200),
+            'pass_logo' => UploadedFile::fake()->image('pass-logo.png', 160, 50),
+            'pass_hero_image' => UploadedFile::fake()->image('pass-hero.png', 640, 180),
         ])
         ->assertRedirect(route('merchant.stores.index'));
 
     $store = Store::where('user_id', $user->id)
         ->where('name', 'Second Store')
         ->firstOrFail();
+    $program = $store->resolvedDefaultProgram();
 
-    expect($store->brand_color)->toBe(Store::DEFAULT_BRAND_COLOR)
-        ->and($store->background_color)->toBe(Store::DEFAULT_BACKGROUND_COLOR)
-        ->and($store->registration_form_config['email']['required'])->toBeTrue();
+    expect($store->brand_color)->toBe('#123456')
+        ->and($store->background_color)->toBe('#654321')
+        ->and($store->logo_path)->not->toBeNull()
+        ->and($store->pass_logo_path)->not->toBeNull()
+        ->and($store->pass_hero_image_path)->not->toBeNull()
+        ->and($program)->not->toBeNull()
+        ->and($program->logo_path)->not->toBeNull()
+        ->and($program->pass_logo_path)->not->toBeNull()
+        ->and($program->pass_hero_image_path)->not->toBeNull();
 });
 
 test('customer can join and repeated join by same email returns existing card', function () {

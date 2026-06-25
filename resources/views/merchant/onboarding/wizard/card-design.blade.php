@@ -3,14 +3,14 @@
     $bgColor = old('background_color', $store->background_color ?? '#1F2937');
     $inputClass = 'block w-full rounded-xl border border-stone-300 bg-white px-4 py-2.5 text-sm text-stone-900 placeholder-stone-400 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500';
 @endphp
-<x-merchant-layout>
+<x-onboarding-layout>
     <x-slot name="header">Card design</x-slot>
 
     <x-onboarding-step-layout
         :step="2"
-        :totalSteps="5"
+        :totalSteps="4"
         title="Make it yours"
-        subtitle="Choose branding that stays readable across the join page, wallet passes, and the customer card. Optional wallet assets help polish the result, but safe fallbacks are built in."
+        subtitle="Upload your store logo and wallet images, and choose colors that stay readable on the join page, customer card, and Apple/Google Wallet passes."
         :backUrl="route('merchant.onboarding.wizard.store-basics')"
     >
         <form method="POST" action="{{ route('merchant.onboarding.wizard.card-design.store') }}" enctype="multipart/form-data" id="card-design-form"
@@ -52,27 +52,34 @@
                 const darker = Math.min(l1, l2);
                 return (lighter + 0.05) / (darker + 0.05);
             },
+            get hasRequiredAssets() {
+                return Boolean(this.logoPreview && this.passLogoPreview && this.passHeroPreview);
+            },
             get launchScore() {
                 let score = 0;
                 if (this.brandColor) score++;
                 if (this.bgColor) score++;
                 if (this.logoPreview) score++;
-                if (this.passLogoPreview || this.passHeroPreview) score++;
+                if (this.passLogoPreview) score++;
+                if (this.passHeroPreview) score++;
                 if (!this.hasLowContrastPreview && !this.hasVeryLightBackground) score++;
                 return score;
             },
             get launchLabel() {
-                if (this.launchScore >= 5) return 'Good to launch';
-                if (this.launchScore >= 3) return 'Launchable, but could be improved';
+                if (this.launchScore >= 6) return 'Good to launch';
+                if (this.launchScore >= 4) return 'Almost ready';
                 return 'Needs review';
             },
             get launchTone() {
-                if (this.launchScore >= 5) return 'bg-emerald-100 text-emerald-700';
-                if (this.launchScore >= 3) return 'bg-amber-100 text-amber-700';
+                if (this.launchScore >= 6) return 'bg-emerald-100 text-emerald-700';
+                if (this.launchScore >= 4) return 'bg-amber-100 text-amber-700';
                 return 'bg-accent-100 text-accent-700';
             },
             get hasLowContrastPreview() {
-                return this.contrastRatio(this.brandColor, this.bgColor) < 2.4;
+                return this.contrastRatio(this.brandColor, this.bgColor) < 3;
+            },
+            get hasBlockedContrast() {
+                return this.contrastRatio(this.brandColor, this.bgColor) < 2;
             },
             get hasVeryLightBackground() {
                 return this.luminance(this.bgColor) > 0.9;
@@ -97,8 +104,8 @@
                             <div>
                                 <label for="brand_color" class="block text-sm font-medium text-stone-700 mb-1.5">Brand color</label>
                                 <div class="flex gap-3 mt-1.5">
-                                    <input type="color" id="brand_color" name="brand_color" x-ref="brandColor" value="{{ $brandColor }}" class="color-swatch-input h-11 w-11 rounded-full border-2 border-stone-300 cursor-pointer flex-shrink-0 overflow-hidden p-0 bg-transparent appearance-none" />
-                                    <input type="text" id="brand_color_text" x-ref="brandColorText" value="{{ $brandColor }}" placeholder="#0EA5E9" aria-label="Brand color hex value" aria-describedby="brand_color_note" autocapitalize="off" spellcheck="false" class="{{ $inputClass }}" />
+                                    <input type="color" id="brand_color" name="brand_color" x-ref="brandColor" value="{{ $brandColor }}" class="color-swatch-input h-11 w-11 rounded-full border-2 cursor-pointer flex-shrink-0 overflow-hidden p-0 bg-transparent appearance-none" x-bind:class="hasBlockedContrast ? 'border-red-300' : 'border-stone-300'" />
+                                    <input type="text" id="brand_color_text" x-ref="brandColorText" value="{{ $brandColor }}" placeholder="#0EA5E9" aria-label="Brand color hex value" aria-describedby="brand_color_note" autocapitalize="off" spellcheck="false" class="{{ $inputClass }}" x-bind:class="hasBlockedContrast ? '!border-red-300 !ring-red-100' : ''" />
                                 </div>
                                 <x-onboarding-helper-note id="brand_color_note">Used for buttons and accents on the customer card.</x-onboarding-helper-note>
                                 <x-input-error :messages="$errors->get('brand_color')" class="mt-2" />
@@ -106,23 +113,33 @@
                             <div>
                                 <label for="background_color" class="block text-sm font-medium text-stone-700 mb-1.5">Background color</label>
                                 <div class="flex gap-3 mt-1.5">
-                                    <input type="color" id="background_color" name="background_color" x-ref="bgColor" value="{{ $bgColor }}" class="color-swatch-input h-11 w-11 rounded-full border-2 border-stone-300 cursor-pointer flex-shrink-0 overflow-hidden p-0 bg-transparent appearance-none" />
-                                    <input type="text" id="background_color_text" x-ref="bgColorText" value="{{ $bgColor }}" placeholder="#1F2937" aria-label="Background color hex value" aria-describedby="background_color_note" autocapitalize="off" spellcheck="false" class="{{ $inputClass }}" />
+                                    <input type="color" id="background_color" name="background_color" x-ref="bgColor" value="{{ $bgColor }}" class="color-swatch-input h-11 w-11 rounded-full border-2 cursor-pointer flex-shrink-0 overflow-hidden p-0 bg-transparent appearance-none" x-bind:class="hasBlockedContrast ? 'border-red-300' : 'border-stone-300'" />
+                                    <input type="text" id="background_color_text" x-ref="bgColorText" value="{{ $bgColor }}" placeholder="#1F2937" aria-label="Background color hex value" aria-describedby="background_color_note" autocapitalize="off" spellcheck="false" class="{{ $inputClass }}" x-bind:class="hasBlockedContrast ? '!border-red-300 !ring-red-100' : ''" />
                                 </div>
                                 <x-onboarding-helper-note id="background_color_note">Background of the join page and card.</x-onboarding-helper-note>
                                 <x-input-error :messages="$errors->get('background_color')" class="mt-2" />
                             </div>
-                            <div x-show="hasLowContrastPreview || hasVeryLightBackground" x-cloak class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-                                <p class="font-semibold">Preview warning</p>
-                                <p class="mt-1 leading-relaxed">
-                                    These colors are very close together or very light, so wallet and join screens may look washed out. The card will still work, but merchants usually get a clearer result with more contrast between accent and background colors.
-                                </p>
+                            <div x-show="hasBlockedContrast" x-cloak>
+                                <x-ui.alert variant="danger">
+                                    <p class="font-semibold">Colors need more contrast</p>
+                                    <p class="mt-1 leading-relaxed">
+                                        Your brand and background colors are too close together, so the join page and saved card can become unreadable. Use a darker background, a brighter accent, or increase the contrast between them before continuing.
+                                    </p>
+                                </x-ui.alert>
+                            </div>
+                            <div x-show="!hasBlockedContrast && (hasLowContrastPreview || hasVeryLightBackground)" x-cloak>
+                                <x-ui.alert variant="warning">
+                                    <p class="font-semibold">Preview warning</p>
+                                    <p class="mt-1 leading-relaxed">
+                                        This combination will save, but it may still look washed out on the join page or wallet handoff. The safest fix is a darker background and a more distinct accent color.
+                                    </p>
+                                </x-ui.alert>
                             </div>
                             <div class="rounded-xl border border-stone-200 bg-stone-50/80 p-4">
                                 <p class="text-sm font-semibold text-stone-800">Recommended approach</p>
                                 <ul class="mt-2 space-y-2 text-sm leading-relaxed text-stone-600">
                                     <li>Use a darker background with a brighter accent for the safest wallet and join-page readability.</li>
-                                    <li>If you skip wallet-specific assets, Kawhe falls back to your main logo and clean branded backgrounds.</li>
+                                    <li>Upload a square store logo plus wallet pass logo and hero image before continuing.</li>
                                     <li>Choose colors customers can recognise quickly from the counter or poster, not just on a laptop screen.</li>
                                 </ul>
                             </div>
@@ -131,7 +148,7 @@
 
                     <x-onboarding-form-section title="Store branding">
                         <div>
-                            <label for="logo" class="block text-sm font-medium text-stone-700 mb-1.5">Store logo <span class="text-stone-400 font-normal">(optional)</span></label>
+                            <label for="logo" class="block text-sm font-medium text-stone-700 mb-1.5">Store logo <span class="text-red-500">*</span></label>
                             <div class="mt-2 flex flex-col sm:flex-row sm:items-start gap-4">
                                 <div x-show="logoPreview" class="flex-shrink-0">
                                     <p class="text-xs font-medium text-stone-500 mb-1.5">Preview</p>
@@ -150,12 +167,11 @@
                         </div>
                     </x-onboarding-form-section>
 
-                    <x-onboarding-form-section title="Wallet assets" class="relative">
-                        <span class="absolute -top-1 right-0 text-xs font-medium text-stone-500 bg-stone-100 px-2.5 py-1 rounded-lg">Optional</span>
-                        <p class="text-sm text-stone-600 mb-4">For Apple Wallet and Google Wallet passes. Skip them for now if you want. Kawhe will use safer built-in fallbacks until you upload polished wallet-specific assets.</p>
+                    <x-onboarding-form-section title="Wallet assets">
+                        <p class="text-sm text-stone-600 mb-4">Required for Apple Wallet and Google Wallet passes. Upload both images so customers see a polished card when they save it.</p>
                         <div class="space-y-5">
                             <div>
-                                <label for="pass_logo" class="block text-sm font-medium text-stone-700 mb-1.5">Pass logo</label>
+                                <label for="pass_logo" class="block text-sm font-medium text-stone-700 mb-1.5">Pass logo <span class="text-red-500">*</span></label>
                                 <div class="mt-2 flex flex-col sm:flex-row sm:items-start gap-4">
                                     <div x-show="passLogoPreview" class="flex-shrink-0">
                                         <p class="text-xs font-medium text-stone-500 mb-1.5">Preview</p>
@@ -170,7 +186,7 @@
                                 <x-input-error :messages="$errors->get('pass_logo')" class="mt-2" />
                             </div>
                             <div>
-                                <label for="pass_hero_image" class="block text-sm font-medium text-stone-700 mb-1.5">Pass hero image</label>
+                                <label for="pass_hero_image" class="block text-sm font-medium text-stone-700 mb-1.5">Pass hero image <span class="text-red-500">*</span></label>
                                 <div class="mt-2 flex flex-col sm:flex-row sm:items-start gap-4">
                                     <div x-show="passHeroPreview" class="flex-shrink-0">
                                         <p class="text-xs font-medium text-stone-500 mb-1.5">Preview</p>
@@ -206,40 +222,50 @@
                                     <p class="text-xs font-semibold uppercase tracking-wider text-stone-500">Launch quality</p>
                                     <p class="mt-1 text-sm text-stone-600">A quick read on whether this card will feel polished before customers save it.</p>
                                 </div>
-                                <span class="inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold" :class="launchTone" x-text="launchLabel"></span>
+                                <span class="inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold" x-bind:class="launchTone" x-text="launchLabel"></span>
                             </div>
-                            <p class="mt-3 text-xs text-stone-500" x-text="launchScore + ' of 5 launch signals are in a strong place.'"></p>
+                            <p class="mt-3 text-xs text-stone-500" x-text="launchScore + ' of 6 launch signals are in a strong place.'"></p>
                             <p class="mt-4 text-xs font-semibold uppercase tracking-wider text-stone-500">Setup status</p>
-                            <ul class="mt-4 space-y-3 text-sm">
-                                <li class="flex items-start justify-between gap-3">
-                                    <span class="text-stone-700">Brand accent chosen</span>
-                                    <span class="font-medium" :class="brandColor ? 'text-emerald-700' : 'text-stone-500'" x-text="brandColor ? 'Ready' : 'Needed'"></span>
-                                </li>
-                                <li class="flex items-start justify-between gap-3">
-                                    <span class="text-stone-700">Background chosen</span>
-                                    <span class="font-medium" :class="bgColor ? 'text-emerald-700' : 'text-stone-500'" x-text="bgColor ? 'Ready' : 'Needed'"></span>
-                                </li>
-                                <li class="flex items-start justify-between gap-3">
-                                    <span class="text-stone-700">Store logo</span>
-                                    <span class="font-medium" :class="logoPreview ? 'text-emerald-700' : 'text-amber-700'" x-text="logoPreview ? 'Ready' : 'Optional'"></span>
-                                </li>
-                                <li class="flex items-start justify-between gap-3">
-                                    <span class="text-stone-700">Wallet pass assets</span>
-                                    <span class="font-medium" :class="(passLogoPreview || passHeroPreview) ? 'text-emerald-700' : 'text-amber-700'" x-text="(passLogoPreview || passHeroPreview) ? 'Ready' : 'Optional'"></span>
-                                </li>
-                                <li class="flex items-start justify-between gap-3">
-                                    <span class="text-stone-700">Visual contrast</span>
-                                    <span class="font-medium" :class="(hasLowContrastPreview || hasVeryLightBackground) ? 'text-amber-700' : 'text-emerald-700'" x-text="(hasLowContrastPreview || hasVeryLightBackground) ? 'Review' : 'Ready'"></span>
-                                </li>
-                            </ul>
-                            <p class="mt-4 text-xs leading-relaxed text-stone-500">This does not block saving. It is here to help merchants avoid weak branding combinations before customers see the card.</p>
+                            <div class="mt-4 space-y-3">
+                                <x-ui.readiness-row label="Brand accent chosen">
+                                    <x-slot name="status">
+                                        <span class="font-medium" x-bind:class="brandColor ? 'text-emerald-700' : 'text-stone-500'" x-text="brandColor ? 'Ready' : 'Needed'"></span>
+                                    </x-slot>
+                                </x-ui.readiness-row>
+                                <x-ui.readiness-row label="Background chosen">
+                                    <x-slot name="status">
+                                        <span class="font-medium" x-bind:class="bgColor ? 'text-emerald-700' : 'text-stone-500'" x-text="bgColor ? 'Ready' : 'Needed'"></span>
+                                    </x-slot>
+                                </x-ui.readiness-row>
+                                <x-ui.readiness-row label="Store logo">
+                                    <x-slot name="status">
+                                        <span class="font-medium" x-bind:class="logoPreview ? 'text-emerald-700' : 'text-stone-500'" x-text="logoPreview ? 'Ready' : 'Needed'"></span>
+                                    </x-slot>
+                                </x-ui.readiness-row>
+                                <x-ui.readiness-row label="Pass logo">
+                                    <x-slot name="status">
+                                        <span class="font-medium" x-bind:class="passLogoPreview ? 'text-emerald-700' : 'text-stone-500'" x-text="passLogoPreview ? 'Ready' : 'Needed'"></span>
+                                    </x-slot>
+                                </x-ui.readiness-row>
+                                <x-ui.readiness-row label="Pass hero image">
+                                    <x-slot name="status">
+                                        <span class="font-medium" x-bind:class="passHeroPreview ? 'text-emerald-700' : 'text-stone-500'" x-text="passHeroPreview ? 'Ready' : 'Needed'"></span>
+                                    </x-slot>
+                                </x-ui.readiness-row>
+                                <x-ui.readiness-row label="Visual contrast">
+                                    <x-slot name="status">
+                                        <span class="font-medium" x-bind:class="hasBlockedContrast ? 'text-red-700' : ((hasLowContrastPreview || hasVeryLightBackground) ? 'text-amber-700' : 'text-emerald-700')" x-text="hasBlockedContrast ? 'Blocked' : ((hasLowContrastPreview || hasVeryLightBackground) ? 'Review' : 'Ready')"></span>
+                                    </x-slot>
+                                </x-ui.readiness-row>
+                            </div>
+                            <p class="mt-4 text-xs leading-relaxed text-stone-500">Unreadable color combinations are blocked. Borderline combinations still save, but we warn before customers see the card.</p>
                         </div>
                         <div class="mt-4 rounded-2xl border border-stone-200 bg-white p-5 shadow-sm">
                             <p class="text-sm font-semibold text-stone-800">Asset guidance</p>
                             <ul class="mt-3 space-y-2 text-sm leading-relaxed text-stone-600">
                                 <li>Use a clean logo with plenty of empty space so it still reads at small wallet sizes.</li>
                                 <li>Pick a hero image with one strong subject or texture, not a collage of text-heavy elements.</li>
-                                <li>If you are short on time, upload the logo first. Kawhe can still generate a solid first version of the pass.</li>
+                                <li>Upload all three images before continuing — they power the join page, wallet pass, and poster.</li>
                             </ul>
                         </div>
                         @if($store->pass_logo_path || $store->pass_hero_image_path)
@@ -262,8 +288,8 @@
                         Back
                     </button>
                 </form>
-                <x-ui.button type="submit" form="card-design-form" variant="primary" size="lg" class="w-full sm:w-auto rounded-xl min-w-[140px]">Continue</x-ui.button>
+                <x-ui.button type="submit" form="card-design-form" variant="primary" size="lg" class="w-full sm:w-auto rounded-xl min-w-[140px]" x-bind:disabled="hasBlockedContrast || !hasRequiredAssets" x-bind:aria-disabled="(hasBlockedContrast || !hasRequiredAssets) ? 'true' : 'false'">Continue</x-ui.button>
             </div>
         </x-slot>
     </x-onboarding-step-layout>
-</x-merchant-layout>
+</x-onboarding-layout>

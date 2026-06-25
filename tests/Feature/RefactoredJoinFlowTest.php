@@ -1,11 +1,11 @@
 <?php
 
-use App\Models\Store;
-use App\Models\User;
 use App\Models\Customer;
 use App\Models\LoyaltyAccount;
-use Illuminate\Support\Facades\Notification;
+use App\Models\Store;
+use App\Models\User;
 use App\Notifications\VerifyLoyaltyAccount;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\URL;
 
 test('short join URL /j/{code} redirects to join flow', function () {
@@ -32,6 +32,8 @@ test('landing page validates slug and token', function () {
     // Invalid token
     $response = $this->get(route('join.index', ['slug' => $store->slug, 't' => 'invalid']));
     $response->assertNotFound();
+    $response->assertViewIs('join.invalid');
+    $response->assertSee('This link isn’t valid');
 });
 
 test('new join flow still works and redirects to card', function () {
@@ -59,7 +61,7 @@ test('returning lookup is store-scoped and redirects directly', function () {
         'store_id' => $storeA->id,
         'loyalty_program_id' => $storeA->resolvedDefaultProgram()->id,
         'customer_id' => $customer->id,
-        'public_token' => 'token-a'
+        'public_token' => 'token-a',
     ]);
 
     // Try lookup in Store B (should not find Store A card)
@@ -73,6 +75,39 @@ test('returning lookup is store-scoped and redirects directly', function () {
         'email' => 'returning@example.com',
     ]);
     $response->assertRedirect(route('card.show', ['public_token' => 'token-a']));
+});
+
+test('returning lookup supports phone when phone field is enabled on the card', function () {
+    $merchant = User::factory()->create();
+    $store = Store::factory()->create(['user_id' => $merchant->id]);
+    $program = $store->resolvedDefaultProgram();
+    $program->update([
+        'registration_form_config' => [
+            'email' => ['enabled' => true, 'required' => true],
+            'first_name' => ['enabled' => false, 'required' => false],
+            'last_name' => ['enabled' => false, 'required' => false],
+            'phone' => ['enabled' => true, 'required' => false],
+            'birthday' => ['enabled' => false, 'required' => false],
+        ],
+    ]);
+
+    $customer = Customer::factory()->create([
+        'email' => null,
+        'phone' => '0412345678',
+    ]);
+
+    LoyaltyAccount::factory()->create([
+        'store_id' => $store->id,
+        'loyalty_program_id' => $program->id,
+        'customer_id' => $customer->id,
+        'public_token' => 'phone-token',
+    ]);
+
+    $response = $this->post(route('join.lookup', ['slug' => $program->slug, 't' => $program->join_token]), [
+        'phone' => '0412345678',
+    ]);
+
+    $response->assertRedirect(route('card.show', ['public_token' => 'phone-token']));
 });
 
 test('verification flow sends email and marks as verified', function () {
@@ -95,7 +130,7 @@ test('verification flow sends email and marks as verified', function () {
     $response = $this->get($url);
     $response->assertRedirect(route('card.show', ['public_token' => $account->public_token]));
     $response->assertSessionHas('verified_success');
-    
+
     expect($account->fresh()->verified_at)->not->toBeNull();
 });
 

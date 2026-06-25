@@ -25,6 +25,7 @@ class Store extends Model
     {
         if ($user && $user->isSuperAdmin()) {
             $query = static::query();
+
             return $includeArchived ? $query->withTrashed() : $query;
         }
 
@@ -45,10 +46,15 @@ class Store extends Model
 
     /** Onboarding wizard step: card_design | customer_form | card_ready | continue_trial. Null = completed or legacy. */
     public const ONBOARDING_STEP_CARD_DESIGN = 'card_design';
+
     public const ONBOARDING_STEP_CUSTOMER_FORM = 'customer_form';
+
     public const ONBOARDING_STEP_CARD_READY = 'card_ready';
+
     public const ONBOARDING_STEP_CONTINUE_TRIAL = 'continue_trial';
+
     public const DEFAULT_BRAND_COLOR = '#0EA5E9';
+
     public const DEFAULT_BACKGROUND_COLOR = '#1F2937';
 
     protected $fillable = [
@@ -83,7 +89,7 @@ class Store extends Model
 
         static::creating(function ($store) {
             if (empty($store->slug)) {
-                $store->slug = Str::slug($store->name) . '-' . Str::random(6);
+                $store->slug = Str::slug($store->name).'-'.Str::random(6);
             }
             if (empty($store->join_token)) {
                 $store->join_token = Str::random(32);
@@ -127,6 +133,7 @@ class Store extends Model
                 $code .= $alphabet[random_int(0, $len - 1)];
             }
         } while (static::where('join_short_code', $code)->exists());
+
         return $code;
     }
 
@@ -138,6 +145,7 @@ class Store extends Model
         if (! empty($this->join_short_code)) {
             return route('join.short', ['code' => $this->join_short_code]);
         }
+
         return route('join.index', ['slug' => $this->slug, 't' => $this->join_token]);
     }
 
@@ -161,6 +169,7 @@ class Store extends Model
     public function getRegistrationFormConfigAttribute($value): array
     {
         $decoded = is_array($value) ? $value : (is_string($value) ? json_decode($value, true) : []);
+
         return array_merge(self::defaultRegistrationFormConfig(), $decoded ?: []);
     }
 
@@ -248,6 +257,38 @@ class Store extends Model
 
             return $program;
         });
+    }
+
+    /**
+     * Push store-level onboarding fields to the default loyalty program so
+     * customer join pages reflect what the merchant configured in the wizard.
+     */
+    public function syncDefaultProgramFromStore(): ?LoyaltyProgram
+    {
+        if (! $this->exists) {
+            return null;
+        }
+
+        $program = $this->resolvedDefaultProgram();
+
+        if (! $program) {
+            return null;
+        }
+
+        $program->forceFill([
+            'name' => $this->reward_title ?: ($this->name.' Loyalty Card'),
+            'reward_target' => $this->reward_target,
+            'reward_title' => $this->reward_title,
+            'brand_color' => $this->brand_color,
+            'background_color' => $this->background_color,
+            'logo_path' => $this->logo_path,
+            'pass_logo_path' => $this->pass_logo_path,
+            'pass_hero_image_path' => $this->pass_hero_image_path,
+            'require_verification_for_redemption' => $this->require_verification_for_redemption ?? true,
+            'registration_form_config' => $this->registration_form_config,
+        ])->save();
+
+        return $program->fresh();
     }
 
     public function getIsArchivedAttribute(): bool

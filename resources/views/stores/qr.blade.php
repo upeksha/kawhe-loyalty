@@ -50,12 +50,22 @@
             <p class="text-sm text-stone-600">Scan to join {{ $store->name }}</p>
 
             <div class="flex flex-col items-center gap-2 w-full">
-                <a href="{{ route('merchant.stores.qr.pdf', $store) }}" target="_blank" rel="noopener" class="inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg bg-brand-600 text-white hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-500">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                    </svg>
-                    Download PDF (A4 poster)
-                </a>
+                <div class="flex flex-wrap items-center justify-center gap-2">
+                    <button type="button" onclick="downloadStorePoster('{{ route('merchant.stores.qr.pdf', $store) }}', '{{ \Illuminate\Support\Str::slug($store->name) }}-join-poster.pdf')" class="inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg bg-brand-600 text-white hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-500">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        Download PDF (A4 poster)
+                    </button>
+                    <form method="GET" action="{{ route('merchant.stores.qr.image', $store) }}">
+                        <button type="submit" class="inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg bg-stone-100 text-stone-800 hover:bg-stone-200 border border-stone-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-stone-500">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h2m4 0h-2m-4 4h6m-6-2h2m2 0h2m-4-4h2m2 0h2" />
+                            </svg>
+                            Download QR (SVG)
+                        </button>
+                    </form>
+                </div>
                 <p class="text-xs text-stone-500">Print or email this poster for your customers to scan and join.</p>
             </div>
 
@@ -183,6 +193,39 @@
     </div>
 
     <script>
+        async function downloadStorePoster(url, filename) {
+            try {
+                const response = await fetch(url, {
+                    credentials: 'same-origin',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                });
+
+                if (!response.ok) {
+                    throw new Error('Download failed');
+                }
+
+                const contentType = response.headers.get('content-type') || '';
+                if (!contentType.includes('application/pdf')) {
+                    window.location.href = url;
+                    return;
+                }
+
+                const blob = await response.blob();
+                const blobUrl = window.URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = blobUrl;
+                link.download = filename;
+                document.body.appendChild(link);
+                link.click();
+                link.remove();
+                window.URL.revokeObjectURL(blobUrl);
+            } catch (error) {
+                window.location.href = url;
+            }
+        }
+
         function copyToClipboard() {
             var copyText = document.getElementById("join-link");
             copyText.select();

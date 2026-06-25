@@ -1,29 +1,23 @@
-<x-merchant-layout>
+<x-onboarding-layout>
     <x-slot name="header">Your card is ready</x-slot>
 
     <x-onboarding-step-layout
         :step="4"
-        :totalSteps="5"
+        :totalSteps="4"
         title="Your loyalty card is ready"
-        subtitle="You can start collecting customers today. Review the checklist below first so your first launch feels polished and easy to use."
+        subtitle="You can start collecting customers today. Review the checklist below first, then finish setup and start sharing your card."
         :backUrl="route('merchant.onboarding.wizard.customer-form')"
     >
         <div class="space-y-8">
-            {{-- Success message + 50 free --}}
-            <div class="flex items-start gap-4 p-5 rounded-xl border border-green-200 bg-green-50/80">
-                <div class="flex-shrink-0 w-11 h-11 rounded-full bg-green-100 flex items-center justify-center">
-                    <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
-                </div>
-                <div>
-                    <p class="font-semibold text-green-900">Your first 50 customer cards are free.</p>
-                    <p class="text-sm text-green-800 mt-0.5">No setup delay. Your QR is ready to use.</p>
-                </div>
-            </div>
+            <x-ui.alert variant="success">
+                <p class="font-semibold">Your default loyalty card is ready.</p>
+                <p class="mt-0.5">You can start sharing your QR code right away.</p>
+            </x-ui.alert>
 
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 {{-- QR + actions --}}
                 <div class="lg:col-span-2 space-y-6">
-                    <div class="bg-white rounded-2xl border border-stone-200 p-6 sm:p-8 shadow-lg shadow-stone-200/30">
+                    <x-ui.section-panel class="rounded-[24px] border-stone-200/80 p-6 sm:p-8">
                         <p class="text-sm font-semibold text-stone-600 mb-4">Share your QR code or link</p>
                         <div class="flex flex-col sm:flex-row items-center gap-6">
                             <div class="flex-shrink-0 p-4 bg-white rounded-xl border border-stone-200 inline-block shadow-sm">
@@ -33,7 +27,7 @@
                                 <label for="join-link" class="block text-sm font-medium text-stone-700 mb-1.5">Join link</label>
                                 <div class="flex gap-2">
                                     <input type="text" id="join-link" value="{{ $joinUrl }}" readonly class="block w-full rounded-xl border border-stone-300 bg-stone-50 px-4 py-2.5 text-sm text-stone-700 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500" />
-                                    <button type="button" onclick="copyJoinLink()" class="inline-flex items-center justify-center font-medium rounded-xl px-4 py-2.5 text-sm bg-brand-600 text-white hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-500 flex-shrink-0 transition-colors">Copy</button>
+                                    <x-ui.button type="button" onclick="copyJoinLink()" variant="primary" size="md" class="flex-shrink-0">Copy</x-ui.button>
                                 </div>
                             </div>
                         </div>
@@ -45,24 +39,50 @@
                                 <li>The poster QR scans comfortably from counter distance.</li>
                             </ul>
                         </div>
-                    </div>
+                    </x-ui.section-panel>
 
                     <div class="flex flex-wrap gap-3">
-                        <a href="{{ route('merchant.stores.qr.pdf', $store) }}" target="_blank" rel="noopener"
-                            class="inline-flex items-center gap-2 px-4 py-3 text-sm font-medium rounded-xl bg-stone-100 text-stone-800 hover:bg-stone-200 border border-stone-200 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-stone-500">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-                            Download poster (PDF)
-                        </a>
-                        <a href="{{ $joinUrl }}" target="_blank" rel="noopener"
-                            class="inline-flex items-center gap-2 px-4 py-3 text-sm font-medium rounded-xl bg-stone-100 text-stone-800 hover:bg-stone-200 border border-stone-200 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-stone-500">
+                        <form method="GET" action="{{ route('merchant.stores.qr.pdf', $store) }}">
+                            <x-ui.button type="submit" variant="secondary" size="md">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                                Download poster (PDF)
+                            </x-ui.button>
+                        </form>
+                        <form method="GET" action="{{ route('merchant.stores.qr.image', $store) }}">
+                            <x-ui.button type="submit" variant="secondary" size="md">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h2m4 0h-2m-4 4h6m-6-2h2m2 0h2m-4-4h2m2 0h2"/></svg>
+                                Download QR (SVG)
+                            </x-ui.button>
+                        </form>
+                        <x-ui.button href="{{ $joinUrl }}" target="_blank" rel="noopener" variant="secondary" size="md">
                             Open test join page
-                        </a>
+                        </x-ui.button>
                     </div>
                 </div>
 
-                {{-- How it works --}}
+                {{-- How it works + phone preview --}}
                 <div class="lg:col-span-1">
                     <div class="sticky top-8 space-y-4">
+                        <div class="rounded-xl border border-stone-200 bg-stone-900 p-4 shadow-lg">
+                            <p class="text-xs font-semibold uppercase tracking-wider text-stone-400 mb-3 text-center">Customer preview</p>
+                            <div class="mx-auto w-[220px] rounded-[2rem] border-[10px] border-stone-700 bg-stone-800 p-2 shadow-2xl">
+                                <div class="rounded-[1.25rem] overflow-hidden bg-white aspect-[9/16]">
+                                    <iframe
+                                        src="{{ $joinUrl }}"
+                                        title="Join page preview"
+                                        class="w-[200%] h-[200%] origin-top-left scale-50 border-0 pointer-events-none"
+                                        loading="lazy"
+                                        tabindex="-1"
+                                    ></iframe>
+                                </div>
+                            </div>
+                            <p class="mt-3 text-center text-xs leading-relaxed text-stone-400">
+                                This is what customers see after scanning your QR code.
+                            </p>
+                            <a href="{{ $joinUrl }}" target="_blank" rel="noopener" class="mt-3 block text-center text-sm font-medium text-brand-400 hover:text-brand-300 transition-colors">
+                                Open full preview →
+                            </a>
+                        </div>
                         <div class="rounded-xl border border-stone-200 bg-stone-50/70 p-5 shadow-sm">
                             <p class="text-sm font-semibold text-stone-800 mb-4">Before you share</p>
                             <ul class="space-y-3 text-sm text-stone-700">
@@ -118,7 +138,7 @@
                 </form>
                 <form method="POST" action="{{ route('merchant.onboarding.wizard.card-ready.advance') }}" class="w-full sm:w-auto">
                     @csrf
-                    <x-ui.button type="submit" variant="primary" size="lg" class="w-full sm:w-auto rounded-xl min-w-[160px]">Continue trial</x-ui.button>
+                    <x-ui.button type="submit" variant="primary" size="lg" class="w-full sm:w-auto rounded-xl min-w-[160px]">Finish setup</x-ui.button>
                 </form>
             </div>
         </x-slot>
@@ -167,4 +187,4 @@
             });
         }
     </script>
-</x-merchant-layout>
+</x-onboarding-layout>

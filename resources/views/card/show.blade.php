@@ -1,99 +1,12 @@
-@php
-    $bg    = $account->program_background_color ?? '#1F2937';
-    $brand = $account->program_brand_color ?? '#0EA5E9';
-    $hex   = ltrim($bg, '#');
-    if (strlen($hex) === 6) {
-        $r = hexdec(substr($hex, 0, 2));
-        $g = hexdec(substr($hex, 2, 2));
-        $b = hexdec(substr($hex, 4, 2));
-        $lum = (0.299 * $r + 0.587 * $g + 0.114 * $b) / 255;
-        $textOnBg  = $lum < 0.5 ? '#ffffff' : '#111827';
-        $mutedOnBg = $lum < 0.5 ? 'rgba(255,255,255,0.65)' : 'rgba(17,24,39,0.6)';
-        if ($lum < 0.5) {
-            $surface = sprintf('#%02x%02x%02x', min(255,$r+28), min(255,$g+28), min(255,$b+28));
-            $inner   = sprintf('#%02x%02x%02x', min(255,$r+18), min(255,$g+18), min(255,$b+18));
-            $divider = 'rgba(255,255,255,0.09)';
-        } else {
-            $surface = sprintf('#%02x%02x%02x', max(0,$r-18), max(0,$g-18), max(0,$b-18));
-            $inner   = sprintf('#%02x%02x%02x', max(0,$r-10), max(0,$g-10), max(0,$b-10));
-            $divider = 'rgba(0,0,0,0.08)';
-        }
-    } else {
-        $textOnBg  = '#ffffff';
-        $mutedOnBg = 'rgba(255,255,255,0.65)';
-        $surface   = '#374151';
-        $inner     = '#2d3748';
-        $divider   = 'rgba(255,255,255,0.09)';
-    }
-@endphp
-<!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
-    <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-        <meta name="csrf-token" content="{{ csrf_token() }}">
-        <meta name="theme-color" content="{{ $bg }}">
-        <meta name="apple-mobile-web-app-capable" content="yes">
-        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-        <meta name="apple-mobile-web-app-title" content="{{ $account->store->name }}">
-        <link rel="manifest" href="{{ route('card.manifest', ['public_token' => $account->public_token]) }}">
-        <link rel="apple-touch-icon" href="{{ asset('favicon.ico') }}">
-
-        <title>{{ $account->store->name }} – My Card</title>
-
-        <link rel="preconnect" href="https://fonts.bunny.net">
-        <link href="https://fonts.bunny.net/css?family=figtree:400,500,600,700&display=swap" rel="stylesheet" />
-
-        @vite(['resources/css/app.css', 'resources/js/app.js'])
-        
-        <style>
-            [x-cloak] { display: none !important; }
-            body { background-color: {{ $bg }}; color: {{ $textOnBg }}; }
-            .card-surface  { background-color: {{ $surface }}; }
-            .card-inner    { background-color: {{ $inner }}; }
-            .card-text     { color: {{ $textOnBg }}; }
-            .card-muted    { color: {{ $mutedOnBg }}; }
-            .card-divider  { border-color: {{ $divider }}; }
-            .card-btn      { background-color: {{ $brand }}; color: #fff; }
-            .card-btn:hover { filter: brightness(1.1); }
-            .card-btn-icon { background-color: {{ $brand }}; }
-            .card-badge    { background-color: {{ $brand }}; color: #fff; }
-            .card-qr-border { border-color: {{ $brand }}; }
-            .card-accent   { color: {{ $brand }}; }
-            .loyalty-card {
-                background: linear-gradient(135deg, {{ $surface }} 0%, {{ $bg }} 50%, {{ $inner }} 100%);
-                position: relative;
-                overflow: hidden;
-            }
-            .loyalty-card::before {
-                content: '';
-                position: absolute;
-                inset: 0;
-                background:
-                    radial-gradient(ellipse at 15% 20%, {{ $brand }}30 0%, transparent 55%),
-                    radial-gradient(ellipse at 85% 80%, {{ $brand }}20 0%, transparent 50%);
-                pointer-events: none;
-            }
-            @keyframes glow-pulse {
-                0%, 100% { opacity: 0.5; transform: translate(-50%, -50%) scale(1); }
-                50%       { opacity: 0.9; transform: translate(-50%, -50%) scale(1.15); }
-            }
-            .card-glow {
-                position: absolute;
-                top: 38%;
-                left: 50%;
-                transform: translate(-50%, -50%);
-                width: 260px;
-                height: 260px;
-                background: radial-gradient(circle, {{ $brand }}28 0%, transparent 70%);
-                animation: glow-pulse 4s ease-in-out infinite;
-                pointer-events: none;
-            }
-        </style>
-    </head>
-    <body class="font-sans antialiased" style="min-height: 100vh; min-height: 100dvh;" x-data="cardApp()" x-init="init()">
-        <div class="min-h-screen pb-8">
-            <div class="w-full max-w-md mx-auto px-4 pt-6">
+<x-customer-layout
+    :account="$account"
+    :document-title="$account->store->name . ' – My Card'"
+    :manifest-href="route('card.manifest', ['public_token' => $account->public_token])"
+    shell="card"
+    title="My Card"
+    x-data="cardApp()"
+    x-init="init()"
+>
                 <!-- Success Message (e.g., from email verification) -->
                 @if(session('message'))
                     <div class="bg-green-500 text-white rounded-lg p-4 mb-4 shadow-lg">
@@ -102,6 +15,31 @@
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
                             </svg>
                             <p class="font-semibold">{{ session('message') }}</p>
+                        </div>
+                    </div>
+                @endif
+
+                @if(session('registered'))
+                    <div
+                        x-data="{ showWelcome: true }"
+                        x-show="showWelcome"
+                        x-transition
+                        class="customer-welcome-banner rounded-xl p-4 mb-4 shadow-lg border-2"
+                    >
+                        <div class="flex items-start gap-3">
+                            <div class="customer-welcome-icon flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-lg">
+                                ✓
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <p class="font-semibold text-base">You're in!</p>
+                                <p class="text-sm mt-1 card-muted">
+                                    Collect {{ $account->reward_target }} stamps to earn {{ $account->reward_title }}.
+                                    Show this QR code when you visit to collect stamps.
+                                </p>
+                            </div>
+                            <button type="button" @click="showWelcome = false" class="flex-shrink-0 text-sm opacity-70 hover:opacity-100" aria-label="Dismiss">
+                                ✕
+                            </button>
                         </div>
                     </div>
                 @endif
@@ -164,7 +102,7 @@
                 @endif
 
                 <!-- Main Loyalty Card -->
-                <div class="loyalty-card rounded-2xl shadow-2xl overflow-hidden mb-4" style="border: 3px solid {{ $brand }};">
+                <div class="loyalty-card rounded-2xl shadow-2xl overflow-hidden mb-4">
                     <!-- Ambient Glow -->
                     <div class="card-glow"></div>
                     
@@ -172,7 +110,7 @@
                         <!-- Store Logo (if available) -->
                         @if($account->program_logo_url)
                             <div class="flex justify-center mb-4">
-                                <img src="{{ $account->program_logo_url }}" alt="{{ $account->store->name }} logo" class="h-20 w-20 object-contain rounded-lg bg-white/10 backdrop-blur-sm p-2 border-2" style="border-color: {{ $brand }};">
+                                <img src="{{ $account->program_logo_url }}" alt="{{ $account->store->name }} logo" class="program-logo-frame h-20 w-20 object-contain rounded-lg bg-white/10 backdrop-blur-sm p-2 border-2">
                             </div>
                         @endif
                         
@@ -232,15 +170,13 @@
                             <div id="stamp-circles-container" class="flex gap-2 justify-center flex-wrap">
                                 @for ($i = 1; $i <= $account->reward_target; $i++)
                                     @if($i <= $account->stamp_count)
-                                        <div class="stamp-circle w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold text-white"
-                                            style="background-color: {{ $brand }};">
+                                        <div class="stamp-circle stamp-circle--filled w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold">
                                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path>
                                             </svg>
                                         </div>
                                     @else
-                                        <div class="stamp-circle w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold"
-                                            style="background-color: {{ $inner }}; color: {{ $mutedOnBg }}; border: 2px solid {{ $mutedOnBg }}44;">
+                                        <div class="stamp-circle stamp-circle--empty w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold">
                                             {{ $i }}
                                         </div>
                                     @endif
@@ -373,16 +309,15 @@
                         ✓ Card removed from this device
                     </p>
                 </div>
-            </div>
-        </div>{{-- end min-h-screen wrapper --}}
 
+            @push('overlays')
         <!-- ============================================================ -->
-        <!-- Wallet Nudge Modal — shown every time user arrives via email -->
+        <!-- Wallet Nudge Modal — shown after first join when wallet not yet added -->
             <!-- ============================================================ -->
             <div
                 x-show="showWalletNudge"
                 x-cloak
-                @keydown.escape.window="showWalletNudge = false"
+                @keydown.escape.window="dismissWalletNudge()"
                 class="fixed inset-0 z-[100] flex flex-col"
                 x-transition:enter="transition ease-out duration-300"
                 x-transition:enter-start="opacity-0"
@@ -392,13 +327,12 @@
                 x-transition:leave-end="opacity-0"
             >
                 <!-- Backdrop (only visible on sm+, on mobile the sheet fills the screen) -->
-                <div class="absolute inset-0 bg-black/70 backdrop-blur-sm sm:block" @click="showWalletNudge = false"></div>
+                <div class="absolute inset-0 bg-black/70 backdrop-blur-sm sm:block" @click="dismissWalletNudge()"></div>
 
                 <!-- Full-height sheet on mobile, centred card on sm+ -->
                 <div
                     @click.stop
-                    class="relative flex flex-col w-full h-full sm:h-auto sm:max-w-md sm:mx-auto sm:my-auto sm:rounded-3xl sm:max-h-[90vh] shadow-2xl overflow-hidden"
-                    style="background: linear-gradient(160deg, {{ $surface }} 0%, {{ $bg }} 100%);"
+                    class="wallet-sheet relative flex flex-col w-full h-full sm:h-auto sm:max-w-md sm:mx-auto sm:my-auto sm:rounded-3xl sm:max-h-[90vh] shadow-2xl overflow-hidden"
                     x-transition:enter="transition ease-out duration-350"
                     x-transition:enter-start="opacity-0 translate-y-6"
                     x-transition:enter-end="opacity-100 translate-y-0"
@@ -406,14 +340,12 @@
                     x-transition:leave-start="opacity-100 translate-y-0"
                     x-transition:leave-end="opacity-0 translate-y-6"
                 >
-                    <!-- Brand accent bar -->
-                    <div class="flex-shrink-0 h-1 w-full" style="background: linear-gradient(90deg, {{ $brand }}, {{ $brand }}88);"></div>
+                    <div class="wallet-sheet-accent flex-shrink-0 h-1 w-full"></div>
 
                     <!-- Close button -->
                     <button
-                        @click="showWalletNudge = false"
-                        class="absolute top-4 right-4 z-10 w-9 h-9 flex items-center justify-center rounded-full transition hover:opacity-80"
-                        style="background: {{ $brand }}22;"
+                        @click="dismissWalletNudge()"
+                        class="wallet-sheet-close absolute top-4 right-4 z-10 w-9 h-9 flex items-center justify-center rounded-full transition hover:opacity-80"
                         aria-label="Close"
                     >
                         <svg class="w-5 h-5 card-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -424,12 +356,12 @@
                     <!-- Scrollable content -->
                     <div class="flex-1 overflow-y-auto px-6 pt-6 pb-safe-bottom" style="padding-bottom: max(2rem, env(safe-area-inset-bottom));">
                         <!-- Drag handle (mobile feel) -->
-                        <div class="w-10 h-1 rounded-full mx-auto mb-6 opacity-30" style="background: {{ $textOnBg }};"></div>
+                        <div class="wallet-sheet-handle w-10 h-1 rounded-full mx-auto mb-6 opacity-30"></div>
 
                         <!-- Icon -->
                         <div class="flex justify-center mb-5">
-                            <div class="w-20 h-20 rounded-3xl flex items-center justify-center shadow-lg" style="background: {{ $brand }}22; border: 2px solid {{ $brand }}44;">
-                                <svg class="w-10 h-10" style="color: {{ $brand }};" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <div class="wallet-sheet-icon-wrap w-20 h-20 rounded-3xl flex items-center justify-center shadow-lg">
+                                <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>
                                 </svg>
                             </div>
@@ -449,9 +381,9 @@
                                 ['icon' => 'M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9', 'text' => 'Get notified when you earn a reward'],
                                 ['icon' => 'M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z', 'text' => 'Your card is always secure & private'],
                             ] as $benefit)
-                                <div class="flex items-center gap-3 px-4 py-3 rounded-2xl" style="background: {{ $brand }}15;">
-                                    <div class="flex-shrink-0 w-8 h-8 rounded-xl flex items-center justify-center" style="background: {{ $brand }}25;">
-                                        <svg class="w-4 h-4" style="color: {{ $brand }};" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <div class="wallet-benefit-pill flex items-center gap-3 px-4 py-3 rounded-2xl">
+                                    <div class="wallet-benefit-icon flex-shrink-0 w-8 h-8 rounded-xl flex items-center justify-center">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="{{ $benefit['icon'] }}"/>
                                         </svg>
                                     </div>
@@ -511,7 +443,7 @@
 
                         <!-- Dismiss -->
                         <button
-                            @click="showWalletNudge = false"
+                            @click="dismissWalletNudge()"
                             class="mt-5 mb-2 w-full text-center text-sm card-muted hover:opacity-80 transition py-3"
                         >
                             I'll keep using the browser link
@@ -605,13 +537,13 @@
                     </div>
                 </div>
             @endif
+            @endpush
 
+        @push('scripts')
         <script>
-            const CARD_SURFACE  = @json($surface);
-            const CARD_INNER    = @json($inner);
-            const CARD_TEXT     = @json($textOnBg);
-            const CARD_MUTED    = @json($mutedOnBg);
-            const BRAND_COLOR   = @json($brand);
+            const themePage = document.querySelector('.customer-page');
+            const themeVar = (name) => themePage ? getComputedStyle(themePage).getPropertyValue(name).trim() : '';
+            const BRAND_COLOR = themeVar('--program-brand');
 
             document.addEventListener('alpine:init', () => {
                 Alpine.data('cardApp', () => ({
@@ -621,6 +553,7 @@
                     showRedeemModal: false,
                     // Wallet nudge
                     showWalletNudge: false,
+                    justRegistered: @json(session('show_wallet_nudge', false)),
                     // IMPORTANT:
                     // reward_redeemed_at is a "last redeemed at" timestamp and can be set even when reward_balance > 0
                     // (partial redemption). So we only consider the reward "fully redeemed" when no rewards remain.
@@ -651,26 +584,45 @@
 
                     initWalletNudge() {
                         const walletKey = 'kawhe_wallet_added_{{ $account->public_token }}';
-                        // Never show if they've already added to wallet
-                        if (localStorage.getItem(walletKey) === 'true') return;
-                        // Always show after 3 seconds — every visit, new or returning
-                        setTimeout(() => { this.showWalletNudge = true; }, 3000);
+                        if (localStorage.getItem(walletKey) === 'true') {
+                            return;
+                        }
+
+                        const dismissedKey = 'kawhe_wallet_nudge_dismissed_{{ $account->public_token }}';
+                        if (! this.justRegistered || localStorage.getItem(dismissedKey) === 'true') {
+                            return;
+                        }
+
+                        setTimeout(() => { this.showWalletNudge = true; }, 2000);
+                    },
+
+                    dismissWalletNudge() {
+                        localStorage.setItem('kawhe_wallet_nudge_dismissed_{{ $account->public_token }}', 'true');
+                        this.showWalletNudge = false;
                     },
 
                     walletAdded() {
                         localStorage.setItem('kawhe_wallet_added_{{ $account->public_token }}', 'true');
+                        localStorage.setItem('kawhe_wallet_nudge_dismissed_{{ $account->public_token }}', 'true');
                         this.showWalletNudge = false;
                     },
 
                     persistCard() {
-                        localStorage.setItem('kawhe_last_card_{{ $account->store_id }}', this.publicToken);
+                        const programKey = '{{ $account->loyalty_program_id ?? $account->store_id }}';
+                        localStorage.setItem('kawhe_last_card_' + programKey, this.publicToken);
                         @if($account->customer->email)
-                            localStorage.setItem('kawhe_last_email_{{ $account->store_id }}', '{{ $account->customer->email }}');
+                            localStorage.setItem('kawhe_last_email_' + programKey, '{{ $account->customer->email }}');
                         @endif
+                        // Remove legacy store-scoped keys once program-scoped keys are saved.
+                        localStorage.removeItem('kawhe_last_card_{{ $account->store_id }}');
+                        localStorage.removeItem('kawhe_last_email_{{ $account->store_id }}');
                     },
 
                     forgetCard() {
                         try {
+                            const programKey = '{{ $account->loyalty_program_id ?? $account->store_id }}';
+                            localStorage.removeItem('kawhe_last_card_' + programKey);
+                            localStorage.removeItem('kawhe_last_email_' + programKey);
                             localStorage.removeItem('kawhe_last_card_{{ $account->store_id }}');
                             localStorage.removeItem('kawhe_last_email_{{ $account->store_id }}');
                             this.cardForgotten = true;
@@ -771,24 +723,24 @@
                         if (!container) return;
                         
                         if (!transactions || transactions.length === 0) {
-                            container.innerHTML = `<p class="text-sm text-center" style="color:${CARD_MUTED}">No recent activity</p>`;
+                            container.innerHTML = '<p class="text-sm text-center card-muted">No recent activity</p>';
                             return;
                         }
                         
                         container.innerHTML = transactions.map(tx => `
-                            <div class="flex items-center justify-between p-3 rounded-lg" style="background-color:${CARD_INNER}">
+                            <div class="tx-history-item flex items-center justify-between p-3 rounded-lg">
                                 <div class="flex items-center gap-3">
-                                    <div class="w-8 h-8 rounded-full flex items-center justify-center" style="background-color:${BRAND_COLOR}22; color:${BRAND_COLOR}">
+                                    <div class="tx-history-icon w-8 h-8 rounded-full flex items-center justify-center">
                                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
                                         </svg>
                                     </div>
                                     <div>
-                                        <p class="text-sm font-medium" style="color:${CARD_TEXT}">${tx.description}</p>
-                                        <p class="text-xs" style="color:${CARD_MUTED}">${tx.formatted_date}</p>
+                                        <p class="tx-history-title text-sm font-medium">${tx.description}</p>
+                                        <p class="tx-history-date text-xs">${tx.formatted_date}</p>
                                     </div>
                                 </div>
-                                <span class="text-sm font-bold" style="color:${BRAND_COLOR}">
+                                <span class="tx-history-points text-sm font-bold">
                                     +${tx.points}
                                 </span>
                             </div>
@@ -844,16 +796,16 @@
                                 circles.forEach((circle, index) => {
                                     const stampNumber = index + 1;
                                     if (stampNumber <= data.stamp_count) {
-                                        circle.className = 'stamp-circle w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold';
-                                        circle.style.backgroundColor = BRAND_COLOR;
-                                        circle.style.color = '#fff';
-                                        circle.style.border = 'none';
+                                        circle.className = 'stamp-circle stamp-circle--filled w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold';
+                                        circle.style.backgroundColor = '';
+                                        circle.style.color = '';
+                                        circle.style.border = '';
                                         circle.innerHTML = '<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>';
                                     } else {
-                                        circle.className = 'stamp-circle w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold';
-                                        circle.style.backgroundColor = CARD_INNER;
-                                        circle.style.color = CARD_MUTED;
-                                        circle.style.border = `2px solid ${CARD_MUTED}44`;
+                                        circle.className = 'stamp-circle stamp-circle--empty w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold';
+                                        circle.style.backgroundColor = '';
+                                        circle.style.color = '';
+                                        circle.style.border = '';
                                         circle.textContent = stampNumber;
                                     }
                                 });
@@ -1009,5 +961,5 @@
                 }
             }
         </script>
-    </body>
-</html>
+        @endpush
+</x-customer-layout>

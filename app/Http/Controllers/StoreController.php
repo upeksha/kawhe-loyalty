@@ -4,19 +4,17 @@ namespace App\Http\Controllers;
 
 use App\Models\AppleWalletRegistration;
 use App\Models\LoyaltyAccount;
-use App\Models\LoyaltyProgram;
 use App\Models\Store;
 use App\Models\SupportAuditLog;
 use App\Services\Billing\UsageService;
 use App\Services\Support\MerchantRecoveryService;
 use App\Support\StoreAssets;
+use App\Support\StoreBrandingRules;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
-use Illuminate\Validation\ValidationException;
-use Illuminate\Validation\Rule;
 use SimpleSoftwareIO\QrCode\Facades\QrCode;
 
 class StoreController extends Controller
@@ -25,8 +23,7 @@ class StoreController extends Controller
 
     public function __construct(
         protected MerchantRecoveryService $merchantRecoveryService
-    ) {
-    }
+    ) {}
 
     /**
      * Display a listing of the resource.
@@ -36,8 +33,9 @@ class StoreController extends Controller
         $allStores = Store::queryForUser(Auth::user(), includeArchived: true)->latest()->get();
         $stores = $allStores->whereNull('deleted_at')->values();
         $archivedStores = $allStores->whereNotNull('deleted_at')->values();
+        $usageStats = app(UsageService::class)->getUsageStats(Auth::user());
 
-        return view('stores.index', compact('stores', 'archivedStores'));
+        return view('stores.index', compact('stores', 'archivedStores', 'usageStats'));
     }
 
     /**
@@ -45,6 +43,10 @@ class StoreController extends Controller
      */
     public function create()
     {
+        if (! app(UsageService::class)->canCreateStore(Auth::user())) {
+            return redirect()->route('merchant.stores.index');
+        }
+
         return view('stores.create');
     }
 
@@ -55,44 +57,24 @@ class StoreController extends Controller
     {
         $usageService = app(UsageService::class);
 
-        if (! $usageService->canCreateProgram(Auth::user())) {
+        if (! $usageService->canCreateStore(Auth::user())) {
             return redirect()->route('billing.index')
                 ->withErrors([
-                    'error' => 'Your current plan already uses all loyalty card slots. Free includes 1 card, and Pro includes up to 3 cards.',
+                    'error' => 'Your current plan has reached its store limit. Free includes 1 store; Pro includes up to 3 stores.',
                 ]);
         }
 
-        $validated = $request->validate([
+        $validated = $request->validate(array_merge([
             'name' => ['required', 'string', 'max:255'],
             'address' => ['nullable', 'string', 'max:255'],
             'reward_target' => ['required', 'integer', 'min:1'],
             'reward_title' => ['required', 'string', 'max:255'],
-            'brand_color' => ['nullable', 'string', 'regex:/^#[0-9A-Fa-f]{6}$/'],
-            'background_color' => ['nullable', 'string', 'regex:/^#[0-9A-Fa-f]{6}$/'],
-            'logo' => ['nullable', 'image', 'mimes:png,jpg,jpeg,webp', 'max:2048'],
-            'pass_logo' => ['nullable', 'image', 'mimes:png,jpg,jpeg,webp', 'max:2048'],
-            'pass_hero_image' => ['nullable', 'image', 'mimes:png,jpg,jpeg,webp', 'max:2048'],
-        ]);
+        ], StoreBrandingRules::validationRules()));
 
-        // Handle logo upload
-        if ($request->hasFile('logo')) {
-            $logoPath = StoreAssets::storeUploaded($request->file('logo'), 'logos');
-            $validated['logo_path'] = $logoPath;
-        }
+        $validated['logo_path'] = StoreAssets::storeUploaded($request->file('logo'), 'logos');
+        $validated['pass_logo_path'] = StoreAssets::storeUploaded($request->file('pass_logo'), 'pass-logos');
+        $validated['pass_hero_image_path'] = StoreAssets::storeUploaded($request->file('pass_hero_image'), 'pass-heroes');
 
-        // Handle pass logo upload
-        if ($request->hasFile('pass_logo')) {
-            $passLogoPath = StoreAssets::storeUploaded($request->file('pass_logo'), 'pass-logos');
-            $validated['pass_logo_path'] = $passLogoPath;
-        }
-
-        // Handle pass hero image upload
-        if ($request->hasFile('pass_hero_image')) {
-            $passHeroPath = StoreAssets::storeUploaded($request->file('pass_hero_image'), 'pass-heroes');
-            $validated['pass_hero_image_path'] = $passHeroPath;
-        }
-
-        // Remove file inputs from validated array
         unset($validated['logo'], $validated['pass_logo'], $validated['pass_hero_image']);
 
         $store = Auth::user()->stores()->create($validated);
@@ -104,11 +86,11 @@ class StoreController extends Controller
             'reward_title' => $validated['reward_title'],
             'join_token' => $store->join_token,
             'join_short_code' => $store->join_short_code,
-            'brand_color' => $validated['brand_color'] ?? $store->brand_color,
-            'background_color' => $validated['background_color'] ?? $store->background_color,
-            'logo_path' => $validated['logo_path'] ?? $store->logo_path,
-            'pass_logo_path' => $validated['pass_logo_path'] ?? $store->pass_logo_path,
-            'pass_hero_image_path' => $validated['pass_hero_image_path'] ?? $store->pass_hero_image_path,
+            'brand_color' => $validated['brand_color'],
+            'background_color' => $validated['background_color'],
+            'logo_path' => $validated['logo_path'],
+            'pass_logo_path' => $validated['pass_logo_path'],
+            'pass_hero_image_path' => $validated['pass_hero_image_path'],
             'require_verification_for_redemption' => true,
             'registration_form_config' => Store::defaultRegistrationFormConfig(),
             'is_default' => true,
@@ -128,11 +110,8 @@ class StoreController extends Controller
         $store = Store::queryForUser(Auth::user(), includeArchived: true)->whereKey($store->id)->firstOrFail();
         $walletHealth = $this->walletHealth($store);
         $defaultProgram = $store->resolvedDefaultProgram();
-        $hasIssuedCards = $defaultProgram
-            ? LoyaltyAccount::where('loyalty_program_id', $defaultProgram->id)->exists()
-            : LoyaltyAccount::where('store_id', $store->id)->exists();
 
-        return view('stores.edit', compact('store', 'walletHealth', 'hasIssuedCards'));
+        return view('stores.edit', compact('store', 'walletHealth', 'defaultProgram'));
     }
 
     /**
@@ -141,35 +120,16 @@ class StoreController extends Controller
     public function update(Request $request, Store $store)
     {
         $store = Store::queryForUser(Auth::user(), includeArchived: true)->whereKey($store->id)->firstOrFail();
-        $defaultProgram = $store->resolvedDefaultProgram();
-        $hasIssuedCards = $defaultProgram
-            ? LoyaltyAccount::where('loyalty_program_id', $defaultProgram->id)->exists()
-            : LoyaltyAccount::where('store_id', $store->id)->exists();
 
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'address' => ['nullable', 'string', 'max:255'],
-            'reward_target' => $hasIssuedCards ? ['nullable', 'integer', 'min:1'] : ['required', 'integer', 'min:1'],
-            'reward_title' => ['required', 'string', 'max:255'],
             'brand_color' => ['nullable', 'string', 'regex:/^#[0-9A-Fa-f]{6}$/'],
             'background_color' => ['nullable', 'string', 'regex:/^#[0-9A-Fa-f]{6}$/'],
-            'require_verification_for_redemption' => ['nullable', 'boolean'],
             'logo' => ['nullable', 'image', 'mimes:png,jpg,jpeg,webp', 'max:2048'],
             'pass_logo' => ['nullable', 'image', 'mimes:png,jpg,jpeg,webp', 'max:2048'],
             'pass_hero_image' => ['nullable', 'image', 'mimes:png,jpg,jpeg,webp', 'max:2048'],
         ]);
-
-        $validated['require_verification_for_redemption'] = $request->boolean('require_verification_for_redemption');
-
-        if ($hasIssuedCards) {
-            if (array_key_exists('reward_target', $validated) && $validated['reward_target'] !== null && (int) $validated['reward_target'] !== (int) $store->reward_target) {
-                throw ValidationException::withMessages([
-                    'reward_target' => 'Stamps needed for reward is locked after customers have joined this loyalty program. Create a new program if you need a different threshold.',
-                ]);
-            }
-
-            $validated['reward_target'] = $store->reward_target;
-        }
 
         // Handle logo upload
         if ($request->hasFile('logo')) {
@@ -196,43 +156,17 @@ class StoreController extends Controller
         unset($validated['logo'], $validated['pass_logo'], $validated['pass_hero_image']);
 
         // Remove paths from validated if not uploaded (to avoid overwriting with null)
-        if (!isset($validated['logo_path'])) {
+        if (! isset($validated['logo_path'])) {
             unset($validated['logo_path']);
         }
-        if (!isset($validated['pass_logo_path'])) {
+        if (! isset($validated['pass_logo_path'])) {
             unset($validated['pass_logo_path']);
         }
-        if (!isset($validated['pass_hero_image_path'])) {
+        if (! isset($validated['pass_hero_image_path'])) {
             unset($validated['pass_hero_image_path']);
         }
 
-        // Build registration_form_config from checkbox inputs
-        $registrationFields = ['first_name', 'last_name', 'phone', 'birthday'];
-        $formConfig = ['email' => ['enabled' => true, 'required' => true]];
-        foreach ($registrationFields as $field) {
-            $formConfig[$field] = [
-                'enabled'  => $request->boolean("{$field}_enabled"),
-                'required' => $request->boolean("{$field}_required"),
-            ];
-        }
-        $validated['registration_form_config'] = $formConfig;
-
         $store->update($validated);
-
-        if ($defaultProgram) {
-            $defaultProgram->update([
-                'name' => $validated['reward_title'],
-                'reward_target' => $validated['reward_target'],
-                'reward_title' => $validated['reward_title'],
-                'brand_color' => $validated['brand_color'] ?? $store->brand_color,
-                'background_color' => $validated['background_color'] ?? $store->background_color,
-                'logo_path' => $validated['logo_path'] ?? $defaultProgram->logo_path,
-                'pass_logo_path' => $validated['pass_logo_path'] ?? $defaultProgram->pass_logo_path,
-                'pass_hero_image_path' => $validated['pass_hero_image_path'] ?? $defaultProgram->pass_hero_image_path,
-                'require_verification_for_redemption' => $validated['require_verification_for_redemption'],
-                'registration_form_config' => $formConfig,
-            ]);
-        }
 
         return redirect()->route('merchant.stores.index')->with('success', 'Store updated successfully.');
     }
@@ -244,6 +178,7 @@ class StoreController extends Controller
     {
         // Not used currently, redirect to edit or QR
         $this->authorize('view', $store);
+
         return redirect()->route('merchant.stores.edit', $store);
     }
 
@@ -283,12 +218,12 @@ class StoreController extends Controller
     {
         // First check if store exists
         $store = Store::withTrashed()->find($store->id);
-        if (!$store) {
+        if (! $store) {
             abort(404);
         }
-        
+
         // Then check authorization - return 403 for unauthorized access
-        if ($store->user_id !== Auth::id() && !Auth::user()->is_super_admin) {
+        if ($store->user_id !== Auth::id() && ! Auth::user()->is_super_admin) {
             abort(403);
         }
 
@@ -297,7 +232,7 @@ class StoreController extends Controller
                 'store' => 'This store is archived. Restore it before sharing the join QR code again.',
             ]);
         }
-        
+
         $joinUrl = $store->join_url; // short URL /j/{code} when join_short_code is set
         $walletHealth = $this->walletHealth($store);
 
@@ -330,10 +265,10 @@ class StoreController extends Controller
             ->where('created_at', '>=', now()->subDays(7))
             ->count();
 
-        $walletReady = !empty($store->reward_title)
+        $walletReady = ! empty($store->reward_title)
             && (int) ($store->reward_target ?? 0) > 0
-            && !empty($store->background_color)
-            && (!empty($store->logo_path) || !empty($store->pass_logo_path));
+            && ! empty($store->background_color)
+            && (! empty($store->logo_path) || ! empty($store->pass_logo_path));
 
         if (! $walletReady) {
             $statusLabel = 'Needs setup';
@@ -380,7 +315,7 @@ class StoreController extends Controller
 
         $queuedCount = $this->merchantRecoveryService->queueStoreWalletRefresh($store, Auth::id());
 
-        return back()->with('success', "Queued wallet refresh for {$queuedCount} card" . ($queuedCount === 1 ? '' : 's') . '.');
+        return back()->with('success', "Queued wallet refresh for {$queuedCount} card".($queuedCount === 1 ? '' : 's').'.');
     }
 
     /**
@@ -406,10 +341,10 @@ class StoreController extends Controller
         $qrCodeDataUrl = null;
         try {
             $qrPng = QrCode::format('png')->size(320)->margin(1)->errorCorrection('L')->generate($joinUrl);
-            $qrCodeDataUrl = 'data:image/png;base64,' . base64_encode($qrPng);
+            $qrCodeDataUrl = 'data:image/png;base64,'.base64_encode($qrPng);
         } catch (\Throwable $e) {
             $qrSvg = (string) QrCode::format('svg')->size(320)->margin(1)->errorCorrection('L')->generate($joinUrl);
-            $qrCodeDataUrl = 'data:image/svg+xml;base64,' . base64_encode($qrSvg);
+            $qrCodeDataUrl = 'data:image/svg+xml;base64,'.base64_encode($qrSvg);
         }
 
         $logoDataUrl = null;
@@ -433,7 +368,7 @@ class StoreController extends Controller
         $googleWalletBadgeDataUrl = $this->fileToDataUri(public_path('wallet-badges/add-to-google-wallet.svg'));
 
         $rewardWord = $store->reward_title ?: 'stamp';
-        $promoHtml = 'Get 1 free <u>' . e($rewardWord) . '</u> instantly when you join!';
+        $promoHtml = 'Get 1 free <u>'.e($rewardWord).'</u> instantly when you join!';
 
         $viewData = [
             'store' => $store,
@@ -452,9 +387,38 @@ class StoreController extends Controller
 
         $pdf = Pdf::loadView('stores.qr-poster', $viewData)->setPaper('a4', 'portrait');
 
-        $filename = Str::slug($store->name) . '-join-poster.pdf';
+        $filename = Str::slug($store->name).'-join-poster.pdf';
 
         return $pdf->download($filename);
+    }
+
+    /**
+     * Download just the QR code as an SVG image.
+     */
+    public function qrImage(Store $store)
+    {
+        $store = Store::withTrashed()->find($store->id);
+        if (! $store) {
+            abort(404);
+        }
+        if ($store->user_id !== Auth::id() && ! Auth::user()->is_super_admin) {
+            abort(403);
+        }
+        if ($store->trashed()) {
+            return redirect()->route('merchant.stores.edit', $store)->withErrors([
+                'store' => 'This store is archived. Restore it before generating or sharing QR assets.',
+            ]);
+        }
+
+        $joinUrl = $store->join_url;
+        $qrSvg = (string) QrCode::format('svg')->size(1200)->margin(1)->errorCorrection('L')->generate($joinUrl);
+        $filename = Str::slug($store->name).'-qr-code.svg';
+
+        return response($qrSvg, 200, [
+            'Content-Type' => 'image/svg+xml',
+            'Content-Disposition' => 'attachment; filename='.$filename,
+            'Cache-Control' => 'no-cache, private',
+        ]);
     }
 
     private function fileToDataUri(?string $path): ?string
@@ -481,7 +445,7 @@ class StoreController extends Controller
             return null;
         }
 
-        return 'data:' . $mime . ';base64,' . base64_encode($contents);
+        return 'data:'.$mime.';base64,'.base64_encode($contents);
     }
 
     private function binaryToDataUri(?string $contents, string $pathHint): ?string
@@ -499,6 +463,6 @@ class StoreController extends Controller
             default => null,
         };
 
-        return $mime ? 'data:' . $mime . ';base64,' . base64_encode($contents) : null;
+        return $mime ? 'data:'.$mime.';base64,'.base64_encode($contents) : null;
     }
 }

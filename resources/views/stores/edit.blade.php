@@ -50,7 +50,57 @@
                         </div>
                     @endif
 
-                    <form method="POST" action="{{ route('merchant.stores.update', $store) }}" enctype="multipart/form-data" class="max-w-md mx-auto" id="store-edit-form">
+                    <form
+                        method="POST"
+                        action="{{ route('merchant.stores.update', $store) }}"
+                        enctype="multipart/form-data"
+                        class="max-w-md mx-auto"
+                        id="store-edit-form"
+                        x-data="{
+                            brandColor: @js(old('brand_color', $store->brand_color ?? '#0EA5E9')),
+                            bgColor: @js(old('background_color', $store->background_color ?? '#1F2937')),
+                            hexToRgb(hex) {
+                                const cleaned = (hex || '').replace('#', '');
+                                if (cleaned.length !== 6) return null;
+                                const value = parseInt(cleaned, 16);
+                                if (Number.isNaN(value)) return null;
+                                return { r: (value >> 16) & 255, g: (value >> 8) & 255, b: value & 255 };
+                            },
+                            luminance(hex) {
+                                const rgb = this.hexToRgb(hex);
+                                if (!rgb) return 0;
+                                const convert = (channel) => {
+                                    const normalized = channel / 255;
+                                    return normalized <= 0.03928
+                                        ? normalized / 12.92
+                                        : Math.pow((normalized + 0.055) / 1.055, 2.4);
+                                };
+                                return (0.2126 * convert(rgb.r)) + (0.7152 * convert(rgb.g)) + (0.0722 * convert(rgb.b));
+                            },
+                            contrastRatio(a, b) {
+                                const l1 = this.luminance(a);
+                                const l2 = this.luminance(b);
+                                const lighter = Math.max(l1, l2);
+                                const darker = Math.min(l1, l2);
+                                return (lighter + 0.05) / (darker + 0.05);
+                            },
+                            get hasLowContrastPreview() {
+                                return this.contrastRatio(this.brandColor, this.bgColor) < 3;
+                            },
+                            get hasBlockedContrast() {
+                                return this.contrastRatio(this.brandColor, this.bgColor) < 2;
+                            },
+                            get hasVeryLightBackground() {
+                                return this.luminance(this.bgColor) > 0.9;
+                            }
+                        }"
+                        x-init="
+                            $refs.brandColor.addEventListener('input', e => { brandColor = e.target.value; $refs.brandColorText.value = e.target.value; });
+                            $refs.brandColorText.addEventListener('input', e => { if (/^#[0-9A-Fa-f]{6}$/.test(e.target.value)) { brandColor = e.target.value; $refs.brandColor.value = e.target.value; } });
+                            $refs.bgColor.addEventListener('input', e => { bgColor = e.target.value; $refs.bgColorText.value = e.target.value; });
+                            $refs.bgColorText.addEventListener('input', e => { if (/^#[0-9A-Fa-f]{6}$/.test(e.target.value)) { bgColor = e.target.value; $refs.bgColor.value = e.target.value; } });
+                        "
+                    >
                         @csrf
                         @method('PUT')
                         <x-form-error-summary form-id="store-edit-form" />
@@ -71,113 +121,81 @@
 
                         <div class="mb-6 rounded-2xl border border-stone-200 bg-stone-50/70 p-4">
                             <p class="text-sm font-semibold text-stone-900">Default loyalty card</p>
-                            <p class="mt-1 text-sm text-stone-600">These settings control the default card for this store. Additional cards are managed separately from the Loyalty Cards screen.</p>
-                        </div>
-
-                        <!-- Reward Target -->
-                        <div class="mb-5">
-                            <label for="reward_target" class="block mb-2 text-sm font-medium text-stone-700">Stamps needed for reward</label>
-                            @if($hasIssuedCards ?? false)
-                                <input type="hidden" name="reward_target" value="{{ old('reward_target', $store->reward_target) }}">
-                                <x-ui.input type="number" id="reward_target" value="{{ old('reward_target', $store->reward_target) }}" min="1" readonly aria-readonly="true" class="bg-stone-100 text-stone-500 cursor-not-allowed" />
-                            @else
-                                <x-ui.input type="number" id="reward_target" name="reward_target" value="{{ old('reward_target', $store->reward_target) }}" min="1" required />
-                            @endif
-                            @if($hasIssuedCards ?? false)
-                                <p class="mt-1 text-xs text-stone-500">
-                                    This setting is locked because customers have already joined this loyalty program. Their existing progress and rewards stay unchanged.
-                                </p>
-                            @endif
-                            <x-input-error :messages="$errors->get('reward_target')" class="mt-2" />
-                        </div>
-
-                        <!-- Reward Title -->
-                        <div class="mb-5">
-                            <label for="reward_title" class="block mb-2 text-sm font-medium text-stone-700">Default card reward title</label>
-                            <x-ui.input type="text" id="reward_title" name="reward_title" value="{{ old('reward_title', $store->reward_title) }}" required />
-                            <x-input-error :messages="$errors->get('reward_title')" class="mt-2" />
-                        </div>
-
-                        <!-- Require Verification for Redemption -->
-                        <div class="mb-5" x-data="{ requireVerification: {{ old('require_verification_for_redemption', $store->require_verification_for_redemption ?? true) ? 'true' : 'false' }} }">
-                            <div class="flex items-start gap-3">
-                                <div class="flex items-center h-5">
-                                    <input 
-                                        type="checkbox" 
-                                        id="require_verification_for_redemption" 
-                                        name="require_verification_for_redemption" 
-                                        value="1"
-                                        x-model="requireVerification"
-                                        class="w-4 h-4 text-brand-600 border-stone-300 rounded focus:ring-brand-500"
-                                        {{ old('require_verification_for_redemption', $store->require_verification_for_redemption ?? true) ? 'checked' : '' }}
-                                    />
-                                </div>
-                                <div class="flex-1">
-                                    <label for="require_verification_for_redemption" class="block text-sm font-medium text-stone-700 cursor-pointer">
-                                        Require Email Verification for Redemption
-                                    </label>
-                                    <p class="mt-1 text-xs text-stone-500">
-                                        If enabled, customers must verify their email address before redeeming rewards. This helps prevent fraud and ensures rewards go to the correct customer.
-                                    </p>
-                                    <!-- Warning when disabled -->
-                                    <div x-show="!requireVerification" x-cloak class="mt-2 p-3 bg-accent-50 border-l-4 border-accent-500 rounded-r">
-                                        <div class="flex items-start gap-2">
-                                            <svg class="w-5 h-5 text-accent-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                                            </svg>
-                                            <div>
-                                                <p class="text-sm font-semibold text-accent-800">Security Warning</p>
-                                                <p class="text-xs text-accent-700 mt-1">
-                                                    Allowing unverified redemption may increase fraud risk. Only disable this if you verify customers in person at your store.
-                                                </p>
-                                            </div>
+                            <p class="mt-1 text-sm text-stone-600">Reward rules, verification, and join form fields are managed from the default card screen.</p>
+                            @if($defaultProgram)
+                                @php
+                                    $defaultFormConfig = $defaultProgram->registration_form_config ?? [];
+                                    $enabledJoinFields = collect(['first_name', 'last_name', 'phone', 'birthday'])
+                                        ->filter(fn ($field) => data_get($defaultFormConfig, "{$field}.enabled"))
+                                        ->map(fn ($field) => str($field)->replace('_', ' ')->title())
+                                        ->values();
+                                @endphp
+                                <div class="mt-4 rounded-2xl border border-stone-200 bg-white p-4">
+                                    <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                                        <div class="space-y-2">
+                                            <p class="font-semibold text-stone-900">{{ $defaultProgram->name }}</p>
+                                            <p class="text-sm text-stone-600">{{ $defaultProgram->reward_target }} stamps for {{ $defaultProgram->reward_title }}</p>
+                                            <p class="text-xs text-stone-500">
+                                                Redemption verification: {{ $defaultProgram->require_verification_for_redemption ? 'Required' : 'Optional' }}
+                                            </p>
+                                            <p class="text-xs text-stone-500">
+                                                Join fields:
+                                                {{ $enabledJoinFields->isNotEmpty() ? $enabledJoinFields->join(', ') : 'Email only' }}
+                                            </p>
+                                        </div>
+                                        <div class="flex flex-wrap gap-2">
+                                            <x-ui.button href="{{ route('merchant.stores.programs.edit', [$store, $defaultProgram]) }}" variant="secondary" size="sm">
+                                                Edit Default Card
+                                            </x-ui.button>
+                                            <x-ui.button href="{{ route('merchant.stores.programs.index', $store) }}" variant="ghost" size="sm">
+                                                View All Cards
+                                            </x-ui.button>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
-                            <x-input-error :messages="$errors->get('require_verification_for_redemption')" class="mt-2" />
+                            @endif
                         </div>
 
+                        <div class="mb-5">
+                            <x-input-error :messages="$errors->get('reward_target')" class="mt-2" />
+                            <x-input-error :messages="$errors->get('reward_title')" class="mt-2" />
+                            <x-input-error :messages="$errors->get('require_verification_for_redemption')" class="mt-2" />
+                        </div>
+                        
                         <!-- Brand Color -->
                         <div class="mb-5">
                             <label for="brand_color" class="block mb-2 text-sm font-medium text-stone-700">Brand Color</label>
                             <div class="flex gap-2">
-                                <input type="color" id="brand_color" name="brand_color" value="{{ old('brand_color', $store->brand_color ?? '#0EA5E9') }}" class="h-10 w-20 rounded border border-stone-300 cursor-pointer">
-                                <x-ui.input type="text" id="brand_color_text" value="{{ old('brand_color', $store->brand_color ?? '#0EA5E9') }}" placeholder="#0EA5E9" pattern="^#[0-9A-Fa-f]{6}$" class="flex-1" />
+                                <input type="color" id="brand_color" name="brand_color" x-ref="brandColor" value="{{ old('brand_color', $store->brand_color ?? '#0EA5E9') }}" class="h-10 w-20 rounded border cursor-pointer" x-bind:class="hasBlockedContrast ? 'border-red-300' : 'border-stone-300'">
+                                <x-ui.input type="text" id="brand_color_text" x-ref="brandColorText" value="{{ old('brand_color', $store->brand_color ?? '#0EA5E9') }}" placeholder="#0EA5E9" pattern="^#[0-9A-Fa-f]{6}$" class="flex-1" x-bind:class="hasBlockedContrast ? '!border-red-300' : ''" />
                             </div>
                             <p class="mt-1 text-xs text-stone-500">Used for customer card styling</p>
                             <x-input-error :messages="$errors->get('brand_color')" class="mt-2" />
-                            <script>
-                                document.getElementById('brand_color').addEventListener('input', function(e) {
-                                    document.getElementById('brand_color_text').value = e.target.value;
-                                });
-                                document.getElementById('brand_color_text').addEventListener('input', function(e) {
-                                    if (/^#[0-9A-Fa-f]{6}$/.test(e.target.value)) {
-                                        document.getElementById('brand_color').value = e.target.value;
-                                    }
-                                });
-                            </script>
                         </div>
 
                         <!-- Background Color -->
                         <div class="mb-5">
                             <label for="background_color" class="block mb-2 text-sm font-medium text-stone-700">Background Color</label>
                             <div class="flex gap-2">
-                                <input type="color" id="background_color" name="background_color" value="{{ old('background_color', $store->background_color ?? '#1F2937') }}" class="h-10 w-20 rounded border border-stone-300 cursor-pointer">
-                                <x-ui.input type="text" id="background_color_text" value="{{ old('background_color', $store->background_color ?? '#1F2937') }}" placeholder="#1F2937" pattern="^#[0-9A-Fa-f]{6}$" class="flex-1" />
+                                <input type="color" id="background_color" name="background_color" x-ref="bgColor" value="{{ old('background_color', $store->background_color ?? '#1F2937') }}" class="h-10 w-20 rounded border cursor-pointer" x-bind:class="hasBlockedContrast ? 'border-red-300' : 'border-stone-300'">
+                                <x-ui.input type="text" id="background_color_text" x-ref="bgColorText" value="{{ old('background_color', $store->background_color ?? '#1F2937') }}" placeholder="#1F2937" pattern="^#[0-9A-Fa-f]{6}$" class="flex-1" x-bind:class="hasBlockedContrast ? '!border-red-300' : ''" />
                             </div>
                             <p class="mt-1 text-xs text-stone-500">Used for customer card page background</p>
                             <x-input-error :messages="$errors->get('background_color')" class="mt-2" />
-                            <script>
-                                document.getElementById('background_color').addEventListener('input', function(e) {
-                                    document.getElementById('background_color_text').value = e.target.value;
-                                });
-                                document.getElementById('background_color_text').addEventListener('input', function(e) {
-                                    if (/^#[0-9A-Fa-f]{6}$/.test(e.target.value)) {
-                                        document.getElementById('background_color').value = e.target.value;
-                                    }
-                                });
-                            </script>
+                        </div>
+
+                        <div x-show="hasBlockedContrast" x-cloak class="mb-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900">
+                            <p class="font-semibold">Colors need more contrast</p>
+                            <p class="mt-1 leading-relaxed">
+                                Your brand and background colors are too close together, so the join page and saved card can become unreadable. Use a darker background, a brighter accent, or increase the contrast between them before saving.
+                            </p>
+                        </div>
+
+                        <div x-show="!hasBlockedContrast && (hasLowContrastPreview || hasVeryLightBackground)" x-cloak class="mb-5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                            <p class="font-semibold">Preview warning</p>
+                            <p class="mt-1 leading-relaxed">
+                                This combination will save, but it may still look washed out on the join page or wallet handoff. The safest fix is a darker background and a more distinct accent color.
+                            </p>
                         </div>
 
                         <!-- Logo Upload -->
@@ -282,72 +300,8 @@
                             });
                         </script>
 
-                        <!-- Customer Registration Form Fields -->
-                        @php
-                            $formConfig = $store->registration_form_config ?? [];
-                            $fields = [
-                                'first_name' => 'First Name',
-                                'last_name'  => 'Last Name',
-                                'phone'      => 'Phone Number',
-                                'birthday'   => 'Birthday',
-                            ];
-                        @endphp
-                        <div class="mb-5">
-                            <label class="block mb-2 text-sm font-medium text-stone-700">Customer Registration Fields</label>
-                            <p class="text-xs text-stone-500 mb-3">Choose which fields to collect when customers join your loyalty program. Email is always required.</p>
-                            <div class="space-y-3 rounded-xl border border-stone-200 p-4 bg-stone-50">
-                                <!-- Email — always on, locked -->
-                                <div class="flex items-center justify-between py-1">
-                                    <span class="text-sm font-medium text-stone-700">Email Address</span>
-                                    <div class="flex items-center gap-4">
-                                        <label class="flex items-center gap-1.5 text-xs text-stone-400 cursor-not-allowed">
-                                            <input type="checkbox" checked disabled class="w-4 h-4 rounded text-brand-600 border-stone-300 opacity-50">
-                                            Enabled
-                                        </label>
-                                        <label class="flex items-center gap-1.5 text-xs text-stone-400 cursor-not-allowed">
-                                            <input type="checkbox" checked disabled class="w-4 h-4 rounded text-brand-600 border-stone-300 opacity-50">
-                                            Required
-                                        </label>
-                                    </div>
-                                </div>
-                                @foreach($fields as $key => $label)
-                                    @php
-                                        $enabled  = old("{$key}_enabled",  ($formConfig[$key]['enabled']  ?? false) ? '1' : '0') === '1';
-                                        $required = old("{$key}_required", ($formConfig[$key]['required'] ?? false) ? '1' : '0') === '1';
-                                    @endphp
-                                    <div class="flex items-center justify-between py-1 border-t border-stone-200" x-data="{ enabled: {{ $enabled ? 'true' : 'false' }} }">
-                                        <span class="text-sm font-medium text-stone-700">{{ $label }}</span>
-                                        <div class="flex items-center gap-4">
-                                            <label class="flex items-center gap-1.5 text-xs text-stone-600 cursor-pointer">
-                                                <input
-                                                    type="checkbox"
-                                                    name="{{ $key }}_enabled"
-                                                    value="1"
-                                                    x-model="enabled"
-                                                    {{ $enabled ? 'checked' : '' }}
-                                                    class="w-4 h-4 rounded text-brand-600 border-stone-300 focus:ring-brand-500"
-                                                >
-                                                Enabled
-                                            </label>
-                                            <label class="flex items-center gap-1.5 text-xs cursor-pointer" :class="enabled ? 'text-stone-600' : 'text-stone-300 cursor-not-allowed'">
-                                                <input
-                                                    type="checkbox"
-                                                    name="{{ $key }}_required"
-                                                    value="1"
-                                                    :disabled="!enabled"
-                                                    {{ $required ? 'checked' : '' }}
-                                                    class="w-4 h-4 rounded text-brand-600 border-stone-300 focus:ring-brand-500 disabled:opacity-40"
-                                                >
-                                                Required
-                                            </label>
-                                        </div>
-                                    </div>
-                                @endforeach
-                            </div>
-                        </div>
-
                         <div class="flex items-center justify-end gap-4">
-                            <x-ui.button type="submit" variant="primary">
+                            <x-ui.button type="submit" variant="primary" x-bind:disabled="hasBlockedContrast" x-bind:aria-disabled="hasBlockedContrast ? 'true' : 'false'">
                                 Update Store
                             </x-ui.button>
                         </div>

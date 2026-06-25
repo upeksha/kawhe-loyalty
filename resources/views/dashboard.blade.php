@@ -4,10 +4,6 @@
     </x-slot>
 
     @php
-        $usagePercent = isset($usageStats) ? min(100, max(0, (int) ($usageStats['usage_percentage'] ?? 0))) : 0;
-        $cardsRemaining = isset($usageStats) && !($usageStats['is_subscribed'] ?? false)
-            ? max(0, (int) (($usageStats['limit'] ?? 0) - ($usageStats['non_grandfathered_programs_count'] ?? 0)))
-            : null;
         $merchantStores = request()->user()?->stores()->get() ?? collect();
         $storesCount = $merchantStores->count();
         $storesWithLogo = $merchantStores->filter(fn ($store) => !empty($store->logo_path))->count();
@@ -253,74 +249,56 @@
     @endphp
 
     <div class="space-y-6 sm:space-y-8">
-        <section class="rounded-[28px] border border-stone-200/70 bg-white p-4 shadow-sm shadow-stone-200/50 sm:p-6">
-            <div class="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
-                <div class="max-w-2xl">
-                    <p class="text-xs font-semibold uppercase tracking-[0.22em] text-[#4f7d54]">Dashboard</p>
-                    <h2 class="mt-2 text-2xl font-semibold tracking-tight text-stone-900 sm:text-3xl">
-                        Welcome back, {{ request()->user()->name ?? 'Merchant' }}.
-                    </h2>
-                    <p class="mt-2 max-w-xl text-sm leading-6 text-stone-600">
-                        Here’s the clearest read on customer growth, reward usage, and store readiness across your loyalty program.
-                    </p>
-                </div>
-
+        <x-ui.page-hero
+            eyebrow="Dashboard"
+            title="Welcome back, {{ request()->user()->name ?? 'Merchant' }}."
+            description="Here’s the clearest read on customer growth, reward usage, and store readiness across your loyalty program."
+            class="rounded-[28px] border-stone-200/70 p-4 shadow-stone-200/50 sm:p-6"
+        >
+            <x-slot name="actions">
                 <div class="w-full max-w-[34rem]">
                     <p class="text-xs font-semibold uppercase tracking-[0.18em] text-stone-400">Quick Actions</p>
                     <div class="mt-2 grid gap-2 sm:grid-cols-3">
-                        <x-ui.button href="{{ route('merchant.scanner') }}" variant="primary" size="sm" class="!justify-start !rounded-xl !border-0 !bg-[#f3efe7] !px-3 !py-3 !text-[#3a2a22] !shadow-none hover:!bg-[#ece4d6]">
-                            Open Scanner
-                        </x-ui.button>
-                        <x-ui.button href="{{ route('merchant.stores.index') }}" variant="secondary" size="sm" class="!justify-start !rounded-xl !border-0 !bg-[#edf4eb] !px-3 !py-3 !text-[#1f3b2c] !shadow-none hover:!bg-[#deebda]">
-                            Store QR
-                        </x-ui.button>
-                        <x-ui.button href="{{ route('merchant.customers.index') }}" variant="secondary" size="sm" class="!justify-start !rounded-xl !border-0 !bg-[#fff4e9] !px-3 !py-3 !text-[#c96a3b] !shadow-none hover:!bg-[#fde8d7]">
-                            Customers
-                        </x-ui.button>
+                        <x-ui.action-tile href="{{ route('merchant.scanner') }}" label="Open Scanner" tone="sand" />
+                        <x-ui.action-tile href="{{ route('merchant.stores.index') }}" label="Store QR" tone="sage" />
+                        <x-ui.action-tile href="{{ route('merchant.customers.index') }}" label="Customers" tone="peach" />
                     </div>
                 </div>
-            </div>
-        </section>
+            </x-slot>
+        </x-ui.page-hero>
 
         <section class="grid gap-4 lg:grid-cols-3">
             @foreach($summaryCards as $card)
-                <article class="rounded-[26px] border border-stone-200/60 {{ $card['tone'] }} p-5 shadow-sm shadow-stone-200/40">
-                    <div class="flex items-start justify-between gap-4">
-                        <div>
-                            <p class="text-sm font-medium text-stone-500">{{ $card['label'] }}</p>
-                            <p class="mt-4 text-4xl font-semibold tracking-tight text-stone-950">{{ $card['value'] }}</p>
-                        </div>
-                        <div class="mt-0 h-[5.5rem] w-36 shrink-0">
-                            <canvas class="h-full w-full" data-chart='@json($card["chart"])' aria-hidden="true"></canvas>
-                        </div>
-                    </div>
-                </article>
+                <x-ui.stat-card
+                    layout="horizontal"
+                    :label="$card['label']"
+                    :value="$card['value']"
+                    :tone="$card['tone']"
+                    :accent="$card['accent']"
+                    size="lg"
+                    class="rounded-[26px] border border-stone-200/60 shadow-sm shadow-stone-200/40"
+                >
+                    <x-slot name="chart">
+                        <canvas class="h-full w-full" data-chart='@json($card["chart"])' aria-hidden="true"></canvas>
+                    </x-slot>
+                </x-ui.stat-card>
             @endforeach
         </section>
 
         <section class="grid gap-6 md:grid-cols-2">
-            <section class="rounded-[30px] border border-stone-200/70 bg-white p-5 shadow-sm shadow-stone-200/50 sm:p-6">
+            <x-ui.section-panel class="rounded-[30px] border-stone-200/70 p-5 shadow-stone-200/50 sm:p-6">
                 <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                     <div>
                         <h3 class="text-xl font-semibold text-stone-900">Loyalty Activity</h3>
                         <p class="mt-2 text-sm leading-6 text-stone-600">Daily joins, stamps, and redeems across the last 14 days.</p>
                     </div>
-                    <span class="inline-flex items-center rounded-full bg-stone-100 px-3 py-1 text-xs font-semibold text-stone-600">Last 14 days</span>
+                    <x-ui.badge variant="default">Last 14 days</x-ui.badge>
                 </div>
 
                 <div class="mt-6 grid gap-3 md:grid-cols-3">
-                    <div class="rounded-2xl bg-[#f3efe7] p-4 text-[#3a2a22]">
-                        <p class="text-xs font-semibold uppercase tracking-[0.18em] opacity-75">New cards</p>
-                        <p class="mt-3 text-3xl font-semibold tracking-tight text-stone-950">{{ number_format($analytics['joins_last_window']) }}</p>
-                    </div>
-                    <div class="rounded-2xl bg-[#edf4eb] p-4 text-[#1f3b2c]">
-                        <p class="text-xs font-semibold uppercase tracking-[0.18em] opacity-75">Stamp activity</p>
-                        <p class="mt-3 text-3xl font-semibold tracking-tight text-stone-950">{{ number_format($trendPoints->sum('stamps')) }}</p>
-                    </div>
-                    <div class="rounded-2xl bg-[#fff5df] p-4 text-[#d6a24a]">
-                        <p class="text-xs font-semibold uppercase tracking-[0.18em] opacity-75">Avg per day</p>
-                        <p class="mt-3 text-3xl font-semibold tracking-tight text-stone-950">{{ number_format($trendPoints->sum('total') / max(1, $trendPoints->count()), 1) }}</p>
-                    </div>
+                    <x-ui.admin-metric label="New cards" :value="number_format($analytics['joins_last_window'])" tone="bg-[#f3efe7] text-[#3a2a22]" />
+                    <x-ui.admin-metric label="Stamp activity" :value="number_format($trendPoints->sum('stamps'))" tone="bg-[#edf4eb] text-[#1f3b2c]" />
+                    <x-ui.admin-metric label="Avg per day" :value="number_format($trendPoints->sum('total') / max(1, $trendPoints->count()), 1)" tone="bg-[#fff5df] text-[#d6a24a]" />
                 </div>
 
                 @if($trendPoints->every(fn ($day) => ($day['total'] ?? 0) === 0))
@@ -334,26 +312,20 @@
                         </div>
                     </div>
                 @endif
-            </section>
+            </x-ui.section-panel>
 
-            <section class="rounded-[30px] border border-stone-200/70 bg-white p-5 shadow-sm shadow-stone-200/50 sm:p-6">
+            <x-ui.section-panel class="rounded-[30px] border-stone-200/70 p-5 shadow-stone-200/50 sm:p-6">
                 <div class="flex items-start justify-between gap-4">
                     <div>
                         <h3 class="text-xl font-semibold text-stone-900">Card Growth</h3>
                         <p class="mt-2 text-sm leading-6 text-stone-600">New customer cards added over the last two weeks.</p>
                     </div>
-                    <span class="rounded-full bg-[#edf4eb] px-3 py-1 text-xs font-semibold text-[#1f3b2c]">Live</span>
+                    <x-ui.badge variant="success">Live</x-ui.badge>
                 </div>
 
                 <div class="mt-5 grid gap-3 sm:grid-cols-2">
-                    <div class="rounded-2xl bg-[#f3efe7] p-4 text-[#3a2a22]">
-                        <p class="text-xs font-semibold uppercase tracking-[0.18em] opacity-75">Cards added</p>
-                        <p class="mt-3 text-3xl font-semibold tracking-tight text-stone-950">{{ number_format($analytics['joins_last_window']) }}</p>
-                    </div>
-                    <div class="rounded-2xl bg-stone-100 p-4 text-stone-700">
-                        <p class="text-xs font-semibold uppercase tracking-[0.18em] opacity-75">Daily average</p>
-                        <p class="mt-3 text-3xl font-semibold tracking-tight text-stone-950">{{ number_format($analytics['joins_last_window'] / max(1, $trendPoints->count()), 1) }}</p>
-                    </div>
+                    <x-ui.admin-metric label="Cards added" :value="number_format($analytics['joins_last_window'])" tone="bg-[#f3efe7] text-[#3a2a22]" />
+                    <x-ui.admin-metric label="Daily average" :value="number_format($analytics['joins_last_window'] / max(1, $trendPoints->count()), 1)" tone="bg-stone-100 text-stone-700" />
                 </div>
 
                 @if($trendPoints->every(fn ($day) => ($day['joins'] ?? 0) === 0))
@@ -367,7 +339,7 @@
                         </div>
                     </div>
                 @endif
-            </section>
+            </x-ui.section-panel>
         </section>
 
         <section class="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -390,20 +362,49 @@
                             </x-ui.button>
                         @endif
                     </div>
-                    <div class="mt-4 rounded-xl border border-stone-200 bg-stone-50/80 p-4">
-                        <p class="text-sm text-stone-700">
-                            Loyalty cards:
-                            <strong>{{ $usageStats['programs_count'] }} / {{ $usageStats['limit'] }}</strong>
-                        </p>
-                        @if(!$usageStats['is_subscribed'])
-                            <p class="mt-1 text-xs text-stone-500">Remaining on free plan: {{ $cardsRemaining }}</p>
-                            <div class="mt-3 w-full bg-stone-200 rounded-full h-2">
-                                <div class="h-2 rounded-full bg-[#4f7d54] transition-all duration-300" style="width: {{ $usagePercent }}%"></div>
-                            </div>
-                        @endif
+                    @php
+                        $storesUsed = (int) ($usageStats['stores_count'] ?? 0);
+                        $storesLimit = $usageStats['stores_limit'] ?? null;
+                        $cardsUsed = (int) ($usageStats['primary_store_programs_count'] ?? $usageStats['programs_count'] ?? 0);
+                        $cardsLimit = $usageStats['programs_per_store_limit'] ?? null;
+                        $customersUsed = (int) ($usageStats['primary_program_customers_count'] ?? 0);
+                        $customersLimit = $usageStats['customers_per_program_limit'] ?? null;
+                    @endphp
+                    <div class="mt-4 space-y-3">
+                        <div class="rounded-xl border border-stone-200 bg-stone-50/80 p-4">
+                            <p class="text-xs font-semibold uppercase tracking-[0.18em] text-stone-500">Stores</p>
+                            <p class="mt-2 text-lg font-semibold text-stone-900">
+                                {{ $storesUsed }}@if($storesLimit)<span class="text-sm font-medium text-stone-500"> / {{ $storesLimit }}</span>@endif
+                            </p>
+                            <p class="mt-1 text-xs text-stone-600">{{ ($usageStats['can_create_store'] ?? false) ? 'Room for another store' : 'Store limit reached' }}</p>
+                            <x-ui.usage-meter class="mt-3" :used="$storesUsed" :limit="$storesLimit" />
+                        </div>
+
+                        <div class="rounded-xl border border-stone-200 bg-stone-50/80 p-4">
+                            <p class="text-xs font-semibold uppercase tracking-[0.18em] text-stone-500">Cards (primary store)</p>
+                            <p class="mt-2 text-lg font-semibold text-stone-900">
+                                {{ $cardsUsed }}@if($cardsLimit)<span class="text-sm font-medium text-stone-500"> / {{ $cardsLimit }}</span>@endif
+                            </p>
+                            <p class="mt-1 text-xs text-stone-600">{{ ($usageStats['can_create_program'] ?? false) ? 'Can add another card' : 'Card limit reached on this store' }}</p>
+                            <x-ui.usage-meter class="mt-3" :used="$cardsUsed" :limit="$cardsLimit" />
+                        </div>
+
+                        <div class="rounded-xl border border-stone-200 bg-stone-50/80 p-4">
+                            <p class="text-xs font-semibold uppercase tracking-[0.18em] text-stone-500">Customers (primary card)</p>
+                            <p class="mt-2 text-lg font-semibold text-stone-900">
+                                {{ $customersUsed }}@if($customersLimit)<span class="text-sm font-medium text-stone-500"> / {{ $customersLimit }}</span>@else<span class="text-sm font-medium text-stone-500"> unlimited</span>@endif
+                            </p>
+                            <p class="mt-1 text-xs text-stone-600">{{ $usageStats['is_subscribed'] ? 'Unlimited new joins on Pro' : 'New joins blocked at 100 on Free' }}</p>
+                            <x-ui.usage-meter class="mt-3" :used="$customersUsed" :limit="$customersLimit" />
+                        </div>
+
                         @if($usageStats['grandfathered_programs_count'] > 0)
-                            <p class="mt-2 text-xs text-stone-500">{{ $usageStats['grandfathered_programs_count'] }} grandfathered card(s) active</p>
+                            <p class="px-1 text-xs text-stone-500">{{ $usageStats['grandfathered_programs_count'] }} grandfathered card(s) active</p>
                         @endif
+
+                        <x-ui.button href="{{ route('billing.index') }}" variant="ghost" size="sm" class="w-full">
+                            View billing details
+                        </x-ui.button>
                     </div>
                 </x-ui.card>
             @else
@@ -432,18 +433,21 @@
                 </div>
 
                 <div class="mt-5 space-y-3 text-sm">
-                    <div class="flex items-center justify-between rounded-xl border border-stone-200 bg-stone-50/80 px-4 py-3">
-                        <span class="text-stone-700">Store branding added</span>
-                        <span class="font-medium {{ $storesWithLogo === $storesCount && $storesCount > 0 ? 'text-emerald-700' : 'text-amber-700' }}">{{ $storesWithLogo }}/{{ $storesCount }}</span>
-                    </div>
-                    <div class="flex items-center justify-between rounded-xl border border-stone-200 bg-stone-50/80 px-4 py-3">
-                        <span class="text-stone-700">Wallet assets added</span>
-                        <span class="font-medium {{ $storesWithWalletAssets === $storesCount && $storesCount > 0 ? 'text-emerald-700' : 'text-amber-700' }}">{{ $storesWithWalletAssets }}/{{ $storesCount }}</span>
-                    </div>
-                    <div class="flex items-center justify-between rounded-xl border border-stone-200 bg-stone-50/80 px-4 py-3">
-                        <span class="text-stone-700">Reward setup complete</span>
-                        <span class="font-medium {{ $storesWithRewardRules === $storesCount && $storesCount > 0 ? 'text-emerald-700' : 'text-amber-700' }}">{{ $storesWithRewardRules }}/{{ $storesCount }}</span>
-                    </div>
+                    <x-ui.readiness-row
+                        label="Store branding added"
+                        :value="$storesWithLogo.'/'.$storesCount"
+                        :state="$storesWithLogo === $storesCount && $storesCount > 0 ? 'ready' : 'attention'"
+                    />
+                    <x-ui.readiness-row
+                        label="Wallet assets added"
+                        :value="$storesWithWalletAssets.'/'.$storesCount"
+                        :state="$storesWithWalletAssets === $storesCount && $storesCount > 0 ? 'ready' : 'attention'"
+                    />
+                    <x-ui.readiness-row
+                        label="Reward setup complete"
+                        :value="$storesWithRewardRules.'/'.$storesCount"
+                        :state="$storesWithRewardRules === $storesCount && $storesCount > 0 ? 'ready' : 'attention'"
+                    />
                 </div>
             </x-ui.card>
 
@@ -475,31 +479,18 @@
         </section>
 
         @if(isset($usageStats) && !$usageStats['is_subscribed'])
-            @if($usageStats['non_grandfathered_programs_count'] >= $usageStats['limit'])
-                <x-ui.card class="p-4 border border-accent-200 bg-accent-50">
-                    <p class="text-sm text-accent-800">
-                        <strong>Limit Reached:</strong> You’ve reached the free plan limit of {{ $usageStats['limit'] }} loyalty card.
-                        @if($usageStats['grandfathered_programs_count'] > 0)
-                            {{ $usageStats['grandfathered_programs_count'] }} grandfathered card(s) remain active, but you cannot add another card until you upgrade.
-                        @else
-                            Existing customers can still use their cards, but you cannot add another card until you upgrade.
-                        @endif
-                    </p>
-                </x-ui.card>
+            @if(($usageStats['primary_program_customers_count'] ?? 0) >= ($usageStats['customers_per_program_limit'] ?? PHP_INT_MAX))
+                <x-ui.alert variant="warning">
+                    <strong>Customer limit reached:</strong> New joins are paused at 100 customers on this card. Existing customers can still scan and redeem.
+                </x-ui.alert>
             @elseif($usageStats['has_cancelled_subscription'] && $usageStats['grandfathered_programs_count'] > 0)
-                <x-ui.card class="p-4 border border-[#d6a24a]/40 bg-[#fff5df]">
-                    <p class="text-sm text-[#7c5a1c]">
-                        <strong>Grandfathered Cards:</strong> You have {{ $usageStats['grandfathered_programs_count'] }} active from your previous Pro subscription.
-                        You can create {{ $usageStats['limit'] - $usageStats['non_grandfathered_programs_count'] }} more card(s) on free.
-                    </p>
-                </x-ui.card>
-            @elseif($usageStats['programs_count'] >= ($usageStats['limit'] * 0.8))
-                <x-ui.card class="p-4 border border-[#d6a24a]/40 bg-[#fff5df]">
-                    <p class="text-sm text-[#7c5a1c]">
-                        <strong>Almost there:</strong> You’re using {{ $usageStats['programs_count'] }} of {{ $usageStats['limit'] }} free card slots.
-                        Consider upgrading to keep adding loyalty cards.
-                    </p>
-                </x-ui.card>
+                <x-ui.alert variant="warning">
+                    <strong>Grandfathered cards:</strong> You have {{ $usageStats['grandfathered_programs_count'] }} active from your previous Pro subscription. New growth follows free-plan limits.
+                </x-ui.alert>
+            @elseif(($usageStats['customers_usage_percentage'] ?? 0) >= 80)
+                <x-ui.alert variant="warning">
+                    <strong>Almost at customer cap:</strong> {{ $usageStats['primary_program_customers_count'] }} of {{ $usageStats['customers_per_program_limit'] }} free-plan customers on your primary card.
+                </x-ui.alert>
             @endif
         @endif
     </div>

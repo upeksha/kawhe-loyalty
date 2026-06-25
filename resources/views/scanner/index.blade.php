@@ -8,16 +8,26 @@
         $googlePlayUrl = config('services.merchant_app.google_play_url');
     @endphp
 
-    <div class="mx-auto">
+    <div class="mx-auto space-y-6">
+        @if($stores->isNotEmpty())
+            <x-ui.page-hero
+                eyebrow="Counter tool"
+                title="Scan loyalty cards"
+                description="Select your store, scan a customer QR code, and stamp or redeem in seconds. Use the mobile app for the fastest daily workflow."
+            />
+        @endif
+
         @if($stores->isEmpty())
-            <x-ui.card class="p-6 text-center">
-                <p class="mb-4 text-stone-600">You need to finish setting up your first store before you can scan cards.</p>
+            <x-ui.empty-state
+                heading="Finish setup to start scanning"
+                description="You need to finish setting up your first store before you can scan cards."
+            >
                 <x-ui.button href="{{ route('merchant.onboarding.wizard.store-basics') }}" variant="primary">
                     Finish Setup
                 </x-ui.button>
-            </x-ui.card>
+            </x-ui.empty-state>
         @else
-            <x-ui.card class="mb-6 overflow-hidden border border-stone-200/80 bg-gradient-to-br from-[#f3efe7] via-white to-[#edf4eb] p-5 sm:p-6">
+            <x-ui.section-panel class="mb-6 overflow-hidden border-stone-200/80 bg-gradient-to-br from-[#f3efe7] via-white to-[#edf4eb] p-5 sm:p-6">
                 <div class="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
                     <div class="max-w-xl">
                         <p class="text-xs font-semibold uppercase tracking-[0.22em] text-[#4f7d54]">Merchant App</p>
@@ -63,47 +73,49 @@
                         Set <code>MERCHANT_APP_APPLE_STORE_URL</code> in production to show the live App Store link here.
                     </p>
                 @endif
-            </x-ui.card>
+            </x-ui.section-panel>
 
-            <x-ui.card class="p-4 sm:p-6">
+            <x-ui.section-panel class="p-4 sm:p-6">
                 <div class="max-w-md mx-auto" x-data="scannerApp()" @keydown.escape.window="handleEscape()">
                     <!-- Store Selector -->
                     <div class="mb-6">
-                        <label for="store_id" class="block mb-2 text-sm font-medium text-stone-700">Select Active Store</label>
-                        <select id="store_id" x-model="activeStoreId" class="block w-full rounded-lg border border-stone-300 shadow-sm px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500">
+                        <label for="store_id" class="mb-2 block text-sm font-medium text-stone-700">Select Active Store</label>
+                        <x-ui.select id="store_id" x-model="activeStoreId" class="rounded-lg">
                             <option value="">-- Choose a Store --</option>
                             @foreach($stores as $store)
                                 <option value="{{ $store->id }}">{{ $store->name }}</option>
                             @endforeach
-                        </select>
+                        </x-ui.select>
                     </div>
 
                     <!-- Scanner Controls -->
-                    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-2">
-                        <p class="text-xs sm:text-sm text-stone-600" x-text="cameraStatus"></p>
+                    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-2">
+                        <p class="text-sm text-stone-600" x-text="cameraStatus"></p>
                         <div class="flex items-center gap-2 flex-wrap">
                             <span
-                                class="inline-flex items-center rounded-full px-2 py-1 text-[11px] font-semibold"
-                                :class="cooldownActive ? 'bg-amber-100 text-amber-800' : (isProcessingScan ? 'bg-brand-100 text-brand-800' : 'bg-emerald-100 text-emerald-800')"
+                                class="inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-semibold tracking-wide"
+                                :class="cooldownActive ? 'bg-amber-50 text-amber-700 border-amber-100' : (isProcessingScan ? 'bg-brand-50 text-brand-700 border-brand-100' : 'bg-emerald-50 text-emerald-700 border-emerald-100')"
                                 x-text="cooldownActive ? 'Cooldown' : (isProcessingScan ? 'Processing' : 'Ready')"
                             ></span>
-                            <button
+                            <x-ui.button
                                 type="button"
                                 x-show="!isScanning"
                                 @click="startScanner()"
-                                :disabled="isProcessingScan"
-                                class="px-3 py-2 text-xs font-medium rounded-lg bg-brand-600 hover:bg-brand-700 text-white transition"
+                                x-bind:disabled="isProcessingScan"
+                                variant="primary"
+                                size="md"
                             >
                                 Start Camera
-                            </button>
-                            <button
+                            </x-ui.button>
+                            <x-ui.button
                                 type="button"
                                 @click="switchCamera()"
                                 x-bind:disabled="!canSwitchCamera || !isScanning || isProcessingScan"
-                                class="px-3 py-2 text-xs font-medium rounded-lg border transition disabled:opacity-50 disabled:cursor-not-allowed bg-white hover:bg-stone-50 text-stone-800 border-stone-300"
+                                variant="secondary"
+                                size="md"
                             >
                                 Switch camera
-                            </button>
+                            </x-ui.button>
                         </div>
                     </div>
 
@@ -155,9 +167,9 @@
                                 type="button"
                                 @click="startScanner()"
                                 :disabled="isProcessingScan"
-                                class="px-6 py-3 text-base font-medium rounded-lg bg-brand-600 hover:bg-brand-700 text-white transition shadow-lg"
+                                class="px-6 py-3.5 text-base font-semibold rounded-xl bg-brand-600 hover:bg-brand-700 text-white transition shadow-lg disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px]"
                             >
-                                📷 Start Camera
+                                Start Camera
                             </button>
                         </div>
 
@@ -214,9 +226,9 @@
                         <label for="manual_token" class="block mb-2 text-sm font-medium text-stone-700">Or enter code manually</label>
                         <div class="flex flex-col sm:flex-row gap-2">
                             <x-ui.input type="text" id="manual_token" x-model="manualToken" placeholder="e.g. A3CX or LA:..." class="flex-1" maxlength="50" />
-                            <button @click="handleScan(manualToken)" :disabled="isProcessingScan || !manualToken" type="button" class="w-full sm:w-auto px-4 py-2.5 text-sm font-medium rounded-lg bg-brand-600 hover:bg-brand-700 text-white transition focus:outline-none focus:ring-2 focus:ring-brand-500 disabled:opacity-50 disabled:cursor-not-allowed">
+                            <x-ui.button @click="handleScan(manualToken)" x-bind:disabled="isProcessingScan || !manualToken" type="button" variant="primary" size="lg" class="w-full sm:w-auto min-h-[44px]">
                                 Scan
-                            </button>
+                            </x-ui.button>
                         </div>
                         <p class="mt-2 text-xs text-stone-500">Scanner pauses briefly while each scan is validated to prevent double actions.</p>
                     </div>
@@ -387,13 +399,13 @@
                     </div>
 
                     <!-- Store Switched Banner -->
-                    <div x-show="storeSwitched" x-transition class="p-4 mb-4 text-sm rounded-lg text-brand-800 bg-brand-50" role="status" aria-live="polite">
-                        <span class="font-medium">ℹ️ Store Switched</span>
-                        <p x-text="'Switched to ' + switchedStoreName + ' for this scan'"></p>
-                    </div>
+                    <x-ui.alert x-show="storeSwitched" x-transition variant="info" class="mb-4" role="status" aria-live="polite">
+                        <p class="font-medium">Store switched</p>
+                        <p class="mt-1" x-text="'Switched to ' + switchedStoreName + ' for this scan'"></p>
+                    </x-ui.alert>
 
                     <!-- Feedback -->
-                    <div x-show="message" x-transition class="p-4 mb-4 text-sm rounded-lg border-l-4" :class="success ? (isRedeem ? 'text-accent-800 bg-accent-50 border-accent-500' : 'text-brand-800 bg-brand-50 border-brand-500') : 'text-red-800 bg-red-50 border-red-500'" role="status" :aria-live="success ? 'polite' : 'assertive'">
+                    <div x-show="message" x-transition class="mb-4 rounded-xl border px-4 py-4 text-sm sm:px-5 sm:py-5" :class="success ? (isRedeem ? 'border-accent-200 bg-accent-50 text-accent-900' : 'border-brand-200 bg-brand-50 text-brand-900') : 'border-red-200 bg-red-50 text-red-900'" role="status" :aria-live="success ? 'polite' : 'assertive'">
                         <div class="flex items-center gap-2 mb-2">
                             <span class="font-medium" x-text="success ? (isRedeem ? '🎁 Reward Redeemed!' : '✅ Stamped!') : '❌ Error!'"></span>
                             <span x-show="success && isRedeem" class="text-xs font-semibold px-2 py-0.5 rounded bg-accent-200 text-accent-900">REDEEM</span>
@@ -415,7 +427,7 @@
                         </template>
                     </div>
                 </div>
-            </x-ui.card>
+            </x-ui.section-panel>
         @endif
     </div>
 

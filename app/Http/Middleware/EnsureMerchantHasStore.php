@@ -24,6 +24,14 @@ class EnsureMerchantHasStore
             return $next($request);
         }
 
+        // Allow poster downloads/previews while onboarding is still in progress.
+        if (in_array($routeName, [
+            'merchant.stores.qr.pdf',
+            'merchant.stores.qr.image',
+        ], true)) {
+            return $next($request);
+        }
+
         // Super admins bypass this check
         if ($user && $user->isSuperAdmin()) {
             return $next($request);

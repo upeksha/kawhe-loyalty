@@ -8,6 +8,7 @@ use App\Models\PointsTransaction;
 use App\Models\StampEvent;
 use App\Models\Store;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -17,6 +18,8 @@ class MerchantAnalyticsDashboardTest extends TestCase
 
     public function test_merchant_dashboard_shows_value_metrics(): void
     {
+        $this->travelTo(Carbon::parse('2026-03-20 12:00:00'));
+
         $merchant = User::factory()->create();
         $store = Store::factory()->for($merchant)->create();
 

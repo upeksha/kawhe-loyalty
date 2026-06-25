@@ -3,12 +3,14 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\MerchantOnboardingWizardController;
 use App\Mail\MerchantWelcomeEmail;
 use App\Models\User;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\Rules;
@@ -34,14 +36,31 @@ class RegisteredUserController extends Controller
         $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:'.User::class],
+            'store_name' => ['required', 'string', 'max:255'],
+            'address' => ['nullable', 'string', 'max:255'],
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
         ]);
 
-        $user = User::create([
-            'name' => $request->name,
-            'email' => $request->email,
-            'password' => Hash::make($request->password),
-        ]);
+        $user = DB::transaction(function () use ($request) {
+            $user = User::create([
+                'name' => $request->name,
+                'email' => $request->email,
+                'password' => Hash::make($request->password),
+            ]);
+
+            $store = $user->stores()->create([
+                'name' => $request->string('store_name')->toString(),
+                'address' => $request->filled('address') ? $request->string('address')->toString() : null,
+                'reward_target' => 9,
+                'reward_title' => 'Free coffee',
+                'onboarding_step' => MerchantOnboardingWizardController::STEP_STORE_BASICS,
+            ]);
+
+            $store->ensureDefaultProgramExists();
+            $store->syncDefaultProgramFromStore();
+
+            return $user;
+        });
 
         event(new Registered($user));
 
@@ -72,7 +91,6 @@ class RegisteredUserController extends Controller
 
         Auth::login($user);
 
-        // New merchants have no stores yet: send them to onboarding v2 wizard
         return redirect()->route('merchant.onboarding.wizard.store-basics');
     }
 }

@@ -1,19 +1,23 @@
 <x-merchant-layout>
-    <x-slot name="header">
-        <div class="flex justify-between items-center">
-            <span>{{ __('Stores') }}</span>
-            <x-ui.button href="{{ route('merchant.stores.create') }}" variant="primary" size="sm" class="ml-5">
-                Add Another Store
-            </x-ui.button>
-        </div>
-    </x-slot>
+        <x-slot name="header">
+            <x-ui.page-header title="{{ __('Stores') }}">
+                <x-slot name="actions">
+                    @if($usageStats['can_create_store'] ?? false)
+                        <x-ui.button href="{{ route('merchant.stores.create') }}" variant="primary" size="sm">
+                            Add Another Store
+                        </x-ui.button>
+                    @endif
+                </x-slot>
+            </x-ui.page-header>
+        </x-slot>
 
     <div class="space-y-6">
         @if($stores->isEmpty() && ($archivedStores ?? collect())->isEmpty())
-            <x-ui.card class="p-12 text-center">
-                <h3 class="text-lg font-semibold text-stone-900">No active stores</h3>
-                <p class="text-stone-500 mt-2">Use the setup wizard for your first store. Come back here later to manage stores and add extra locations.</p>
-                <div class="mt-6 flex flex-wrap justify-center gap-2">
+            <x-ui.empty-state
+                heading="No active stores"
+                description="Use the setup wizard for your first store. Come back here later to manage stores and add extra locations."
+            >
+                <div class="flex flex-wrap justify-center gap-2">
                     <x-ui.button href="{{ route('merchant.onboarding.wizard.store-basics') }}" variant="primary">
                         Open Setup Wizard
                     </x-ui.button>
@@ -21,7 +25,7 @@
                         Back to Dashboard
                     </x-ui.button>
                 </div>
-            </x-ui.card>
+            </x-ui.empty-state>
         @else
             @if($stores->isNotEmpty())
                 <div>
@@ -42,7 +46,6 @@
                                 <div class="mt-4 flex items-center gap-3">
                                     <a href="{{ route('merchant.stores.edit', $store) }}" class="text-brand-600 hover:text-brand-700 font-medium text-sm">Edit</a>
                                     <a href="{{ route('merchant.stores.programs.index', $store) }}" class="text-brand-600 hover:text-brand-700 font-medium text-sm">Loyalty Cards</a>
-                                    <a href="{{ route('merchant.stores.qr', $store) }}" class="text-brand-600 hover:text-brand-700 font-medium text-sm">Default Card QR</a>
                                 </div>
                             </x-ui.card>
                         @endforeach
@@ -74,7 +77,6 @@
                                             <div class="flex justify-end gap-3">
                                                 <a href="{{ route('merchant.stores.edit', $store) }}" class="text-brand-600 hover:text-brand-700 font-medium text-sm">Edit</a>
                                                 <a href="{{ route('merchant.stores.programs.index', $store) }}" class="text-brand-600 hover:text-brand-700 font-medium text-sm">Loyalty Cards</a>
-                                                <a href="{{ route('merchant.stores.qr', $store) }}" class="text-brand-600 hover:text-brand-700 font-medium text-sm">Default Card QR</a>
                                             </div>
                                         </x-ui.table-cell>
                                     </tr>

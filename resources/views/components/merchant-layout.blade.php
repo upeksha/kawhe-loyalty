@@ -28,6 +28,12 @@
         </style>
     </head>
     <body class="font-sans antialiased bg-stone-50">
+        @php
+            $navCardStore = Auth::user()?->stores()->whereNull('deleted_at')->orderBy('id')->first();
+            $storesNavActive = request()->routeIs('merchant.stores.*');
+            $cardsNavActive = request()->routeIs('merchant.stores.programs.*');
+            $storesNavOpenDefault = $cardsNavActive;
+        @endphp
         <div x-data="{ sidebarOpen: false }" class="min-h-screen">
             <!-- Sidebar -->
             <aside 
@@ -62,15 +68,57 @@
                             Dashboard
                         </a>
                         
-                        <a 
-                            href="{{ route('merchant.stores.index') }}" 
-                            class="flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors {{ request()->routeIs('merchant.stores.*') ? 'bg-brand-50 text-brand-700' : 'text-stone-700 hover:bg-stone-100' }}"
-                        >
-                            <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                            </svg>
-                            Stores
-                        </a>
+                        <div x-data="{ storesNavOpen: @json($storesNavOpenDefault) }">
+                            <div class="flex items-center gap-1">
+                                <a
+                                    href="{{ route('merchant.stores.index') }}"
+                                    class="flex min-w-0 flex-1 items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors {{ $storesNavActive ? 'bg-brand-50 text-brand-700' : 'text-stone-700 hover:bg-stone-100' }}"
+                                >
+                                    <svg class="mr-3 h-5 w-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                                    </svg>
+                                    <span class="truncate">Stores</span>
+                                </a>
+                                @if($navCardStore)
+                                    <button
+                                        type="button"
+                                        @click="storesNavOpen = !storesNavOpen"
+                                        class="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg text-stone-500 transition-colors hover:bg-stone-100 hover:text-stone-700"
+                                        :aria-expanded="storesNavOpen"
+                                        aria-controls="merchant-nav-cards"
+                                    >
+                                        <svg class="h-4 w-4 transition-transform duration-200" :class="{ 'rotate-180': storesNavOpen }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                        </svg>
+                                        <span class="sr-only">Toggle cards menu</span>
+                                    </button>
+                                @endif
+                            </div>
+                            @if($navCardStore)
+                                <div
+                                    id="merchant-nav-cards"
+                                    x-show="storesNavOpen"
+                                    x-transition:enter="transition ease-out duration-150"
+                                    x-transition:enter-start="opacity-0 -translate-y-1"
+                                    x-transition:enter-end="opacity-100 translate-y-0"
+                                    x-transition:leave="transition ease-in duration-100"
+                                    x-transition:leave-start="opacity-100 translate-y-0"
+                                    x-transition:leave-end="opacity-0 -translate-y-1"
+                                    class="mt-1 space-y-1"
+                                    style="display: none;"
+                                >
+                                    <a
+                                        href="{{ route('merchant.stores.programs.index', $navCardStore) }}"
+                                        class="ml-11 flex items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors {{ $cardsNavActive ? 'bg-brand-50 text-brand-700' : 'text-stone-600 hover:bg-stone-100 hover:text-stone-900' }}"
+                                    >
+                                        <svg class="mr-3 h-4 w-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7h16M4 12h16M4 17h10M6 5h12a2 2 0 012 2v10a2 2 0 01-2 2H6a2 2 0 01-2-2V7a2 2 0 012-2z" />
+                                        </svg>
+                                        Cards
+                                    </a>
+                                </div>
+                            @endif
+                        </div>
                         
                         <a 
                             href="{{ route('merchant.customers.index') }}" 

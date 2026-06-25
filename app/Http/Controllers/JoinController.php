@@ -7,11 +7,13 @@ use App\Models\Customer;
 use App\Models\LoyaltyAccount;
 use App\Models\LoyaltyProgram;
 use App\Models\Store;
+use App\Support\RegistrationFormConfig;
 use Illuminate\Http\Request;
-use Illuminate\View\View;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
+use Illuminate\View\View;
 
 class JoinController extends Controller
 {
@@ -23,8 +25,17 @@ class JoinController extends Controller
         $program = LoyaltyProgram::withTrashed()->where('join_short_code', strtoupper($code))->first();
 
         if (! $program) {
-            $store = Store::withTrashed()->where('join_short_code', strtoupper($code))->firstOrFail();
+            $store = Store::withTrashed()->where('join_short_code', strtoupper($code))->first();
+
+            if (! $store) {
+                return $this->invalidJoinResponse();
+            }
+
             $program = $store->resolvedDefaultProgram();
+
+            if (! $program) {
+                return $this->invalidJoinResponse($store->slug);
+            }
         }
 
         return redirect()->route('join.index', [
@@ -37,7 +48,11 @@ class JoinController extends Controller
     {
         $token = $request->query('t');
 
-        $program = $this->findJoinProgram($slug, $token);
+        $program = $this->resolveJoinProgram($slug, $token);
+        if ($program instanceof Response) {
+            return $program;
+        }
+
         $store = $program->store;
 
         if ($archived = $this->archivedStoreResponse($store, $program, $token)) {
@@ -51,32 +66,70 @@ class JoinController extends Controller
     {
         $token = $request->query('t');
 
-        $program = $this->findJoinProgram($slug, $token);
+        $program = $this->resolveJoinProgram($slug, $token);
+        if ($program instanceof Response) {
+            return $program;
+        }
+
         $store = $program->store;
 
         if ($archived = $this->archivedStoreResponse($store, $program, $token)) {
             return $archived;
         }
 
-        return view('join.existing', compact('store', 'program', 'token'));
+        return view('join.existing', [
+            'store' => $store,
+            'program' => $program,
+            'token' => $token,
+            'phoneLookupEnabled' => RegistrationFormConfig::phoneLookupEnabled($program->registration_form_config ?? []),
+        ]);
     }
 
     public function lookup(Request $request, string $slug)
     {
         $token = $request->query('t');
 
-        $program = $this->findJoinProgram($slug, $token);
+        $program = $this->resolveJoinProgram($slug, $token);
+        if ($program instanceof Response) {
+            return $program;
+        }
+
         $store = $program->store;
 
         if ($archived = $this->archivedStoreResponse($store, $program, $token)) {
             return $archived;
         }
 
-        $validated = $request->validate([
-            'email' => ['required', 'email', 'max:255'],
-        ]);
+        $formConfig = $program->registration_form_config ?? [];
+        $phoneLookupEnabled = RegistrationFormConfig::phoneLookupEnabled($formConfig);
 
-        $customer = Customer::where('email', $validated['email'])->first();
+        $rules = [
+            'email' => [$phoneLookupEnabled ? 'nullable' : 'required', 'email', 'max:255'],
+        ];
+
+        if ($phoneLookupEnabled) {
+            $rules['phone'] = ['nullable', 'string', 'max:20'];
+        }
+
+        $validated = $request->validate($rules);
+
+        if (empty($validated['email']) && empty($validated['phone'] ?? null)) {
+            throw ValidationException::withMessages([
+                'email' => $phoneLookupEnabled
+                    ? 'Enter the email or phone number you used to join.'
+                    : 'Enter the email address you used to join.',
+            ]);
+        }
+
+        $customer = null;
+
+        if (! empty($validated['email'])) {
+            $customer = Customer::where('email', $validated['email'])->first();
+        }
+
+        if (! $customer && ! empty($validated['phone'] ?? null)) {
+            $customer = Customer::where('phone', $validated['phone'])->first();
+        }
 
         if ($customer) {
             $loyaltyAccount = LoyaltyAccount::where('loyalty_program_id', $program->id)
@@ -89,8 +142,13 @@ class JoinController extends Controller
             }
         }
 
+        $errorField = ! empty($validated['email']) ? 'email' : ($phoneLookupEnabled && ! empty($validated['phone'] ?? null) ? 'phone' : 'email');
+        $errorMessage = $phoneLookupEnabled
+            ? 'We could not find a card for that email or phone number in this loyalty card yet. Try a different detail, or create a new card if you have not joined yet.'
+            : 'We could not find a card for that email address in this loyalty card yet. Try a different email, or create a new card if you have not joined yet.';
+
         return back()->withErrors([
-            'email' => 'We could not find a card for that email address in this loyalty card yet. Try a different email, or create a new card if you have not joined yet.',
+            $errorField => $errorMessage,
         ])->withInput();
     }
 
@@ -98,7 +156,11 @@ class JoinController extends Controller
     {
         $token = $request->query('t');
 
-        $program = $this->findJoinProgram($slug, $token);
+        $program = $this->resolveJoinProgram($slug, $token);
+        if ($program instanceof Response) {
+            return $program;
+        }
+
         $store = $program->store;
 
         if ($archived = $this->archivedStoreResponse($store, $program, $token)) {
@@ -112,7 +174,11 @@ class JoinController extends Controller
     {
         $token = $request->query('t');
 
-        $program = $this->findJoinProgram($slug, $token);
+        $program = $this->resolveJoinProgram($slug, $token);
+        if ($program instanceof Response) {
+            return $program;
+        }
+
         $store = $program->store;
 
         if ($archived = $this->archivedStoreResponse($store, $program, $token)) {
@@ -188,14 +254,19 @@ class JoinController extends Controller
 
         $merchant = $store->user;
 
-        if (!$merchant) {
+        if (! $merchant) {
             \Log::error('Store has no owner user', [
                 'store_id' => $store->id,
                 'store_name' => $store->name,
             ]);
             abort(500, 'The store is not ready to accept new joins right now. Please ask staff for help.');
         }
-        
+
+        $usageService = app(\App\Services\Billing\UsageService::class);
+        if (! $usageService->canAcceptNewCustomer($program)) {
+            return view('join.limit-reached', compact('store', 'program', 'token'));
+        }
+
         // Create new loyalty account
         $loyaltyAccount = LoyaltyAccount::create([
             'store_id' => $store->id,
@@ -210,7 +281,7 @@ class JoinController extends Controller
         if ($customer->email) {
             // Generate verification token (store-specific)
             $verificationToken = Str::random(40);
-            
+
             // Save verification data on the loyalty account (store-specific verification)
             $loyaltyAccount->update([
                 'email_verification_token_hash' => hash('sha256', $verificationToken),
@@ -258,8 +329,12 @@ class JoinController extends Controller
             ->with('show_wallet_nudge', true);
     }
 
-    private function findJoinProgram(string $slug, ?string $token): LoyaltyProgram
+    private function resolveJoinProgram(string $slug, ?string $token): LoyaltyProgram|Response
     {
+        if (! $token) {
+            return $this->invalidJoinResponse($slug);
+        }
+
         $program = LoyaltyProgram::withTrashed()
             ->where('slug', $slug)
             ->where('join_token', $token)
@@ -273,12 +348,29 @@ class JoinController extends Controller
         $store = Store::withTrashed()
             ->where('slug', $slug)
             ->where('join_token', $token)
-            ->firstOrFail();
+            ->first();
+
+        if (! $store) {
+            return $this->invalidJoinResponse($slug);
+        }
 
         $program = $store->resolvedDefaultProgram();
-        abort_if(! $program, 404);
+
+        if (! $program) {
+            return $this->invalidJoinResponse($slug);
+        }
 
         return $program;
+    }
+
+    private function invalidJoinResponse(?string $slug = null): Response
+    {
+        $program = $slug
+            ? LoyaltyProgram::where('slug', $slug)->with('store')->first()
+            : null;
+        $store = $program?->store ?? ($slug ? Store::where('slug', $slug)->first() : null);
+
+        return response()->view('join.invalid', compact('store', 'program'), 404);
     }
 
     private function archivedStoreResponse(Store $store, LoyaltyProgram $program, ?string $token): ?View

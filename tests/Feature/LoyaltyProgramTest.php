@@ -103,6 +103,120 @@ test('merchant cannot change a loyalty program reward target after customers hav
     expect($program->fresh()->reward_target)->toBe(7);
 });
 
+test('merchant can download a loyalty card qr as svg', function () {
+    $owner = User::factory()->create();
+    $store = Store::factory()->create(['user_id' => $owner->id, 'name' => 'My Cafe']);
+    $program = $store->resolvedDefaultProgram();
+
+    $response = $this->actingAs($owner)->get(route('merchant.stores.programs.qr.image', [$store, $program]));
+
+    $response->assertOk();
+    $response->assertHeader('Content-Type', 'image/svg+xml');
+    $response->assertHeader('Content-Disposition', 'attachment; filename=my-cafe-'.\Illuminate\Support\Str::slug($program->name).'-qr-code.svg');
+});
+
+test('merchant can download a loyalty card poster as pdf', function () {
+    $owner = User::factory()->create();
+    $store = Store::factory()->create(['user_id' => $owner->id, 'name' => 'My Cafe']);
+    $program = $store->resolvedDefaultProgram();
+
+    $response = $this->actingAs($owner)->get(route('merchant.stores.programs.qr.pdf', [$store, $program]));
+
+    $response->assertOk();
+    $response->assertHeader('content-type', 'application/pdf');
+});
+
+test('updating the default loyalty card syncs legacy store compatibility fields', function () {
+    $owner = User::factory()->create();
+    $store = Store::factory()->create([
+        'user_id' => $owner->id,
+        'reward_target' => 9,
+        'reward_title' => 'Free coffee',
+        'require_verification_for_redemption' => true,
+        'registration_form_config' => Store::defaultRegistrationFormConfig(),
+    ]);
+    $program = $store->resolvedDefaultProgram();
+
+    $response = $this->actingAs($owner)->put(route('merchant.stores.programs.update', [$store, $program]), [
+        'name' => 'Main Coffee Card',
+        'reward_target' => 12,
+        'reward_title' => 'Free bag of beans',
+        'brand_color' => '#111827',
+        'background_color' => '#F5F5F4',
+        'first_name_enabled' => '1',
+        'phone_enabled' => '1',
+    ]);
+
+    $response->assertRedirect(route('merchant.stores.programs.edit', [$store, $program]));
+
+    $store->refresh();
+    $program->refresh();
+
+    expect($program->reward_target)->toBe(12);
+    expect($program->reward_title)->toBe('Free bag of beans');
+    expect((bool) $program->require_verification_for_redemption)->toBeFalse();
+    expect($program->registration_form_config['phone']['enabled'])->toBeTrue();
+
+    expect($store->reward_target)->toBe(12);
+    expect($store->reward_title)->toBe('Free bag of beans');
+    expect((bool) $store->require_verification_for_redemption)->toBeFalse();
+    expect($store->registration_form_config['phone']['enabled'])->toBeTrue();
+});
+
+test('updating a non-default loyalty card does not overwrite store compatibility fields', function () {
+    $owner = User::factory()->create(['stripe_id' => 'sub_123']);
+    $store = Store::factory()->create([
+        'user_id' => $owner->id,
+        'reward_target' => 9,
+        'reward_title' => 'Free coffee',
+        'require_verification_for_redemption' => true,
+        'registration_form_config' => Store::defaultRegistrationFormConfig(),
+    ]);
+    Subscription::create([
+        'user_id' => $owner->id,
+        'name' => 'default',
+        'stripe_id' => 'si_123',
+        'stripe_status' => 'active',
+        'quantity' => 1,
+    ]);
+
+    $program = LoyaltyProgram::create([
+        'store_id' => $store->id,
+        'name' => 'Weekend Card',
+        'reward_target' => 4,
+        'reward_title' => 'Free pastry',
+        'brand_color' => '#D97706',
+        'background_color' => '#431407',
+        'registration_form_config' => Store::defaultRegistrationFormConfig(),
+        'require_verification_for_redemption' => false,
+        'sort_order' => 2,
+    ]);
+
+    $response = $this->actingAs($owner)->put(route('merchant.stores.programs.update', [$store, $program]), [
+        'name' => 'Weekend Card Updated',
+        'reward_target' => 5,
+        'reward_title' => 'Free cake slice',
+        'brand_color' => '#D97706',
+        'background_color' => '#431407',
+        'require_verification_for_redemption' => '1',
+        'first_name_enabled' => '1',
+        'phone_enabled' => '1',
+    ]);
+
+    $response->assertRedirect(route('merchant.stores.programs.edit', [$store, $program]));
+
+    $store->refresh();
+    $program->refresh();
+
+    expect($program->reward_target)->toBe(5);
+    expect($program->reward_title)->toBe('Free cake slice');
+    expect((bool) $program->require_verification_for_redemption)->toBeTrue();
+
+    expect($store->reward_target)->toBe(9);
+    expect($store->reward_title)->toBe('Free coffee');
+    expect((bool) $store->require_verification_for_redemption)->toBeTrue();
+});
+
 test('free merchant cannot add an additional loyalty card beyond the default card', function () {
     $owner = User::factory()->create();
     $store = Store::factory()->create(['user_id' => $owner->id]);
@@ -115,4 +229,23 @@ test('free merchant cannot add an additional loyalty card beyond the default car
 
     $response->assertSessionHasErrors('name');
     expect(LoyaltyProgram::where('store_id', $store->id)->count())->toBe(1);
+});
+
+test('free merchant at card limit does not see add loyalty card button', function () {
+    $owner = User::factory()->create();
+    $store = Store::factory()->create(['user_id' => $owner->id]);
+
+    $response = $this->actingAs($owner)->get(route('merchant.stores.programs.index', $store));
+
+    $response->assertOk();
+    $response->assertDontSee('Add Loyalty Card', false);
+});
+
+test('free merchant at card limit is redirected from create loyalty card form', function () {
+    $owner = User::factory()->create();
+    $store = Store::factory()->create(['user_id' => $owner->id]);
+
+    $response = $this->actingAs($owner)->get(route('merchant.stores.programs.create', $store));
+
+    $response->assertRedirect(route('merchant.stores.programs.index', $store));
 });

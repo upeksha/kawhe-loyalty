@@ -2,26 +2,84 @@
 
 namespace App\Services\Billing;
 
+use App\Models\LoyaltyAccount;
 use App\Models\LoyaltyProgram;
+use App\Models\Store;
 use App\Models\User;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 
 class UsageService
 {
+    public function planFor(User $user): string
+    {
+        if ($this->isSubscribed($user)) {
+            return 'pro';
+        }
+
+        return 'free';
+    }
+
+    public function planConfig(string $plan): array
+    {
+        return config("billing.plans.{$plan}", config('billing.plans.free'));
+    }
+
+    public function planLabel(User $user): string
+    {
+        return (string) ($this->planConfig($this->planFor($user))['label'] ?? 'Free');
+    }
+
+    /** @deprecated Use storesLimitForUser() or programsPerStoreLimitForUser() */
     public function freeLimit(): int
     {
-        return 1;
+        return (int) config('billing.plans.free.programs_per_store', 1);
     }
 
+    /** @deprecated Use storesLimitForUser() */
     public function paidLimit(): int
     {
-        return 3;
+        return (int) config('billing.plans.pro.stores', 3);
     }
 
-    public function programLimitForUser(User $user): int
+    public function storesLimitForUser(User $user): ?int
     {
-        return $this->isSubscribed($user) ? $this->paidLimit() : $this->freeLimit();
+        $limit = $this->planConfig($this->planFor($user))['stores'] ?? null;
+
+        return $limit === null ? null : (int) $limit;
+    }
+
+    public function programsPerStoreLimitForUser(User $user): ?int
+    {
+        $limit = $this->planConfig($this->planFor($user))['programs_per_store'] ?? null;
+
+        return $limit === null ? null : (int) $limit;
+    }
+
+    public function customersPerProgramLimitForUser(User $user): ?int
+    {
+        $limit = $this->planConfig($this->planFor($user))['customers_per_program'] ?? null;
+
+        return $limit === null ? null : (int) $limit;
+    }
+
+    public function storesCountForUser(User $user): int
+    {
+        try {
+            return $user->stores()->whereNull('deleted_at')->count();
+        } catch (\Exception $e) {
+            Log::error('Error counting stores for user', [
+                'user_id' => $user->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return 0;
+        }
+    }
+
+    public function programsCountForStore(Store $store): int
+    {
+        return $store->loyaltyPrograms()->whereNull('deleted_at')->count();
     }
 
     public function programsCountForUser(User $user, bool $includeGrandfathered = true): int
@@ -98,6 +156,13 @@ class UsageService
         }
     }
 
+    public function customersCountForProgram(LoyaltyProgram $program): int
+    {
+        return LoyaltyAccount::query()
+            ->where('loyalty_program_id', $program->id)
+            ->count();
+    }
+
     public function isSubscribed(User $user): bool
     {
         try {
@@ -157,44 +222,139 @@ class UsageService
         }
     }
 
-    public function canCreateProgram(User $user): bool
+    public function canCreateStore(User $user): bool
     {
-        $limit = $this->programLimitForUser($user);
-        $nonGrandfatheredCount = $this->programsCountForUser($user, includeGrandfathered: false);
+        $limit = $this->storesLimitForUser($user);
 
-        return $nonGrandfatheredCount < $limit;
+        if ($limit === null) {
+            return true;
+        }
+
+        return $this->storesCountForUser($user) < $limit;
     }
 
-    public function canCreateCard(User $user): bool
+    public function canCreateProgramForStore(User $user, Store $store): bool
     {
-        return $this->canCreateProgram($user);
+        if ((int) $store->user_id !== (int) $user->id) {
+            return false;
+        }
+
+        $limit = $this->programsPerStoreLimitForUser($user);
+
+        if ($limit === null) {
+            return true;
+        }
+
+        return $this->programsCountForStore($store) < $limit;
+    }
+
+    public function canCreateProgram(User $user, ?Store $store = null): bool
+    {
+        if ($store !== null) {
+            return $this->canCreateProgramForStore($user, $store);
+        }
+
+        if ($this->canCreateStore($user)) {
+            return true;
+        }
+
+        foreach ($user->stores()->whereNull('deleted_at')->get() as $ownedStore) {
+            if ($this->canCreateProgramForStore($user, $ownedStore)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public function canCreateCard(User $user, ?Store $store = null): bool
+    {
+        return $this->canCreateProgram($user, $store);
+    }
+
+    public function canAcceptNewCustomer(LoyaltyProgram $program): bool
+    {
+        $store = $program->store;
+        $merchant = $store?->user;
+
+        if (! $merchant) {
+            return false;
+        }
+
+        $limit = $this->customersPerProgramLimitForUser($merchant);
+
+        if ($limit === null) {
+            return true;
+        }
+
+        return $this->customersCountForProgram($program) < $limit;
+    }
+
+    public function programLimitForUser(User $user): int
+    {
+        return $this->programsPerStoreLimitForUser($user) ?? PHP_INT_MAX;
     }
 
     public function getUsageStats(User $user): array
     {
+        $plan = $this->planFor($user);
+        $planConfig = $this->planConfig($plan);
         $programsCount = $this->programsCountForUser($user, includeGrandfathered: true);
         $nonGrandfatheredCount = $this->programsCountForUser($user, includeGrandfathered: false);
         $grandfatheredCount = $this->grandfatheredProgramsCount($user);
         $isSubscribed = $this->isSubscribed($user);
         $subscription = $user->subscription('default');
         $hasCancelledSubscription = $subscription && $subscription->ends_at && ! $isSubscribed;
-        $limit = $this->programLimitForUser($user);
+        $storesCount = $this->storesCountForUser($user);
+        $storesLimit = $this->storesLimitForUser($user);
+        $programsPerStoreLimit = $this->programsPerStoreLimitForUser($user);
+        $customersPerProgramLimit = $this->customersPerProgramLimitForUser($user);
+
+        $primaryStore = $user->stores()->whereNull('deleted_at')->orderBy('id')->first();
+        $primaryStoreProgramsCount = $primaryStore ? $this->programsCountForStore($primaryStore) : 0;
+        $primaryProgram = $primaryStore?->defaultLoyaltyProgram ?? $primaryStore?->loyaltyPrograms()->whereNull('deleted_at')->orderBy('id')->first();
+        $primaryProgramCustomersCount = $primaryProgram ? $this->customersCountForProgram($primaryProgram) : 0;
+        $canAcceptNewCustomer = $primaryProgram ? $this->canAcceptNewCustomer($primaryProgram) : true;
+
+        $programsLimit = $programsPerStoreLimit ?? PHP_INT_MAX;
+        $storesUsagePercent = $storesLimit !== null && $storesLimit > 0
+            ? min(100, ($storesCount / $storesLimit) * 100)
+            : 0;
+        $programsUsagePercent = $programsPerStoreLimit !== null && $programsPerStoreLimit > 0 && $primaryStore
+            ? min(100, ($primaryStoreProgramsCount / $programsPerStoreLimit) * 100)
+            : 0;
+        $customersUsagePercent = $customersPerProgramLimit !== null && $customersPerProgramLimit > 0 && $primaryProgram
+            ? min(100, ($primaryProgramCustomersCount / $customersPerProgramLimit) * 100)
+            : 0;
 
         return [
+            'plan' => $plan,
+            'plan_label' => $planConfig['label'] ?? ucfirst($plan),
+            'stores_count' => $storesCount,
+            'stores_limit' => $storesLimit,
+            'can_create_store' => $this->canCreateStore($user),
+            'programs_per_store_limit' => $programsPerStoreLimit,
+            'customers_per_program_limit' => $customersPerProgramLimit,
+            'primary_store_programs_count' => $primaryStoreProgramsCount,
+            'primary_program_customers_count' => $primaryProgramCustomersCount,
             'programs_count' => $programsCount,
             'cards_count' => $programsCount,
             'non_grandfathered_programs_count' => $nonGrandfatheredCount,
             'non_grandfathered_count' => $nonGrandfatheredCount,
             'grandfathered_programs_count' => $grandfatheredCount,
             'grandfathered_count' => $grandfatheredCount,
-            'limit' => $limit,
-            'free_limit' => $this->freeLimit(),
-            'paid_limit' => $this->paidLimit(),
+            'limit' => $programsPerStoreLimit ?? $storesLimit ?? 0,
+            'free_limit' => (int) config('billing.plans.free.programs_per_store', 1),
+            'paid_limit' => (int) config('billing.plans.pro.stores', 3),
             'is_subscribed' => $isSubscribed,
             'has_cancelled_subscription' => $hasCancelledSubscription,
             'can_create_program' => $this->canCreateProgram($user),
             'can_create_card' => $this->canCreateProgram($user),
-            'usage_percentage' => $limit > 0 ? min(100, ($nonGrandfatheredCount / $limit) * 100) : 0,
+            'can_accept_new_customer' => $canAcceptNewCustomer,
+            'usage_percentage' => max($storesUsagePercent, $programsUsagePercent, $customersUsagePercent),
+            'stores_usage_percentage' => $storesUsagePercent,
+            'programs_usage_percentage' => $programsUsagePercent,
+            'customers_usage_percentage' => $customersUsagePercent,
         ];
     }
 }

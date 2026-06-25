@@ -1,3 +1,5 @@
+@import './customer.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -21,4 +23,15 @@
 .color-swatch-input::-moz-color-swatch {
     border: 0;
     border-radius: 9999px;
+}
+
+/* Join/card inputs: beat @tailwindcss/forms base styles (white background). */
+.customer-page input.customer-input,
+.customer-page textarea.customer-input,
+.customer-page select.customer-input {
+    background-color: var(--program-input-bg) !important;
+    color: var(--program-input-text) !important;
+    -webkit-text-fill-color: var(--program-input-text) !important;
+    border-color: var(--program-input-border);
+    border-radius: 0.75rem;
 }

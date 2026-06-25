@@ -4,7 +4,21 @@ use App\Models\Customer;
 use App\Models\LoyaltyAccount;
 use App\Models\Store;
 use App\Models\User;
+use Illuminate\Http\UploadedFile;
 use Laravel\Cashier\Subscription;
+
+function validStoreCreatePayload(array $overrides = []): array
+{
+    return array_merge([
+        'reward_target' => 9,
+        'reward_title' => 'Free Coffee',
+        'brand_color' => '#123456',
+        'background_color' => '#654321',
+        'logo' => UploadedFile::fake()->image('logo.png', 200, 200),
+        'pass_logo' => UploadedFile::fake()->image('pass-logo.png', 160, 50),
+        'pass_hero_image' => UploadedFile::fake()->image('pass-hero.png', 640, 180),
+    ], $overrides);
+}
 
 test('authenticated merchant with an existing store can create another store', function () {
     $user = User::factory()->create(['stripe_id' => 'sub_123']);
@@ -17,12 +31,10 @@ test('authenticated merchant with an existing store can create another store', f
         'quantity' => 1,
     ]);
 
-    $response = $this->actingAs($user)->post('/merchant/stores', [
+    $response = $this->actingAs($user)->post('/merchant/stores', validStoreCreatePayload([
         'name' => 'My Awesome Coffee Shop',
         'address' => '123 Main St',
-        'reward_target' => 9,
-        'reward_title' => 'Free Coffee',
-    ]);
+    ]));
 
     $response->assertRedirect('/merchant/stores');
     $this->assertDatabaseHas('stores', [
@@ -67,17 +79,13 @@ test('slug is unique', function () {
         'quantity' => 1,
     ]);
 
-    $this->actingAs($user)->post('/merchant/stores', [
+    $this->actingAs($user)->post('/merchant/stores', validStoreCreatePayload([
         'name' => 'Coffee Shop',
-        'reward_target' => 9,
-        'reward_title' => 'Free Coffee',
-    ]);
+    ]));
 
-    $this->actingAs($user)->post('/merchant/stores', [
+    $this->actingAs($user)->post('/merchant/stores', validStoreCreatePayload([
         'name' => 'Coffee Shop',
-        'reward_target' => 9,
-        'reward_title' => 'Free Coffee',
-    ]);
+    ]));
 
     $stores = Store::where('name', 'Coffee Shop')->get();
     expect($stores)->toHaveCount(2);
@@ -106,49 +114,43 @@ test('owner can view their store qr', function () {
     $response->assertViewHas('joinUrl');
 });
 
-test('merchant can change reward target before any customers join', function () {
+test('owner can download their store qr as svg', function () {
+    $owner = User::factory()->create();
+    $store = Store::factory()->create(['user_id' => $owner->id, 'name' => 'My Coffee Shop']);
+
+    $response = $this->actingAs($owner)->get(route('merchant.stores.qr.image', $store));
+
+    $response->assertOk();
+    $response->assertHeader('Content-Type', 'image/svg+xml');
+    $response->assertHeader('Content-Disposition', 'attachment; filename=my-coffee-shop-qr-code.svg');
+});
+
+test('merchant can update store details without card settings in the payload', function () {
     $owner = User::factory()->create();
     $store = Store::factory()->create([
         'user_id' => $owner->id,
         'reward_target' => 9,
+        'reward_title' => 'Free Coffee',
+        'require_verification_for_redemption' => true,
     ]);
 
     $response = $this->actingAs($owner)->put(route('merchant.stores.update', $store), [
-        'name' => $store->name,
-        'address' => $store->address,
-        'reward_target' => 12,
-        'reward_title' => $store->reward_title,
+        'name' => 'Updated Store Name',
+        'address' => '99 Harbour Street',
+        'brand_color' => '#111827',
+        'background_color' => '#F5F5F4',
     ]);
 
     $response->assertRedirect(route('merchant.stores.index'));
-    expect($store->fresh()->reward_target)->toBe(12);
-});
 
-test('merchant cannot change reward target after customers have joined', function () {
-    $owner = User::factory()->create();
-    $store = Store::factory()->create([
-        'user_id' => $owner->id,
-        'reward_target' => 9,
-    ]);
-    $customer = Customer::factory()->create();
-
-    LoyaltyAccount::factory()->create([
-        'store_id' => $store->id,
-        'customer_id' => $customer->id,
-    ]);
-
-    $response = $this->from(route('merchant.stores.edit', $store))
-        ->actingAs($owner)
-        ->put(route('merchant.stores.update', $store), [
-            'name' => $store->name,
-            'address' => $store->address,
-            'reward_target' => 12,
-            'reward_title' => $store->reward_title,
-        ]);
-
-    $response->assertRedirect(route('merchant.stores.edit', $store));
-    $response->assertSessionHasErrors('reward_target');
-    expect($store->fresh()->reward_target)->toBe(9);
+    $updated = $store->fresh();
+    expect($updated->name)->toBe('Updated Store Name');
+    expect($updated->address)->toBe('99 Harbour Street');
+    expect($updated->brand_color)->toBe('#111827');
+    expect($updated->background_color)->toBe('#F5F5F4');
+    expect($updated->reward_target)->toBe(9);
+    expect($updated->reward_title)->toBe('Free Coffee');
+    expect((bool) $updated->require_verification_for_redemption)->toBeTrue();
 });
 
 test('merchant can still update other store details after customers have joined', function () {
@@ -169,7 +171,6 @@ test('merchant can still update other store details after customers have joined'
     $response = $this->actingAs($owner)->put(route('merchant.stores.update', $store), [
         'name' => 'Updated Store Name',
         'address' => '99 Harbour Street',
-        'reward_title' => $store->reward_title,
         'brand_color' => '#111827',
         'background_color' => '#F5F5F4',
     ]);
@@ -198,4 +199,23 @@ test('free merchant cannot create a second store because it would add another de
     $response->assertRedirect(route('billing.index'));
     $response->assertSessionHasErrors('error');
     expect(Store::where('user_id', $owner->id)->count())->toBe(1);
+});
+
+test('free merchant at store limit does not see add another store button', function () {
+    $owner = User::factory()->create();
+    Store::factory()->create(['user_id' => $owner->id]);
+
+    $response = $this->actingAs($owner)->get(route('merchant.stores.index'));
+
+    $response->assertOk();
+    $response->assertDontSee('Add Another Store', false);
+});
+
+test('free merchant at store limit is redirected from create store form', function () {
+    $owner = User::factory()->create();
+    Store::factory()->create(['user_id' => $owner->id]);
+
+    $response = $this->actingAs($owner)->get(route('merchant.stores.create'));
+
+    $response->assertRedirect(route('merchant.stores.index'));
 });

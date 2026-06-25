@@ -2,7 +2,6 @@
 
 namespace Tests\Feature;
 
-use App\Models\LoyaltyAccount;
 use App\Models\Store;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -21,15 +20,20 @@ class BillingDiagnosticsTest extends TestCase
             ->get(route('billing.index'));
 
         $response->assertOk();
+        $response->assertSee('Usage right now');
+        $response->assertSee('% used');
         $response->assertSee('Billing Support Diagnostics');
         $response->assertSee('Stripe customer linked');
-        $response->assertSee('Plan allows another loyalty card');
+        $response->assertSee('Plan allows growth');
         $response->assertSee('Recommended next step');
         $response->assertSee('Plan State');
+        $response->assertSee('Compare plans');
+        $response->assertSee('Business');
+        $response->assertSee('Coming soon');
         $response->assertSee('Recovery actions');
     }
 
-    public function test_billing_page_surfaces_blocking_card_limit_state(): void
+    public function test_billing_page_shows_free_plan_active_for_new_merchant_with_store(): void
     {
         $user = User::factory()->create();
         Store::factory()->for($user)->create();
@@ -39,7 +43,32 @@ class BillingDiagnosticsTest extends TestCase
             ->get(route('billing.index'));
 
         $response->assertOk();
-        $response->assertSee('You have used all free plan card slots');
+        $response->assertSee('Free plan active');
+        $response->assertSee('You are on the free plan');
+        $response->assertDontSee('You have reached the free customer limit');
+    }
+
+    public function test_billing_page_surfaces_customer_limit_state(): void
+    {
+        $user = User::factory()->create();
+        $store = Store::factory()->for($user)->create();
+        $program = $store->loyaltyPrograms()->first();
+
+        for ($i = 0; $i < 100; $i++) {
+            \App\Models\LoyaltyAccount::create([
+                'store_id' => $store->id,
+                'loyalty_program_id' => $program->id,
+                'customer_id' => \App\Models\Customer::factory()->create()->id,
+            ]);
+        }
+
+        $response = $this
+            ->actingAs($user)
+            ->get(route('billing.index'));
+
+        $response->assertOk();
+        $response->assertSee('Free plan full');
+        $response->assertSee('You have reached the free customer limit');
         $response->assertSee('Sync Billing Status');
     }
 
