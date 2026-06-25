@@ -17,7 +17,7 @@
 ```json
 {
   "lastUpdated": "1705747200",
-  "serialNumbers": ["kawhe-2-9"]
+  "serialNumbers": ["kawhe-42"]
 }
 ```
 
@@ -155,7 +155,7 @@ Then in tinker:
 $account = \App\Models\LoyaltyAccount::find(10); // Use account with registration
 $service = app(\App\Services\Wallet\Apple\ApplePushService::class);
 $passType = config('passgenerator.pass_type_identifier');
-$serial = 'kawhe-' . $account->store_id . '-' . $account->customer_id;
+$serial = \App\Services\Wallet\Apple\AppleWalletSerial::fromAccount($account);
 $service->sendPassUpdatePushes($passType, $serial);
 exit
 ```

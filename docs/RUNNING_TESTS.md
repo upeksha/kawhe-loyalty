@@ -43,7 +43,9 @@ Instead of running tests, verify functionality manually:
 
 ### 1. Test APNs Push Command
 ```bash
-php artisan wallet:apns-test kawhe-1-2
+# Resolve serial from latest account
+SERIAL=$(php artisan tinker --execute="\$a = \App\Models\LoyaltyAccount::latest()->first(); echo \App\Services\Wallet\Apple\AppleWalletSerial::fromAccount(\$a);" | tail -1)
+php artisan wallet:apns-test "$SERIAL"
 ```
 
 ### 2. Check Logs

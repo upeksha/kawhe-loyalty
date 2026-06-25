@@ -27,7 +27,8 @@ Instead of running tests, verify the functionality works:
 
 ### 1. Test APNs Push Command
 ```bash
-php artisan wallet:apns-test kawhe-1-2
+SERIAL=$(php artisan tinker --execute="\$a = \App\Models\LoyaltyAccount::latest()->first(); echo \App\Services\Wallet\Apple\AppleWalletSerial::fromAccount(\$a);" | tail -1)
+php artisan wallet:apns-test "$SERIAL"
 ```
 
 ### 2. Check if Registration Endpoint Works
@@ -47,8 +48,9 @@ if (\$account) {
 
 ### 3. Test Device Registration Endpoint (Manual)
 ```bash
-# Get serial and device info
-SERIAL="kawhe-1-2"  # Replace with actual serial
+# Get serial and device info (replace SERIAL with output from tinker below)
+php artisan tinker --execute="\$a = \App\Models\LoyaltyAccount::first(); echo \App\Services\Wallet\Apple\AppleWalletSerial::fromAccount(\$a);"
+SERIAL="kawhe-42"  # Replace with actual serial from above
 DEVICE="test-device-123"
 PUSH_TOKEN=$(openssl rand -hex 32)  # Generate 64-char token
 AUTH_TOKEN="your-account-public-token"  # Get from database

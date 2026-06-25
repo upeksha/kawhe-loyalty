@@ -60,7 +60,7 @@ php artisan tinker
 ```php
 // Check for new registration
 $account = \App\Models\LoyaltyAccount::where('public_token', '{public_token}')->first();
-$serial = 'kawhe-' . $account->store_id . '-' . $account->customer_id;
+$serial = \App\Services\Wallet\Apple\AppleWalletSerial::fromAccount($account);
 $reg = \App\Models\AppleWalletRegistration::where('serial_number', $serial)
     ->where('active', true)
     ->first();
@@ -254,7 +254,7 @@ tail -f storage/logs/laravel.log | grep -E "push|stamp|wallet|APNs" --color=alwa
    ```bash
    php artisan tinker --execute="
    \$account = \App\Models\LoyaltyAccount::where('public_token', '{public_token}')->first();
-   \$serial = 'kawhe-' . \$account->store_id . '-' . \$account->customer_id;
+   \$serial = \App\Services\Wallet\Apple\AppleWalletSerial::fromAccount(\$account);
    \$reg = \App\Models\AppleWalletRegistration::where('serial_number', \$serial)->where('active', true)->first();
    echo \$reg ? 'Registered' : 'Not registered';
    "
@@ -267,8 +267,9 @@ tail -f storage/logs/laravel.log | grep -E "push|stamp|wallet|APNs" --color=alwa
 
 3. **Test push manually:**
    ```bash
-   php artisan wallet:apns-test kawhe-{store_id}-{customer_id}
+   php artisan wallet:apns-test kawhe-{loyalty_account_id}
    ```
+   (Use the account ID from `AppleWalletSerial::fromAccount($account)`, or legacy `kawhe-{store_id}-{customer_id}` if testing old passes.)
 
 4. **Check iPhone:**
    - Ensure iPhone has internet connection
@@ -321,7 +322,10 @@ ACCOUNT_ID=$(echo "$ACCOUNT" | head -2 | tail -1)
 STORE_ID=$(echo "$ACCOUNT" | head -3 | tail -1)
 CUSTOMER_ID=$(echo "$ACCOUNT" | tail -1)
 
-SERIAL="kawhe-${STORE_ID}-${CUSTOMER_ID}"
+SERIAL=$(php artisan tinker --execute="
+\$account = \App\Models\LoyaltyAccount::first();
+echo \App\Services\Wallet\Apple\AppleWalletSerial::fromAccount(\$account);
+" | tail -1)
 
 echo "Account ID: $ACCOUNT_ID"
 echo "Public Token: $PUBLIC_TOKEN"

@@ -115,10 +115,11 @@ Or use an online tool like https://placeholder.com or create simple colored PNGs
    php artisan tinker
    ```
    ```php
-   $store = App\Models\Store::first();
-   $customer = App\Models\Customer::first();
-   $account = App\Models\LoyaltyAccount::where('store_id', $store->id)->where('customer_id', $customer->id)->first();
-   echo $account->public_token;
+   $account = App\Models\LoyaltyAccount::latest()->first();
+   // Or by public token: LoyaltyAccount::where('public_token', '...')->first();
+   $serial = \App\Services\Wallet\Apple\AppleWalletSerial::fromAccount($account);
+   echo "Public token: {$account->public_token}\n";
+   echo "Serial: {$serial}\n";
    ```
 
 2. **Generate signed URL** (in tinker or browser):

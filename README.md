@@ -1,23 +1,23 @@
 # Kawhe Loyalty
 
-A Progressive Web App (PWA) loyalty card system built with Laravel 11. Enable merchants to create digital loyalty programs where customers earn stamps and redeem rewards with real-time updates.
+A Progressive Web App (PWA) loyalty platform built with Laravel 12. Merchants configure loyalty cards, onboard customers via QR/join links, and scan to stamp/redeem rewards. Customers get web cards with optional Apple Wallet and Google Wallet passes and real-time updates.
 
 ## Features
 
-- 🏪 **Multi-Store Management**: Merchants can create and manage multiple stores
-- 🎨 **Custom Branding**: Upload logos, set brand colors, and customize card backgrounds
+- 🏪 **Multi-Store & Multi-Card**: Stores can run multiple loyalty cards (programs), each with its own join link and QR
+- 🎨 **Custom Branding**: Required logos, brand colors, and wallet assets during setup
 - 📱 **PWA Support**: Works offline with service worker caching
 - ⚡ **Real-time Updates**: Live synchronization via Laravel Reverb (WebSockets)
-- 🔒 **Secure Redemption**: Email verification required for reward redemption
+- 🔒 **Secure Redemption**: Email verification required for reward redemption (configurable per card)
 - 📊 **Transaction Ledger**: Immutable audit trail of all point transactions
 - 🛡️ **Data Integrity**: Idempotency, optimistic locking, and rate limiting
-- 📧 **Email Integration**: SendGrid SMTP for verification emails
+- 📧 **Email Integration**: SendGrid SMTP for verification and welcome emails
 - 💳 **Subscription Billing**: Stripe integration via Laravel Cashier for merchant subscriptions
-- 🍎 **Apple Wallet**: Generate and download Apple Wallet passes for customer loyalty cards
+- 🍎 **Apple Wallet / Google Wallet**: Pass generation with per-account serial numbers and auto-updates
 
 ## Quick Start
 
-See [RUN_PROJECT.md](RUN_PROJECT.md) for detailed setup instructions.
+See [docs/RUN_PROJECT.md](docs/RUN_PROJECT.md) for detailed setup instructions.
 
 ```bash
 # Install dependencies
@@ -41,17 +41,27 @@ php artisan reverb:start
 
 ## Documentation
 
-- **[TECHNICAL_DOCUMENTATION.md](TECHNICAL_DOCUMENTATION.md)** - Complete technical documentation covering architecture, features, API endpoints, and more
-- **[RUN_PROJECT.md](RUN_PROJECT.md)** - Setup and running instructions
-- **[RELEASE_WORKFLOW.md](docs/RELEASE_WORKFLOW.md)** - Required local -> testing -> production release process
-- **[SENDGRID_SETUP.md](SENDGRID_SETUP.md)** - Email configuration guide
-- **[PRODUCTION_EMAIL_SETUP.md](PRODUCTION_EMAIL_SETUP.md)** - Production email setup with SendGrid and queue workers
-- **[BILLING_SETUP.md](BILLING_SETUP.md)** - Stripe billing and subscription setup guide
-- **[APPLE_WALLET_SETUP.md](APPLE_WALLET_SETUP.md)** - Apple Wallet pass generation setup and configuration
+**Start here for new developers:**
+- **[docs/DEVELOPER_HANDOVER.md](docs/DEVELOPER_HANDOVER.md)** — Product behavior, domain model, flows, and where to edit
+
+**Reference:**
+- **[docs/FULL_SYSTEM_DOCUMENTATION.md](docs/FULL_SYSTEM_DOCUMENTATION.md)** — End-to-end system reference
+- **[docs/MERCHANT_ONBOARDING_AND_CARD_DESIGN_FLOW.md](docs/MERCHANT_ONBOARDING_AND_CARD_DESIGN_FLOW.md)** — Wizard and branding setup detail
+- **[docs/TECHNICAL_DOCUMENTATION.md](docs/TECHNICAL_DOCUMENTATION.md)** — Architecture, API, security, deployment
+- **[AGENTS.md](AGENTS.md)** — Delivery guardrails for AI agents and contributors
+- **[docs/CHANGES_SUMMARY.md](docs/CHANGES_SUMMARY.md)** — Recent platform changes
+
+**Setup & ops:**
+- **[docs/RUN_PROJECT.md](docs/RUN_PROJECT.md)** — Local setup and running
+- **[docs/RELEASE_WORKFLOW.md](docs/RELEASE_WORKFLOW.md)** — Release process
+- **[docs/SELF_SERVE_LAUNCH_CHECKLIST.md](docs/SELF_SERVE_LAUNCH_CHECKLIST.md)** — Pre-launch QA
+- **[docs/SENDGRID_SETUP.md](docs/SENDGRID_SETUP.md)** — Email configuration
+- **[docs/BILLING_SETUP.md](docs/BILLING_SETUP.md)** — Stripe billing setup
+- **[docs/APPLE_WALLET_SETUP.md](docs/APPLE_WALLET_SETUP.md)** — Apple Wallet setup
 
 ## Tech Stack
 
-- **Backend**: Laravel 11, PHP 8.2+
+- **Backend**: Laravel 12, PHP 8.2+
 - **Frontend**: Tailwind CSS, Alpine.js, Vite
 - **Real-time**: Laravel Reverb (WebSockets)
 - **Database**: SQLite (dev) / PostgreSQL/MySQL (production)
@@ -61,10 +71,10 @@ php artisan reverb:start
 
 ## Key User Flows
 
-1. **Merchant Onboarding**: Register → Create Store → Get Join Link
-2. **Customer Enrollment**: Receive Join Link → Enter Details → Get Loyalty Card
-3. **Stamping**: Merchant Scans QR → Stamps Added → Real-time Update
-4. **Redemption**: Reach Target → Verify Email → Scan Redeem QR → Reward Redeemed
+1. **Merchant Onboarding**: Register → 4-step wizard (basics, branding, customer form, card ready) → QR/join link
+2. **Customer Enrollment**: Join link/QR → signup or find existing card → web loyalty card → optional wallet
+3. **Stamping**: Merchant scans QR → stamps added → real-time + wallet sync
+4. **Redemption**: Reach target → verify email (if required) → scan redeem QR → reward redeemed
 
 ## Security
 
@@ -107,12 +117,4 @@ php artisan kawhe:mail-test your-email@example.com
 php artisan health:check
 ```
 
-See **[PRODUCTION_EMAIL_SETUP.md](PRODUCTION_EMAIL_SETUP.md)** for complete production email setup instructions including:
-- SendGrid SMTP configuration
-- Queue worker setup (Supervisor/systemd)
-- Monitoring and troubleshooting
-- Email testing commands
-
-## License
-
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+See **[docs/PRODUCTION_EMAIL_SETUP.md](docs/PRODUCTION_EMAIL_SETUP.md)** for complete production email setup instructions.

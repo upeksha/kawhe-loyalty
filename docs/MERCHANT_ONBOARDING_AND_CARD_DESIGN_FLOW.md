@@ -1,228 +1,218 @@
-# Merchant Onboarding, Store Creation, and Card Design – Full Flow
+# Merchant Onboarding, Store Creation, and Card Design
 
-This document describes **every step** from onboarding a new merchant through creating a store and configuring card design in the current app. Use it when changing steps or adding options so nothing is missed.
+**Last updated:** June 2026
+
+This document describes the **current** merchant setup flow: registration, the 4-step onboarding wizard, additional store creation, and loyalty card (program) management. Use it when changing setup steps, validation, or branding requirements.
 
 ---
 
-## 1. Entry points: how a merchant gets into the app
+## 1. Entry points
 
 | Entry | Route | What happens |
-|-------|--------|---------------|
-| **Public start** | `GET /start` | Renders `resources/views/public/start.blade.php`. Marketing page: “Kawhe Loyalty”, “Create your café loyalty QR program in minutes”, bullets (Digital Stamp Cards, Instant Setup, Real-Time Updates). Buttons: **Create Free Account** → `route('register')`, **Log In** → `route('login')`. |
-| **Register** | `GET /register`, `POST /register` | `RegisteredUserController`: create user, fire `Registered`, send `MerchantWelcomeEmail` (sync or queue per `config('mail.welcome_sync')`), log in user, **redirect to `merchant.onboarding.store`** (onboarding). |
-| **Login** | `POST /login` | `AuthenticatedSessionController`: authenticate, regenerate session, **redirect to `intended('/dashboard')`**. |
-| **Dashboard (no store)** | `GET /dashboard` | In `routes/web.php`: if super_admin → `admin.dashboard`; else if `user->stores()->count() > 0` → `merchant.dashboard`; **else** → `view('dashboard')` (same blade as merchant dashboard but no `$usageStats`). Dashboard view has “My Stores”, “Customers”, “Scanner” cards with links to `merchant.stores.index`, `merchant.stores.create`, `merchant.customers.index`, `merchant.scanner`. |
-| **Any merchant route with 0 stores** | e.g. `GET /merchant/dashboard` | Middleware `EnsureMerchantHasStore`: if user has no stores → **redirect to `merchant.onboarding.store`**. Exempt routes: any `merchant.stores.*` and `merchant.stores.qr` so they can create/view stores and QR. |
+|-------|--------|--------------|
+| Public start | `GET /start` | Marketing page → Register or Login |
+| Register | `GET/POST /register` | Creates user + store shell + **default loyalty program**; syncs store → program; redirects to **wizard step 1** |
+| Login | `POST /login` | Redirects to dashboard or intended URL |
+| Dashboard (no completed store) | `GET /merchant/dashboard` | Redirect to wizard (via middleware or route logic) |
+| Legacy onboarding GET | `GET /merchant/onboarding/store` | Redirect → `merchant.onboarding.wizard.store-basics` |
+| Legacy onboarding POST | `POST /merchant/onboarding/store` | Redirect → wizard with info message (**does not create a store**) |
 
-So:
-
-- **New signup** → always goes to **onboarding** (first store).
-- **Existing merchant with no store** → either lands on `/dashboard` (generic dashboard) or hits a merchant route and gets redirected to **onboarding**.
-- **Merchant with at least one store** → `/dashboard` redirects to `merchant.dashboard` (same dashboard view with usage stats).
+**Middleware:** `EnsureMerchantHasStore` blocks merchant routes until onboarding is complete. Onboarding wizard routes are **exempt**.
 
 ---
 
-## 2. Onboarding: “Create Your First Store” (first store only)
+## 2. Onboarding wizard (first store)
 
-- **Routes:**  
-  - `GET  /merchant/onboarding/store` → `OnboardingController@createStore`  
-  - `POST /merchant/onboarding/store` → `OnboardingController@storeStore`
-- **View:** `resources/views/merchant/onboarding/store.blade.php`
-- **Layout:** `x-merchant-layout`, header: “Create Your First Store”.
+**Controller:** `MerchantOnboardingWizardController`  
+**Layout:** `x-onboarding-layout` (no sidebar — focused setup mode)  
+**State:** `stores.onboarding_step`, `stores.onboarding_completed_at`
 
-### 2.1 Onboarding page content
+After each step that updates store fields, **`Store::syncDefaultProgramFromStore()`** pushes config to the default `LoyaltyProgram` so customer join pages stay in sync.
 
-- **Welcome block:** “Welcome to Kawhe!”, “Let’s set up your first loyalty program…”
-- **Form** `POST` → `route('merchant.onboarding.store.store')`, `enctype="multipart/form-data"`.
+### Step 1 — Store basics
 
-### 2.2 Fields on onboarding form (in order)
+| | |
+|--|--|
+| **Routes** | `GET/POST /merchant/onboarding/wizard/store-basics` |
+| **View** | `merchant/onboarding/wizard/store-basics.blade.php` |
 
-| Field | Name | Type | Validation (controller) | Default / Notes |
-|-------|------|------|--------------------------|-----------------|
-| Store Name | `name` | text | required, string, max:255 | — |
-| Address | `address` | text | nullable, string, max:255 | Optional |
-| Stamps needed for reward | `reward_target` | number | required, integer, min:1 | old: 9 |
-| Reward Title | `reward_title` | text | required, string, max:255 | old: “Free coffee” |
-| Brand Color | `brand_color` | color + text | nullable, regex: `^#[0-9A-Fa-f]{6}$` | old: #0EA5E9. Helper text: “Used for customer card styling”. Inline script syncs color picker and hex input. |
-| Background Color | `background_color` | color + text | nullable, regex: `^#[0-9A-Fa-f]{6}$` | old: #1F2937. Helper text: “Used for customer card page background”. Same sync script. |
-| Store Logo | `logo` | file | nullable, image, mimes:png,jpg,jpeg,webp, max:2048 | Optional. Hint: “PNG, JPG, or WebP (max 2MB)”. |
+**Fields:**
 
-**Not on onboarding:** Pass Logo, Pass Hero Image, Require verification for redemption. Those exist only on **Create Store** (post-onboarding) and **Edit Store**.
+| Field | Name | Validation |
+|-------|------|------------|
+| Store name | `name` | required, max 255 |
+| Address | `address` | nullable |
+| Stamps for reward | `reward_target` | required, integer, min 1 |
+| Reward title | `reward_title` | required, max 255 |
 
-### 2.3 Onboarding submit logic (`OnboardingController@storeStore`)
+Store details may be collapsed if pre-filled from registration (`store_name` on register form).
 
-1. Validate as above.
-2. If `logo` uploaded → `store('logos', 'public')` → set `$validated['logo_path']`.
-3. `unset($validated['logo'])`.
-4. `Auth::user()->stores()->create($validated)`.
-5. **Redirect:** `route('merchant.stores.qr', $store)` with success: “Welcome! Your first store has been created. Here’s your QR code to share with customers.”
-
-So after onboarding the merchant lands on the **QR code page** for the new store, not the store list.
-
-### 2.4 Store model auto-values (on create)
-
-- `slug`: `Str::slug($name) . '-' . Str::random(6)` if empty.
-- `join_token`: `Str::random(32)` if empty.
-- `join_short_code`: unique 6-char from `JOIN_SHORT_CODE_ALPHABET` (no I,O,0,1).
+**On submit:** create or update store; set `onboarding_step = card_design`; sync program; redirect to card design.
 
 ---
 
-## 3. Create Store (after onboarding – additional stores)
+### Step 2 — Card design
 
-- **Routes:**  
-  - `GET  /merchant/stores/create` → `StoreController@create`  
-  - `POST /merchant/stores` → `StoreController@store`
-- **View:** `resources/views/stores/create.blade.php`
-- **Layout:** `x-merchant-layout`, header: “Create Store”.
+| | |
+|--|--|
+| **Routes** | `GET/POST /merchant/onboarding/wizard/card-design` |
+| **View** | `merchant/onboarding/wizard/card-design.blade.php` |
+| **Validation** | `StoreBrandingRules::validationRules($store)` |
 
-### 3.1 Create Store form
+**Fields (all required on first pass):**
 
-- **Action:** `route('merchant.stores.store')`, `enctype="multipart/form-data"`.
-- **Fields (same order as in blade):**
+| Field | Name | Notes |
+|-------|------|-------|
+| Brand color | `brand_color` | hex `#RRGGBB` |
+| Background color | `background_color` | hex |
+| Store logo | `logo` | image, max 2MB |
+| Wallet logo | `pass_logo` | Apple/Google pass logo (~160×50) |
+| Wallet hero | `pass_hero_image` | pass banner (~640×180) |
 
-| Field | Name | Validation | Default / Notes |
-|-------|------|------------|----------------|
-| Store Name | `name` | required, string, max:255 | — |
-| Address | `address` | nullable, string, max:255 | Optional |
-| Stamps needed for reward | `reward_target` | required, integer, min:1 | old: 9 |
-| Reward Title | `reward_title` | required, string, max:255 | old: “Free coffee” |
-| Brand Color | `brand_color` | nullable, regex: `^#[0-9A-Fa-f]{6}$` | #0EA5E9 |
-| Background Color | `background_color` | nullable, regex: `^#[0-9A-Fa-f]{6}$` | #1F2937 |
-| Store Logo | `logo` | nullable, image, mimes:png,jpg,jpeg,webp, max:2048 | “Used for customer card page.” |
-| Pass Logo (Wallet Passes) | `pass_logo` | nullable, image, mimes:png,jpg,jpeg,webp, max:2048 | “Apple Wallet and Google Wallet. Recommended: 160x50px.” |
-| Pass Hero Image (Wallet Passes) | `pass_hero_image` | nullable, image, mimes:png,jpg,jpeg,webp, max:2048 | “Banner. Recommended: 640x180px (Apple) or 640x200px (Google).” |
+On wizard **revisit**, file uploads are required only if not already saved on the store.
 
-### 3.2 Create submit logic (`StoreController@store`)
+UI: live color sync (Alpine), dropzone-style uploads, preview panel. Continue disabled until all assets present (client-side guard + server validation).
 
-1. Validate all above.
-2. Logo → `store('logos', 'public')` → `logo_path`.
-3. Pass logo → `store('pass-logos', 'public')` → `pass_logo_path`.
-4. Pass hero → `store('pass-heroes', 'public')` → `pass_hero_image_path`.
-5. `unset($validated['logo'], $validated['pass_logo'], $validated['pass_hero_image'])`.
-6. `Auth::user()->stores()->create($validated)`.
-7. **Redirect:** `route('merchant.stores.index')` with success “Store created successfully.”
+**On submit:** save assets via `StoreAssets`; set `onboarding_step = customer_form`; sync program.
 
 ---
 
-## 4. Edit Store (card design + settings)
+### Step 3 — Customer form
 
-- **Routes:**  
-  - `GET  /merchant/stores/{store}/edit` → `StoreController@edit`  
-  - `PUT  /merchant/stores/{store}` → `StoreController@update`
-- **View:** `resources/views/stores/edit.blade.php`
-- **Authorization:** `Store::queryForUser(Auth::user())->whereKey($store->id)->firstOrFail()` (owner or super_admin).
+| | |
+|--|--|
+| **Routes** | `GET/POST /merchant/onboarding/wizard/customer-form` |
+| **View** | `merchant/onboarding/wizard/customer-form.blade.php` |
+| **Component** | `x-registration-form-config-editor` |
+| **Parsing** | `RegistrationFormConfig::fromRequest()` |
 
-### 4.1 Edit form fields (order in blade)
+**Fields collected from customers at join time:**
 
-| Field | Name | Validation in `update()` | Notes |
-|-------|------|---------------------------|-------|
-| Store Name | `name` | required, string, max:255 | — |
-| Address | `address` | nullable, string, max:255 | — |
-| Stamps needed for reward | `reward_target` | required, integer, min:1 | — |
-| Reward Title | `reward_title` | required, string, max:255 | — |
-| **Require Email Verification for Redemption** | `require_verification_for_redemption` | **Not in controller** | Checkbox, value="1". Alpine `x-data` for warning when unchecked. **Bug:** not validated or saved in `StoreController@update` (see below). |
-| Brand Color | `brand_color` | nullable, regex: `^#[0-9A-Fa-f]{6}$` | Color + hex text, sync script. “Used for customer card styling”. |
-| Background Color | `background_color` | nullable, regex: `^#[0-9A-Fa-f]{6}$` | “Used for customer card page background”. |
-| Store Logo | `logo` | nullable, image, mimes:png,jpg,jpeg,webp, max:2048 | Shows current logo if `$store->logo_path`. “Used for customer card page.” |
-| Pass Logo (Wallet Passes) | `pass_logo` | nullable, image, … | Shows current pass logo if set. 160x50px recommended. |
-| Pass Hero Image (Wallet Passes) | `pass_hero_image` | nullable, image, … | Shows current hero if set. 640x180 / 640x200 recommended. |
+- **Email** — always enabled/required (not toggleable)
+- **First name, Last name, Phone, Birthday** — each: `_enabled` + `_required` checkboxes (hidden `0` values when unchecked)
 
-Then separate form: **Delete Store** → `route('merchant.stores.destroy', $store)`, `@method('DELETE')`, confirm dialog.
+UI includes quick presets (Fastest / Balanced / Marketing-friendly), café recommendation callout, friction indicator, and signup preview panel.
 
-### 4.2 Update submit logic (`StoreController@update`)
-
-1. Load store with `queryForUser` + `firstOrFail`.
-2. Validate only: `name`, `address`, `reward_target`, `reward_title`, `brand_color`, `background_color`, `logo`, `pass_logo`, `pass_hero_image`. **`require_verification_for_redemption` is not validated or saved.**
-3. Logo: if new file, delete old `logo_path` (if exists), store new in `logos`, set `logo_path`.
-4. Pass logo: same for `pass_logo_path` in `pass-logos`.
-5. Pass hero: same for `pass_hero_image_path` in `pass-heroes`.
-6. `unset($validated['logo'], $validated['pass_logo'], $validated['pass_hero_image'])`.
-7. For each of `logo_path`, `pass_logo_path`, `pass_hero_image_path`: if not set in `$validated`, unset so existing DB value isn’t overwritten with null.
-8. `$store->update($validated)`.
-9. Redirect to `merchant.stores.index` with “Store updated successfully.”
-
-**Fix needed:** Add `require_verification_for_redemption` to validation (e.g. `['nullable', 'boolean']` or accept checkbox as `'sometimes','in:0,1'`) and merge into `$validated` (e.g. `$validated['require_verification_for_redemption'] = $request->boolean('require_verification_for_redemption');`) so the Edit form checkbox actually persists.
+**On submit:** save `registration_form_config`; set `onboarding_step = card_ready`; sync program.
 
 ---
 
-## 5. Store list and QR
+### Step 4 — Card ready
 
-- **Stores index:** `GET /merchant/stores` → `StoreController@index` → `stores.index` with `$stores` (queryForUser, latest). Table: Store Name, Address, Reward Target (e.g. “9 stamps for Free coffee”), Actions: Edit, QR Code.
-- **QR page:** `GET /merchant/stores/{store}/qr` → `StoreController@qr` → `stores.qr` with `$store`, `$joinUrl` (short URL when `join_short_code` set). Shows QR, “Download PDF (A4 poster)”, copy join link, “Back to Stores”.
-- **QR PDF:** `GET /merchant/stores/{store}/qr/pdf` → `StoreController@qrPdf` → PDF from `stores.qr-poster` (store branding used there too).
+| | |
+|--|--|
+| **Routes** | `GET /merchant/onboarding/wizard/card-ready`, `POST /merchant/onboarding/wizard/complete` |
+| **View** | `merchant/onboarding/wizard/card-ready.blade.php` |
 
----
+Shows:
+- Join URL from **`$program->join_url`** (default program)
+- QR code, copy link, download poster PDF
+- Phone-frame iframe preview of join page
+- Primary CTA completes onboarding
 
-## 6. Database: store columns (card design + behaviour)
-
-From `Store` model and migrations:
-
-| Column | Type | Purpose |
-|--------|------|---------|
-| `id` | bigint | PK |
-| `user_id` | FK users | Owner |
-| `name` | string | Store name |
-| `slug` | string unique | Used in join URL when not using short code |
-| `address` | string nullable | Optional address |
-| `reward_target` | integer (default 9) | Stamps needed for one reward |
-| `reward_title` | string (default “Free coffee”) | Label for the reward |
-| `require_verification_for_redemption` | boolean (default true) | If true, redeem requires verified email; used by scanner/API. **Only editable on Edit form; not saved by current update().** |
-| `join_token` | string unique | Long token for join URL |
-| `join_short_code` | string (6 chars) | Short code for `/j/{code}` |
-| `brand_color` | string(7) nullable | Hex, e.g. #0EA5E9. Card styling, buttons, accents. |
-| `logo_path` | string nullable | Path in `storage/app/public`: “logos/…” |
-| `background_color` | string(7) nullable | Hex. Customer card page and join page background. |
-| `pass_logo_path` | string nullable | “pass-logos/…” – Apple/Google Wallet pass logo (160x50 recommended). |
-| `pass_hero_image_path` | string nullable | “pass-heroes/…” – Wallet pass banner (640x180 / 640x200). |
-| `timestamps` | | |
+**On complete:** `onboarding_step = null`, `onboarding_completed_at = now()` → redirect to **`merchant.stores.qr`** for the store.
 
 ---
 
-## 7. Where card design is used (don’t miss when adding options)
+## 3. Create additional store
 
-### 7.1 Customer-facing web
+**Routes:** `GET/POST /merchant/stores` (create)  
+**View:** `resources/views/stores/create.blade.php`  
+**Validation:** same **`StoreBrandingRules`** as wizard (all branding assets required on create)
 
-- **Join landing:** `resources/views/join/landing.blade.php`  
-  - `$bg = $store->background_color ?? '#1F2937'`, `$brand = $store->brand_color ?? '#0EA5E9'`.  
-  - Logo: `$store->logo_path` (asset URL).
-- **Join form (new customer):** `resources/views/join/show.blade.php`  
-  - Same `$bg`, `$brand`; luminance-based `$textOnBg`, `$mutedOnBg` for contrast.  
-  - Styles: `.join-page` background, `.join-muted`, `.join-card`, `.join-btn`, `.join-input:focus` use `$bg`/`$brand`.  
-  - Logo: `$store->logo_path`.
-- **Customer card page:** `resources/views/card/show.blade.php`  
-  - `theme-color` and body background: `$account->store->background_color ?? '#1F2937'`.  
-  - Card border and logo border: `$account->store->brand_color ?? '#0EA5E9'`.  
-  - Logo: `$account->store->logo_path`.
+Creates store + default program. Redirects to stores index.
 
-### 7.2 QR poster PDF
-
-- **View:** `resources/views/stores/qr-poster.blade.php`  
-  - Uses `$store->background_color`, `$store->brand_color` (with fallbacks #FBF8F4, #5C3D2E, #6A3A1F, #5A2D16) for background, text, and button.  
-  - Logo: `$store->logo_path` (data URI in controller).  
-  - Also uses Apple/Google Wallet badge assets and promo text from `reward_title`.
-
-### 7.3 Wallet passes (Apple / Google)
-
-- **Apple Wallet:** Services use store’s pass logo and hero (and branding) when generating `.pkpass`.
-- **Google Wallet:** `GoogleWalletPassService` uses store branding (including pass logo/hero) for the loyalty/generic pass.
-
-So any new “card design” or “store branding” option should be considered for: join landing, join show, card show, qr-poster, and wallet pass generation.
+Requires active subscription / plan limits per `UsageService`.
 
 ---
 
-## 8. Summary: flow and where to add/change things
+## 4. Loyalty cards (programs)
 
-1. **Public start** (`/start`) → Register or Login.
-2. **Register** → always **Onboarding** (first store): `merchant/onboarding/store` (one form: name, address, reward_target, reward_title, brand_color, background_color, logo). Submit → create store → redirect to **QR page** for that store.
-3. **Login** → `/dashboard`; if no stores → same dashboard view; if has stores → redirect to merchant dashboard. Any merchant route with 0 stores → redirect to onboarding.
-4. **Create Store** (further stores): `merchant/stores/create` – same as onboarding **plus** pass_logo, pass_hero_image. Submit → store list.
-5. **Edit Store:** `merchant/stores/{store}/edit` – all of the above **plus** require_verification_for_redemption (checkbox; currently **not persisted** in `StoreController@update`), current logo/hero previews, and Delete store form.
-6. **Card design** lives in: Store name, reward_target, reward_title, brand_color, background_color, logo_path, pass_logo_path, pass_hero_image_path (and require_verification_for_redemption for behaviour). Used on join landing, join show, card show, QR poster PDF, and Apple/Google Wallet passes.
+Merchants manage cards at **`/merchant/stores/{store}/programs`**.
 
-When changing steps or adding options:
+| Action | Route |
+|--------|-------|
+| List | `GET …/programs` |
+| Create | `GET/POST …/programs/create` |
+| Edit | `GET/PUT …/programs/{program}/edit` |
+| Archive | `DELETE …/programs/{program}` |
+| Restore | `POST …/programs/{program}/restore` |
+| QR / poster | `GET …/programs/{program}/qr`, `…/qr/pdf` |
 
-- Update the right form(s): onboarding, create, and/or edit.
-- Update `OnboardingController@storeStore` and/or `StoreController@store`/`update` (validation + save).
-- If adding a new column, add migration and add to `Store::$fillable`.
-- Consider usage in: join landing, join show, card show, qr-poster, and wallet pass services.
-- Keep `/api/v1` and Flutter app contract unchanged (store list and scanner use store data from API; no change to stamp/redeem/preview/verify-email behaviour required for design-only changes).
+**Create/edit form** (`programs/partials/form.blade.php`):
+- Reward, branding, wallet assets, verification toggle
+- **Join form fields** via shared `x-registration-form-config-editor` (presets enabled)
+- Reward target locked on edit when customers already joined
+
+**Empty state:** index shows CTA when no active or archived cards.
+
+Each program has its own `slug`, `join_token`, `join_short_code`, and join URL.
+
+---
+
+## 5. Edit store (legacy store-level settings)
+
+**Routes:** `GET/PUT /merchant/stores/{store}/edit`  
+Still used for store name, address, and legacy fields. Default card branding for customer join is primarily on the **default loyalty program**; wizard sync keeps store and default program aligned during onboarding.
+
+---
+
+## 6. Where branding and form config are consumed
+
+| Surface | Source |
+|---------|--------|
+| Join landing / new / existing | `$program` branding + `$program->registration_form_config` |
+| Customer card page | Account’s program + store |
+| QR poster (store) | Store (legacy) |
+| QR poster (program) | Program |
+| Apple / Google Wallet | Program/store branding on account’s store and program |
+
+When adding a new branding or form option, update:
+1. Migration + model fillable
+2. Wizard and/or program form + controller validation
+3. `syncDefaultProgramFromStore()` if store-level during onboarding
+4. Join views and wallet pass services
+
+---
+
+## 7. Database columns (quick reference)
+
+### `stores` (onboarding-relevant)
+
+- `onboarding_step`, `onboarding_completed_at`
+- `reward_target`, `reward_title`
+- `brand_color`, `background_color`
+- `logo_path`, `pass_logo_path`, `pass_hero_image_path`
+- `registration_form_config` (JSON)
+- `require_verification_for_redemption`
+
+### `loyalty_programs`
+
+Mirrors reward, branding, join tokens, form config per card. See `LoyaltyProgram` model `$fillable`.
+
+### `loyalty_accounts`
+
+- Unique on `(loyalty_program_id, customer_id)` — customer can hold multiple cards across programs
+
+---
+
+## 8. Flow summary
+
+```
+Register → Wizard (4 steps) → Complete → Store QR page
+                ↓ sync after each step
+         Default LoyaltyProgram (customer join reads this)
+
+Additional stores → Create store form (required branding) → Stores index
+Additional cards  → Programs create/edit (shared form editor) → Program QR
+```
+
+---
+
+## 9. Tests
+
+```bash
+php artisan test --filter='MerchantOnboardingIntegrationTest|SelfServeSaasBaselineTest|StoreTest|LoyaltyProgramTest'
+```
+
+Covers: full wizard path, required assets, legacy POST redirect, program form config persistence.

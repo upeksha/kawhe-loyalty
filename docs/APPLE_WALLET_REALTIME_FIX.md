@@ -54,7 +54,7 @@ Fixed all issues preventing Apple Wallet real-time updates from working correctl
 ```json
 {
   "lastUpdated": "2026-01-20T12:34:56+00:00",
-  "serialNumbers": ["kawhe-1-2", "kawhe-1-3"]
+  "serialNumbers": ["kawhe-42", "kawhe-43"]
 }
 ```
 
@@ -178,7 +178,7 @@ php artisan wallet:apns-test {serialNumber}
 
 2. **Test APNs push:**
    ```bash
-   php artisan wallet:apns-test kawhe-1-2
+   php artisan wallet:apns-test kawhe-42
    ```
 
 3. **Monitor logs:**

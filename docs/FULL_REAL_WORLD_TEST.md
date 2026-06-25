@@ -283,7 +283,7 @@ php artisan tinker
 
 ```php
 $account = \App\Models\LoyaltyAccount::latest()->first();
-$serial = 'kawhe-' . $account->store_id . '-' . $account->customer_id;
+$serial = \App\Services\Wallet\Apple\AppleWalletSerial::fromAccount($account);
 
 echo "=== Account Status ===\n";
 echo "Account ID: {$account->id}\n";
@@ -394,10 +394,10 @@ echo "Check latest account:"
 echo "  php artisan tinker --execute=\"\$a = \App\Models\LoyaltyAccount::latest()->first(); echo 'ID: ' . \$a->id . ', Token: ' . \$a->public_token . PHP_EOL;\""
 echo ""
 echo "Check registration:"
-echo "  php artisan tinker --execute=\"\$a = \App\Models\LoyaltyAccount::latest()->first(); \$s = 'kawhe-' . \$a->store_id . '-' . \$a->customer_id; echo \App\Models\AppleWalletRegistration::where('serial_number', \$s)->where('active', true)->count() . PHP_EOL;\""
+echo "  php artisan tinker --execute=\"\$a = \App\Models\LoyaltyAccount::latest()->first(); \$s = \\App\\Services\\Wallet\\Apple\\AppleWalletSerial::fromAccount(\$a); echo \\App\\Models\\AppleWalletRegistration::where('serial_number', \$s)->where('active', true)->count() . PHP_EOL;\""
 echo ""
 echo "Test push:"
-echo "  php artisan wallet:apns-test kawhe-{store_id}-{customer_id}"
+echo "  php artisan wallet:apns-test kawhe-{loyalty_account_id}"
 echo ""
 ```
 

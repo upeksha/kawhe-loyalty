@@ -99,13 +99,13 @@ exit
 # Get serial number from an account
 php artisan tinker --execute="
 \$account = \App\Models\LoyaltyAccount::first();
-echo 'Serial: kawhe-' . \$account->store_id . '-' . \$account->customer_id . PHP_EOL;
+echo 'Serial: ' . \App\Services\Wallet\Apple\AppleWalletSerial::fromAccount(\$account) . PHP_EOL;
 "
 ```
 
-Then test push:
+Then test push (use the serial printed above, e.g. `kawhe-42`):
 ```bash
-php artisan wallet:apns-test kawhe-1-10
+php artisan wallet:apns-test kawhe-42
 ```
 
 **Expected output:**
@@ -343,7 +343,7 @@ php artisan tinker --execute="echo 'Active registrations: ' . \App\Models\AppleW
 
 echo ""
 echo "=== Test Push ==="
-SERIAL=$(php artisan tinker --execute="\$a = \App\Models\LoyaltyAccount::first(); echo 'kawhe-' . \$a->store_id . '-' . \$a->customer_id . PHP_EOL;" | tail -1)
+SERIAL=$(php artisan tinker --execute="\$a = \App\Models\LoyaltyAccount::first(); echo \App\Services\Wallet\Apple\AppleWalletSerial::fromAccount(\$a) . PHP_EOL;" | tail -1)
 echo "Testing serial: $SERIAL"
 php artisan wallet:apns-test "$SERIAL"
 ```

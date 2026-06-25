@@ -1,7 +1,7 @@
 # Kawhe Loyalty - Complete Technical Documentation
 
-**Version:** 2.0  
-**Last Updated:** January 2026
+**Version:** 2.1  
+**Last Updated:** June 2026
 
 This document provides a complete, comprehensive explanation of the Kawhe Loyalty application from A to Z. It covers architecture, implementation, features, logic, and how everything works together.
 
@@ -29,7 +29,9 @@ This document provides a complete, comprehensive explanation of the Kawhe Loyalt
 
 ### What is Kawhe Loyalty?
 
-Kawhe Loyalty is a **Progressive Web App (PWA)** loyalty card system built with Laravel 11. It enables merchants to create digital loyalty programs where customers earn stamps and redeem rewards. The system features real-time updates, email verification, store branding, subscription billing, and native wallet integrations (Apple Wallet & Google Wallet).
+Kawhe Loyalty is a **Progressive Web App (PWA)** loyalty platform built with Laravel 12. Merchants configure **loyalty cards** (programs) per store; customers join via program-specific links, earn stamps, and redeem rewards. The system features real-time updates, email verification, required store branding, subscription billing, and native wallet integrations (Apple Wallet & Google Wallet).
+
+> **New developer?** Start with [`docs/DEVELOPER_HANDOVER.md`](DEVELOPER_HANDOVER.md) for current product behavior before reading this full reference.
 
 ### Key Capabilities
 
@@ -46,7 +48,7 @@ Kawhe Loyalty is a **Progressive Web App (PWA)** loyalty card system built with 
 
 ### Tech Stack
 
-- **Backend**: Laravel 11 (PHP 8.2+)
+- **Backend**: Laravel 12 (PHP 8.2+)
 - **Frontend**: Tailwind CSS, Alpine.js, Vite
 - **Real-time**: Laravel Reverb (WebSocket server)
 - **Database**: SQLite (dev) / PostgreSQL/MySQL (production)
@@ -257,7 +259,7 @@ Device registrations for Apple Wallet auto-updates.
 - `device_library_identifier` (unique device ID)
 - `push_token` (APNs push token)
 - `pass_type_identifier` (e.g., "pass.com.kawhe.loyalty")
-- `serial_number` (e.g., "kawhe-1-2")
+- `serial_number` (e.g., `kawhe-42` — loyalty account ID)
 - `loyalty_account_id` (foreign key)
 - `active` (boolean)
 - `last_registered_at`
@@ -298,48 +300,60 @@ LoyaltyAccount
 
 ### 4.1 Merchant Onboarding Flow
 
-**Route:** `/merchant/onboarding/store`
+**Routes:** `/merchant/onboarding/wizard/*`  
+**Controller:** `MerchantOnboardingWizardController`
 
 1. User registers → `RegisteredUserController`
-   - **Welcome Email**: Upon registration, a welcome email is automatically sent via SendGrid
-   - Email includes dashboard link and onboarding instructions
-   - Email is queued (non-blocking) using `MerchantWelcomeEmail` mailable
-2. If no stores exist → Redirect to onboarding
-3. User creates first store → `OnboardingController::storeStore()`
-4. Store created with:
-   - Auto-generated `slug` (name + random 6 chars)
-   - Auto-generated `join_token` (32 chars)
-   - Default `reward_target` (10)
-5. Redirect to merchant dashboard
+   - Creates user, store shell, and **default `LoyaltyProgram`**
+   - Calls `syncDefaultProgramFromStore()`
+   - Sends `MerchantWelcomeEmail` (sync or queue per `config('mail.welcome_sync')`)
+   - Redirects to **wizard step 1** (`store-basics`)
 
-**Implementation:**
-- `OnboardingController` validates store data
-- `Store` model boot() hook generates `slug` and `join_token`
-- Middleware `EnsureMerchantHasStore` checks if user has stores
-- `RegisteredUserController` sends `MerchantWelcomeEmail` after user creation
+2. **4-step wizard** (layout: `onboarding-layout`, no sidebar):
+
+| Step | Saves | Notes |
+|------|-------|-------|
+| Store basics | name, address, reward_target, reward_title | |
+| Card design | colors, logo, pass_logo, pass_hero_image | All required via `StoreBrandingRules` |
+| Customer form | `registration_form_config` | Shared `registration-form-config-editor` component |
+| Card ready | — | Join URL from default program; complete → store QR page |
+
+3. After each store-updating step: **`Store::syncDefaultProgramFromStore()`** so join pages reflect wizard config.
+
+4. **Legacy:** `GET/POST /merchant/onboarding/store` redirect to wizard. `continue-trial` step removed.
+
+5. **Middleware:** `EnsureMerchantHasStore` redirects incomplete merchants to wizard. Onboarding routes are exempt.
+
+**Additional stores:** `StoreController@store` uses same branding rules as wizard.
+
+**Loyalty cards:** `LoyaltyProgramController` — create/edit/archive programs; shared registration form editor; reward target locks after customers join.
 
 ### 4.2 Customer Enrollment Flow
 
-**Route:** `/join/{slug}?t={join_token}`
+**Routes:** `/join/{slug}?t={token}`, `/join/{slug}/new`, `/join/{slug}/existing`  
+**Controller:** `JoinController`
 
-1. Customer receives join link (e.g., `/join/coffee-shop-XYz123?t=abc...`)
-2. Customer chooses "New Customer" or "Existing Customer"
-3. **New Customer:**
-   - Enters name and email/phone
-   - System creates `Customer` record
-   - System creates `LoyaltyAccount` linking customer to store
-   - Auto-generates `public_token` (40 chars)
-   - Redirects to card page: `/c/{public_token}`
-4. **Existing Customer:**
-   - Enters email
-   - System looks up existing `Customer`
-   - If found, creates new `LoyaltyAccount` for this store
-   - If not found, shows error
+Join resolves **`LoyaltyProgram`** by slug + token (legacy store slug/token → default program).
+
+1. Customer opens join link or scans QR (`/j/{code}` short redirect)
+2. Landing: primary CTA new card; secondary find existing card
+3. **New customer** (`POST join.store`):
+   - Fields from `program.registration_form_config`
+   - Match/create `Customer` by email, then phone
+   - Create `LoyaltyAccount` for `loyalty_program_id` (unique per customer per program)
+   - Existing account → redirect to card
+   - Welcome email + verification when email present
+4. **Existing customer** (`POST join.lookup`, throttled):
+   - Email lookup; **phone lookup** when phone enabled on program form config
+   - Program-scoped account lookup → redirect to `/c/{public_token}`
+5. Invalid slug/token → branded `join.invalid` (404)
+
+**Card page:** localStorage keyed by `loyalty_program_id`; wallet nudge once via session flag.
 
 **Implementation:**
-- `JoinController::store()` handles enrollment
-- `LoyaltyAccount` boot() hook generates `public_token` and `wallet_auth_token`
-- Customers can have multiple loyalty accounts (one per store)
+- `RegistrationFormConfig` parses merchant form field toggles
+- `LoyaltyAccount` unique on `(loyalty_program_id, customer_id)`
+- Apple Wallet serial: `kawhe-{loyalty_account_id}` via `AppleWalletSerial`
 
 ### 4.3 Stamping Flow
 
@@ -677,7 +691,8 @@ Sends push to all registered devices for a pass.
 - Stores (list, create, edit, QR)
 - Customers (list, detail, edit)
 - Scanner (`/merchant/scanner`)
-- Onboarding (`/merchant/onboarding/store`)
+- Onboarding wizard (`/merchant/onboarding/wizard/*`)
+- Loyalty cards / programs (`/merchant/stores/{store}/programs`)
 - Profile (`/profile`)
 - Billing (`/billing`, `/billing/cancel`, `/billing/success`)
 
@@ -731,11 +746,12 @@ Controller → Service → Model → Database
 ```
 GET  /                          - Welcome page
 GET  /start                     - Merchant onboarding start
-GET  /join/{slug}               - Customer join page
+GET  /join/{slug}               - Customer join landing (invalid slug/token → join.invalid 404)
 GET  /join/{slug}/new           - New customer form
 POST /join/{slug}/new           - Create new customer account
 GET  /join/{slug}/existing       - Existing customer lookup
-POST /join/{slug}/existing      - Lookup existing customer
+POST /join/{slug}/existing      - Lookup existing customer (throttle: 10/min)
+GET  /j/{code}                  - Short join redirect
 GET  /c/{public_token}          - Loyalty card display
 GET  /api/card/{public_token}   - Card data (JSON)
 GET  /api/card/{public_token}/transactions - Transaction history
@@ -999,8 +1015,9 @@ $nonGrandfatheredCount = LoyaltyAccount::whereIn('store_id', $storeIds)
 - `authenticationToken`: `wallet_auth_token` (per-pass auth)
 
 **Serial Number Format:**
-- `kawhe-{store_id}-{customer_id}`
-- Example: `kawhe-1-2`
+- **Current:** `kawhe-{loyalty_account_id}` (via `AppleWalletSerial::fromAccount()`)
+- **Legacy (still resolved):** `kawhe-{store_id}-{customer_id}`
+- Example: `kawhe-42`
 
 #### Phase 2: Auto-Updates (Pass Web Service)
 

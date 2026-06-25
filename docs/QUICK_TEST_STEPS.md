@@ -136,4 +136,4 @@ echo "Reward added, wallet update dispatched\n";
 ### Pass Won't Update
 - Check APNs is enabled: `php artisan config:show wallet.apple.push_enabled`
 - Check registrations exist: `php artisan tinker --execute="echo \App\Models\AppleWalletRegistration::where('active', true)->count();"`
-- Test APNs push: `php artisan wallet:apns-test kawhe-1-10`
+- Test APNs push: `php artisan wallet:apns-test kawhe-42` (use serial from `AppleWalletSerial::fromAccount($account)`)

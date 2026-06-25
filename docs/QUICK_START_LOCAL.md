@@ -50,10 +50,12 @@ Currently set to **log driver** (emails written to logs):
 ## ✅ Verify Everything Works
 
 1. **Visit**: http://localhost:8000
-2. **Register** a merchant account
-3. **Create** a store
-4. **Test** the join flow
-5. **Test** scanning/stamping
+2. **Register** a merchant account → completes **4-step onboarding wizard** (store basics, branding with required assets, customer form, card ready)
+3. **Share** the join link or QR from the store/program QR page
+4. **Test** customer join (new + existing email/phone lookup)
+5. **Test** scanning/stamping at `/merchant/scanner`
+
+See [`docs/DEVELOPER_HANDOVER.md`](DEVELOPER_HANDOVER.md) for flow detail.
 
 ## 🐛 If You See Errors
 

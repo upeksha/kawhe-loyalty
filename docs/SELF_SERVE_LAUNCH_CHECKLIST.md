@@ -4,10 +4,11 @@ This is the final launch pass for the Kawhe self-serve SaaS product.
 
 ## Product Flows
 
-- Merchant can sign up and complete onboarding without developer help.
-- Merchant can create a store, brand it, and publish a join QR.
+- Merchant can sign up and complete the **4-step onboarding wizard** without developer help.
+- Merchant must upload **logo, wallet logo, wallet hero, and colors** during setup (and when adding a store).
+- Merchant can create loyalty cards (programs), brand them, and publish join QR codes per card.
 - Customer can join from QR and get a card successfully.
-- Existing customer can recover a card with email.
+- Existing customer can recover a card with **email** (or **phone** when that field is enabled on the card).
 - Merchant can stamp and redeem without duplicate-trigger issues.
 - Apple Wallet and Google Wallet passes can be added from a fresh card.
 - Wallet passes update after stamp and redeem.
@@ -17,7 +18,7 @@ This is the final launch pass for the Kawhe self-serve SaaS product.
 - Archived store shows a clear join message instead of a dead-end error.
 - Free-plan join limit shows a clear customer-facing blocked state.
 - Merchant billing page clearly explains when new joins are blocked.
-- Missing or invalid card links show a friendly recovery message.
+- Missing or invalid card links show a friendly recovery message (`join/invalid`).
 - Verification resend limits show a clear cooldown message.
 - Missing customer email shows a clear explanation and next step.
 

@@ -1,5 +1,7 @@
 # Apple Wallet Testing Guide
 
+> **Serial format:** `kawhe-{loyalty_account_id}` (e.g. `kawhe-42`). Use `AppleWalletSerial::fromAccount($account)` in tinker. Legacy `kawhe-{store_id}-{customer_id}` still resolves for old passes.
+
 ## Quick Start Testing
 
 ### Option 1: Use Existing Data (After Migration)
@@ -77,7 +79,7 @@ $account = \App\Models\LoyaltyAccount::factory()->create([
 echo "Account ID: {$account->id}\n";
 echo "Public Token: {$account->public_token}\n";
 echo "Wallet Auth Token: {$account->wallet_auth_token}\n";
-echo "Serial Number: kawhe-{$store->id}-{$customer->id}\n";
+echo "Serial Number: " . \App\Services\Wallet\Apple\AppleWalletSerial::fromAccount($account) . "\n";
 
 // 3. Test pass generation
 $service = app(\App\Services\Wallet\AppleWalletPassService::class);
@@ -157,7 +159,7 @@ php artisan wallet:apns-test {serialNumber}
 
 Example:
 ```bash
-php artisan wallet:apns-test kawhe-1-2
+php artisan wallet:apns-test kawhe-42
 ```
 
 ### Test Pass Generation
@@ -187,7 +189,7 @@ php artisan tinker
 
 ```php
 $account = \App\Models\LoyaltyAccount::first();
-$serial = "kawhe-{$account->store_id}-{$account->customer_id}";
+$serial = \App\Services\Wallet\Apple\AppleWalletSerial::fromAccount($account);
 $url = config('app.url') . "/wallet/v1/passes/pass.com.kawhe.loyalty/{$serial}";
 $token = $account->wallet_auth_token;
 
@@ -203,7 +205,7 @@ php artisan tinker
 
 ```php
 $account = \App\Models\LoyaltyAccount::first();
-$serial = "kawhe-{$account->store_id}-{$account->customer_id}";
+$serial = \App\Services\Wallet\Apple\AppleWalletSerial::fromAccount($account);
 $deviceId = 'test-device-' . time();
 $pushToken = str_repeat('a', 64);
 
@@ -342,7 +344,7 @@ echo "\n=== Account Info ===\n";
 echo "Account ID: {$account->id}\n";
 echo "Public Token: {$account->public_token}\n";
 echo "Wallet Auth Token: {$account->wallet_auth_token}\n";
-echo "Serial: kawhe-{$store->id}-{$account->customer_id}\n";
+echo "Serial: " . \App\Services\Wallet\Apple\AppleWalletSerial::fromAccount($account) . "\n";
 echo "Stamps: {$account->stamp_count}\n";
 echo "Rewards: " . ($account->reward_balance ?? 0) . "\n";
 

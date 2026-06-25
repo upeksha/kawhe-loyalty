@@ -51,13 +51,13 @@ Test if the registration endpoint is accessible:
 # Get a loyalty account serial number
 php artisan tinker --execute="
 \$account = \App\Models\LoyaltyAccount::first();
-\$serial = 'kawhe-' . \$account->store_id . '-' . \$account->customer_id;
+\$serial = \App\Services\Wallet\Apple\AppleWalletSerial::fromAccount(\$account);
 echo 'Serial: ' . \$serial . PHP_EOL;
 echo 'Public Token: ' . \$account->public_token . PHP_EOL;
 "
 
-# Then test registration (replace with your values)
-curl -X POST https://testing.kawhe.shop/wallet/v1/devices/test-device-123/registrations/pass.com.kawhe.loyalty/kawhe-2-1 \
+# Then test registration (replace SERIAL in URL with output above, e.g. kawhe-42)
+curl -X POST https://testing.kawhe.shop/wallet/v1/devices/test-device-123/registrations/pass.com.kawhe.loyalty/kawhe-42 \
   -H "Authorization: ApplePass 658b39f8f3f73f0de6ac8bdb2643b09b3e85cc8a0ff04304d9911b8b26e7b45a" \
   -H "Content-Type: application/json" \
   -d '{"pushToken": "test-token-12345"}' \

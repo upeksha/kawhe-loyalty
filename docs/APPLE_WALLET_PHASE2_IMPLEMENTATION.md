@@ -58,7 +58,7 @@ All endpoints are under `/wallet/v1/` and require authentication via `Authorizat
 
 **Example:**
 ```bash
-curl -X POST https://your-domain.com/wallet/v1/devices/device123/registrations/pass.com.kawhe.loyalty/kawhe-1-2 \
+curl -X POST https://your-domain.com/wallet/v1/devices/device123/registrations/pass.com.kawhe.loyalty/kawhe-42 \
   -H "Authorization: ApplePass your-web-service-token" \
   -H "Content-Type: application/json" \
   -d '{"pushToken": "abc123def456"}'
@@ -73,7 +73,7 @@ curl -X POST https://your-domain.com/wallet/v1/devices/device123/registrations/p
 
 **Example:**
 ```bash
-curl -X DELETE https://your-domain.com/wallet/v1/devices/device123/registrations/pass.com.kawhe.loyalty/kawhe-1-2 \
+curl -X DELETE https://your-domain.com/wallet/v1/devices/device123/registrations/pass.com.kawhe.loyalty/kawhe-42 \
   -H "Authorization: ApplePass your-web-service-token"
 ```
 
@@ -97,7 +97,7 @@ curl -X DELETE https://your-domain.com/wallet/v1/devices/device123/registrations
 
 **Example:**
 ```bash
-curl -X GET https://your-domain.com/wallet/v1/passes/pass.com.kawhe.loyalty/kawhe-1-2 \
+curl -X GET https://your-domain.com/wallet/v1/passes/pass.com.kawhe.loyalty/kawhe-42 \
   -H "Authorization: ApplePass your-web-service-token" \
   -H "If-Modified-Since: Mon, 15 Jan 2024 10:00:00 GMT" \
   --output pass.pkpass
@@ -114,7 +114,7 @@ curl -X GET https://your-domain.com/wallet/v1/passes/pass.com.kawhe.loyalty/kawh
 ```json
 {
   "lastUpdated": 1705320000,
-  "serialNumbers": ["kawhe-1-2", "kawhe-1-3"]
+  "serialNumbers": ["kawhe-42", "kawhe-43"]
 }
 ```
 
@@ -228,13 +228,13 @@ php artisan test --filter AppleWalletWebServiceTest
        'store_id' => $store->id,
        'customer_id' => $customer->id,
    ]);
-   $serialNumber = "kawhe-{$store->id}-{$customer->id}";
+   $serialNumber = \App\Services\Wallet\Apple\AppleWalletSerial::fromAccount($account);
    echo "Serial Number: {$serialNumber}\n";
    ```
 
 2. **Register device**:
    ```bash
-   curl -X POST http://localhost:8000/wallet/v1/devices/test-device-123/registrations/pass.com.kawhe.loyalty/kawhe-1-2 \
+   curl -X POST http://localhost:8000/wallet/v1/devices/test-device-123/registrations/pass.com.kawhe.loyalty/kawhe-42 \
      -H "Authorization: ApplePass test-auth-token-123" \
      -H "Content-Type: application/json" \
      -d '{"pushToken": "test-push-token-456"}'
@@ -242,7 +242,7 @@ php artisan test --filter AppleWalletWebServiceTest
 
 3. **Get pass**:
    ```bash
-   curl -X GET http://localhost:8000/wallet/v1/passes/pass.com.kawhe.loyalty/kawhe-1-2 \
+   curl -X GET http://localhost:8000/wallet/v1/passes/pass.com.kawhe.loyalty/kawhe-42 \
      -H "Authorization: ApplePass test-auth-token-123" \
      --output test-pass.pkpass
    ```
@@ -250,12 +250,12 @@ php artisan test --filter AppleWalletWebServiceTest
 4. **Test 304 Not Modified**:
    ```bash
    # First request
-   curl -X GET http://localhost:8000/wallet/v1/passes/pass.com.kawhe.loyalty/kawhe-1-2 \
+   curl -X GET http://localhost:8000/wallet/v1/passes/pass.com.kawhe.loyalty/kawhe-42 \
      -H "Authorization: ApplePass test-auth-token-123" \
      -v
    
    # Note the Last-Modified header, then:
-   curl -X GET http://localhost:8000/wallet/v1/passes/pass.com.kawhe.loyalty/kawhe-1-2 \
+   curl -X GET http://localhost:8000/wallet/v1/passes/pass.com.kawhe.loyalty/kawhe-42 \
      -H "Authorization: ApplePass test-auth-token-123" \
      -H "If-Modified-Since: <Last-Modified-value>" \
      -v
@@ -277,10 +277,12 @@ php artisan test --filter AppleWalletWebServiceTest
 
 ### Serial Number Mapping
 
-Serial numbers follow the format: `kawhe-{store_id}-{customer_id}`
+**Current format:** `kawhe-{loyalty_account_id}` via `AppleWalletSerial::fromAccount()`.
+
+**Legacy format:** `kawhe-{store_id}-{customer_id}` — still resolved by `AppleWalletSerial::resolveAccount()`.
 
 This ensures:
-- Stable serial numbers (same account = same serial)
+- Stable serial per loyalty account (supports multiple cards per customer)
 - Easy mapping to `LoyaltyAccount`
 - No collisions between stores/customers
 

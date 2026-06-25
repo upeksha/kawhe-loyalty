@@ -6,12 +6,12 @@
 
 **New File:** `app/Services/Wallet/Apple/AppleWalletSerial.php`
 
-**Purpose:** Ensures consistent serial number format (`kawhe-{store_id}-{customer_id}`) across all components.
+**Purpose:** Centralizes Apple Wallet serial numbers. **Current format:** `kawhe-{loyalty_account_id}`. **Legacy format** (still resolved): `kawhe-{store_id}-{customer_id}`.
 
 **Methods:**
-- `fromAccount(LoyaltyAccount $account): string` - Generate serial from account
-- `parse(string $serialNumber): ?array` - Parse serial to extract store_id and customer_id
-- `resolveAccount(string $serialNumber): ?LoyaltyAccount` - Resolve account from serial
+- `fromAccount(LoyaltyAccount $account): string` - Generate serial from account (current format)
+- `parse(string $serialNumber): ?array` - Parse serial (account or legacy)
+- `resolveAccount(string $serialNumber): ?LoyaltyAccount` - Resolve account from either format
 
 **Updated Files:**
 - `AppleWalletPassService.php` - Uses `AppleWalletSerial::fromAccount()`

@@ -1,175 +1,121 @@
 # Billing Implementation Summary
 
-This document summarizes the monetization gate implementation using Stripe subscriptions via Laravel Cashier.
+This document summarizes plan entitlements and how Stripe subscriptions gate merchant growth via Laravel Cashier.
 
-## Overview
+## Plan matrix
 
-- **Free Plan**: Up to 50 loyalty cards per merchant account
-- **Pro Plan**: Unlimited loyalty cards (requires subscription)
-- Limit enforcement only applies to **new** loyalty account creation
-- Existing customers can still use their cards (stamping/redeeming works)
+| Dimension | Free | Pro | Business (coming soon) |
+|-----------|------|-----|------------------------|
+| Stores | 1 | 3 | Unlimited (TBD) |
+| Loyalty cards | 1 per store | 5 per store | Unlimited |
+| Customers | 100 per card | Unlimited | Unlimited |
+| Stripe price | — | `STRIPE_PRICE_ID` | Future second price |
 
-## Files Changed
+Configuration: `config/billing.php`
 
-### 1. Package Installation
-- `composer.json` - Added `laravel/cashier` dependency
+## Soft gates (downgrade-safe)
 
-### 2. Models
-- `app/Models/User.php` - Added `Billable` trait from Laravel Cashier
+Limits apply only to **new** growth:
 
-### 3. Services
-- `app/Services/Billing/UsageService.php` - **NEW** - Service for counting cards and checking limits
-  - `cardsCountForUser(User $user): int` - Counts loyalty cards across all stores
-  - `freeLimit(): int` - Returns 50
-  - `isSubscribed(User $user): bool` - Checks subscription status
-  - `canCreateCard(User $user): bool` - Determines if merchant can create new cards
-  - `getUsageStats(User $user): array` - Returns usage statistics
+- **New store** — blocked when store cap reached
+- **New loyalty card** — blocked when per-store card cap reached
+- **New customer join** — blocked when per-program customer cap reached (Free: 100)
 
-### 4. Controllers
-- `app/Http/Controllers/JoinController.php` - Modified `store()` method
-  - Checks if loyalty account already exists (allows existing customers)
-  - Enforces limit before creating new loyalty accounts
-  - Returns friendly error page if limit reached
-  - Logs blocked attempts
+What always keeps working:
 
-- `app/Http/Controllers/BillingController.php` - **NEW**
-  - `index()` - Billing overview page
-  - `checkout()` - Creates Stripe Checkout session
-  - `portal()` - Redirects to Stripe Billing Portal
-  - `success()` - Success page after subscription
-  - `cancel()` - Cancel page after cancelled checkout
+- Existing stores, cards, and customers
+- Stamping, redeeming, scanner, wallet passes
+- Returning customers re-joining the same card (same email/phone on that program)
 
-### 5. Routes
-- `routes/web.php`
-  - Added billing routes (`/billing`, `/billing/checkout`, `/billing/portal`, etc.)
-  - Added Stripe webhook route (`/stripe/webhook`)
-  - Updated dashboard route to pass usage stats
+After Pro cancellation, merchants fall back to Free limits for new actions. Existing Pro-era stores/cards/customers are **not** deleted (grandfathering for programs created before `subscription.ends_at` is still tracked for UI messaging).
 
-### 6. Views
-- `resources/views/dashboard.blade.php` - Updated
-  - Shows plan status (Free/Pro)
-  - Displays usage meter (X / 50 cards)
-  - Shows warning banner when limit reached
-  - Upgrade CTA button
+## Architecture
 
-- `resources/views/billing/index.blade.php` - **NEW**
-  - Billing overview page
-  - Current plan status
-  - Usage statistics
-  - Subscription details
-  - Upgrade benefits
+### Entitlements service
 
-- `resources/views/billing/success.blade.php` - **NEW**
-  - Success page after subscription activation
+`app/Services/Billing/UsageService.php` is the single gate for plan limits.
 
-- `resources/views/billing/cancel.blade.php` - **NEW**
-  - Cancel page after cancelled checkout
+| Method | Purpose |
+|--------|---------|
+| `planFor(User $user)` | `'free'` or `'pro'` (Business stub in config) |
+| `canCreateStore(User $user)` | Store count vs plan |
+| `canCreateProgram(User $user, ?Store $store)` | Cards per store (or any capacity if `$store` omitted) |
+| `canAcceptNewCustomer(LoyaltyProgram $program)` | Loyalty accounts per program |
+| `getUsageStats(User $user)` | Dashboard/billing metrics |
 
-- `resources/views/join/limit-reached.blade.php` - **NEW**
-  - Customer-facing error page when limit reached
-  - Friendly message with store name
-  - "Try Again Later" button
+### Enforcement points
 
-### 7. Migrations
-- `database/migrations/2026_01_13_001909_create_subscriptions_table.php` - **NEW** (from Cashier)
-- `database/migrations/2026_01_13_001910_create_subscription_items_table.php` - **NEW** (from Cashier)
-- Additional Cashier migrations for user table columns
+| Action | Controller | Gate |
+|--------|------------|------|
+| Create store | `StoreController::store` | `canCreateStore()` |
+| Create loyalty card | `LoyaltyProgramController::store` | `canCreateProgram($user, $store)` |
+| Customer join | `JoinController::store` | `canAcceptNewCustomer($program)` → `join/limit-reached` |
 
-### 8. Configuration
-- `config/cashier.php` - **NEW** (published from Cashier)
-  - Stripe keys configuration
-  - Webhook secret configuration
+### Customer counting
 
-### 9. Documentation
-- `README.md` - Updated with billing features and links
-- `BILLING_SETUP.md` - **NEW** - Complete Stripe setup guide
+- Counts `loyalty_accounts` rows **per `loyalty_program_id`**
+- Returning customer with existing account on that program skips the cap check
+- Does not block stamp/redeem APIs
 
-## Key Implementation Details
+### Subscription
 
-### Limit Enforcement Logic
+- Laravel Cashier, subscription name `'default'`
+- Pro resolved via active/trialing Stripe subscription
+- Checkout: `BillingController::checkout`
+- Portal: `BillingController::portal`
+- Webhooks: `/stripe/webhook` (Cashier)
 
-1. **When**: Only enforced when creating a **new** loyalty account
-2. **Where**: `JoinController::store()` method
-3. **How**:
-   - First checks if loyalty account already exists for customer + store
-   - If exists, allows (no limit check)
-   - If new, checks `UsageService::canCreateCard()`
-   - If blocked, returns friendly error page
-   - Logs blocked attempts for debugging
+## Key files
 
-### Usage Counting
+| Area | Path |
+|------|------|
+| Plan config | `config/billing.php` |
+| Entitlements | `app/Services/Billing/UsageService.php` |
+| Billing UI | `resources/views/billing/index.blade.php` |
+| Plan comparison | `resources/views/components/billing/plan-comparison.blade.php` |
+| Customer limit page | `resources/views/join/limit-reached.blade.php` |
+| Dashboard usage | `resources/views/dashboard.blade.php` |
 
-- Counts all `loyalty_accounts` where `store_id` belongs to stores owned by the merchant
-- Uses efficient query: `LoyaltyAccount::whereIn('store_id', $storeIds)->count()`
-- Single query per check (no N+1 issues)
-
-### Subscription Management
-
-- Uses Laravel Cashier's built-in subscription handling
-- Subscription name: `'default'`
-- Stripe Checkout for new subscriptions
-- Stripe Billing Portal for managing/cancelling
-- Webhooks automatically handled by Cashier
-
-## Environment Variables Required
+## Environment variables
 
 ```env
-STRIPE_KEY=pk_test_...  # Stripe publishable key
-STRIPE_SECRET=sk_test_...  # Stripe secret key
-STRIPE_PRICE_ID=price_...  # Subscription price ID
-STRIPE_WEBHOOK_SECRET=whsec_...  # Webhook signing secret
+STRIPE_KEY=pk_test_...
+STRIPE_SECRET=sk_test_...
+STRIPE_PRICE_ID=price_...          # Pro plan
+STRIPE_WEBHOOK_SECRET=whsec_...
 ```
 
-## Artisan Commands After Deploy
+## Tests
 
 ```bash
-# 1. Run migrations (creates Cashier tables)
-php artisan migrate --force
-
-# 2. Clear and cache config
-php artisan config:clear
-php artisan config:cache
+php artisan test --filter='UsageServiceTest|CustomerJoinLimitTest|BillingDiagnosticsTest|StoreTest'
 ```
 
-## Testing Checklist
+Coverage includes:
 
-### Free Merchant Under Limit
-- [ ] Create store
-- [ ] Create multiple customer joins (should work)
-- [ ] Verify dashboard shows usage meter
+- Free: 1 store, 1 card/store, 100 customers/program
+- Pro: 3 stores, 5 cards/store, unlimited customers
+- Join blocked at 101st customer on Free; returning customer still works
+- Free merchant cannot create second store
 
-### Free Merchant At Limit
-- [ ] Create 50 loyalty accounts
-- [ ] Attempt 51st join → Should show "Limit Reached" page
-- [ ] Existing customer re-joining same store → Should work
-- [ ] Merchant scanner stamping/redeem → Should work for existing cards
+## Business plan (future)
 
-### Subscribed Merchant
-- [ ] Subscribe via `/billing`
-- [ ] Complete Stripe Checkout
-- [ ] Verify dashboard shows "Pro Plan Active"
-- [ ] Create customer join beyond 50 → Should work
-- [ ] Verify unlimited cards
+`config/billing.php` includes a `business` plan stub (`coming_soon: true`).
 
-### Webhook Testing
-- [ ] Configure webhook endpoint in Stripe Dashboard
-- [ ] Send test webhook from Stripe
-- [ ] Verify subscription status updates in database
+To launch:
 
-## Important Notes
+1. Create Stripe product/price for Business
+2. Extend `UsageService::planFor()` to map subscription price → `'business'`
+3. Set Business entitlements in config (stores > 3, unlimited programs, advanced features)
+4. Enable checkout CTA on billing plan comparison (currently disabled)
 
-1. **No Breaking Changes**: All existing flows (joining, stamping, redeeming, Reverb) remain unchanged
-2. **Backward Compatible**: Existing merchants and customers unaffected
-3. **Production Safe**: Proper error handling, logging, and user-friendly messages
-4. **Efficient**: Single query for usage counting, no N+1 issues
-5. **Secure**: Webhook signature verification via Cashier middleware
+## Merchant-facing UI
 
-## Next Steps
+The billing page shows:
 
-1. Set up Stripe account and get API keys
-2. Create subscription price in Stripe Dashboard
-3. Configure webhook endpoint
-4. Test the flow end-to-end
-5. Deploy to production with live Stripe keys
+1. **Plan state** hero (Free / Pro / limit reached)
+2. **Compare plans** — Free vs Pro vs Business (coming soon)
+3. **Usage right now** — stores, cards, customers on primary store/card
+4. **Advanced billing help** — diagnostics and recovery actions
 
-See `BILLING_SETUP.md` for detailed setup instructions.
+See `BILLING_SETUP.md` for Stripe setup steps.

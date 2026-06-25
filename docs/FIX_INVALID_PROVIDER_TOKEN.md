@@ -41,11 +41,11 @@ php artisan wallet:test-jwt
 # Get a serial number
 php artisan tinker --execute="
 \$account = \App\Models\LoyaltyAccount::first();
-echo 'kawhe-' . \$account->store_id . '-' . \$account->customer_id . PHP_EOL;
+echo \App\Services\Wallet\Apple\AppleWalletSerial::fromAccount(\$account) . PHP_EOL;
 "
 
-# Test push
-php artisan wallet:apns-test kawhe-1-10
+# Test push (use serial from above, e.g. kawhe-42)
+php artisan wallet:apns-test kawhe-42
 ```
 
 **Expected:** `✅ Push notification sent successfully!`

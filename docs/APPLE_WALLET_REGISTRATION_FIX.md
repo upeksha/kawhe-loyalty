@@ -93,13 +93,13 @@ php artisan route:list | grep wallet/v1
 # Get account details
 php artisan tinker --execute="
 \$account = \App\Models\LoyaltyAccount::first();
-\$serial = 'kawhe-' . \$account->store_id . '-' . \$account->customer_id;
+\$serial = \App\Services\Wallet\Apple\AppleWalletSerial::fromAccount(\$account);
 echo 'Serial: ' . \$serial . PHP_EOL;
 echo 'Token: ' . \$account->public_token . PHP_EOL;
 "
 
-# Test registration
-curl -X POST https://testing.kawhe.shop/wallet/v1/devices/test-device-123/registrations/pass.com.kawhe.loyalty/kawhe-2-1 \
+# Test registration (use SERIAL from above in URL, e.g. kawhe-42)
+curl -X POST https://testing.kawhe.shop/wallet/v1/devices/test-device-123/registrations/pass.com.kawhe.loyalty/kawhe-42 \
   -H "Content-Type: application/json" \
   -H "Authorization: ApplePass <PUBLIC_TOKEN>" \
   -d '{"pushToken":"test-push-token"}' \
