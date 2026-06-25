@@ -30,34 +30,14 @@
         ];
 
         $platformMetricCards = [
-            [
-                'label' => 'New cards',
-                'value' => number_format($activityTrend['joins_total']),
-                'tone' => 'bg-brand-50 text-brand-700',
-            ],
-            [
-                'label' => 'Stamps added',
-                'value' => number_format($activityTrend['stamps_total']),
-                'tone' => 'bg-emerald-50 text-emerald-700',
-            ],
-            [
-                'label' => 'Rewards redeemed',
-                'value' => number_format($activityTrend['redeems_total']),
-                'tone' => 'bg-accent-50 text-accent-700',
-            ],
+            ['label' => 'New cards', 'value' => number_format($activityTrend['joins_total']), 'tone' => 'bg-brand-50 text-brand-700'],
+            ['label' => 'Stamps added', 'value' => number_format($activityTrend['stamps_total']), 'tone' => 'bg-emerald-50 text-emerald-700'],
+            ['label' => 'Rewards redeemed', 'value' => number_format($activityTrend['redeems_total']), 'tone' => 'bg-accent-50 text-accent-700'],
         ];
 
         $growthMetricCards = [
-            [
-                'label' => 'Stores added',
-                'value' => number_format($storeTrend['stores_total']),
-                'tone' => 'bg-brand-50 text-brand-700',
-            ],
-            [
-                'label' => 'Issue events',
-                'value' => number_format($storeTrend['issues_total']),
-                'tone' => 'bg-stone-100 text-stone-700',
-            ],
+            ['label' => 'Stores added', 'value' => number_format($storeTrend['stores_total']), 'tone' => 'bg-brand-50 text-brand-700'],
+            ['label' => 'Issue events', 'value' => number_format($storeTrend['issues_total']), 'tone' => 'bg-stone-100 text-stone-700'],
         ];
 
         $recentStampItems = $recent_stamps->take(5);
@@ -65,61 +45,45 @@
     @endphp
 
     <div class="mx-auto max-w-7xl space-y-8">
-        <section class="rounded-[28px] border border-stone-200/80 bg-white p-6 shadow-sm shadow-stone-200/60 sm:p-8">
-            <div class="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
-                <div class="max-w-2xl">
-                    <p class="text-sm font-semibold uppercase tracking-[0.24em] text-brand-600">Overview</p>
-                    <h2 class="mt-3 text-3xl font-semibold tracking-tight text-stone-900 sm:text-4xl">
-                        Welcome back, {{ auth()->user()->name ?? 'Admin' }}.
-                    </h2>
-                    <p class="mt-3 max-w-xl text-base leading-7 text-stone-600">
-                        This is the platform pulse. The top half focuses on joins, stamps, store growth, and support pressure so we can spot changes quickly without digging through logs first.
-                    </p>
-                </div>
-
-                <div class="grid gap-3 sm:grid-cols-3 xl:w-[34rem]">
-                    <a href="{{ route('admin.support.index') }}" class="rounded-2xl border border-stone-200 bg-stone-50 px-4 py-4 transition hover:border-brand-200 hover:bg-brand-50/60">
-                        <p class="text-xs font-semibold uppercase tracking-[0.18em] text-stone-500">Quick Action</p>
-                        <p class="mt-2 text-sm font-semibold text-stone-900">Open Support Logs</p>
-                    </a>
-                    <a href="{{ route('admin.support.index', ['event_type' => 'billing_issue']) }}" class="rounded-2xl border border-stone-200 bg-stone-50 px-4 py-4 transition hover:border-accent-200 hover:bg-accent-50/50">
-                        <p class="text-xs font-semibold uppercase tracking-[0.18em] text-stone-500">Quick Action</p>
-                        <p class="mt-2 text-sm font-semibold text-stone-900">Review Billing Issues</p>
-                    </a>
-                    <a href="{{ route('admin.support.index', ['event_type' => 'wallet_sync', 'issues_only' => 1]) }}" class="rounded-2xl border border-stone-200 bg-stone-50 px-4 py-4 transition hover:border-emerald-200 hover:bg-emerald-50/50">
-                        <p class="text-xs font-semibold uppercase tracking-[0.18em] text-stone-500">Quick Action</p>
-                        <p class="mt-2 text-sm font-semibold text-stone-900">Check Wallet Sync</p>
-                    </a>
-                </div>
-            </div>
-        </section>
+        <x-ui.page-hero
+            eyebrow="Overview"
+            title="Welcome back, {{ auth()->user()->name ?? 'Admin' }}."
+            description="This is the platform pulse. The top half focuses on joins, stamps, store growth, and support pressure so we can spot changes quickly without digging through logs first."
+        >
+            <x-slot name="actions">
+                <x-ui.quick-link href="{{ route('admin.support.index') }}" label="Quick Action" title="Open Support Logs" />
+                <x-ui.quick-link href="{{ route('admin.support.index', ['event_type' => 'billing_issue']) }}" label="Quick Action" title="Review Billing Issues" hover="accent" />
+                <x-ui.quick-link href="{{ route('admin.support.index', ['event_type' => 'wallet_sync', 'issues_only' => 1]) }}" label="Quick Action" title="Check Wallet Sync" hover="emerald" class="sm:col-span-2 xl:col-span-1" />
+            </x-slot>
+        </x-ui.page-hero>
 
         <section class="grid gap-4 xl:grid-cols-3">
             @foreach($summaryCards as $card)
-                <article class="rounded-[26px] border border-stone-200/70 bg-gradient-to-br {{ $card['tone'] }} p-5 shadow-sm shadow-stone-200/70">
-                    <p class="text-sm font-medium text-stone-500">{{ $card['label'] }}</p>
-                    <p class="mt-4 text-4xl font-semibold tracking-tight text-stone-950">{{ $card['value'] }}</p>
-                    <p class="mt-3 max-w-[16rem] text-sm leading-6 text-stone-600">{{ $card['caption'] }}</p>
-                </article>
+                <x-ui.stat-card
+                    :label="$card['label']"
+                    :value="$card['value']"
+                    :caption="$card['caption']"
+                    size="lg"
+                    tone=""
+                    accent="text-stone-950"
+                    class="rounded-[26px] border border-stone-200/70 bg-gradient-to-br {{ $card['tone'] }} p-5 shadow-sm shadow-stone-200/70"
+                />
             @endforeach
         </section>
 
         <section class="grid gap-6 xl:grid-cols-[1.75fr_1fr]">
-            <section class="rounded-[28px] border border-stone-200/80 bg-white p-6 shadow-sm shadow-stone-200/60">
+            <x-ui.section-panel class="p-6">
                 <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                     <div>
                         <h3 class="text-xl font-semibold text-stone-900">Platform Activity</h3>
                         <p class="mt-2 text-sm leading-6 text-stone-600">Daily joins, stamp updates, and reward redeems over the last 14 days.</p>
                     </div>
-                    <span class="inline-flex items-center rounded-full bg-stone-100 px-3 py-1 text-xs font-semibold text-stone-600">Last 14 days</span>
+                    <x-ui.badge variant="default">Last 14 days</x-ui.badge>
                 </div>
 
                 <div class="mt-6 grid gap-3 md:grid-cols-3">
                     @foreach($platformMetricCards as $card)
-                        <div class="rounded-2xl {{ $card['tone'] }} p-4">
-                            <p class="text-xs font-semibold uppercase tracking-[0.18em] opacity-75">{{ $card['label'] }}</p>
-                            <p class="mt-3 text-3xl font-semibold tracking-tight text-stone-950">{{ $card['value'] }}</p>
-                        </div>
+                        <x-ui.admin-metric :label="$card['label']" :value="$card['value']" :tone="$card['tone']" />
                     @endforeach
                 </div>
 
@@ -148,24 +112,21 @@
                     <span class="inline-flex items-center gap-2"><span class="h-2.5 w-2.5 rounded-full bg-emerald-500"></span> Stamps added</span>
                     <span class="inline-flex items-center gap-2"><span class="h-2.5 w-2.5 rounded-full bg-amber-500"></span> Rewards redeemed</span>
                 </div>
-            </section>
+            </x-ui.section-panel>
 
             <div class="space-y-6">
-                <section class="rounded-[28px] border border-stone-200/80 bg-white p-6 shadow-sm shadow-stone-200/60">
+                <x-ui.section-panel class="p-6">
                     <div class="flex items-start justify-between gap-4">
                         <div>
                             <h3 class="text-xl font-semibold text-stone-900">Store Growth</h3>
                             <p class="mt-2 text-sm leading-6 text-stone-600">New stores created versus support pressure.</p>
                         </div>
-                        <span class="rounded-full bg-brand-50 px-3 py-1 text-xs font-semibold text-brand-700">Live</span>
+                        <x-ui.badge variant="info">Live</x-ui.badge>
                     </div>
 
                     <div class="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
                         @foreach($growthMetricCards as $card)
-                            <div class="rounded-2xl {{ $card['tone'] }} p-4">
-                                <p class="text-xs font-semibold uppercase tracking-[0.18em] opacity-75">{{ $card['label'] }}</p>
-                                <p class="mt-3 text-3xl font-semibold tracking-tight text-stone-950">{{ $card['value'] }}</p>
-                            </div>
+                            <x-ui.admin-metric :label="$card['label']" :value="$card['value']" :tone="$card['tone']" />
                         @endforeach
                     </div>
 
@@ -185,9 +146,9 @@
                         <span class="inline-flex items-center gap-2"><span class="h-2.5 w-2.5 rounded-full bg-indigo-600"></span> Stores added</span>
                         <span class="inline-flex items-center gap-2"><span class="h-2.5 w-2.5 rounded-full bg-stone-500"></span> Issue events</span>
                     </div>
-                </section>
+                </x-ui.section-panel>
 
-                <section class="rounded-[28px] border border-stone-200/80 bg-white p-6 shadow-sm shadow-stone-200/60">
+                <x-ui.section-panel class="p-6">
                     <div class="flex items-start justify-between gap-4">
                         <div>
                             <h3 class="text-xl font-semibold text-stone-900">Recent Activity</h3>
@@ -210,7 +171,7 @@
                                             <p class="truncate text-xs text-stone-500">{{ $stamp->store->name }}</p>
                                         </div>
                                         <div class="text-right">
-                                            <span class="inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold {{ $stamp->type === 'redeem' ? 'bg-accent-50 text-accent-700' : 'bg-emerald-50 text-emerald-700' }}">{{ ucfirst($stamp->type) }}</span>
+                                            <x-ui.badge :variant="$stamp->type === 'redeem' ? 'accent' : 'success'">{{ ucfirst($stamp->type) }}</x-ui.badge>
                                             <p class="mt-1 text-[11px] text-stone-400">{{ $stamp->created_at->diffForHumans() }}</p>
                                         </div>
                                     </div>
@@ -233,7 +194,9 @@
                                             <p class="truncate text-xs text-stone-500">{{ $event->store->name ?? 'System' }}</p>
                                         </div>
                                         <div class="text-right">
-                                            <span class="inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold {{ $event->status === 'failed' ? 'bg-red-50 text-red-700' : ($event->status === 'blocked' || $event->status === 'partial' ? 'bg-amber-50 text-amber-700' : 'bg-emerald-50 text-emerald-700') }}">{{ ucfirst($event->status) }}</span>
+                                            <x-ui.badge :variant="$event->status === 'failed' ? 'danger' : (in_array($event->status, ['blocked', 'partial'], true) ? 'warning' : 'success')">
+                                                {{ ucfirst($event->status) }}
+                                            </x-ui.badge>
                                             <p class="mt-1 text-[11px] text-stone-400">{{ $event->created_at->diffForHumans() }}</p>
                                         </div>
                                     </div>
@@ -243,34 +206,25 @@
                             </div>
                         </div>
                     </div>
-                </section>
+                </x-ui.section-panel>
             </div>
         </section>
 
-        <section class="rounded-[28px] border border-stone-200/80 bg-white p-6 shadow-sm shadow-stone-200/60">
+        <x-ui.section-panel class="p-6">
             <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                 <div>
                     <h3 class="text-xl font-semibold text-stone-900">Merchant Issue Diagnostics</h3>
                     <p class="mt-2 text-sm leading-6 text-stone-600">Repeated billing and wallet issues are surfaced here first so support can act before merchants escalate.</p>
                 </div>
-                <a href="{{ route('admin.support.index', ['issues_only' => 1]) }}" class="inline-flex items-center rounded-full border border-stone-200 bg-stone-50 px-4 py-2 text-sm font-medium text-stone-700 transition hover:border-brand-200 hover:text-brand-700">
+                <x-ui.button href="{{ route('admin.support.index', ['issues_only' => 1]) }}" variant="secondary" size="sm" class="rounded-full">
                     View all issue logs
-                </a>
+                </x-ui.button>
             </div>
 
             <div class="mt-6 grid gap-3 md:grid-cols-3">
-                <div class="rounded-2xl bg-brand-50 p-4 text-brand-700">
-                    <p class="text-xs font-semibold uppercase tracking-[0.18em] opacity-70">Stores to Review</p>
-                    <p class="mt-3 text-3xl font-semibold tracking-tight text-stone-950">{{ number_format($issueStores) }}</p>
-                </div>
-                <div class="rounded-2xl bg-accent-50 p-4 text-accent-700">
-                    <p class="text-xs font-semibold uppercase tracking-[0.18em] opacity-70">Billing Issues</p>
-                    <p class="mt-3 text-3xl font-semibold tracking-tight text-stone-950">{{ number_format($billingIssues) }}</p>
-                </div>
-                <div class="rounded-2xl bg-emerald-50 p-4 text-emerald-700">
-                    <p class="text-xs font-semibold uppercase tracking-[0.18em] opacity-70">Wallet Issues</p>
-                    <p class="mt-3 text-3xl font-semibold tracking-tight text-stone-950">{{ number_format($walletIssues) }}</p>
-                </div>
+                <x-ui.admin-metric label="Stores to Review" :value="number_format($issueStores)" tone="bg-brand-50 text-brand-700" />
+                <x-ui.admin-metric label="Billing Issues" :value="number_format($billingIssues)" tone="bg-accent-50 text-accent-700" />
+                <x-ui.admin-metric label="Wallet Issues" :value="number_format($walletIssues)" tone="bg-emerald-50 text-emerald-700" />
             </div>
 
             <div class="mt-6 overflow-hidden rounded-3xl border border-stone-200">
@@ -295,8 +249,8 @@
                                     <td class="px-5 py-4 text-sm text-stone-600">{{ $merchantIssue->email }}</td>
                                     <td class="px-5 py-4">
                                         <div class="flex flex-wrap gap-2">
-                                            <span class="inline-flex items-center rounded-full bg-accent-50 px-3 py-1 text-xs font-semibold text-accent-700">{{ $merchantIssue->billing_issue_count }} billing</span>
-                                            <span class="inline-flex items-center rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">{{ $merchantIssue->wallet_issue_count }} wallet</span>
+                                            <x-ui.badge variant="accent">{{ $merchantIssue->billing_issue_count }} billing</x-ui.badge>
+                                            <x-ui.badge variant="success">{{ $merchantIssue->wallet_issue_count }} wallet</x-ui.badge>
                                         </div>
                                     </td>
                                     <td class="px-5 py-4 text-sm leading-6 text-stone-600">
@@ -309,9 +263,9 @@
                                         @endif
                                     </td>
                                     <td class="px-5 py-4">
-                                        <a href="{{ route('admin.support.index', ['store_id' => $merchantIssue->id, 'issues_only' => 1]) }}" class="inline-flex items-center rounded-full border border-stone-200 px-3 py-1.5 text-sm font-medium text-brand-700 transition hover:border-brand-200 hover:bg-brand-50">
+                                        <x-ui.button href="{{ route('admin.support.index', ['store_id' => $merchantIssue->id, 'issues_only' => 1]) }}" variant="ghost" size="sm" class="rounded-full border border-stone-200 px-3 py-1.5 text-brand-700 hover:border-brand-200 hover:bg-brand-50">
                                             Open diagnostics
-                                        </a>
+                                        </x-ui.button>
                                     </td>
                                 </tr>
                             @empty
@@ -323,6 +277,6 @@
                     </table>
                 </div>
             </div>
-        </section>
+        </x-ui.section-panel>
     </div>
 </x-admin-layout>

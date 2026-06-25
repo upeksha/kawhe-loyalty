@@ -34,7 +34,7 @@
                     </div>
                     <div class="text-right">
                         <p class="text-xs text-brand-700 font-semibold">
-                            Unlimited Cards
+                            Up to {{ $usageStats['paid_limit'] }} Loyalty Cards
                         </p>
                     </div>
                 </div>
