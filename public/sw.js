@@ -1,11 +1,11 @@
-const CACHE_NAME = 'kawhe-v3'; // Updated version to force refresh
+const CACHE_NAME = 'kawhe-v4';
 
 self.addEventListener('install', event => {
     event.waitUntil(
         caches.open(CACHE_NAME).then(cache => {
-            // Only cache static assets, not Vite-built assets (Vite handles those)
+            // Only cache lightweight static assets.
+            // Avoid caching navigations like "/" because redirect responses can become stale.
             return cache.addAll([
-                '/',
                 '/manifest.webmanifest'
             ]).catch(err => {
                 console.log('Service worker cache: Some assets may not be available', err);
@@ -36,7 +36,8 @@ self.addEventListener('fetch', event => {
     const url = new URL(event.request.url);
     const isExternal = url.origin !== location.origin;
     const isApi = url.pathname.startsWith('/api/');
-    
+    const isNavigation = event.request.mode === 'navigate';
+
     // Skip caching for external resources and API calls
     if (isExternal || isApi) {
         return fetch(event.request).catch(() => {
@@ -44,7 +45,12 @@ self.addEventListener('fetch', event => {
             return new Response('', { status: 404 });
         });
     }
-    
+
+    if (isNavigation) {
+        event.respondWith(fetch(event.request));
+        return;
+    }
+
     // Cache local resources
     event.respondWith(
         caches.match(event.request).then(response => {
@@ -52,4 +58,3 @@ self.addEventListener('fetch', event => {
         })
     );
 });
-
