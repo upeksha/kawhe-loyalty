@@ -41,7 +41,7 @@ echo "1. Getting test account details..."
 SERIAL=$(php artisan tinker --execute="
     \$account = \App\Models\LoyaltyAccount::first();
     if (\$account) {
-        echo 'kawhe-' . \$account->store_id . '-' . \$account->customer_id;
+        echo \App\Services\Wallet\Apple\AppleWalletSerial::fromAccount(\$account);
     }
 " 2>/dev/null | tail -1)
 

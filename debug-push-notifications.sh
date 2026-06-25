@@ -94,7 +94,7 @@ if [ "$PUSH_ENABLED" = "true" ]; then
             
             \$service = app(\App\Services\Wallet\Apple\ApplePushService::class);
             \$passType = config('passgenerator.pass_type_identifier');
-            \$serial = 'kawhe-' . \$account->store_id . '-' . \$account->customer_id;
+            \$serial = \App\Services\Wallet\Apple\AppleWalletSerial::fromAccount(\$account);
             
             echo 'Testing push for: ' . \$serial . PHP_EOL;
             \$service->sendPassUpdatePushes(\$passType, \$serial);

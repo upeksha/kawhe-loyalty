@@ -3,7 +3,6 @@
 namespace App\Services\Wallet\Apple;
 
 use App\Models\LoyaltyAccount;
-use App\Services\Wallet\Apple\AppleWalletSerial;
 use App\Services\Wallet\AppleWalletPassService;
 
 /**
@@ -22,8 +21,8 @@ class ApplePassService
     /**
      * Generate pkpass binary data for a loyalty account.
      *
-     * @param LoyaltyAccount $account
      * @return string Raw pkpass binary data
+     *
      * @throws \Exception
      */
     public function generatePkpassForAccount(LoyaltyAccount $account): string
@@ -33,11 +32,9 @@ class ApplePassService
 
     /**
      * Resolve loyalty account from serial number.
-     * 
-     * Serial number format: kawhe-{store_id}-{customer_id}
-     * 
-     * @param string $serialNumber
-     * @return LoyaltyAccount|null
+     *
+     * Current format: kawhe-{loyalty_account_id}
+     * Legacy format: kawhe-{store_id}-{customer_id}
      */
     public function resolveLoyaltyAccount(string $serialNumber): ?LoyaltyAccount
     {
@@ -63,9 +60,6 @@ class ApplePassService
 
     /**
      * Get the serial number for a loyalty account.
-     *
-     * @param LoyaltyAccount $account
-     * @return string
      */
     public function getSerialNumber(LoyaltyAccount $account): string
     {

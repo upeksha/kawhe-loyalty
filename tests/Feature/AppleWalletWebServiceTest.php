@@ -5,9 +5,9 @@ use App\Models\Customer;
 use App\Models\LoyaltyAccount;
 use App\Models\Store;
 use App\Models\User;
+use App\Services\Wallet\Apple\AppleWalletSerial;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Config;
-use Tests\TestCase;
 
 uses(RefreshDatabase::class);
 
@@ -26,7 +26,7 @@ test('register device creates new registration', function () {
         'customer_id' => $customer->id,
     ]);
 
-    $serialNumber = "kawhe-{$store->id}-{$customer->id}";
+    $serialNumber = AppleWalletSerial::fromAccount($account);
     $deviceId = 'test-device-123';
     $pushToken = 'test-push-token-456';
 
@@ -57,7 +57,7 @@ test('register device again is idempotent', function () {
         'customer_id' => $customer->id,
     ]);
 
-    $serialNumber = "kawhe-{$store->id}-{$customer->id}";
+    $serialNumber = AppleWalletSerial::fromAccount($account);
     $deviceId = 'test-device-123';
     $pushToken = 'test-push-token-456';
 
@@ -92,7 +92,7 @@ test('register device stores pushToken with correct length', function () {
         'customer_id' => $customer->id,
     ]);
 
-    $serialNumber = "kawhe-{$store->id}-{$customer->id}";
+    $serialNumber = AppleWalletSerial::fromAccount($account);
     $deviceId = 'test-device-123';
     // Push token should be 64 characters (hex encoded device token)
     $pushToken = str_repeat('a', 64);
@@ -100,7 +100,7 @@ test('register device stores pushToken with correct length', function () {
     $response = $this->postJson("/wallet/v1/devices/{$deviceId}/registrations/pass.com.kawhe.loyalty/{$serialNumber}", [
         'pushToken' => $pushToken,
     ], [
-        'Authorization' => 'ApplePass ' . $account->wallet_auth_token,
+        'Authorization' => 'ApplePass '.$account->wallet_auth_token,
     ]);
 
     $response->assertStatus(201);
@@ -122,7 +122,7 @@ test('GET device registrations list returns 204 when no updates', function () {
         'customer_id' => $customer->id,
     ]);
 
-    $serialNumber = "kawhe-{$store->id}-{$customer->id}";
+    $serialNumber = AppleWalletSerial::fromAccount($account);
     $deviceId = 'test-device-123';
     $pushToken = str_repeat('a', 64);
 
@@ -152,7 +152,7 @@ test('GET device registrations list returns serialNumbers when updated_at change
         'customer_id' => $customer->id,
     ]);
 
-    $serialNumber = "kawhe-{$store->id}-{$customer->id}";
+    $serialNumber = AppleWalletSerial::fromAccount($account);
     $deviceId = 'test-device-123';
     $pushToken = str_repeat('a', 64);
 
@@ -169,10 +169,10 @@ test('GET device registrations list returns serialNumbers when updated_at change
     // Update account (simulating a stamp)
     // Get timestamp BEFORE updating
     $oldTimestamp = $account->updated_at->timestamp;
-    
+
     // Wait a moment to ensure timestamp difference (timestamps are in seconds)
     sleep(1);
-    
+
     // Update account (simulating a stamp)
     $account->touch(); // Update updated_at
     $account->refresh();
@@ -210,7 +210,7 @@ test('GET device registrations list does not require authentication', function (
         'customer_id' => $customer->id,
     ]);
 
-    $serialNumber = "kawhe-{$store->id}-{$customer->id}";
+    $serialNumber = AppleWalletSerial::fromAccount($account);
     $deviceId = 'test-device-123';
     $pushToken = str_repeat('a', 64);
 
@@ -243,7 +243,7 @@ test('unregister device deactivates registration', function () {
         'customer_id' => $customer->id,
     ]);
 
-    $serialNumber = "kawhe-{$store->id}-{$customer->id}";
+    $serialNumber = AppleWalletSerial::fromAccount($account);
     $deviceId = 'test-device-123';
 
     // Create registration
@@ -294,7 +294,7 @@ test('get updated serials returns correct format', function () {
         'customer_id' => $customer->id,
     ]);
 
-    $serialNumber = "kawhe-{$store->id}-{$customer->id}";
+    $serialNumber = AppleWalletSerial::fromAccount($account);
     $deviceId = 'test-device-123';
 
     AppleWalletRegistration::create([
@@ -315,7 +315,7 @@ test('get updated serials returns correct format', function () {
         'lastUpdated',
         'serialNumbers',
     ]);
-    
+
     $data = $response->json();
     expect($data['serialNumbers'])->toContain($serialNumber);
 });
@@ -353,4 +353,32 @@ test('authentication not required for log endpoint even with invalid token', fun
     ]);
 
     $response->assertStatus(200);
+});
+
+test('legacy serial registration still resolves for existing wallet passes', function () {
+    $user = User::factory()->create();
+    $store = Store::factory()->create(['user_id' => $user->id]);
+    $customer = Customer::factory()->create();
+    $account = LoyaltyAccount::factory()->create([
+        'store_id' => $store->id,
+        'customer_id' => $customer->id,
+    ]);
+
+    $legacySerial = "kawhe-{$store->id}-{$customer->id}";
+    $deviceId = 'legacy-device-123';
+    $pushToken = str_repeat('b', 64);
+
+    $response = $this->postJson("/wallet/v1/devices/{$deviceId}/registrations/pass.com.kawhe.loyalty/{$legacySerial}", [
+        'pushToken' => $pushToken,
+    ], [
+        'Authorization' => 'ApplePass test-auth-token-123',
+    ]);
+
+    $response->assertStatus(201);
+
+    $this->assertDatabaseHas('apple_wallet_registrations', [
+        'serial_number' => $legacySerial,
+        'loyalty_account_id' => $account->id,
+        'active' => true,
+    ]);
 });

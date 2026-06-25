@@ -15,7 +15,7 @@ if (!\$account) {
     echo 'NO_ACCOUNT';
     exit;
 }
-\$serial = 'kawhe-' . \$account->store_id . '-' . \$account->customer_id;
+\$serial = \App\Services\Wallet\Apple\AppleWalletSerial::fromAccount(\$account);
 echo \$serial . '|' . \$account->public_token;
 " 2>/dev/null | tail -1)
 

@@ -91,7 +91,7 @@ echo ""
 # Test push if registrations exist
 if [ "$REG_COUNT" -gt "0" ]; then
     echo "=== Test Push ==="
-    SERIAL=$(php artisan tinker --execute="\$a = \App\Models\LoyaltyAccount::first(); if(\$a) echo 'kawhe-' . \$a->store_id . '-' . \$a->customer_id . PHP_EOL;" 2>/dev/null | tail -1)
+    SERIAL=$(php artisan tinker --execute="\$a = \App\Models\LoyaltyAccount::first(); if(\$a) echo \App\Services\Wallet\Apple\AppleWalletSerial::fromAccount(\$a) . PHP_EOL;" 2>/dev/null | tail -1)
     if [ -n "$SERIAL" ]; then
         echo "Testing serial: $SERIAL"
         php artisan wallet:apns-test "$SERIAL" 2>&1 | tail -10
@@ -102,7 +102,8 @@ else
     echo "=== Test Push ==="
     echo "⚠️  Skipping - no registrations found"
     echo "  Add pass to iPhone Wallet first, then run:"
-    echo "  php artisan wallet:apns-test kawhe-1-10"
+    echo "  SERIAL=\$(php artisan tinker --execute=\"\\\$a = \\App\\Models\\LoyaltyAccount::first(); echo \\App\\Services\\Wallet\\Apple\\AppleWalletSerial::fromAccount(\\\$a);\" | tail -1)"
+    echo "  php artisan wallet:apns-test \"\$SERIAL\""
 fi
 echo ""
 
