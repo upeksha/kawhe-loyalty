@@ -2,6 +2,8 @@
     'used' => 0,
     'limit' => null,
     'showPercent' => true,
+    'fullLabel' => 'At limit',
+    'fullTone' => 'danger',
 ])
 
 @php
@@ -10,9 +12,15 @@
     $roundedPercent = $percent !== null ? (int) round($percent) : null;
     $barClass = match (true) {
         ! $hasLimit => 'bg-brand-400/35',
+        $roundedPercent >= 100 && $fullTone === 'neutral' => 'bg-brand-600',
         $roundedPercent >= 100 => 'bg-red-500',
         $roundedPercent >= 80 => 'bg-amber-500',
         default => 'bg-brand-600',
+    };
+    $fullLabelClass = match ($fullTone) {
+        'neutral' => 'font-medium text-stone-600',
+        'success' => 'font-medium text-emerald-700',
+        default => 'font-medium text-red-700',
     };
 @endphp
 
@@ -22,7 +30,7 @@
             <div class="mb-1.5 flex items-center justify-between text-xs">
                 <span class="text-stone-500">{{ $roundedPercent }}% used</span>
                 @if($roundedPercent >= 100)
-                    <span class="font-medium text-red-700">At limit</span>
+                    <span class="{{ $fullLabelClass }}">{{ $fullLabel }}</span>
                 @elseif($roundedPercent >= 80)
                     <span class="font-medium text-amber-700">Nearly full</span>
                 @endif

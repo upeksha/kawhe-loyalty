@@ -125,6 +125,7 @@ Route::middleware(['auth', App\Http\Middleware\EnsureMerchantHasStore::class])->
         ]);
     })->name('dashboard');
 
+    Route::get('/programs', [LoyaltyProgramController::class, 'indexAll'])->name('programs.index');
     Route::get('/stores', [StoreController::class, 'index'])->name('stores.index');
     Route::get('/stores/create', [StoreController::class, 'create'])->name('stores.create');
     Route::post('/stores', [StoreController::class, 'store'])->name('stores.store');

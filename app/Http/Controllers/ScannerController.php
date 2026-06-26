@@ -16,11 +16,13 @@ use Illuminate\Validation\ValidationException;
 class ScannerController extends Controller
 {
     private const CARD_NOT_ACTIVE_CODE = 'CARD_NOT_ACTIVE';
+
     private const CARD_NOT_ACTIVE_MESSAGE = 'This loyalty card is no longer active. Ask the customer to rejoin or contact the store.';
 
     public function index()
     {
         $stores = Auth::user()->stores()->get();
+
         return view('scanner.index', compact('stores'));
     }
 
@@ -35,7 +37,7 @@ class ScannerController extends Controller
         ]);
 
         $token = $request->token;
-        
+
         // Handle LR: (redeem) vs LA: (stamp) prefixes
         $isRedeem = false;
         if (Str::startsWith($token, 'LR:')) {
@@ -51,7 +53,7 @@ class ScannerController extends Controller
 
         // Remove dashes/spaces from manual entry (formatted tokens from wallet pass)
         $token = str_replace(['-', ' '], '', trim($token));
-        
+
         // If this is a redeem request, route to redeem method
         if ($isRedeem) {
             return $this->redeem($request->merge(['token' => $token]));
@@ -72,16 +74,16 @@ class ScannerController extends Controller
         if (strlen($token) === 4 && $requestedStoreId) {
             $account = LoyaltyAccount::where('store_id', $requestedStoreId)
                 ->where('manual_entry_code', strtoupper($token))
-                ->with(['customer', 'store'])
+                ->with(['customer', 'store', 'loyaltyProgram'])
                 ->first();
         }
-        if (!$account) {
+        if (! $account) {
             $account = LoyaltyAccount::where('public_token', $token)
-                ->with(['customer', 'store'])
+                ->with(['customer', 'store', 'loyaltyProgram'])
                 ->first();
         }
 
-        if (!$account) {
+        if (! $account) {
             return $this->cardNotActiveResponse();
         }
 
@@ -112,7 +114,7 @@ class ScannerController extends Controller
 
         $cooldownSeconds = config('loyalty.stamp_cooldown_seconds', 0);
         if ($cooldownSeconds > 0 && $secondsSinceLastStamp !== null && $secondsSinceLastStamp < $cooldownSeconds) {
-            if (!$overrideCooldown) {
+            if (! $overrideCooldown) {
                 return response()->json([
                     'status' => 'cooldown',
                     'success' => false,
@@ -170,7 +172,7 @@ class ScannerController extends Controller
             $account->refresh();
             $account->load(['store', 'customer']);
             $store = $account->store;
-            
+
             return response()->json([
                 'status' => 'duplicate',
                 'success' => false,
@@ -208,31 +210,31 @@ class ScannerController extends Controller
             }
 
             return response()->json([
-            'status' => 'success',
-            'success' => true,
-            'message' => $count > 1 
-                ? "Successfully added {$count} stamps!" 
-                : "Successfully added 1 stamp!",
-            'storeName' => $store->name, // Keep for backwards compatibility
-            'store_id_used' => $store->id,
-            'store_name_used' => $store->name,
-            'store_switched' => $storeSwitched,
-            'loyalty_account_id' => $account->id,
-            'customerLabel' => $account->customer->name ?? 'Customer',
-            'stampCount' => $result->stampCount,
-            'rewardBalance' => $result->rewardBalance,
-            'rewardTarget' => $result->rewardTarget,
-            'rewardAvailable' => $result->rewardBalance > 0,
-            'rewardEarned' => $result->rewardEarned,
-            'stampsRemaining' => max(0, $result->rewardTarget - $result->stampCount),
-            'cooldown_seconds' => config('loyalty.stamp_client_cooldown_seconds', 5), // For scanner/Flutter: countdown before next scan
-            'receipt' => [
-                'transaction_id' => $transaction->id ?? null,
-                'timestamp' => now()->toIso8601String(),
-                'stamps_added' => $count,
-                'new_total' => $result->stampCount,
-            ],
-        ]);
+                'status' => 'success',
+                'success' => true,
+                'message' => $count > 1
+                    ? "Successfully added {$count} stamps!"
+                    : 'Successfully added 1 stamp!',
+                'storeName' => $store->name, // Keep for backwards compatibility
+                'store_id_used' => $store->id,
+                'store_name_used' => $store->name,
+                'store_switched' => $storeSwitched,
+                'loyalty_account_id' => $account->id,
+                'customerLabel' => $account->customer->name ?? 'Customer',
+                'stampCount' => $result->stampCount,
+                'rewardBalance' => $result->rewardBalance,
+                'rewardTarget' => $result->rewardTarget,
+                'rewardAvailable' => $result->rewardBalance > 0,
+                'rewardEarned' => $result->rewardEarned,
+                'stampsRemaining' => max(0, $result->rewardTarget - $result->stampCount),
+                'cooldown_seconds' => config('loyalty.stamp_client_cooldown_seconds', 5), // For scanner/Flutter: countdown before next scan
+                'receipt' => [
+                    'transaction_id' => $transaction->id ?? null,
+                    'timestamp' => now()->toIso8601String(),
+                    'stamps_added' => $count,
+                    'new_total' => $result->stampCount,
+                ],
+            ]);
         } catch (\Exception $e) {
             // Log error but still return success if stamp actually happened
             \Log::error('Error formatting stamp response', [
@@ -240,7 +242,7 @@ class ScannerController extends Controller
                 'account_id' => $account->id ?? null,
                 'trace' => $e->getTraceAsString(),
             ]);
-            
+
             // Return minimal success response
             return response()->json([
                 'status' => 'success',
@@ -266,7 +268,7 @@ class ScannerController extends Controller
         $token = $request->token;
         $isRedeemQR = false;
         $hasPrefix = false;
-        
+
         // Handle LR: (redeem) vs LA: (stamp) prefixes
         if (Str::startsWith($token, 'LR:')) {
             $token = Str::substr($token, 3);
@@ -281,7 +283,7 @@ class ScannerController extends Controller
             $isRedeemQR = false;
             $hasPrefix = true;
         }
-        
+
         // Remove dashes/spaces from manual entry (formatted tokens from wallet pass)
         $token = str_replace(['-', ' '], '', trim($token));
         $requestedStoreId = $request->store_id;
@@ -296,43 +298,43 @@ class ScannerController extends Controller
         }
 
         // Try to find account by public_token (stamp QR)
-        if (!$account) {
+        if (! $account) {
             $account = LoyaltyAccount::where('public_token', $token)
                 ->with(['customer', 'store'])
                 ->first();
         }
 
         // If not found and it's a redeem QR, try redeem_token
-        if (!$account && $isRedeemQR && $requestedStoreId) {
+        if (! $account && $isRedeemQR && $requestedStoreId) {
             $account = LoyaltyAccount::where('redeem_token', $token)
                 ->where('store_id', $requestedStoreId)
-                ->with(['customer', 'store'])
+                ->with(['customer', 'store', 'loyaltyProgram'])
                 ->first();
         }
-        
+
         // If no prefix provided (manual entry from wallet pass), try both token types
-        if (!$account && !$hasPrefix) {
+        if (! $account && ! $hasPrefix) {
             // First try public_token (stamp mode)
             $account = LoyaltyAccount::where('public_token', $token)
-                ->with(['customer', 'store'])
+                ->with(['customer', 'store', 'loyaltyProgram'])
                 ->first();
-            
+
             // If not found and store_id provided, try redeem_token
-            if (!$account && $requestedStoreId) {
+            if (! $account && $requestedStoreId) {
                 $account = LoyaltyAccount::where('redeem_token', $token)
                     ->where('store_id', $requestedStoreId)
-                    ->with(['customer', 'store'])
+                    ->with(['customer', 'store', 'loyaltyProgram'])
                     ->first();
                 if ($account) {
                     $isRedeemQR = true; // Auto-detect it's a redeem token
                 }
             }
-            
+
             // If still not found and no store_id, try redeem_token without store filter
             // (less secure but allows manual entry to work)
-            if (!$account) {
+            if (! $account) {
                 $account = LoyaltyAccount::where('redeem_token', $token)
-                    ->with(['customer', 'store'])
+                    ->with(['customer', 'store', 'loyaltyProgram'])
                     ->first();
                 if ($account) {
                     $isRedeemQR = true; // Auto-detect it's a redeem token
@@ -340,7 +342,7 @@ class ScannerController extends Controller
             }
         }
 
-        if (!$account) {
+        if (! $account) {
             return response()->json([
                 'success' => false,
                 'code' => self::CARD_NOT_ACTIVE_CODE,
@@ -350,13 +352,14 @@ class ScannerController extends Controller
 
         $rewardBalance = $account->reward_balance ?? 0;
         $store = $account->store;
+        $program = $account->loyaltyProgram;
 
         // Verify user has access to this store
         // If store_id provided, verify ownership; otherwise verify the account's store belongs to user
         $userStore = null;
         if ($requestedStoreId) {
             $userStore = Auth::user()->stores()->where('id', $requestedStoreId)->first();
-            if (!$userStore) {
+            if (! $userStore) {
                 return response()->json([
                     'success' => false,
                     'message' => 'You do not have access to this store.',
@@ -372,7 +375,7 @@ class ScannerController extends Controller
         } else {
             // Auto-detect: verify the account's store belongs to the user
             $userStore = Auth::user()->stores()->where('id', $store->id)->first();
-            if (!$userStore) {
+            if (! $userStore) {
                 return response()->json([
                     'success' => false,
                     'message' => 'You do not have access to this customer\'s store.',
@@ -390,6 +393,9 @@ class ScannerController extends Controller
             'customer_name' => $account->customer->name ?? 'Customer',
             'store_name' => $store->name,
             'store_id' => $store->id,
+            'program_id' => $program?->id,
+            'program_name' => $program?->name ?? $account->reward_title,
+            'requires_verification' => (bool) $account->requires_verification_for_redemption,
             'is_redeem_qr' => $isRedeemQR,
             'token' => $request->token, // Return original token for processing
             'redeem_token' => $account->redeem_token, // Include redeem token if available (for stamp QR -> redeem flow)
@@ -413,7 +419,7 @@ class ScannerController extends Controller
         // Also handle whitespace and case-insensitive matching
         $raw = trim($token);
         $token = preg_replace('/^(LR:|REDEEM:)\s*/i', '', $raw);
-        
+
         // Remove dashes/spaces from manual entry (formatted tokens from wallet pass)
         $token = str_replace(['-', ' '], '', $token);
 
@@ -421,7 +427,7 @@ class ScannerController extends Controller
 
         // Verify user owns the store
         $store = Auth::user()->stores()->where('id', $storeId)->first();
-        if (!$store) {
+        if (! $store) {
             abort(403, 'You do not own this store.');
         }
 
@@ -431,7 +437,7 @@ class ScannerController extends Controller
             ->with(['customer', 'store', 'loyaltyProgram'])
             ->first();
 
-        if (!$account) {
+        if (! $account) {
             return response()->json([
                 'success' => false,
                 'code' => self::CARD_NOT_ACTIVE_CODE,
@@ -441,28 +447,36 @@ class ScannerController extends Controller
 
         $customer = $account->customer;
         $accountStore = $account->store;
-        
+
         // Check verification status (store-specific)
         // Customer is verified if:
         // 1. loyaltyAccount.verified_at is not null (store-specific verification)
         // 2. customer.email is null (no email provided = auto-verified)
-        $isVerified = !is_null($account->verified_at) 
+        $isVerified = ! is_null($account->verified_at)
             || ($customer && is_null($customer->email));
-        
+
         // Check if store requires verification
         $requiresVerification = $account->requires_verification_for_redemption;
-        
+
         $rewardBalance = $account->reward_balance ?? 0;
+        $program = $account->loyaltyProgram;
 
         return response()->json([
             'success' => true,
             'reward_balance' => $rewardBalance,
             'reward_title' => $account->reward_title,
+            'reward_target' => $account->reward_target ?? 10,
+            'current_stamps' => $account->stamp_count,
+            'available_rewards' => $rewardBalance,
             'customer_name' => $account->customer->name ?? 'Customer',
             'customer_email' => $customer->email ?? null,
+            'store_name' => $accountStore->name,
+            'store_id' => $accountStore->id,
+            'program_id' => $program?->id,
+            'program_name' => $program?->name ?? $account->reward_title,
             'is_verified' => $isVerified,
             'requires_verification' => $requiresVerification,
-            'verification_required' => $requiresVerification && $customer && !is_null($customer->email) && !$isVerified,
+            'verification_required' => $requiresVerification && $customer && ! is_null($customer->email) && ! $isVerified,
             'public_token' => $account->public_token,
             'loyalty_account_id' => $account->id,
         ]);
@@ -482,7 +496,7 @@ class ScannerController extends Controller
         // Also handle whitespace and case-insensitive matching
         $raw = trim($token);
         $token = preg_replace('/^(LR:|REDEEM:)\s*/i', '', $raw);
-        
+
         // Remove dashes/spaces from manual entry (formatted tokens from wallet pass)
         $token = str_replace(['-', ' '], '', $token);
 
@@ -503,7 +517,7 @@ class ScannerController extends Controller
 
         // Verify user owns the store
         $store = Auth::user()->stores()->where('id', $storeId)->first();
-        if (!$store) {
+        if (! $store) {
             abort(403, 'You do not own this store.');
         }
 
@@ -513,24 +527,24 @@ class ScannerController extends Controller
             ->where('store_id', $storeId)
             ->with(['customer', 'store', 'loyaltyProgram'])
             ->first();
-        
+
         if ($preAccount) {
             $customer = $preAccount->customer;
             $accountStore = $preAccount->store;
-            
+
             // Customer is considered verified if ANY of these are true:
             // 1. loyaltyAccount.verified_at is not null (store-specific verification)
             // 2. customer.email is null (no email provided = auto-verified)
             // NOTE: We no longer check customer.email_verified_at (removed global verification)
-            $isVerified = !is_null($preAccount->verified_at) 
+            $isVerified = ! is_null($preAccount->verified_at)
                 || ($customer && is_null($customer->email));
-            
+
             // Check if store requires verification for redemption (default: true for security)
             $requiresVerification = $preAccount->requires_verification_for_redemption;
-            
+
             // Only block if store requires verification AND customer has email AND is not verified
             // Return 422 with status + public_token so Flutter app can show verification modal and call verify-email / stamp instead
-            if ($requiresVerification && $customer && !is_null($customer->email) && !$isVerified) {
+            if ($requiresVerification && $customer && ! is_null($customer->email) && ! $isVerified) {
                 return response()->json([
                     'status' => 'verification_required',
                     'success' => false,
@@ -541,9 +555,9 @@ class ScannerController extends Controller
                     'loyalty_account_id' => $preAccount->id,
                 ], 422);
             }
-            
+
             // Log unverified redemption if it's allowed (store setting disabled verification requirement)
-            if (!$requiresVerification && $customer && !is_null($customer->email) && !$isVerified) {
+            if (! $requiresVerification && $customer && ! is_null($customer->email) && ! $isVerified) {
                 \Log::warning('Unverified redemption allowed', [
                     'loyalty_account_id' => $preAccount->id,
                     'store_id' => $storeId,
@@ -571,7 +585,7 @@ class ScannerController extends Controller
                 // Return the existing result (idempotent)
                 $account = $existingEvent->loyaltyAccount;
                 $account->load(['store', 'customer']);
-                
+
                 return response()->json([
                     'success' => true,
                     'message' => 'Reward already redeemed',
@@ -586,7 +600,7 @@ class ScannerController extends Controller
                 ->with(['customer'])
                 ->first();
 
-            if (!$account) {
+            if (! $account) {
                 // Log debug information to help diagnose the issue
                 \Log::warning('Redeem token lookup failed', [
                     'token' => $token,
@@ -606,14 +620,14 @@ class ScannerController extends Controller
             $rewardBalance = $account->reward_balance ?? 0;
             if ($rewardBalance <= 0) {
                 throw ValidationException::withMessages([
-                    'token' => 'No rewards available to redeem. Please earn more stamps to unlock rewards.'
+                    'token' => 'No rewards available to redeem. Please earn more stamps to unlock rewards.',
                 ]);
             }
 
             // Validate quantity doesn't exceed available rewards
             if ($quantity > $rewardBalance) {
                 throw ValidationException::withMessages([
-                    'quantity' => "Cannot redeem {$quantity} reward(s). Only {$rewardBalance} reward(s) available."
+                    'quantity' => "Cannot redeem {$quantity} reward(s). Only {$rewardBalance} reward(s) available.",
                 ]);
             }
 
@@ -625,7 +639,7 @@ class ScannerController extends Controller
             $account->reward_balance = $rewardBalance - $quantity;
             $account->reward_redeemed_at = now(); // Last redeemed timestamp
             $account->increment('version'); // Increment version for optimistic locking
-            
+
             // Rotate redeem_token after each redemption to prevent reuse
             // This ensures old QR codes cannot be scanned again
             if ($account->reward_balance > 0) {
@@ -636,18 +650,18 @@ class ScannerController extends Controller
                 $account->reward_available_at = null;
                 $account->redeem_token = null;
             }
-            
+
             // Do NOT deduct stamp_count - it represents progress toward next reward
             $account->save();
-            
+
             // Log unverified redemption if it occurred (store setting allows it)
             $account->load('customer');
             $customer = $account->customer;
             // Check store-specific verification
-            $isVerified = !is_null($account->verified_at) 
+            $isVerified = ! is_null($account->verified_at)
                 || ($customer && is_null($customer->email));
-            
-            if (!$account->requires_verification_for_redemption && $customer && !is_null($customer->email) && !$isVerified) {
+
+            if (! $account->requires_verification_for_redemption && $customer && ! is_null($customer->email) && ! $isVerified) {
                 \Log::warning('Unverified redemption processed', [
                     'loyalty_account_id' => $account->id,
                     'store_id' => $storeId,
@@ -661,7 +675,7 @@ class ScannerController extends Controller
                     'reason' => 'Store setting allows unverified redemption',
                 ]);
             }
-            
+
             // Create ledger entry for redemption
             // Using Option A: points = -reward_target * quantity (for historical consistency)
             PointsTransaction::create([
@@ -682,7 +696,7 @@ class ScannerController extends Controller
                 'user_agent' => $userAgent,
                 'ip_address' => $ipAddress,
             ]);
-            
+
             // Refresh account with relationships before broadcasting
             $account->refresh();
             $account->load(['store', 'customer']);
@@ -691,10 +705,10 @@ class ScannerController extends Controller
             try {
                 \Log::info('Dispatching StampUpdated event (redeem)', [
                     'public_token' => $account->public_token,
-                    'channel' => 'loyalty-card.' . $account->public_token,
-                    'stamp_count' => $account->stamp_count
+                    'channel' => 'loyalty-card.'.$account->public_token,
+                    'stamp_count' => $account->stamp_count,
                 ]);
-                
+
                 StampUpdated::dispatch($account);
             } catch (\Exception $e) {
                 // Log but don't fail the request if event dispatch fails
@@ -703,7 +717,7 @@ class ScannerController extends Controller
                     'error' => $e->getMessage(),
                 ]);
             }
-            
+
             // Dispatch wallet update job AFTER transaction commits
             // This ensures the job runs with the committed data (matching stamping service pattern)
             // Wrap in try-catch to prevent errors from breaking the response
@@ -749,11 +763,11 @@ class ScannerController extends Controller
                     'error' => $e->getMessage(),
                 ]);
             }
-            
-            $message = $quantity > 1 
+
+            $message = $quantity > 1
                 ? "Successfully redeemed {$quantity} rewards! Enjoy your {$account->reward_title}!"
                 : "Reward redeemed successfully! Enjoy your {$account->reward_title}!";
-            
+
             try {
                 \Log::info('Redeem processed', [
                     'loyalty_account_id' => $account->id,
@@ -785,7 +799,7 @@ class ScannerController extends Controller
                     'account_id' => $account->id ?? null,
                     'trace' => $e->getTraceAsString(),
                 ]);
-                
+
                 // Return minimal success response
                 return response()->json([
                     'success' => true,

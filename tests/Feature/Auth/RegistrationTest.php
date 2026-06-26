@@ -2,9 +2,11 @@
 
 namespace Tests\Feature\Auth;
 
+use App\Mail\MerchantWelcomeEmail;
 use App\Models\Store;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Mail;
 use Tests\TestCase;
 
 class RegistrationTest extends TestCase
@@ -20,6 +22,8 @@ class RegistrationTest extends TestCase
 
     public function test_new_users_can_register(): void
     {
+        Mail::fake();
+
         $response = $this->post('/register', [
             'name' => 'Test User',
             'email' => 'test@example.com',
@@ -39,5 +43,11 @@ class RegistrationTest extends TestCase
         $this->assertSame('Test Cafe', $store->name);
         $this->assertSame(\App\Http\Controllers\MerchantOnboardingWizardController::STEP_STORE_BASICS, $store->onboarding_step);
         $this->assertNotNull($store->default_loyalty_program_id);
+
+        Mail::assertQueued(MerchantWelcomeEmail::class, function (MerchantWelcomeEmail $mail) use ($user) {
+            $html = $mail->content()->with['store']->name ?? null;
+
+            return $mail->user->is($user) && $html === 'Test Cafe';
+        });
     }
 }

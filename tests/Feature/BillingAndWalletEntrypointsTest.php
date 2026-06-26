@@ -15,7 +15,7 @@ test('billing page loads for authenticated merchant', function () {
     $this->actingAs($user)
         ->get(route('billing.index'))
         ->assertOk()
-        ->assertViewHasAll(['stats', 'subscription', 'stripePriceId', 'debugInfo']);
+        ->assertViewHasAll(['stats', 'subscription', 'stripePriceId', 'planState']);
 });
 
 test('billing checkout fails gracefully when stripe is not configured', function () {

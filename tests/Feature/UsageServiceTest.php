@@ -162,6 +162,34 @@ test('get usage stats exposes customer join capacity', function () {
     expect($statsAtLimit['can_accept_new_customer'])->toBeFalse();
 });
 
+test('usage stats primary store card message reflects primary store limit not global capacity', function () {
+    $user = User::factory()->create();
+    makeSubscriber($user);
+
+    $primaryStore = makeStore($user);
+    $secondaryStore = makeStore($user);
+
+    for ($i = 0; $i < 4; $i++) {
+        makeProgram($primaryStore);
+    }
+
+    $service = new UsageService;
+
+    expect($service->programsCountForStore($primaryStore))->toBe(5)
+        ->and($service->canCreateProgramForStore($user, $primaryStore))->toBeFalse()
+        ->and($service->canCreateProgram($user))->toBeTrue();
+
+    $stats = $service->getUsageStats($user);
+
+    expect($stats['primary_store_programs_count'])->toBe(5)
+        ->and($stats['primary_store_can_create_program'])->toBeFalse()
+        ->and($stats['can_create_program'])->toBeTrue()
+        ->and($stats['programs_usage_percentage'])->toBe(100)
+        ->and($stats['stores_card_usage'])->toHaveCount(2)
+        ->and(collect($stats['stores_card_usage'])->firstWhere('store_id', $primaryStore->id)['programs_count'])->toBe(5)
+        ->and(collect($stats['stores_card_usage'])->firstWhere('store_id', $secondaryStore->id)['can_create_program'])->toBeTrue();
+});
+
 test('grandfathered loyalty cards remain after cancellation but new cards are gated on free limits', function () {
     $user = User::factory()->create(['stripe_id' => 'sub_123']);
     $store = makeStore($user);

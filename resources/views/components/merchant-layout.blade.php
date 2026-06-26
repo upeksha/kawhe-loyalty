@@ -29,9 +29,8 @@
     </head>
     <body class="font-sans antialiased bg-stone-50">
         @php
-            $navCardStore = Auth::user()?->stores()->whereNull('deleted_at')->orderBy('id')->first();
             $storesNavActive = request()->routeIs('merchant.stores.*');
-            $cardsNavActive = request()->routeIs('merchant.stores.programs.*');
+            $cardsNavActive = request()->routeIs('merchant.programs.index') || request()->routeIs('merchant.stores.programs.*');
             $storesNavOpenDefault = $cardsNavActive;
         @endphp
         <div x-data="{ sidebarOpen: false }" class="min-h-screen">
@@ -79,7 +78,7 @@
                                     </svg>
                                     <span class="truncate">Stores</span>
                                 </a>
-                                @if($navCardStore)
+                                @if(Auth::user()?->stores()->whereNull('deleted_at')->exists())
                                     <button
                                         type="button"
                                         @click="storesNavOpen = !storesNavOpen"
@@ -94,7 +93,7 @@
                                     </button>
                                 @endif
                             </div>
-                            @if($navCardStore)
+                            @if(Auth::user()?->stores()->whereNull('deleted_at')->exists())
                                 <div
                                     id="merchant-nav-cards"
                                     x-show="storesNavOpen"
@@ -108,7 +107,7 @@
                                     style="display: none;"
                                 >
                                     <a
-                                        href="{{ route('merchant.stores.programs.index', $navCardStore) }}"
+                                        href="{{ route('merchant.programs.index') }}"
                                         class="ml-11 flex items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors {{ $cardsNavActive ? 'bg-brand-50 text-brand-700' : 'text-stone-600 hover:bg-stone-100 hover:text-stone-900' }}"
                                     >
                                         <svg class="mr-3 h-4 w-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">

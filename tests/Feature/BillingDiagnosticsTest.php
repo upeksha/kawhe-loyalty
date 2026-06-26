@@ -11,7 +11,7 @@ class BillingDiagnosticsTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_billing_page_shows_support_diagnostics_panel(): void
+    public function test_billing_page_shows_usage_and_plan_comparison(): void
     {
         $user = User::factory()->create();
 
@@ -22,15 +22,12 @@ class BillingDiagnosticsTest extends TestCase
         $response->assertOk();
         $response->assertSee('Usage right now');
         $response->assertSee('% used');
-        $response->assertSee('Billing Support Diagnostics');
-        $response->assertSee('Stripe customer linked');
-        $response->assertSee('Plan allows growth');
-        $response->assertSee('Recommended next step');
         $response->assertSee('Plan State');
         $response->assertSee('Compare plans');
         $response->assertSee('Business');
         $response->assertSee('Coming soon');
-        $response->assertSee('Recovery actions');
+        $response->assertDontSee('Advanced billing help');
+        $response->assertDontSee('Sync Billing Status');
     }
 
     public function test_billing_page_shows_free_plan_active_for_new_merchant_with_store(): void
@@ -69,7 +66,7 @@ class BillingDiagnosticsTest extends TestCase
         $response->assertOk();
         $response->assertSee('Free plan full');
         $response->assertSee('You have reached the free customer limit');
-        $response->assertSee('Sync Billing Status');
+        $response->assertDontSee('Sync Billing Status');
     }
 
     public function test_billing_cancel_page_explains_next_steps(): void

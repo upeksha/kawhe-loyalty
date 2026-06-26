@@ -50,13 +50,16 @@
                         ]],
                     ],
                     'options' => [
-                        'layout' => ['padding' => ['top' => 8, 'right' => 6, 'bottom' => 8, 'left' => 6]],
-                        'plugins' => ['tooltip' => ['enabled' => false]],
+                        'layout' => ['padding' => ['top' => 6, 'right' => 4, 'bottom' => 6, 'left' => 4]],
+                        'plugins' => [
+                            'legend' => ['display' => false],
+                            'tooltip' => ['enabled' => false],
+                        ],
                         'scales' => [
-                            'x' => ['display' => false, 'offset' => true],
+                            'x' => ['display' => false, 'offset' => false],
                             'y' => ['display' => false, 'grace' => '24%'],
                         ],
-                        'elements' => ['line' => ['capBezierPoints' => true]],
+                        'elements' => ['line' => ['capBezierPoints' => true, 'borderCapStyle' => 'round']],
                     ],
                 ],
             ],
@@ -79,13 +82,16 @@
                         ]],
                     ],
                     'options' => [
-                        'layout' => ['padding' => ['top' => 8, 'right' => 6, 'bottom' => 8, 'left' => 6]],
-                        'plugins' => ['tooltip' => ['enabled' => false]],
+                        'layout' => ['padding' => ['top' => 6, 'right' => 4, 'bottom' => 6, 'left' => 4]],
+                        'plugins' => [
+                            'legend' => ['display' => false],
+                            'tooltip' => ['enabled' => false],
+                        ],
                         'scales' => [
-                            'x' => ['display' => false, 'offset' => true],
+                            'x' => ['display' => false, 'offset' => false],
                             'y' => ['display' => false, 'grace' => '24%'],
                         ],
-                        'elements' => ['line' => ['capBezierPoints' => true]],
+                        'elements' => ['line' => ['capBezierPoints' => true, 'borderCapStyle' => 'round']],
                     ],
                 ],
             ],
@@ -108,13 +114,16 @@
                         ]],
                     ],
                     'options' => [
-                        'layout' => ['padding' => ['top' => 8, 'right' => 6, 'bottom' => 8, 'left' => 6]],
-                        'plugins' => ['tooltip' => ['enabled' => false]],
+                        'layout' => ['padding' => ['top' => 6, 'right' => 4, 'bottom' => 6, 'left' => 4]],
+                        'plugins' => [
+                            'legend' => ['display' => false],
+                            'tooltip' => ['enabled' => false],
+                        ],
                         'scales' => [
-                            'x' => ['display' => false, 'offset' => true],
+                            'x' => ['display' => false, 'offset' => false],
                             'y' => ['display' => false, 'grace' => '24%'],
                         ],
-                        'elements' => ['line' => ['capBezierPoints' => true]],
+                        'elements' => ['line' => ['capBezierPoints' => true, 'borderCapStyle' => 'round']],
                     ],
                 ],
             ],
@@ -365,7 +374,6 @@
                     @php
                         $storesUsed = (int) ($usageStats['stores_count'] ?? 0);
                         $storesLimit = $usageStats['stores_limit'] ?? null;
-                        $cardsUsed = (int) ($usageStats['primary_store_programs_count'] ?? $usageStats['programs_count'] ?? 0);
                         $cardsLimit = $usageStats['programs_per_store_limit'] ?? null;
                         $customersUsed = (int) ($usageStats['primary_program_customers_count'] ?? 0);
                         $customersLimit = $usageStats['customers_per_program_limit'] ?? null;
@@ -381,12 +389,13 @@
                         </div>
 
                         <div class="rounded-xl border border-stone-200 bg-stone-50/80 p-4">
-                            <p class="text-xs font-semibold uppercase tracking-[0.18em] text-stone-500">Cards (primary store)</p>
-                            <p class="mt-2 text-lg font-semibold text-stone-900">
-                                {{ $cardsUsed }}@if($cardsLimit)<span class="text-sm font-medium text-stone-500"> / {{ $cardsLimit }}</span>@endif
-                            </p>
-                            <p class="mt-1 text-xs text-stone-600">{{ ($usageStats['can_create_program'] ?? false) ? 'Can add another card' : 'Card limit reached on this store' }}</p>
-                            <x-ui.usage-meter class="mt-3" :used="$cardsUsed" :limit="$cardsLimit" />
+                            <x-ui.store-cards-usage
+                                :stores="$usageStats['stores_card_usage'] ?? []"
+                                :limit="$cardsLimit"
+                                :is-subscribed="(bool) ($usageStats['is_subscribed'] ?? false)"
+                                :can-create-program="(bool) ($usageStats['can_create_program'] ?? false)"
+                                compact
+                            />
                         </div>
 
                         <div class="rounded-xl border border-stone-200 bg-stone-50/80 p-4">

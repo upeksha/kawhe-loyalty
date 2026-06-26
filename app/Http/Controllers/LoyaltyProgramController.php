@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\LoyaltyAccount;
 use App\Models\LoyaltyProgram;
 use App\Models\Store;
+use App\Models\User;
 use App\Services\Billing\UsageService;
 use App\Support\StoreAssets;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -16,13 +17,45 @@ use SimpleSoftwareIO\QrCode\Facades\QrCode;
 
 class LoyaltyProgramController extends Controller
 {
+    public function indexAll()
+    {
+        $usageService = app(UsageService::class);
+
+        return view('programs.index', [
+            'storesWithPrograms' => $this->storesWithProgramsFor(Auth::user()),
+            'usageStats' => $usageService->getUsageStats(Auth::user()),
+            'usageService' => $usageService,
+        ]);
+    }
+
     public function index(Store $store)
     {
         $store = Store::queryForUser(Auth::user(), includeArchived: true)->whereKey($store->id)->firstOrFail();
-        $programs = $store->loyaltyPrograms()->withCount('loyaltyAccounts')->get();
-        $usageStats = app(UsageService::class)->getUsageStats(Auth::user());
+        $usageService = app(UsageService::class);
 
-        return view('programs.index', compact('store', 'programs', 'usageStats'));
+        return view('programs.index', [
+            'storesWithPrograms' => $this->storesWithProgramsFor(Auth::user(), $store),
+            'usageStats' => $usageService->getUsageStats(Auth::user()),
+            'usageService' => $usageService,
+        ]);
+    }
+
+    /**
+     * @return \Illuminate\Support\Collection<int, Store>
+     */
+    protected function storesWithProgramsFor(User $user, ?Store $singleStore = null)
+    {
+        $query = Store::queryForUser($user, includeArchived: true)
+            ->with(['loyaltyPrograms' => function ($query) {
+                $query->withTrashed()->withCount('loyaltyAccounts');
+            }])
+            ->orderBy('id');
+
+        if ($singleStore !== null) {
+            $query->whereKey($singleStore->id);
+        }
+
+        return $query->get();
     }
 
     public function create(Store $store)

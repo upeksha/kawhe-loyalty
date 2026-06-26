@@ -63,6 +63,9 @@ function createDashboardChart(canvas) {
         return null;
     }
 
+    const userOptions = parsed.options ?? {};
+    const userPlugins = userOptions.plugins ?? {};
+
     const chart = new Chart(canvas, {
         type: parsed.type ?? 'line',
         data: parsed.data,
@@ -74,8 +77,17 @@ function createDashboardChart(canvas) {
                 duration: 700,
                 easing: 'easeOutQuart',
             },
+            interaction: {
+                intersect: false,
+                mode: 'index',
+            },
+            ...userOptions,
             plugins: {
-                legend: parsed.options?.plugins?.legend ?? { display: false },
+                ...userPlugins,
+                legend: {
+                    display: false,
+                    ...userPlugins.legend,
+                },
                 tooltip: {
                     backgroundColor: '#1c1917',
                     titleColor: '#fafaf9',
@@ -85,16 +97,11 @@ function createDashboardChart(canvas) {
                     cornerRadius: 12,
                     intersect: false,
                     mode: 'index',
-                    ...parsed.options?.plugins?.tooltip,
+                    ...userPlugins.tooltip,
                 },
             },
-            interaction: {
-                intersect: false,
-                mode: 'index',
-            },
-            scales: parsed.options?.scales ?? {},
-            elements: parsed.options?.elements ?? {},
-            ...parsed.options,
+            scales: userOptions.scales ?? {},
+            elements: userOptions.elements ?? {},
         },
     });
 

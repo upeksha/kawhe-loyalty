@@ -40,64 +40,13 @@ class BillingController extends Controller
 
         $stats = $this->usageService->getUsageStats($user);
         $subscription = $user->subscription('default');
-
-        // Debug info
-        $debugInfo = [
-            'has_stripe_id' => ! empty($user->stripe_id),
-            'stripe_id' => $user->stripe_id,
-            'subscription_exists' => $subscription !== null,
-            'subscription_status' => $subscription ? $subscription->stripe_status : null,
-            'is_subscribed_check' => $user->subscribed('default'),
-            'subscriptions_count' => $user->subscriptions()->count(),
-        ];
-
-        $billingDiagnostics = [
-            [
-                'label' => 'Stripe customer linked',
-                'ready' => ! empty($user->stripe_id),
-                'hint' => 'Needed for portal access and reliable subscription sync.',
-            ],
-            [
-                'label' => 'Subscription record present',
-                'ready' => $subscription !== null,
-                'hint' => 'If missing after checkout, run a sync from Stripe.',
-            ],
-            [
-                'label' => 'Plan allows growth',
-                'ready' => (bool) (($stats['can_create_store'] ?? false) || ($stats['can_create_program'] ?? false) || ($stats['can_accept_new_customer'] ?? false)),
-                'hint' => sprintf(
-                    'Free: 1 store, 1 card per store, 100 customers per card. Pro: %d stores, %d cards per store, unlimited customers.',
-                    config('billing.plans.pro.stores'),
-                    config('billing.plans.pro.programs_per_store')
-                ),
-            ],
-            [
-                'label' => 'Stripe configuration available',
-                'ready' => ! empty(config('cashier.key')) && ! empty(config('cashier.secret')) && ! empty(config('cashier.price_id')),
-                'hint' => 'Needed for checkout, sync, and subscription management.',
-            ],
-        ];
-
         $planState = $this->buildPlanState($stats, $subscription);
-        $recoveryActions = $this->buildRecoveryActions($user, $stats, $subscription);
-
-        $recommendedBillingAction = ! empty(config('cashier.key')) && ! empty(config('cashier.secret')) && ! empty(config('cashier.price_id'))
-            ? ($subscription === null && ! empty($user->stripe_id)
-                ? 'Stripe knows this merchant, but no local subscription is visible yet. Run a sync from Stripe before escalating.'
-                : ((! ($stats['can_accept_new_customer'] ?? true) && ! ($stats['is_subscribed'] ?? false))
-                    ? 'Your free plan has reached its 100-customer limit. Upgrading to Pro removes the customer cap and expands store and card limits.'
-                    : 'Billing looks healthy. If a merchant still reports issues, refresh subscription status first, then check Stripe Dashboard.'))
-            : 'Stripe configuration is incomplete. Fix configuration first before testing checkout or sync behaviour.';
 
         return view('billing.index', [
             'stats' => $stats,
             'subscription' => $subscription,
             'stripePriceId' => config('cashier.price_id'),
-            'debugInfo' => $debugInfo,
-            'billingDiagnostics' => $billingDiagnostics,
-            'recommendedBillingAction' => $recommendedBillingAction,
             'planState' => $planState,
-            'recoveryActions' => $recoveryActions,
         ]);
     }
 
@@ -190,7 +139,7 @@ class BillingController extends Controller
             );
 
             return back()->withErrors([
-                'error' => 'We could not start checkout right now. Please try again, or use Sync Billing Status first if your account was recently upgraded.',
+                'error' => 'We could not start checkout right now. Please try again in a moment.',
             ]);
         }
     }
@@ -785,45 +734,16 @@ class BillingController extends Controller
         ];
     }
 
-    protected function buildRecoveryActions($user, array $stats, $subscription): array
-    {
-        $actions = [];
-
-        if ($subscription === null && ! empty($user->stripe_id)) {
-            $actions[] = 'Run a Stripe sync if checkout completed but your plan still looks unchanged.';
-        }
-
-        if (! ($stats['can_accept_new_customer'] ?? true) && ! ($stats['is_subscribed'] ?? false)) {
-            $actions[] = 'Upgrade to Pro for unlimited customers, plus more stores and cards per store.';
-        }
-
-        if ($subscription && $subscription->ends_at) {
-            $actions[] = 'Open the billing portal if you want to keep Pro active beyond the current end date.';
-        }
-
-        if (empty(config('cashier.key')) || empty(config('cashier.secret')) || empty(config('cashier.price_id'))) {
-            $actions[] = 'Stripe configuration needs attention before checkout or sync can work reliably.';
-        }
-
-        if (empty($actions)) {
-            $actions[] = 'Billing looks healthy. If something still feels wrong, refresh status first and then review Stripe in the billing portal.';
-        }
-
-        return $actions;
-    }
-
     protected function billingSuccessNextSteps(string $mode): array
     {
         return match ($mode) {
             'processing' => [
-                'Return to billing and refresh status if the plan does not update automatically within a few minutes.',
-                'Use manual sync only if checkout completed but the plan still looks unchanged.',
+                'Return to billing and use Refresh Status if the plan does not update automatically within a few minutes.',
                 'Existing customers can keep using their cards while payment finishes processing.',
             ],
             'error' => [
-                'Go back to billing to refresh status before retrying checkout.',
-                'If Stripe took payment but your plan still looks unchanged, use manual sync first.',
-                'If the problem persists, contact support with your Stripe session or customer details.',
+                'Go back to billing and refresh status before retrying checkout.',
+                'If the problem persists, contact support with your checkout details.',
             ],
             default => [
                 'Return to billing to review your current plan state.',

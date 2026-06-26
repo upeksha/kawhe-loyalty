@@ -2,6 +2,7 @@
 
 namespace App\Mail;
 
+use App\Models\Store;
 use App\Models\User;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -37,6 +38,13 @@ class MerchantWelcomeEmail extends Mailable implements ShouldQueue
         $this->onQueue('emails');
     }
 
+    protected function primaryStore(): ?Store
+    {
+        return $this->user->relationLoaded('stores')
+            ? $this->user->stores->sortBy('id')->first()
+            : $this->user->stores()->orderBy('id')->first();
+    }
+
     /**
      * Get the message envelope.
      */
@@ -53,11 +61,13 @@ class MerchantWelcomeEmail extends Mailable implements ShouldQueue
     public function content(): Content
     {
         $dashboardUrl = config('app.url') . '/dashboard';
+        $store = $this->primaryStore();
 
         return new Content(
             view: 'emails.merchant-welcome',
             with: [
                 'user' => $this->user,
+                'store' => $store,
                 'dashboardUrl' => $dashboardUrl,
             ],
         );

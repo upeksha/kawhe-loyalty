@@ -312,6 +312,9 @@ class UsageService
 
         $primaryStore = $user->stores()->whereNull('deleted_at')->orderBy('id')->first();
         $primaryStoreProgramsCount = $primaryStore ? $this->programsCountForStore($primaryStore) : 0;
+        $primaryStoreCanCreateProgram = $primaryStore
+            ? $this->canCreateProgramForStore($user, $primaryStore)
+            : $this->canCreateProgram($user);
         $primaryProgram = $primaryStore?->defaultLoyaltyProgram ?? $primaryStore?->loyaltyPrograms()->whereNull('deleted_at')->orderBy('id')->first();
         $primaryProgramCustomersCount = $primaryProgram ? $this->customersCountForProgram($primaryProgram) : 0;
         $canAcceptNewCustomer = $primaryProgram ? $this->canAcceptNewCustomer($primaryProgram) : true;
@@ -327,6 +330,23 @@ class UsageService
             ? min(100, ($primaryProgramCustomersCount / $customersPerProgramLimit) * 100)
             : 0;
 
+        $storesCardUsage = $user->stores()
+            ->whereNull('deleted_at')
+            ->orderBy('id')
+            ->get()
+            ->map(function (Store $store) use ($user) {
+                $programsCount = $this->programsCountForStore($store);
+
+                return [
+                    'store_id' => $store->id,
+                    'store_name' => $store->name,
+                    'programs_count' => $programsCount,
+                    'can_create_program' => $this->canCreateProgramForStore($user, $store),
+                ];
+            })
+            ->values()
+            ->all();
+
         return [
             'plan' => $plan,
             'plan_label' => $planConfig['label'] ?? ucfirst($plan),
@@ -336,6 +356,8 @@ class UsageService
             'programs_per_store_limit' => $programsPerStoreLimit,
             'customers_per_program_limit' => $customersPerProgramLimit,
             'primary_store_programs_count' => $primaryStoreProgramsCount,
+            'primary_store_can_create_program' => $primaryStoreCanCreateProgram,
+            'stores_card_usage' => $storesCardUsage,
             'primary_program_customers_count' => $primaryProgramCustomersCount,
             'programs_count' => $programsCount,
             'cards_count' => $programsCount,

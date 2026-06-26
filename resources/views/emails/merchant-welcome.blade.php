@@ -5,16 +5,21 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Welcome to Kawhe Loyalty!</title>
 </head>
+@php
+    $storeName = $store?->name;
+@endphp
 <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
     <div style="background-color: #f8f9fa; padding: 30px; border-radius: 8px;">
-        <h1 style="color: #16A34A; margin-top: 0;">Welcome to Kawhe Loyalty, {{ $user->name }}!</h1>
+        <h1 style="color: #16A34A; margin-top: 0;">
+            Welcome to Kawhe Loyalty{{ $storeName ? ' for '.$storeName : '' }}, {{ $user->name }}!
+        </h1>
         
         <p>Thank you for joining Kawhe Loyalty. We're excited to help you build and manage your customer loyalty program.</p>
         
         <p>Your account has been successfully created. Here's what you can do next:</p>
         
         <ul style="margin: 20px 0; padding-left: 20px;">
-            <li>Create your first store</li>
+            <li>Review your first loyalty card for {{ $storeName ?? 'your store' }}</li>
             <li>Set up your loyalty program (stamps, rewards, etc.)</li>
             <li>Generate QR codes to share with customers</li>
             <li>Start tracking customer loyalty and rewards</li>

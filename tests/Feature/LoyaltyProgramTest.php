@@ -231,6 +231,52 @@ test('free merchant cannot add an additional loyalty card beyond the default car
     expect(LoyaltyProgram::where('store_id', $store->id)->count())->toBe(1);
 });
 
+test('loyalty cards index groups cards by store across all merchant stores', function () {
+    $owner = User::factory()->create(['stripe_id' => 'sub_123']);
+    Subscription::create([
+        'user_id' => $owner->id,
+        'name' => 'default',
+        'type' => 'default',
+        'stripe_id' => 'si_cards_grouped',
+        'stripe_status' => 'active',
+        'quantity' => 1,
+    ]);
+
+    $firstStore = Store::factory()->create(['user_id' => $owner->id, 'name' => 'Downtown Cafe']);
+    $secondStore = Store::factory()->create(['user_id' => $owner->id, 'name' => 'Airport Kiosk']);
+
+    LoyaltyProgram::create([
+        'store_id' => $firstStore->id,
+        'name' => 'Coffee Card',
+        'reward_target' => 8,
+        'reward_title' => 'Free coffee',
+        'brand_color' => '#2563EB',
+        'background_color' => '#0F172A',
+        'registration_form_config' => Store::defaultRegistrationFormConfig(),
+        'sort_order' => 1,
+    ]);
+
+    LoyaltyProgram::create([
+        'store_id' => $secondStore->id,
+        'name' => 'Snack Card',
+        'reward_target' => 5,
+        'reward_title' => 'Free snack',
+        'brand_color' => '#D97706',
+        'background_color' => '#431407',
+        'registration_form_config' => Store::defaultRegistrationFormConfig(),
+        'sort_order' => 1,
+    ]);
+
+    $response = $this->actingAs($owner)->get(route('merchant.programs.index'));
+
+    $response->assertOk();
+    $response->assertSee('Downtown Cafe', false);
+    $response->assertSee('Airport Kiosk', false);
+    $response->assertSee('Coffee Card', false);
+    $response->assertSee('Snack Card', false);
+    $response->assertSee('Cards are grouped by store', false);
+});
+
 test('free merchant at card limit does not see add loyalty card button', function () {
     $owner = User::factory()->create();
     $store = Store::factory()->create(['user_id' => $owner->id]);
