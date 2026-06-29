@@ -12,12 +12,6 @@
 
         <x-ui.card class="p-6">
             <div class="max-w-xl">
-                @include('profile.partials.subscription-details')
-            </div>
-        </x-ui.card>
-
-        <x-ui.card class="p-6">
-            <div class="max-w-xl">
                 @include('profile.partials.update-password-form')
             </div>
         </x-ui.card>

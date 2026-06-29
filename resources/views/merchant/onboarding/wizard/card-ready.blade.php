@@ -41,20 +41,20 @@
                         </div>
                     </x-ui.section-panel>
 
-                    <div class="flex flex-wrap gap-3">
-                        <form method="GET" action="{{ route('merchant.stores.qr.pdf', $store) }}">
-                            <x-ui.button type="submit" variant="secondary" size="md">
+                    <div class="flex flex-nowrap items-center gap-2 sm:gap-3 overflow-x-auto">
+                        <form method="GET" action="{{ route('merchant.stores.qr.pdf', $store) }}" class="shrink-0">
+                            <x-ui.button type="submit" variant="secondary" size="md" class="whitespace-nowrap">
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
                                 Download poster (PDF)
                             </x-ui.button>
                         </form>
-                        <form method="GET" action="{{ route('merchant.stores.qr.image', $store) }}">
-                            <x-ui.button type="submit" variant="secondary" size="md">
+                        <form method="GET" action="{{ route('merchant.stores.qr.image', $store) }}" class="shrink-0">
+                            <x-ui.button type="submit" variant="secondary" size="md" class="whitespace-nowrap">
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h2m4 0h-2m-4 4h6m-6-2h2m2 0h2m-4-4h2m2 0h2"/></svg>
                                 Download QR (SVG)
                             </x-ui.button>
                         </form>
-                        <x-ui.button href="{{ $joinUrl }}" target="_blank" rel="noopener" variant="secondary" size="md">
+                        <x-ui.button href="{{ $joinUrl }}" target="_blank" rel="noopener" variant="secondary" size="md" class="shrink-0 whitespace-nowrap">
                             Open test join page
                         </x-ui.button>
                     </div>

@@ -111,27 +111,6 @@
                         </div>
                     </details>
                     <div class="hidden sm:block sticky top-8">
-                        <div class="rounded-2xl border border-stone-200 bg-stone-50/80 p-5 shadow-sm mb-4">
-                            <p class="text-xs font-semibold uppercase tracking-wider text-stone-500">Setup status</p>
-                            <div class="mt-4 space-y-3">
-                                <x-ui.readiness-row label="Store name">
-                                    <x-slot name="status">
-                                        <span class="font-medium" x-bind:class="storeName?.trim() ? 'text-emerald-700' : 'text-stone-500'" x-text="storeName?.trim() ? 'Ready' : 'Needed'"></span>
-                                    </x-slot>
-                                </x-ui.readiness-row>
-                                <x-ui.readiness-row label="Reward target set">
-                                    <x-slot name="status">
-                                        <span class="font-medium" x-bind:class="rewardTarget > 0 ? 'text-emerald-700' : 'text-stone-500'" x-text="rewardTarget > 0 ? 'Ready' : 'Needed'"></span>
-                                    </x-slot>
-                                </x-ui.readiness-row>
-                                <x-ui.readiness-row label="Reward title named">
-                                    <x-slot name="status">
-                                        <span class="font-medium" x-bind:class="rewardTitle?.trim() ? 'text-emerald-700' : 'text-stone-500'" x-text="rewardTitle?.trim() ? 'Ready' : 'Needed'"></span>
-                                    </x-slot>
-                                </x-ui.readiness-row>
-                            </div>
-                            <p class="mt-4 text-xs leading-relaxed text-stone-500">Next up: card colours, wallet branding, and which fields customers fill in.</p>
-                        </div>
                         <p class="text-xs font-semibold text-stone-500 uppercase tracking-wider mb-3">What customers will see</p>
                         <div class="rounded-2xl bg-white border border-stone-200 p-6 shadow-lg shadow-stone-200/30" role="status" aria-live="polite">
                             <p class="text-lg font-semibold text-stone-800 leading-snug" x-text="'Buy ' + (rewardTarget || 9) + ', get 1 free'"></p>

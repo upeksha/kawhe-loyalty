@@ -166,7 +166,7 @@
                         <div class="mb-5">
                             <label for="brand_color" class="block mb-2 text-sm font-medium text-stone-700">Brand Color</label>
                             <div class="flex gap-2">
-                                <input type="color" id="brand_color" name="brand_color" x-ref="brandColor" value="{{ old('brand_color', $store->brand_color ?? '#0EA5E9') }}" class="h-10 w-20 rounded border cursor-pointer" x-bind:class="hasBlockedContrast ? 'border-red-300' : 'border-stone-300'">
+                                <input type="color" id="brand_color" name="brand_color" x-ref="brandColor" value="{{ old('brand_color', $store->brand_color ?? '#0EA5E9') }}" class="color-swatch-input h-11 w-11 rounded-full border-2 cursor-pointer flex-shrink-0 overflow-hidden p-0 bg-transparent appearance-none" x-bind:class="hasBlockedContrast ? 'border-red-300' : 'border-stone-300'">
                                 <x-ui.input type="text" id="brand_color_text" x-ref="brandColorText" value="{{ old('brand_color', $store->brand_color ?? '#0EA5E9') }}" placeholder="#0EA5E9" pattern="^#[0-9A-Fa-f]{6}$" class="flex-1" x-bind:class="hasBlockedContrast ? '!border-red-300' : ''" />
                             </div>
                             <p class="mt-1 text-xs text-stone-500">Used for customer card styling</p>
@@ -177,7 +177,7 @@
                         <div class="mb-5">
                             <label for="background_color" class="block mb-2 text-sm font-medium text-stone-700">Background Color</label>
                             <div class="flex gap-2">
-                                <input type="color" id="background_color" name="background_color" x-ref="bgColor" value="{{ old('background_color', $store->background_color ?? '#1F2937') }}" class="h-10 w-20 rounded border cursor-pointer" x-bind:class="hasBlockedContrast ? 'border-red-300' : 'border-stone-300'">
+                                <input type="color" id="background_color" name="background_color" x-ref="bgColor" value="{{ old('background_color', $store->background_color ?? '#1F2937') }}" class="color-swatch-input h-11 w-11 rounded-full border-2 cursor-pointer flex-shrink-0 overflow-hidden p-0 bg-transparent appearance-none" x-bind:class="hasBlockedContrast ? 'border-red-300' : 'border-stone-300'">
                                 <x-ui.input type="text" id="background_color_text" x-ref="bgColorText" value="{{ old('background_color', $store->background_color ?? '#1F2937') }}" placeholder="#1F2937" pattern="^#[0-9A-Fa-f]{6}$" class="flex-1" x-bind:class="hasBlockedContrast ? '!border-red-300' : ''" />
                             </div>
                             <p class="mt-1 text-xs text-stone-500">Used for customer card page background</p>
@@ -201,18 +201,18 @@
                         <!-- Logo Upload -->
                         <div class="mb-5">
                             <label for="logo" class="block mb-2 text-sm font-medium text-stone-700">Store Logo</label>
-                            <div class="flex flex-wrap items-start gap-3">
+                            <div class="flex flex-wrap items-center gap-4">
                                 @if($store->logo_path)
-                                    <div class="mb-2">
-                                        <p class="text-xs text-stone-500 mb-1">Current:</p>
-                                        <img src="{{ $store->logo_url }}" alt="Store logo" class="h-20 w-20 object-contain rounded-lg border border-stone-300 shadow-sm">
+                                    <div class="flex shrink-0 flex-col items-center">
+                                        <p class="mb-1 text-xs text-stone-500">Current:</p>
+                                        <img src="{{ $store->logo_url }}" alt="Store logo" class="h-20 w-20 rounded-lg border border-stone-300 object-contain shadow-sm">
                                     </div>
                                 @endif
-                                <div id="logo-thumbnail" class="hidden">
-                                    <p class="text-xs text-stone-500 mb-1">New selection:</p>
-                                    <img id="logo-thumbnail-img" src="" alt="Preview" class="h-20 w-20 object-contain rounded-lg border border-stone-300 bg-white shadow-sm">
+                                <div id="logo-thumbnail" class="hidden flex shrink-0 flex-col items-center">
+                                    <p class="mb-1 text-xs text-stone-500">New selection:</p>
+                                    <img id="logo-thumbnail-img" src="" alt="Preview" class="h-20 w-20 rounded-lg border border-stone-300 bg-white object-contain shadow-sm">
                                 </div>
-                                <div class="flex-1 min-w-0">
+                                <div class="min-w-[12rem] flex-1 self-center">
                                     <x-ui.input type="file" id="logo" name="logo" accept="image/png,image/jpeg,image/jpg,image/webp" />
                                 </div>
                             </div>
@@ -223,18 +223,18 @@
                         <!-- Pass Logo Upload -->
                         <div class="mb-5">
                             <label for="pass_logo" class="block mb-2 text-sm font-medium text-stone-700">Pass Logo (Wallet Passes)</label>
-                            <div class="flex flex-wrap items-start gap-3">
+                            <div class="flex flex-wrap items-center gap-4">
                                 @if($store->pass_logo_path)
-                                    <div class="mb-2">
-                                        <p class="text-xs text-stone-500 mb-1">Current:</p>
-                                        <img src="{{ $store->pass_logo_url }}" alt="Pass logo" class="h-12 w-20 object-contain rounded-lg border border-stone-300 shadow-sm">
+                                    <div class="flex shrink-0 flex-col items-center">
+                                        <p class="mb-1 text-xs text-stone-500">Current:</p>
+                                        <img src="{{ $store->pass_logo_url }}" alt="Pass logo" class="h-12 w-20 rounded-lg border border-stone-300 object-contain shadow-sm">
                                     </div>
                                 @endif
-                                <div id="pass_logo-thumbnail" class="hidden">
-                                    <p class="text-xs text-stone-500 mb-1">New selection:</p>
-                                    <img id="pass_logo-thumbnail-img" src="" alt="Preview" class="h-12 w-20 object-contain rounded-lg border border-stone-300 bg-white shadow-sm">
+                                <div id="pass_logo-thumbnail" class="hidden flex shrink-0 flex-col items-center">
+                                    <p class="mb-1 text-xs text-stone-500">New selection:</p>
+                                    <img id="pass_logo-thumbnail-img" src="" alt="Preview" class="h-12 w-20 rounded-lg border border-stone-300 bg-white object-contain shadow-sm">
                                 </div>
-                                <div class="flex-1 min-w-0">
+                                <div class="min-w-[12rem] flex-1 self-center">
                                     <x-ui.input type="file" id="pass_logo" name="pass_logo" accept="image/png,image/jpeg,image/jpg,image/webp" />
                                 </div>
                             </div>
@@ -245,18 +245,18 @@
                         <!-- Pass Hero Image Upload -->
                         <div class="mb-5">
                             <label for="pass_hero_image" class="block mb-2 text-sm font-medium text-stone-700">Pass Hero Image (Wallet Passes)</label>
-                            <div class="flex flex-wrap items-start gap-3">
+                            <div class="flex flex-wrap items-center gap-4">
                                 @if($store->pass_hero_image_path)
-                                    <div class="mb-2">
-                                        <p class="text-xs text-stone-500 mb-1">Current:</p>
-                                        <img src="{{ $store->pass_hero_image_url }}" alt="Pass hero" class="h-20 w-32 object-cover rounded-lg border border-stone-300 shadow-sm">
+                                    <div class="flex shrink-0 flex-col items-center">
+                                        <p class="mb-1 text-xs text-stone-500">Current:</p>
+                                        <img src="{{ $store->pass_hero_image_url }}" alt="Pass hero" class="h-20 w-32 rounded-lg border border-stone-300 object-cover shadow-sm">
                                     </div>
                                 @endif
-                                <div id="pass_hero_image-thumbnail" class="hidden">
-                                    <p class="text-xs text-stone-500 mb-1">New selection:</p>
-                                    <img id="pass_hero_image-thumbnail-img" src="" alt="Preview" class="h-20 w-32 object-cover rounded-lg border border-stone-300 shadow-sm">
+                                <div id="pass_hero_image-thumbnail" class="hidden flex shrink-0 flex-col items-center">
+                                    <p class="mb-1 text-xs text-stone-500">New selection:</p>
+                                    <img id="pass_hero_image-thumbnail-img" src="" alt="Preview" class="h-20 w-32 rounded-lg border border-stone-300 object-cover shadow-sm">
                                 </div>
-                                <div class="flex-1 min-w-0">
+                                <div class="min-w-[12rem] flex-1 self-center">
                                     <x-ui.input type="file" id="pass_hero_image" name="pass_hero_image" accept="image/png,image/jpeg,image/jpg,image/webp" />
                                 </div>
                             </div>
