@@ -23,6 +23,7 @@
         $launchLabel = $launchScore >= 5
             ? 'Good to launch'
             : ($launchScore >= 3 ? 'Launchable, but could be improved' : 'Needs review');
+        $launchIcon = $launchScore >= 5 ? 'check' : ($launchScore >= 3 ? 'review' : 'alert');
         $launchTone = $launchScore >= 5
             ? 'bg-emerald-100 text-emerald-700'
             : ($launchScore >= 3 ? 'bg-amber-100 text-amber-700' : 'bg-accent-100 text-accent-700');
@@ -345,9 +346,11 @@
                         <h3 class="text-base font-bold text-stone-900">Wallet Health</h3>
                         <p class="mt-1 text-sm text-stone-600">Use this before launch or when a merchant reports a stale pass.</p>
                     </div>
-                    <span class="inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold {{ $walletHealth['status_tone'] }}">
-                        {{ $walletHealth['status_label'] }}
-                    </span>
+                    <x-ui.status-icon-badge
+                        :icon="$walletHealth['status_icon'] ?? 'attention'"
+                        :label="$walletHealth['status_label']"
+                        :tone="$walletHealth['status_tone']"
+                    />
                 </div>
                 <div class="mt-4 grid gap-3 sm:grid-cols-2">
                     <div class="rounded-xl border border-stone-200 bg-stone-50/70 p-3">
@@ -384,9 +387,11 @@
                         <h3 class="text-base font-bold text-stone-900">Launch Quality</h3>
                         <p class="mt-1 text-sm text-stone-600">A quick overall read on whether this store feels ready to share publicly.</p>
                     </div>
-                    <span class="inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold {{ $launchTone }}">
-                        {{ $launchLabel }}
-                    </span>
+                    <x-ui.status-icon-badge
+                        :icon="$launchIcon"
+                        :label="$launchLabel"
+                        :tone="$launchTone"
+                    />
                 </div>
                 <p class="mt-4 text-sm text-stone-600">{{ $launchScore }}/5 launch signals are in a strong place.</p>
                 <p class="mt-3 text-xs leading-relaxed text-stone-500">This score is guidance only. It helps merchants catch branding or plan issues before they print posters or publish the join link.</p>
@@ -398,9 +403,11 @@
                         <h3 class="text-base font-bold text-stone-900">Wallet Readiness</h3>
                         <p class="mt-1 text-sm text-stone-600">Check whether this store is visually ready for Apple Wallet and Google Wallet.</p>
                     </div>
-                    <span class="inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold {{ $walletReady ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700' }}">
-                        {{ $walletReady ? 'Ready' : 'Needs review' }}
-                    </span>
+                    <x-ui.status-icon-badge
+                        :icon="$walletReady ? 'check' : 'review'"
+                        :label="$walletReady ? 'Ready' : 'Needs review'"
+                        :tone="$walletReady ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'"
+                    />
                 </div>
 
                 <ul class="mt-4 space-y-3 text-sm">
@@ -437,9 +444,11 @@
                         <h3 class="text-base font-bold text-stone-900">Billing Readiness</h3>
                         <p class="mt-1 text-sm text-stone-600">Check whether your current plan still allows another loyalty card for this store.</p>
                     </div>
-                    <span class="inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold {{ $billingReady ? 'bg-emerald-100 text-emerald-700' : 'bg-accent-100 text-accent-700' }}">
-                        {{ $billingReady ? 'Ready' : 'Review plan' }}
-                    </span>
+                    <x-ui.status-icon-badge
+                        :icon="$billingReady ? 'check' : 'billing'"
+                        :label="$billingReady ? 'Ready' : 'Review plan'"
+                        :tone="$billingReady ? 'bg-emerald-100 text-emerald-700' : 'bg-accent-100 text-accent-700'"
+                    />
                 </div>
 
                 <ul class="mt-4 space-y-3 text-sm">

@@ -35,6 +35,7 @@
         $launchLabel = $launchScore >= count($launchChecks)
             ? 'Good to launch'
             : ($launchScore >= 3 ? 'Launchable, but could be improved' : 'Needs review');
+        $launchIcon = $launchScore >= count($launchChecks) ? 'check' : ($launchScore >= 3 ? 'review' : 'alert');
         $launchTone = $launchScore >= count($launchChecks)
             ? 'bg-emerald-100 text-emerald-700'
             : ($launchScore >= 3 ? 'bg-amber-100 text-amber-700' : 'bg-accent-100 text-accent-700');
@@ -92,9 +93,11 @@
                         <h3 class="text-base font-bold text-stone-900">Store Launch Checklist</h3>
                         <p class="mt-1 text-sm text-stone-600">Review these before you print or publish this QR code.</p>
                     </div>
-                    <span class="inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold {{ $launchTone }}">
-                        {{ $launchLabel }}
-                    </span>
+                    <x-ui.status-icon-badge
+                        :icon="$launchIcon"
+                        :label="$launchLabel"
+                        :tone="$launchTone"
+                    />
                 </div>
                 <p class="mt-3 text-sm text-stone-600">{{ $launchScore }}/{{ count($launchChecks) }} launch checks are in a strong place.</p>
 
@@ -127,7 +130,11 @@
                             <p class="text-sm font-semibold text-stone-800">Wallet Health</p>
                             <p class="mt-1 text-sm text-stone-600">A quick read on whether saved passes are in a good place before you launch.</p>
                         </div>
-                        <span class="inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold {{ $walletHealth['status_tone'] }}">{{ $walletHealth['status_label'] }}</span>
+                        <x-ui.status-icon-badge
+                            :icon="$walletHealth['status_icon'] ?? 'attention'"
+                            :label="$walletHealth['status_label']"
+                            :tone="$walletHealth['status_tone']"
+                        />
                     </div>
                     <div class="mt-4 grid gap-3 sm:grid-cols-2">
                         <div class="rounded-xl border border-stone-200 bg-white p-3">

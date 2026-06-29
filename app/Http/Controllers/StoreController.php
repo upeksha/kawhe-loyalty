@@ -272,22 +272,27 @@ class StoreController extends Controller
 
         if (! $walletReady) {
             $statusLabel = 'Needs setup';
+            $statusIcon = 'setup';
             $statusTone = 'bg-amber-100 text-amber-700';
             $recommendedAction = 'Finish wallet branding first. Add a readable background color and at least one logo so saved passes look complete.';
         } elseif ($activeCards === 0) {
             $statusLabel = 'Ready for first customer';
+            $statusIcon = 'rocket';
             $statusTone = 'bg-brand-100 text-brand-700';
             $recommendedAction = 'Your wallet setup looks ready. Save one test card to Apple Wallet and Google Wallet before sharing widely.';
         } elseif ($walletFailuresLast7Days > 0) {
             $statusLabel = 'Needs attention';
+            $statusIcon = 'attention';
             $statusTone = 'bg-amber-100 text-amber-700';
             $recommendedAction = 'Recent wallet refreshes have had issues. Queue a store-wide wallet refresh, then ask affected customers to reopen or re-add their pass if it still looks stale.';
         } elseif ($activeAppleRegistrations === 0) {
             $statusLabel = 'Launchable';
+            $statusIcon = 'launch';
             $statusTone = 'bg-stone-100 text-stone-700';
             $recommendedAction = 'No active Apple Wallet registrations are on file yet. That usually means customers have not added the pass yet, or they removed it. Test with one fresh add before launch.';
         } else {
             $statusLabel = 'Healthy';
+            $statusIcon = 'check';
             $statusTone = 'bg-emerald-100 text-emerald-700';
             $recommendedAction = 'Wallet setup looks healthy. If a customer reports a stale card, queue a refresh first, then ask them to reopen the pass. Re-adding is the fallback if Apple or Google still shows cached artwork.';
         }
@@ -295,6 +300,7 @@ class StoreController extends Controller
         return [
             'ready' => $walletReady,
             'status_label' => $statusLabel,
+            'status_icon' => $statusIcon,
             'status_tone' => $statusTone,
             'active_cards' => $activeCards,
             'active_apple_registrations' => $activeAppleRegistrations,
