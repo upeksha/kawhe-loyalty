@@ -41,6 +41,42 @@ test('merchant can create an additional loyalty program for a store', function (
     expect($program->registration_form_config['phone']['enabled'])->toBeTrue();
 });
 
+test('creating a loyalty program inherits store branding assets by default', function () {
+    $owner = User::factory()->create(['stripe_id' => 'sub_123']);
+    $store = Store::factory()->create([
+        'user_id' => $owner->id,
+        'logo_path' => 'logos/store-logo.png',
+        'pass_logo_path' => 'pass-logos/store-pass-logo.png',
+        'pass_hero_image_path' => 'pass-heroes/store-pass-hero.png',
+    ]);
+    Subscription::create([
+        'user_id' => $owner->id,
+        'name' => 'default',
+        'stripe_id' => 'si_store_assets',
+        'stripe_status' => 'active',
+        'quantity' => 1,
+    ]);
+
+    $this->actingAs($owner)->post(route('merchant.stores.programs.store', $store), [
+        'name' => 'Tea Card',
+        'reward_target' => 5,
+        'reward_title' => 'Free tea',
+        'brand_color' => '#2563EB',
+        'background_color' => '#0F172A',
+        'require_verification_for_redemption' => '1',
+        'first_name_enabled' => '1',
+    ])->assertRedirect();
+
+    $program = LoyaltyProgram::where('store_id', $store->id)
+        ->where('name', 'Tea Card')
+        ->first();
+
+    expect($program)->not->toBeNull();
+    expect($program->logo_path)->toBe('logos/store-logo.png');
+    expect($program->pass_logo_path)->toBe('pass-logos/store-pass-logo.png');
+    expect($program->pass_hero_image_path)->toBe('pass-heroes/store-pass-hero.png');
+});
+
 test('program-specific join creates loyalty account under the selected program', function () {
     $store = Store::factory()->create();
     $program = LoyaltyProgram::create([

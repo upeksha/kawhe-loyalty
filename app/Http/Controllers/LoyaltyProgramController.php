@@ -103,12 +103,18 @@ class LoyaltyProgramController extends Controller
 
         if ($request->hasFile('logo')) {
             $validated['logo_path'] = StoreAssets::storeUploaded($request->file('logo'), 'logos');
+        } elseif ($store->logo_path) {
+            $validated['logo_path'] = $store->logo_path;
         }
         if ($request->hasFile('pass_logo')) {
             $validated['pass_logo_path'] = StoreAssets::storeUploaded($request->file('pass_logo'), 'pass-logos');
+        } elseif ($store->pass_logo_path) {
+            $validated['pass_logo_path'] = $store->pass_logo_path;
         }
         if ($request->hasFile('pass_hero_image')) {
             $validated['pass_hero_image_path'] = StoreAssets::storeUploaded($request->file('pass_hero_image'), 'pass-heroes');
+        } elseif ($store->pass_hero_image_path) {
+            $validated['pass_hero_image_path'] = $store->pass_hero_image_path;
         }
 
         unset($validated['logo'], $validated['pass_logo'], $validated['pass_hero_image']);

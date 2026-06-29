@@ -118,20 +118,100 @@
                 </p>
             </div>
 
-            <div class="grid gap-4 md:grid-cols-3">
+            <div class="space-y-5">
+                @php
+                    $logoPreviewUrl = $isEdit ? $program?->logo_url : $store->logo_url;
+                    $passLogoPreviewUrl = $isEdit ? $program?->pass_logo_url : $store->pass_logo_url;
+                    $passHeroPreviewUrl = $isEdit ? $program?->pass_hero_image_url : $store->pass_hero_image_url;
+                    $assetPreviewLabel = $isEdit ? 'Current:' : 'From store:';
+                @endphp
+
                 <div>
                     <label for="logo" class="block text-sm font-medium text-stone-700 mb-1.5">Logo</label>
-                    <input type="file" id="logo" name="logo" accept=".png,.jpg,.jpeg,.webp" class="block w-full text-sm text-stone-600">
+                    <div class="flex flex-wrap items-center gap-4">
+                        @if($logoPreviewUrl)
+                            <div class="flex shrink-0 flex-col items-center">
+                                <p class="mb-1 text-xs text-stone-500">{{ $assetPreviewLabel }}</p>
+                                <img src="{{ $logoPreviewUrl }}" alt="Logo preview" class="h-20 w-20 rounded-lg border border-stone-300 object-contain shadow-sm">
+                            </div>
+                        @endif
+                        <div id="logo-thumbnail" class="hidden flex shrink-0 flex-col items-center">
+                            <p class="mb-1 text-xs text-stone-500">New selection:</p>
+                            <img id="logo-thumbnail-img" src="" alt="Logo preview" class="h-20 w-20 rounded-lg border border-stone-300 bg-white object-contain shadow-sm">
+                        </div>
+                        <div class="min-w-[12rem] flex-1 self-center">
+                            <input type="file" id="logo" name="logo" accept=".png,.jpg,.jpeg,.webp" class="block w-full text-sm text-stone-600">
+                        </div>
+                    </div>
+                    @if(!$isEdit && $store->logo_path)
+                        <p class="mt-1 text-xs text-stone-500">Uses your store logo by default. Upload a file only if this card needs different artwork.</p>
+                    @endif
+                    <x-input-error :messages="$errors->get('logo')" class="mt-2" />
                 </div>
+
                 <div>
                     <label for="pass_logo" class="block text-sm font-medium text-stone-700 mb-1.5">Wallet logo</label>
-                    <input type="file" id="pass_logo" name="pass_logo" accept=".png,.jpg,.jpeg,.webp" class="block w-full text-sm text-stone-600">
+                    <div class="flex flex-wrap items-center gap-4">
+                        @if($passLogoPreviewUrl)
+                            <div class="flex shrink-0 flex-col items-center">
+                                <p class="mb-1 text-xs text-stone-500">{{ $assetPreviewLabel }}</p>
+                                <img src="{{ $passLogoPreviewUrl }}" alt="Wallet logo preview" class="h-12 w-20 rounded-lg border border-stone-300 object-contain shadow-sm">
+                            </div>
+                        @endif
+                        <div id="pass_logo-thumbnail" class="hidden flex shrink-0 flex-col items-center">
+                            <p class="mb-1 text-xs text-stone-500">New selection:</p>
+                            <img id="pass_logo-thumbnail-img" src="" alt="Wallet logo preview" class="h-12 w-20 rounded-lg border border-stone-300 bg-white object-contain shadow-sm">
+                        </div>
+                        <div class="min-w-[12rem] flex-1 self-center">
+                            <input type="file" id="pass_logo" name="pass_logo" accept=".png,.jpg,.jpeg,.webp" class="block w-full text-sm text-stone-600">
+                        </div>
+                    </div>
+                    @if(!$isEdit && $store->pass_logo_path)
+                        <p class="mt-1 text-xs text-stone-500">Uses your store wallet logo by default.</p>
+                    @endif
+                    <x-input-error :messages="$errors->get('pass_logo')" class="mt-2" />
                 </div>
+
                 <div>
                     <label for="pass_hero_image" class="block text-sm font-medium text-stone-700 mb-1.5">Wallet hero</label>
-                    <input type="file" id="pass_hero_image" name="pass_hero_image" accept=".png,.jpg,.jpeg,.webp" class="block w-full text-sm text-stone-600">
+                    <div class="flex flex-wrap items-center gap-4">
+                        @if($passHeroPreviewUrl)
+                            <div class="flex shrink-0 flex-col items-center">
+                                <p class="mb-1 text-xs text-stone-500">{{ $assetPreviewLabel }}</p>
+                                <img src="{{ $passHeroPreviewUrl }}" alt="Wallet hero preview" class="h-20 w-32 rounded-lg border border-stone-300 object-cover shadow-sm">
+                            </div>
+                        @endif
+                        <div id="pass_hero_image-thumbnail" class="hidden flex shrink-0 flex-col items-center">
+                            <p class="mb-1 text-xs text-stone-500">New selection:</p>
+                            <img id="pass_hero_image-thumbnail-img" src="" alt="Wallet hero preview" class="h-20 w-32 rounded-lg border border-stone-300 object-cover shadow-sm">
+                        </div>
+                        <div class="min-w-[12rem] flex-1 self-center">
+                            <input type="file" id="pass_hero_image" name="pass_hero_image" accept=".png,.jpg,.jpeg,.webp" class="block w-full text-sm text-stone-600">
+                        </div>
+                    </div>
+                    @if(!$isEdit && $store->pass_hero_image_path)
+                        <p class="mt-1 text-xs text-stone-500">Uses your store wallet hero image by default.</p>
+                    @endif
+                    <x-input-error :messages="$errors->get('pass_hero_image')" class="mt-2" />
                 </div>
             </div>
+
+            <script>
+                ['logo', 'pass_logo', 'pass_hero_image'].forEach(function(fieldId) {
+                    document.getElementById(fieldId)?.addEventListener('change', function(e) {
+                        var container = document.getElementById(fieldId + '-thumbnail');
+                        var img = document.getElementById(fieldId + '-thumbnail-img');
+                        if (!container || !img) return;
+                        if (e.target.files?.[0]) {
+                            img.src = URL.createObjectURL(e.target.files[0]);
+                            container.classList.remove('hidden');
+                        } else {
+                            img.src = '';
+                            container.classList.add('hidden');
+                        }
+                    });
+                });
+            </script>
 
             <div class="rounded-2xl border border-stone-200 bg-stone-50 p-5">
                 <div class="flex items-start gap-3">
