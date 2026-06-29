@@ -136,7 +136,7 @@
                             <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16h6M12 3C7.03 3 3 6.582 3 11c0 2.014.836 3.854 2.216 5.263L4 21l4.237-1.12A10.47 10.47 0 0012 20c4.97 0 9-3.582 9-8s-4.03-9-9-9z" />
                             </svg>
-                            Support Logs
+                            Activity
                         </a>
                         
                         <a 

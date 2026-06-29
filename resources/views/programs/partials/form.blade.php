@@ -118,88 +118,34 @@
                 </p>
             </div>
 
-            <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <div class="grid grid-cols-1 items-stretch gap-4 sm:grid-cols-3">
                 @php
                     $logoPreviewUrl = $isEdit ? $program?->logo_url : $store->logo_url;
                     $passLogoPreviewUrl = $isEdit ? $program?->pass_logo_url : $store->pass_logo_url;
                     $passHeroPreviewUrl = $isEdit ? $program?->pass_hero_image_url : $store->pass_hero_image_url;
                     $assetPreviewLabel = $isEdit ? 'Current' : 'From store';
+                    $imageFields = [
+                        ['id' => 'logo', 'label' => 'Logo', 'previewUrl' => $logoPreviewUrl, 'imgClass' => 'h-20 w-20 object-contain'],
+                        ['id' => 'pass_logo', 'label' => 'Wallet logo', 'previewUrl' => $passLogoPreviewUrl, 'imgClass' => 'h-12 w-20 object-contain'],
+                        ['id' => 'pass_hero_image', 'label' => 'Wallet hero', 'previewUrl' => $passHeroPreviewUrl, 'imgClass' => 'h-20 w-full max-w-[8rem] object-cover'],
+                    ];
                 @endphp
 
-                <div class="flex min-w-0 flex-col rounded-2xl border border-stone-200 bg-stone-50/60 p-4">
-                    <label for="logo" class="mb-3 block text-sm font-medium text-stone-700">Logo</label>
-                    <div class="flex flex-1 flex-col items-center justify-center gap-3">
-                        @if($logoPreviewUrl)
-                            <div class="flex flex-col items-center">
-                                <p class="mb-1 text-xs text-stone-500">{{ $assetPreviewLabel }}</p>
-                                <img src="{{ $logoPreviewUrl }}" alt="Logo preview" class="h-20 w-20 rounded-lg border border-stone-300 bg-white object-contain shadow-sm">
-                            </div>
-                        @endif
-                        <div id="logo-thumbnail" class="hidden flex flex-col items-center">
-                            <p class="mb-1 text-xs text-stone-500">New selection</p>
-                            <img id="logo-thumbnail-img" src="" alt="Logo preview" class="h-20 w-20 rounded-lg border border-stone-300 bg-white object-contain shadow-sm">
-                        </div>
-                        <input type="file" id="logo" name="logo" accept=".png,.jpg,.jpeg,.webp" class="block w-full text-xs text-stone-600">
-                    </div>
-                    <x-input-error :messages="$errors->get('logo')" class="mt-2" />
-                </div>
-
-                <div class="flex min-w-0 flex-col rounded-2xl border border-stone-200 bg-stone-50/60 p-4">
-                    <label for="pass_logo" class="mb-3 block text-sm font-medium text-stone-700">Wallet logo</label>
-                    <div class="flex flex-1 flex-col items-center justify-center gap-3">
-                        @if($passLogoPreviewUrl)
-                            <div class="flex flex-col items-center">
-                                <p class="mb-1 text-xs text-stone-500">{{ $assetPreviewLabel }}</p>
-                                <img src="{{ $passLogoPreviewUrl }}" alt="Wallet logo preview" class="h-12 w-20 rounded-lg border border-stone-300 bg-white object-contain shadow-sm">
-                            </div>
-                        @endif
-                        <div id="pass_logo-thumbnail" class="hidden flex flex-col items-center">
-                            <p class="mb-1 text-xs text-stone-500">New selection</p>
-                            <img id="pass_logo-thumbnail-img" src="" alt="Wallet logo preview" class="h-12 w-20 rounded-lg border border-stone-300 bg-white object-contain shadow-sm">
-                        </div>
-                        <input type="file" id="pass_logo" name="pass_logo" accept=".png,.jpg,.jpeg,.webp" class="block w-full text-xs text-stone-600">
-                    </div>
-                    <x-input-error :messages="$errors->get('pass_logo')" class="mt-2" />
-                </div>
-
-                <div class="flex min-w-0 flex-col rounded-2xl border border-stone-200 bg-stone-50/60 p-4">
-                    <label for="pass_hero_image" class="mb-3 block text-sm font-medium text-stone-700">Wallet hero</label>
-                    <div class="flex flex-1 flex-col items-center justify-center gap-3">
-                        @if($passHeroPreviewUrl)
-                            <div class="flex flex-col items-center">
-                                <p class="mb-1 text-xs text-stone-500">{{ $assetPreviewLabel }}</p>
-                                <img src="{{ $passHeroPreviewUrl }}" alt="Wallet hero preview" class="h-20 w-full max-w-[8rem] rounded-lg border border-stone-300 bg-white object-cover shadow-sm">
-                            </div>
-                        @endif
-                        <div id="pass_hero_image-thumbnail" class="hidden flex flex-col items-center">
-                            <p class="mb-1 text-xs text-stone-500">New selection</p>
-                            <img id="pass_hero_image-thumbnail-img" src="" alt="Wallet hero preview" class="h-20 w-full max-w-[8rem] rounded-lg border border-stone-300 object-cover shadow-sm">
-                        </div>
-                        <input type="file" id="pass_hero_image" name="pass_hero_image" accept=".png,.jpg,.jpeg,.webp" class="block w-full text-xs text-stone-600">
-                    </div>
-                    <x-input-error :messages="$errors->get('pass_hero_image')" class="mt-2" />
-                </div>
+                @foreach($imageFields as $field)
+                    <x-ui.image-upload-field
+                        :id="$field['id']"
+                        :label="$field['label']"
+                        :preview-url="$field['previewUrl']"
+                        :img-class="$field['imgClass']"
+                        :existing-label="$assetPreviewLabel"
+                    >
+                        <x-input-error :messages="$errors->get($field['id'])" class="mt-2" />
+                    </x-ui.image-upload-field>
+                @endforeach
             </div>
             @if(!$isEdit && ($store->logo_path || $store->pass_logo_path || $store->pass_hero_image_path))
                 <p class="text-xs text-stone-500">Uses your store images by default. Upload only if this card needs different artwork.</p>
             @endif
-
-            <script>
-                ['logo', 'pass_logo', 'pass_hero_image'].forEach(function(fieldId) {
-                    document.getElementById(fieldId)?.addEventListener('change', function(e) {
-                        var container = document.getElementById(fieldId + '-thumbnail');
-                        var img = document.getElementById(fieldId + '-thumbnail-img');
-                        if (!container || !img) return;
-                        if (e.target.files?.[0]) {
-                            img.src = URL.createObjectURL(e.target.files[0]);
-                            container.classList.remove('hidden');
-                        } else {
-                            img.src = '';
-                            container.classList.add('hidden');
-                        }
-                    });
-                });
-            </script>
 
             <div class="rounded-2xl border border-stone-200 bg-stone-50 p-5">
                 <div class="flex items-start gap-3">

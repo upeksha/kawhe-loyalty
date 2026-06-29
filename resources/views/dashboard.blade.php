@@ -267,10 +267,10 @@
             <x-slot name="actions">
                 <div class="w-full max-w-[34rem]">
                     <p class="text-xs font-semibold uppercase tracking-[0.18em] text-stone-400">Quick Actions</p>
-                    <div class="mt-2 grid gap-2 sm:grid-cols-3">
-                        <x-ui.action-tile href="{{ route('merchant.scanner') }}" label="Open Scanner" tone="sand" />
-                        <x-ui.action-tile href="{{ route('merchant.stores.index') }}" label="Store QR" tone="sage" />
-                        <x-ui.action-tile href="{{ route('merchant.customers.index') }}" label="Customers" tone="peach" />
+                    <div class="mt-2 flex flex-nowrap gap-2">
+                        <x-ui.action-tile href="{{ route('merchant.scanner') }}" label="Scanner" icon="scanner" tone="sand" />
+                        <x-ui.action-tile href="{{ route('merchant.stores.index') }}" label="Store QR" icon="qr" tone="sage" />
+                        <x-ui.action-tile href="{{ route('merchant.customers.index') }}" label="Customers" icon="customers" tone="peach" />
                     </div>
                 </div>
             </x-slot>

@@ -7,9 +7,10 @@ use App\Models\AppleWalletRegistration;
 use App\Models\LoyaltyAccount;
 use App\Models\StampEvent;
 use App\Models\SupportAuditLog;
+use App\Models\User;
+use App\Services\Billing\UsageService;
 use App\Services\Support\MerchantRecoveryService;
 use App\Services\Support\SupportAuditService;
-use Illuminate\Support\Collection;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -18,73 +19,114 @@ class MerchantCustomersController extends Controller
     public function __construct(
         protected SupportAuditService $supportAuditService,
         protected MerchantRecoveryService $merchantRecoveryService
-    ) {
-    }
+    ) {}
 
-    public function index(Request $request)
+    public function index(Request $request, UsageService $usageService)
     {
-        // Load merchant stores list
         $stores = Auth::user()->stores()->orderBy('name')->get(['id', 'name']);
-        
-        // Build store scope
-        $storeIds = $stores->pluck('id');
-        
-        // Base query
-        $query = LoyaltyAccount::query()
-            ->whereIn('store_id', $storeIds)
-            ->with(['customer', 'store'])
-            ->latest('id');
-        
-        // Optional store filter
         $storeId = $request->input('store_id');
-        if ($storeId) {
-            // Verify the store belongs to the merchant
-            if (!$storeIds->contains($storeId)) {
-                abort(404, 'Store not found or you do not have access to it.');
-            }
-            $query->where('store_id', $storeId);
-        }
-        
-        // Search filter
         $searchTerm = $request->input('q');
-        if ($searchTerm) {
-            $normalizedSearch = strtoupper(trim($searchTerm));
 
-            $query->where(function ($query) use ($searchTerm, $normalizedSearch) {
-                $query->whereHas('customer', function ($q) use ($searchTerm) {
-                    $q->where('name', 'like', "%{$searchTerm}%")
-                        ->orWhere('email', 'like', "%{$searchTerm}%")
-                        ->orWhere('phone', 'like', "%{$searchTerm}%");
-                })
-                ->orWhere('manual_entry_code', $normalizedSearch)
-                ->orWhere('public_token', $searchTerm);
-            });
+        if ($storeId && ! $stores->pluck('id')->contains($storeId)) {
+            abort(404, 'Store not found or you do not have access to it.');
         }
-        
-        // Pagination
-        $accounts = $query->paginate(25)->withQueryString();
-        
+
+        $accounts = $this->buildAccountsQuery($request, Auth::user())
+            ->with(['customer', 'store'])
+            ->latest('id')
+            ->paginate(25)
+            ->withQueryString();
+
         return view('merchant.customers.index', [
             'stores' => $stores,
             'activeStoreId' => $storeId,
             'q' => $searchTerm,
             'accounts' => $accounts,
+            'canExportCustomers' => $usageService->canExportCustomers(Auth::user()),
         ]);
     }
-    
+
+    public function export(Request $request, UsageService $usageService)
+    {
+        $user = Auth::user();
+
+        if (! $usageService->canExportCustomers($user)) {
+            return redirect()
+                ->route('billing.index')
+                ->withErrors([
+                    'billing' => 'Customer CSV export is available on the Pro plan. Upgrade to export your customer list.',
+                ]);
+        }
+
+        $filename = 'customers-'.now()->format('Y-m-d-His').'.csv';
+
+        return response()->streamDownload(function () use ($request, $user) {
+            $handle = fopen('php://output', 'w');
+
+            fputcsv($handle, [
+                'Store',
+                'Loyalty Card',
+                'First Name',
+                'Last Name',
+                'Full Name',
+                'Email',
+                'Phone',
+                'Birthday',
+                'Manual Code',
+                'Stamps',
+                'Reward Target',
+                'Reward Status',
+                'Email Verified',
+                'Last Stamped',
+                'Joined',
+            ]);
+
+            $this->buildAccountsQuery($request, $user)
+                ->with(['customer', 'store', 'loyaltyProgram'])
+                ->orderBy('id')
+                ->chunkById(200, function ($accounts) use ($handle) {
+                    foreach ($accounts as $account) {
+                        $customer = $account->customer;
+
+                        fputcsv($handle, [
+                            $account->store?->name,
+                            $account->loyaltyProgram?->name,
+                            $customer?->first_name,
+                            $customer?->last_name,
+                            $customer?->name,
+                            $customer?->email,
+                            $customer?->phone,
+                            $customer?->birthday?->format('Y-m-d'),
+                            $account->manual_entry_code,
+                            $account->stamp_count,
+                            $account->reward_target,
+                            $this->rewardStatusLabel($account),
+                            $account->verified_at ? 'Yes' : 'No',
+                            $account->last_stamped_at?->toDateTimeString(),
+                            $account->created_at?->toDateTimeString(),
+                        ]);
+                    }
+                });
+
+            fclose($handle);
+        }, $filename, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+        ]);
+    }
+
     public function show(LoyaltyAccount $loyaltyAccount)
     {
         // Ensure loyalty account belongs to merchant
         $storeIds = Auth::user()->stores()->pluck('id');
-        
+
         // Check if the account's store belongs to the merchant
-        if (!$storeIds->contains($loyaltyAccount->store_id)) {
+        if (! $storeIds->contains($loyaltyAccount->store_id)) {
             return $this->supportAccessRedirect();
         }
-        
+
         // Load relationships
         $account = $loyaltyAccount->load(['customer', 'store']);
-        
+
         // Load recent events
         $events = StampEvent::where('loyalty_account_id', $account->id)
             ->with('user')
@@ -116,7 +158,7 @@ class MerchantCustomersController extends Controller
                 'title' => $event->type === 'redeem' ? 'Reward redeemed' : 'Stamp update',
                 'detail' => ($event->type === 'redeem'
                     ? 'Redeem'
-                    : 'Stamp') . ' recorded' . ($event->count ? ' for ' . $event->count : '') . ($event->user ? ' by ' . $event->user->name : ''),
+                    : 'Stamp').' recorded'.($event->count ? ' for '.$event->count : '').($event->user ? ' by '.$event->user->name : ''),
                 'at' => $event->created_at,
                 'tone' => $event->type === 'redeem' ? 'text-accent-700' : 'text-brand-700',
             ]);
@@ -170,7 +212,7 @@ class MerchantCustomersController extends Controller
         $supportTimeline = $supportTimeline
             ->sortByDesc(fn (array $item) => optional($item['at'])->timestamp ?? 0)
             ->values();
-        
+
         return view('merchant.customers.show', [
             'account' => $account,
             'events' => $events,
@@ -178,55 +220,55 @@ class MerchantCustomersController extends Controller
             'supportTimeline' => $supportTimeline,
         ]);
     }
-    
+
     public function edit(LoyaltyAccount $loyaltyAccount)
     {
         // Ensure loyalty account belongs to merchant
         $storeIds = Auth::user()->stores()->pluck('id');
-        
+
         // Check if the account's store belongs to the merchant
-        if (!$storeIds->contains($loyaltyAccount->store_id)) {
+        if (! $storeIds->contains($loyaltyAccount->store_id)) {
             return $this->supportAccessRedirect();
         }
-        
+
         // Load relationships
         $account = $loyaltyAccount->load(['customer', 'store']);
-        
+
         return view('merchant.customers.edit', [
             'account' => $account,
         ]);
     }
-    
+
     public function update(Request $request, LoyaltyAccount $loyaltyAccount)
     {
         // Ensure loyalty account belongs to merchant
         $storeIds = Auth::user()->stores()->pluck('id');
-        
+
         // Check if the account's store belongs to the merchant
-        if (!$storeIds->contains($loyaltyAccount->store_id)) {
+        if (! $storeIds->contains($loyaltyAccount->store_id)) {
             return $this->supportAccessRedirect();
         }
-        
+
         // Load customer
         $customer = $loyaltyAccount->customer;
-        
+
         // Validate input
         $validated = $request->validate([
             'first_name' => ['nullable', 'string', 'max:255'],
-            'last_name'  => ['nullable', 'string', 'max:255'],
-            'email'      => ['nullable', 'email', 'max:255'],
-            'phone'      => ['nullable', 'string', 'max:255'],
-            'birthday'   => ['nullable', 'date'],
+            'last_name' => ['nullable', 'string', 'max:255'],
+            'email' => ['nullable', 'email', 'max:255'],
+            'phone' => ['nullable', 'string', 'max:255'],
+            'birthday' => ['nullable', 'date'],
         ]);
 
         // Keep the denormalised `name` column in sync
         $firstName = trim($validated['first_name'] ?? $customer->first_name ?? '');
-        $lastName  = trim($validated['last_name']  ?? $customer->last_name  ?? '');
+        $lastName = trim($validated['last_name'] ?? $customer->last_name ?? '');
         $validated['name'] = trim("$firstName $lastName") ?: $customer->name;
 
         // Update customer data
         $customer->update($validated);
-        
+
         return redirect()
             ->route('merchant.customers.show', $loyaltyAccount)
             ->with('success', 'Customer information updated successfully.');
@@ -236,7 +278,7 @@ class MerchantCustomersController extends Controller
     {
         $storeIds = Auth::user()->stores()->pluck('id');
 
-        if (!$storeIds->contains($loyaltyAccount->store_id)) {
+        if (! $storeIds->contains($loyaltyAccount->store_id)) {
             return $this->supportAccessRedirect();
         }
 
@@ -260,7 +302,7 @@ class MerchantCustomersController extends Controller
     {
         $storeIds = Auth::user()->stores()->pluck('id');
 
-        if (!$storeIds->contains($loyaltyAccount->store_id)) {
+        if (! $storeIds->contains($loyaltyAccount->store_id)) {
             return $this->supportAccessRedirect();
         }
 
@@ -281,7 +323,7 @@ class MerchantCustomersController extends Controller
     {
         $storeIds = Auth::user()->stores()->pluck('id');
 
-        if (!$storeIds->contains($loyaltyAccount->store_id)) {
+        if (! $storeIds->contains($loyaltyAccount->store_id)) {
             return $this->supportAccessRedirect();
         }
 
@@ -310,5 +352,48 @@ class MerchantCustomersController extends Controller
             ->withErrors([
                 'support' => 'We could not open that customer record. It may belong to a different store, or it may no longer be available.',
             ]);
+    }
+
+    private function buildAccountsQuery(Request $request, User $user)
+    {
+        $storeIds = $user->stores()->pluck('id');
+
+        $query = LoyaltyAccount::query()
+            ->whereIn('store_id', $storeIds);
+
+        $storeId = $request->input('store_id');
+        if ($storeId) {
+            $query->where('store_id', $storeId);
+        }
+
+        $searchTerm = $request->input('q');
+        if ($searchTerm) {
+            $normalizedSearch = strtoupper(trim($searchTerm));
+
+            $query->where(function ($query) use ($searchTerm, $normalizedSearch) {
+                $query->whereHas('customer', function ($q) use ($searchTerm) {
+                    $q->where('name', 'like', "%{$searchTerm}%")
+                        ->orWhere('email', 'like', "%{$searchTerm}%")
+                        ->orWhere('phone', 'like', "%{$searchTerm}%");
+                })
+                    ->orWhere('manual_entry_code', $normalizedSearch)
+                    ->orWhere('public_token', $searchTerm);
+            });
+        }
+
+        return $query;
+    }
+
+    private function rewardStatusLabel(LoyaltyAccount $account): string
+    {
+        if ($account->reward_redeemed_at) {
+            return 'Redeemed';
+        }
+
+        if ($account->reward_available_at) {
+            return 'Available';
+        }
+
+        return 'Not yet';
     }
 }

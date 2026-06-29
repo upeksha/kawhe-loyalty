@@ -151,6 +151,7 @@ Route::middleware(['auth', App\Http\Middleware\EnsureMerchantHasStore::class])->
     Route::get('/scanner', [ScannerController::class, 'index'])->name('scanner');
 
     Route::get('/customers', [MerchantCustomersController::class, 'index'])->name('customers.index');
+    Route::get('/customers/export', [MerchantCustomersController::class, 'export'])->name('customers.export');
     Route::get('/customers/{loyaltyAccount}', [MerchantCustomersController::class, 'show'])->name('customers.show');
     Route::get('/customers/{loyaltyAccount}/edit', [MerchantCustomersController::class, 'edit'])->name('customers.edit');
     Route::put('/customers/{loyaltyAccount}', [MerchantCustomersController::class, 'update'])->name('customers.update');

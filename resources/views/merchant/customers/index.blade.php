@@ -18,7 +18,8 @@
 
         <!-- Controls Row -->
         <x-ui.section-panel class="p-6" x-data="{ searching: false, filtering: false }">
-            <div class="flex flex-col sm:flex-row gap-4">
+            <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <div class="flex flex-col sm:flex-row gap-4 flex-1">
                 <!-- Search Input -->
                 <div class="flex-1">
                     <form method="GET" action="{{ route('merchant.customers.index') }}" class="flex gap-2" @submit="searching = true">
@@ -65,6 +66,24 @@
                         </x-ui.select>
                     </form>
                 </div>
+            </div>
+
+            <div class="flex shrink-0 flex-wrap items-center gap-2">
+                @if($canExportCustomers)
+                    <x-ui.button
+                        href="{{ route('merchant.customers.export', request()->only(['store_id', 'q'])) }}"
+                        variant="secondary"
+                        size="md"
+                    >
+                        Export CSV
+                    </x-ui.button>
+                @else
+                    <x-ui.button href="{{ route('billing.index') }}" variant="secondary" size="md">
+                        Export CSV (Pro)
+                    </x-ui.button>
+                    <p class="w-full text-xs text-stone-500 lg:w-auto">Upgrade to Pro to export customer details.</p>
+                @endif
+            </div>
             </div>
         </x-ui.section-panel>
 

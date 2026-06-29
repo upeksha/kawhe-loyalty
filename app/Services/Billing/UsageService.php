@@ -222,6 +222,11 @@ class UsageService
         }
     }
 
+    public function canExportCustomers(User $user): bool
+    {
+        return $this->isSubscribed($user);
+    }
+
     public function canCreateStore(User $user): bool
     {
         $limit = $this->storesLimitForUser($user);
@@ -372,6 +377,7 @@ class UsageService
             'has_cancelled_subscription' => $hasCancelledSubscription,
             'can_create_program' => $this->canCreateProgram($user),
             'can_create_card' => $this->canCreateProgram($user),
+            'can_export_customers' => $this->canExportCustomers($user),
             'can_accept_new_customer' => $canAcceptNewCustomer,
             'usage_percentage' => max($storesUsagePercent, $programsUsagePercent, $customersUsagePercent),
             'stores_usage_percentage' => $storesUsagePercent,
