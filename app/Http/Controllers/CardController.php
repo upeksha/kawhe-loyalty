@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Models\LoyaltyAccount;
 use App\Models\PointsTransaction;
-use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 
 class CardController extends Controller
@@ -17,16 +16,18 @@ class CardController extends Controller
                 ->firstOrFail();
 
             // Ensure relationships are loaded
-            if (!$account->store) {
+            if (! $account->store) {
                 \Log::error('LoyaltyAccount has no store', ['account_id' => $account->id]);
+
                 return response()->view('card.unavailable', [
                     'title' => 'Card temporarily unavailable',
                     'message' => 'This loyalty card is missing store information right now. Please ask the store team for a fresh join link or try again shortly.',
                 ], 500);
             }
 
-            if (!$account->customer) {
+            if (! $account->customer) {
                 \Log::error('LoyaltyAccount has no customer', ['account_id' => $account->id]);
+
                 return response()->view('card.unavailable', [
                     'title' => 'Card temporarily unavailable',
                     'message' => 'This loyalty card is missing customer information right now. Please ask the store team for help or try again shortly.',
@@ -57,7 +58,7 @@ class CardController extends Controller
             // Fix for accounts stuck in "Redeemed" state but have started a new cycle
             // Only clear reward_redeemed_at if they've started earning stamps again (old logic for backward compatibility)
             try {
-                if (!is_null($account->reward_redeemed_at) && $account->stamp_count > 0 && $account->stamp_count < $account->reward_target && $rewardBalance == 0) {
+                if (! is_null($account->reward_redeemed_at) && $account->stamp_count > 0 && $account->stamp_count < $account->reward_target && $rewardBalance == 0) {
                     $account->reward_redeemed_at = null;
                     $account->save();
                 }
@@ -83,6 +84,7 @@ class CardController extends Controller
                 'line' => $e->getLine(),
                 'trace' => $e->getTraceAsString(),
             ]);
+
             return response()->view('card.unavailable', [
                 'title' => 'Card temporarily unavailable',
                 'message' => 'We could not load this loyalty card right now. Please try again shortly, or ask the store team for a fresh card link if the problem continues.',
@@ -111,7 +113,7 @@ class CardController extends Controller
 
         // Fix for accounts stuck in "Redeemed" state but have started a new cycle
         // Only clear reward_redeemed_at if they've started earning stamps again (old logic for backward compatibility)
-        if (!is_null($account->reward_redeemed_at) && $account->stamp_count > 0 && $account->stamp_count < $account->reward_target && $rewardBalance == 0) {
+        if (! is_null($account->reward_redeemed_at) && $account->stamp_count > 0 && $account->stamp_count < $account->reward_target && $rewardBalance == 0) {
             $account->reward_redeemed_at = null;
             $account->save();
         }
@@ -151,9 +153,9 @@ class CardController extends Controller
                     'id' => $transaction->id,
                     'type' => $transaction->type,
                     'points' => $transaction->points,
-                    'description' => $transaction->type === 'earn' 
-                        ? "Earned {$transaction->points} stamp(s)" 
-                        : "Redeemed " . abs($transaction->points) . " stamp(s)",
+                    'description' => $transaction->type === 'earn'
+                        ? "Earned {$transaction->points} stamp(s)"
+                        : 'Redeemed '.abs($transaction->points).' stamp(s)',
                     'timestamp' => $transaction->created_at->toIso8601String(),
                     'formatted_date' => $transaction->created_at->format('M d, Y g:i A'),
                 ];
@@ -168,35 +170,35 @@ class CardController extends Controller
     public function manifest(string $public_token)
     {
         $account = LoyaltyAccount::with(['store', 'loyaltyProgram'])->where('public_token', $public_token)->firstOrFail();
-        
+
         $cardUrl = route('card.show', ['public_token' => $public_token]);
         $baseUrl = rtrim(config('app.url'), '/');
         $backgroundColor = $account->program_background_color ?? '#1F2937';
         $themeColor = $account->program_brand_color ?? $backgroundColor;
-        
+
         $manifest = [
-            'name' => $account->store->name . ' - My Card',
+            'name' => $account->store->name.' - My Card',
             'short_name' => $account->store->name,
             'start_url' => $cardUrl,
-            'scope' => $baseUrl . '/c/' . $public_token,
+            'scope' => $baseUrl.'/c/'.$public_token,
             'display' => 'standalone',
             'background_color' => $backgroundColor,
             'theme_color' => $themeColor,
             'orientation' => 'portrait-primary',
             'icons' => [
                 [
-                    'src' => asset('favicon.ico'),
+                    'src' => asset('icon-192.png'),
                     'sizes' => '192x192',
-                    'type' => 'image/x-icon',
-                    'purpose' => 'any maskable'
+                    'type' => 'image/png',
+                    'purpose' => 'any maskable',
                 ],
                 [
-                    'src' => asset('favicon.ico'),
+                    'src' => asset('icon-512.png'),
                     'sizes' => '512x512',
-                    'type' => 'image/x-icon',
-                    'purpose' => 'any maskable'
-                ]
-            ]
+                    'type' => 'image/png',
+                    'purpose' => 'any maskable',
+                ],
+            ],
         ];
 
         return response()->json($manifest)

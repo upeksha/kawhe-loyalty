@@ -7,6 +7,7 @@
 
         <title>{{ config('app.name', 'Laravel') }} - Merchant</title>
 
+        <x-favicon />
         <link rel="manifest" href="{{ asset('manifest.webmanifest') }}">
 
         <!-- Fonts -->
