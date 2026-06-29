@@ -30,7 +30,7 @@
                 </div>
             </div>
 
-            <div data-thumbnail class="hidden min-h-0 w-full flex-1 flex-col items-center justify-center">
+            <div data-thumbnail class="hidden flex min-h-0 w-full flex-1 flex-col items-center justify-center">
                 <p class="mb-1 text-xs font-medium text-stone-500">New selection</p>
                 <div class="flex h-20 w-full items-center justify-center">
                     <img src="" alt="{{ $label }} preview" class="{{ $imgClass }} max-h-20 max-w-full rounded-lg border border-stone-300 bg-white shadow-sm">
@@ -68,54 +68,60 @@
 @once
     @push('scripts')
         <script>
-            document.querySelectorAll('[data-image-upload]').forEach(function(root) {
-                if (root.dataset.bound === 'true') {
-                    return;
-                }
-                root.dataset.bound = 'true';
+            function bindImageUploadFields() {
+                document.querySelectorAll('[data-image-upload]').forEach(function(root) {
+                    if (root.dataset.bound === 'true') {
+                        return;
+                    }
+                    root.dataset.bound = 'true';
 
-                var input = root.querySelector('input[type="file"]');
-                var existing = root.querySelector('[data-existing]');
-                var thumbnail = root.querySelector('[data-thumbnail]');
-                var thumbImg = thumbnail?.querySelector('img');
-                var empty = root.querySelector('[data-empty]');
-                var hint = root.querySelector('[data-hint]');
-                var existingLabel = root.dataset.existingLabel || 'Current';
-                var hasPreview = root.dataset.hasPreview === 'true';
+                    var input = root.querySelector('input[type="file"]');
+                    var existing = root.querySelector('[data-existing]');
+                    var thumbnail = root.querySelector('[data-thumbnail]');
+                    var thumbImg = thumbnail?.querySelector('img');
+                    var empty = root.querySelector('[data-empty]');
+                    var hint = root.querySelector('[data-hint]');
+                    var existingLabel = root.dataset.existingLabel || 'Current';
+                    var hasPreview = root.dataset.hasPreview === 'true';
 
-                input?.addEventListener('change', function(e) {
-                    if (e.target.files?.[0]) {
-                        if (thumbImg) {
-                            thumbImg.src = URL.createObjectURL(e.target.files[0]);
-                        }
-                        thumbnail?.classList.remove('hidden');
-                        thumbnail?.classList.add('flex');
-                        existing?.classList.add('hidden');
-                        empty?.classList.add('hidden');
-                        if (hint) {
-                            hint.textContent = 'New selection · Click to replace';
-                            hint.classList.remove('hidden');
-                        }
-                    } else {
-                        thumbnail?.classList.add('hidden');
-                        thumbnail?.classList.remove('flex');
-                        if (thumbImg) {
-                            thumbImg.src = '';
-                        }
-                        if (existing && hasPreview) {
-                            existing.classList.remove('hidden');
+                    input?.addEventListener('change', function(e) {
+                        if (e.target.files?.[0]) {
+                            if (thumbImg) {
+                                thumbImg.src = URL.createObjectURL(e.target.files[0]);
+                            }
+                            thumbnail?.classList.remove('hidden');
+                            existing?.classList.add('hidden');
+                            empty?.classList.add('hidden');
                             if (hint) {
-                                hint.textContent = existingLabel + ' · Click to replace';
+                                hint.textContent = 'New selection · Click to replace';
                                 hint.classList.remove('hidden');
                             }
                         } else {
-                            existing?.classList.add('hidden');
-                            empty?.classList.remove('hidden');
-                            hint?.classList.add('hidden');
+                            thumbnail?.classList.add('hidden');
+                            if (thumbImg) {
+                                thumbImg.src = '';
+                            }
+                            if (existing && hasPreview) {
+                                existing.classList.remove('hidden');
+                                if (hint) {
+                                    hint.textContent = existingLabel + ' · Click to replace';
+                                    hint.classList.remove('hidden');
+                                }
+                            } else {
+                                existing?.classList.add('hidden');
+                                empty?.classList.remove('hidden');
+                                hint?.classList.add('hidden');
+                            }
                         }
-                    }
+                    });
                 });
-            });
+            }
+
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', bindImageUploadFields);
+            } else {
+                bindImageUploadFields();
+            }
         </script>
     @endpush
 @endonce
