@@ -12,8 +12,8 @@
         @if($stores->isNotEmpty())
             <x-ui.page-hero
                 eyebrow="Counter tool"
-                title="Scan loyalty cards"
-                description="Select your location, scan a customer QR code, and stamp or redeem in seconds. Use the mobile app for the fastest daily workflow."
+                title="Web Scanner Backup"
+                description="For daily counter use, install the Kawhe Merchant app. The browser scanner is kept here as a backup for setup, testing, or emergencies."
             />
         @endif
 
@@ -30,13 +30,18 @@
             <x-ui.section-panel class="mb-6 overflow-hidden border-stone-200/80 bg-gradient-to-br from-[#f3efe7] via-white to-[#edf4eb] p-5 sm:p-6">
                 <div class="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
                     <div class="max-w-xl">
-                        <p class="text-xs font-semibold uppercase tracking-[0.22em] text-[#4f7d54]">Merchant App</p>
+                        <p class="text-xs font-semibold uppercase tracking-[0.22em] text-[#4f7d54]">Recommended scanner</p>
                         <h2 class="mt-2 text-xl font-semibold tracking-tight text-stone-900 sm:text-2xl">
-                            Scan and redeem faster with the Kawhe Merchant app
+                            Use the Kawhe Merchant app at the counter
                         </h2>
                         <p class="mt-3 text-sm leading-6 text-stone-600">
-                            Give your team the quickest way to scan loyalty cards, switch stores, and redeem rewards on the go. The mobile app is the easiest setup for busy counter staff.
+                            The mobile app has the fastest camera flow, clearer staff screens, and better recovery when a scan fails. Use this web scanner only as a backup.
                         </p>
+                        <div class="mt-4 grid gap-2 text-sm text-stone-700 sm:grid-cols-3">
+                            <div class="rounded-xl border border-white/70 bg-white/70 px-3 py-2">Faster scanning</div>
+                            <div class="rounded-xl border border-white/70 bg-white/70 px-3 py-2">Better staff UX</div>
+                            <div class="rounded-xl border border-white/70 bg-white/70 px-3 py-2">Works on iPhone & Android</div>
+                        </div>
                     </div>
 
                     <div class="flex w-full max-w-md flex-col gap-3 sm:flex-row">
@@ -55,16 +60,31 @@
                             </a>
                         @endif
 
-                        <div
-                            class="flex flex-1 items-center justify-center rounded-2xl bg-white p-1.5"
-                            aria-label="Google Play badge"
-                        >
-                            <img
-                                src="{{ asset('images/store-badges/google-play-light-en.png') }}"
-                                alt="Get it on Google Play"
-                                class="h-14 w-auto"
+                        @if($googlePlayUrl)
+                            <a
+                                href="{{ $googlePlayUrl }}"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                class="flex flex-1 items-center justify-center rounded-2xl bg-white p-1.5 transition hover:bg-[#edf4eb]"
                             >
-                        </div>
+                                <img
+                                    src="{{ asset('images/store-badges/google-play-light-en.png') }}"
+                                    alt="Get it on Google Play"
+                                    class="h-14 w-auto"
+                                >
+                            </a>
+                        @else
+                            <div
+                                class="flex flex-1 items-center justify-center rounded-2xl bg-white p-1.5 opacity-75"
+                                aria-label="Google Play badge"
+                            >
+                                <img
+                                    src="{{ asset('images/store-badges/google-play-light-en.png') }}"
+                                    alt="Get it on Google Play"
+                                    class="h-14 w-auto"
+                                >
+                            </div>
+                        @endif
                     </div>
                 </div>
 
@@ -77,6 +97,34 @@
 
             <x-ui.section-panel class="p-4 sm:p-6">
                 <div class="max-w-md mx-auto" x-data="scannerApp()" @keydown.escape.window="handleEscape()">
+                    <div x-show="!webScannerRevealed" class="rounded-2xl border border-amber-200 bg-amber-50 p-5 text-center sm:p-6">
+                        <div class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-amber-100 text-amber-800">
+                            <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 9v4m0 4h.01M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z" />
+                            </svg>
+                        </div>
+                        <h3 class="mt-4 text-lg font-semibold text-stone-900">Browser scanner is a backup</h3>
+                        <p class="mt-2 text-sm leading-6 text-stone-700">
+                            For real counter service, ask staff to use the Kawhe Merchant app. Browser camera scanning can be slower and less reliable, especially during busy service.
+                        </p>
+                        <div class="mt-5 flex flex-col gap-2">
+                            @if($appleStoreUrl)
+                                <a href="{{ $appleStoreUrl }}" target="_blank" rel="noopener noreferrer" class="inline-flex min-h-[44px] items-center justify-center rounded-xl bg-stone-950 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-stone-800">
+                                    Download iPhone app
+                                </a>
+                            @endif
+                            @if($googlePlayUrl)
+                                <a href="{{ $googlePlayUrl }}" target="_blank" rel="noopener noreferrer" class="inline-flex min-h-[44px] items-center justify-center rounded-xl bg-brand-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-800">
+                                    Download Android app
+                                </a>
+                            @endif
+                            <button type="button" @click="revealWebScanner()" class="inline-flex min-h-[44px] items-center justify-center rounded-xl border border-amber-300 bg-white px-4 py-2.5 text-sm font-semibold text-amber-900 transition hover:bg-amber-100">
+                                Use web scanner anyway
+                            </button>
+                        </div>
+                    </div>
+
+                    <div x-show="webScannerRevealed" x-cloak>
                     <!-- Store Selector -->
                     <div class="mb-6">
                         <label for="store_id" class="mb-2 block text-sm font-medium text-stone-700">Select active location</label>
@@ -442,6 +490,7 @@
                             </div>
                         </template>
                     </div>
+                    </div>
                 </div>
             </x-ui.section-panel>
         @endif
@@ -496,7 +545,8 @@
                 message: '',
                 success: false,
                 resultData: null,
-                isScanning: true,
+                isScanning: false,
+                webScannerRevealed: false,
                 showModal: false,
                 showModeToggle: false, // Toggle between stamp/redeem in a single modal
                 verificationRequired: false, // Verification state inside the unified action modal
@@ -529,21 +579,8 @@
                 scannedCustomerName: '',
                 scannedStoreName: '',
 
-                init() {
-                    // Don't auto-start on iOS Safari - requires user gesture
-                    // Check if iOS Safari
-                    const isIOSSafari = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-                    
-                    if (!isIOSSafari) {
-                        // Auto-start on other browsers
-                        this.$nextTick(() => {
-                            this.startScanner();
-                        });
-                    } else {
-                        // iOS Safari: Show start button
-                        this.cameraStatus = 'Tap "Start Camera" to begin scanning';
-                        this.isScanning = false;
-                    }
+	                init() {
+	                    this.cameraStatus = 'Web scanner paused. Use the app unless this is a backup scan.';
 
                     this.$watch('showModal', (isOpen) => {
                         if (isOpen) {
@@ -554,21 +591,27 @@
                         }
                     });
 
-                    this.$watch('showCooldownModal', (isOpen) => {
-                        if (isOpen) {
-                            this.openDialog('cooldown');
-                        } else if (this.activeDialog === 'cooldown') {
-                            this.activeDialog = null;
-                            this.restoreFocus();
-                        }
-                    });
-                },
+	                    this.$watch('showCooldownModal', (isOpen) => {
+	                        if (isOpen) {
+	                            this.openDialog('cooldown');
+	                        } else if (this.activeDialog === 'cooldown') {
+	                            this.activeDialog = null;
+	                            this.restoreFocus();
+	                        }
+	                    });
+	                },
+
+	                revealWebScanner() {
+	                    this.webScannerRevealed = true;
+	                    this.cameraStatus = 'Starting camera…';
+	                    this.$nextTick(() => this.startScanner());
+	                },
 
                                 // Camera / scanner state
                                 html5QrCode: null,
                                 cameras: [],
                                 activeCameraId: null,
-                                cameraStatus: 'Starting camera…',
+                                cameraStatus: 'Use the merchant app for daily scanning.',
                                 showUploadFallback: false,
                                 isProcessingScan: false,
 
