@@ -13,7 +13,7 @@
             <x-ui.page-hero
                 eyebrow="Counter tool"
                 title="Scan loyalty cards"
-                description="Select your store, scan a customer QR code, and stamp or redeem in seconds. Use the mobile app for the fastest daily workflow."
+                description="Select your location, scan a customer QR code, and stamp or redeem in seconds. Use the mobile app for the fastest daily workflow."
             />
         @endif
 
@@ -79,9 +79,9 @@
                 <div class="max-w-md mx-auto" x-data="scannerApp()" @keydown.escape.window="handleEscape()">
                     <!-- Store Selector -->
                     <div class="mb-6">
-                        <label for="store_id" class="mb-2 block text-sm font-medium text-stone-700">Select Active Store</label>
+                        <label for="store_id" class="mb-2 block text-sm font-medium text-stone-700">Select active location</label>
                         <x-ui.select id="store_id" x-model="activeStoreId" class="rounded-lg">
-                            <option value="">-- Choose a Store --</option>
+                            <option value="">-- Choose a location --</option>
                             @foreach($stores as $store)
                                 <option value="{{ $store->id }}">{{ $store->name }}</option>
                             @endforeach
@@ -245,6 +245,20 @@
                                     <span x-text="isRedeem ? '🎁 REDEEM' : '➕ STAMP'"></span>
                                 </div>
                                 <h3 id="action-modal-title" class="text-lg font-bold text-stone-900" x-text="isRedeem ? 'Redeem Reward' : 'Add Stamps'"></h3>
+                                <div x-show="scannedProgramName || scannedRewardTitle || scannedCustomerName" x-cloak class="mt-3 rounded-xl border border-stone-200 bg-stone-50 p-3">
+                                    <p class="text-[11px] font-semibold uppercase tracking-[0.18em] text-stone-500">Scanned loyalty card</p>
+                                    <p class="mt-1 text-sm font-semibold text-stone-900" x-text="scannedProgramName || scannedRewardTitle || 'Loyalty card'"></p>
+                                    <p class="mt-1 text-xs text-stone-600">
+                                        <span x-show="scannedCustomerName" x-text="scannedCustomerName"></span>
+                                        <span x-show="scannedCustomerName && scannedStoreName"> · </span>
+                                        <span x-show="scannedStoreName" x-text="scannedStoreName"></span>
+                                    </p>
+                                    <p x-show="scannedRewardTitle || scannedRewardTarget" class="mt-1 text-xs text-stone-600">
+                                        <span x-show="scannedRewardTarget" x-text="scannedRewardTarget + ' stamps'"></span>
+                                        <span x-show="scannedRewardTarget && scannedRewardTitle"> for </span>
+                                        <span x-show="scannedRewardTitle" x-text="scannedRewardTitle"></span>
+                                    </p>
+                                </div>
                                 <div x-show="showModeToggle" class="mt-3 p-1 rounded-lg bg-stone-100 grid grid-cols-2 gap-1">
                                     <button
                                         type="button"
@@ -415,7 +429,9 @@
                         <template x-if="success && resultData">
                             <div class="mt-2 rounded-lg border border-white/40 bg-white/60 p-3">
                                 <p><strong>Customer:</strong> <span x-text="resultData.customerLabel"></span></p>
-                                <p><strong>Store:</strong> <span x-text="resultData.store_name_used || resultData.storeName"></span></p>
+                                <p><strong>Location:</strong> <span x-text="resultData.store_name_used || resultData.storeName || scannedStoreName"></span></p>
+                                <p x-show="scannedProgramName"><strong>Loyalty card:</strong> <span x-text="scannedProgramName"></span></p>
+                                <p x-show="scannedRewardTitle"><strong>Reward:</strong> <span x-text="scannedRewardTitle"></span></p>
                                 <p x-show="!isRedeem"><strong>Stamps:</strong> <span x-text="resultData.stampCount"></span> / <span x-text="resultData.rewardTarget"></span></p>
                                 <p x-show="isRedeem && resultData.remaining_rewards !== undefined"><strong>Remaining Rewards:</strong> <span x-text="resultData.remaining_rewards"></span></p>
                                 <p x-show="cooldownActive" class="text-xs mt-2 text-stone-600">Next scan ready in <span x-text="cooldownSeconds"></span>s</p>
@@ -507,6 +523,11 @@
                 lastStampCount: 1,
                 lastRedeemQuantity: 1,
                 lastAction: null,
+                scannedProgramName: '',
+                scannedRewardTitle: '',
+                scannedRewardTarget: null,
+                scannedCustomerName: '',
+                scannedStoreName: '',
 
                 init() {
                     // Don't auto-start on iOS Safari - requires user gesture
@@ -1084,6 +1105,11 @@
                         
                         // Store preview data
                         this.previewData = previewResult;
+                        this.scannedProgramName = previewResult.program_name || '';
+                        this.scannedRewardTitle = previewResult.reward_title || '';
+                        this.scannedRewardTarget = previewResult.reward_target || null;
+                        this.scannedCustomerName = previewResult.customer_name || '';
+                        this.scannedStoreName = previewResult.store_name || '';
                         this.clearFailureContext();
                         
                         // If customer has rewards, open the action modal directly and allow mode switching
@@ -1317,6 +1343,7 @@
                                     this.verificationRequired = false;
                                     this.verificationData = null;
                                     this.previewData = null;
+                                    this.clearScannedCardContext();
                                     // Resume scanning quickly so the merchant can scan again
                                     setTimeout(() => this.resumeScanner(), 200);
                                 },
@@ -1536,12 +1563,21 @@
                 },
 
                 clearResultAndResume() {
-                    this.message = '';
-                    this.success = false;
-                    this.resultData = null;
-                    this.resumeScanner();
-                }
-            }));
+	                    this.message = '';
+	                    this.success = false;
+	                    this.resultData = null;
+	                    this.clearScannedCardContext();
+	                    this.resumeScanner();
+	                },
+
+	                clearScannedCardContext() {
+	                    this.scannedProgramName = '';
+	                    this.scannedRewardTitle = '';
+	                    this.scannedRewardTarget = null;
+	                    this.scannedCustomerName = '';
+	                    this.scannedStoreName = '';
+	                }
+	            }));
         });
     </script>
     @endpush
