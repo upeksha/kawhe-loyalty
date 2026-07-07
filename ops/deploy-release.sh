@@ -11,6 +11,7 @@ TARGET_REF="${1:-}"
 RUN_NPM_BUILD="${RUN_NPM_BUILD:-1}"
 RUN_MIGRATIONS="${RUN_MIGRATIONS:-1}"
 ALLOW_DIRTY="${ALLOW_DIRTY:-0}"
+WEB_USER="${WEB_USER:-www-data}"
 
 if [[ -z "$TARGET_REF" ]]; then
   echo "Usage: $0 <git-ref>"
@@ -67,7 +68,12 @@ fi
 php artisan optimize:clear
 php artisan config:cache
 php artisan route:cache
+php artisan event:cache
 php artisan view:cache
+
+if [[ "$(id -u)" = "0" ]] && id "$WEB_USER" >/dev/null 2>&1; then
+  chown -R "$WEB_USER:$WEB_USER" storage bootstrap/cache
+fi
 
 if php artisan about >/dev/null 2>&1; then
   echo "Laravel boot check: OK"
