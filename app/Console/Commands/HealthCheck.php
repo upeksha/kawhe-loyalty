@@ -14,6 +14,7 @@ class HealthCheck extends Command
     protected $description = 'Basic production readiness checks (queue, reverb, wallet, stripe webhook)';
 
     protected bool $hasFailures = false;
+
     protected bool $hasWarnings = false;
 
     public function handle(): int
@@ -33,6 +34,7 @@ class HealthCheck extends Command
         $this->line('');
         if ($this->hasFailures) {
             $this->error('Health check failed: fix critical issues before production deploy.');
+
             return self::FAILURE;
         }
 
@@ -54,7 +56,7 @@ class HealthCheck extends Command
         $appUrl = (string) Config::get('app.url');
 
         $this->line(" - APP_ENV: {$appEnv}");
-        $this->line(' - APP_DEBUG: ' . ($appDebug ? '<comment>true</comment>' : 'false'));
+        $this->line(' - APP_DEBUG: '.($appDebug ? '<comment>true</comment>' : 'false'));
         $this->line(" - APP_URL: {$appUrl}");
 
         if ($appEnv !== 'production') {
@@ -78,9 +80,9 @@ class HealthCheck extends Command
         $routesCached = app()->routesAreCached();
         $eventsCached = app()->eventsAreCached();
 
-        $this->line(' - Config cached: ' . ($configCached ? 'yes' : '<comment>no</comment>'));
-        $this->line(' - Routes cached: ' . ($routesCached ? 'yes' : '<comment>no</comment>'));
-        $this->line(' - Events cached: ' . ($eventsCached ? 'yes' : '<comment>no</comment>'));
+        $this->line(' - Config cached: '.($configCached ? 'yes' : '<comment>no</comment>'));
+        $this->line(' - Routes cached: '.($routesCached ? 'yes' : '<comment>no</comment>'));
+        $this->line(' - Events cached: '.($eventsCached ? 'yes' : '<comment>no</comment>'));
 
         if (! $configCached) {
             $this->warnResult('Config cache is not enabled');
@@ -107,14 +109,15 @@ class HealthCheck extends Command
             DB::connection()->getPdo();
             $this->line(' - Connection test: ok');
         } catch (\Throwable $e) {
-            $this->failResult('Database connection failed: ' . $e->getMessage());
+            $this->failResult('Database connection failed: '.$e->getMessage());
+
             return;
         }
 
         $jobsExists = DB::getSchemaBuilder()->hasTable('jobs');
         $failedJobsExists = DB::getSchemaBuilder()->hasTable('failed_jobs');
-        $this->line(' - jobs table: ' . ($jobsExists ? 'exists' : '<comment>missing</comment>'));
-        $this->line(' - failed_jobs table: ' . ($failedJobsExists ? 'exists' : '<comment>missing</comment>'));
+        $this->line(' - jobs table: '.($jobsExists ? 'exists' : '<comment>missing</comment>'));
+        $this->line(' - failed_jobs table: '.($failedJobsExists ? 'exists' : '<comment>missing</comment>'));
 
         if (! $jobsExists) {
             $this->failResult('jobs table is missing (run migrations)');
@@ -132,9 +135,9 @@ class HealthCheck extends Command
         $cacheWritable = File::isWritable(base_path('bootstrap/cache'));
         $publicStorageExists = is_link(public_path('storage')) || is_dir(public_path('storage'));
 
-        $this->line(' - storage writable: ' . ($storageWritable ? 'yes' : '<comment>no</comment>'));
-        $this->line(' - bootstrap/cache writable: ' . ($cacheWritable ? 'yes' : '<comment>no</comment>'));
-        $this->line(' - public/storage linked: ' . ($publicStorageExists ? 'yes' : '<comment>no</comment>'));
+        $this->line(' - storage writable: '.($storageWritable ? 'yes' : '<comment>no</comment>'));
+        $this->line(' - bootstrap/cache writable: '.($cacheWritable ? 'yes' : '<comment>no</comment>'));
+        $this->line(' - public/storage linked: '.($publicStorageExists ? 'yes' : '<comment>no</comment>'));
 
         if (! $storageWritable) {
             $this->failResult('storage directory is not writable');
@@ -156,7 +159,7 @@ class HealthCheck extends Command
             $table = Config::get('queue.connections.database.table', 'jobs');
             $tableExists = DB::getSchemaBuilder()->hasTable($table);
             $pending = $tableExists ? DB::table($table)->count() : 'n/a';
-            $this->line(" - Jobs table: " . ($tableExists ? 'exists' : 'missing'));
+            $this->line(' - Jobs table: '.($tableExists ? 'exists' : 'missing'));
             $this->line(" - Pending jobs: {$pending}");
 
             if (! $tableExists) {
@@ -176,12 +179,23 @@ class HealthCheck extends Command
         $driver = Config::get('broadcasting.default');
         $this->line("Broadcast driver: <info>{$driver}</info>");
         if ($driver === 'reverb') {
-            $host = Config::get('reverb.host');
-            $port = Config::get('reverb.port');
+            $serverName = Config::get('reverb.default', 'reverb');
+            $server = Config::get("reverb.servers.{$serverName}", []);
+            $appOptions = Config::get('reverb.apps.apps.0.options', []);
+            $appKey = Config::get('reverb.apps.apps.0.key');
+
+            $host = $appOptions['host'] ?? $server['hostname'] ?? null;
+            $port = $appOptions['port'] ?? null;
+            $serverHost = $server['host'] ?? null;
+            $serverPort = $server['port'] ?? null;
+
             if (empty($host) || empty($port)) {
                 $this->warnResult('Reverb host/port not configured');
+            } elseif (empty($appKey)) {
+                $this->warnResult('Reverb app key not configured');
             } else {
                 $this->line(" - Reverb host: {$host}:{$port}");
+                $this->line(" - Reverb server bind: {$serverHost}:{$serverPort}");
             }
         }
     }
@@ -194,10 +208,10 @@ class HealthCheck extends Command
         $googleIssuer = Config::get('services.google_wallet.issuer_id');
 
         $this->line('Wallet config:');
-        $this->line(' - Apple pass type: ' . ($passType ?: '<comment>missing</comment>'));
-        $this->line(' - Apple team id: ' . ($teamId ?: '<comment>missing</comment>'));
-        $this->line(' - Apple push enabled: ' . ($applePushEnabled ? 'yes' : 'no'));
-        $this->line(' - Google issuer id: ' . ($googleIssuer ?: '<comment>missing</comment>'));
+        $this->line(' - Apple pass type: '.($passType ?: '<comment>missing</comment>'));
+        $this->line(' - Apple team id: '.($teamId ?: '<comment>missing</comment>'));
+        $this->line(' - Apple push enabled: '.($applePushEnabled ? 'yes' : 'no'));
+        $this->line(' - Google issuer id: '.($googleIssuer ?: '<comment>missing</comment>'));
 
         if (! $passType || ! $teamId) {
             $this->warnResult('Apple Wallet pass identifiers are incomplete');
@@ -209,14 +223,15 @@ class HealthCheck extends Command
 
     protected function checkStripe(): void
     {
-        $webhookSecret = Config::get('services.stripe.webhook.secret');
+        $webhookSecret = Config::get('services.stripe.webhook_secret')
+            ?: Config::get('cashier.webhook.secret');
         $priceId = Config::get('cashier.price_id');
         $key = Config::get('services.stripe.key');
 
         $this->line('Stripe config:');
-        $this->line(' - Stripe key present: ' . ($key ? 'yes' : '<comment>no</comment>'));
-        $this->line(' - Price ID: ' . ($priceId ?: '<comment>missing</comment>'));
-        $this->line(' - Webhook secret: ' . ($webhookSecret ? 'set' : '<comment>missing</comment>'));
+        $this->line(' - Stripe key present: '.($key ? 'yes' : '<comment>no</comment>'));
+        $this->line(' - Price ID: '.($priceId ?: '<comment>missing</comment>'));
+        $this->line(' - Webhook secret: '.($webhookSecret ? 'set' : '<comment>missing</comment>'));
 
         if (! $key || ! $priceId) {
             $this->warnResult('Stripe key or price id missing');
@@ -229,12 +244,12 @@ class HealthCheck extends Command
     protected function failResult(string $message): void
     {
         $this->hasFailures = true;
-        $this->error(' ! ' . $message);
+        $this->error(' ! '.$message);
     }
 
     protected function warnResult(string $message): void
     {
         $this->hasWarnings = true;
-        $this->warn(' - ' . $message);
+        $this->warn(' - '.$message);
     }
 }
