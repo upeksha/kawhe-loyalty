@@ -211,11 +211,11 @@
                             <span class="text-xs font-medium text-stone-500">Tap to expand</span>
                         </summary>
                         <div class="mt-4">
-                            <x-wallet-pass-preview />
+                            <x-wallet-pass-preview :preview-data="$walletPreview ?? []" />
                         </div>
                     </details>
                     <div class="hidden sm:block sticky top-8">
-                        <x-wallet-pass-preview />
+                        <x-wallet-pass-preview :preview-data="$walletPreview ?? []" />
                         <div class="mt-4 rounded-2xl border border-stone-200 bg-stone-50/80 p-5 shadow-sm">
                             <div class="flex items-start justify-between gap-3">
                                 <div>

@@ -190,6 +190,38 @@ test('GET device registrations list returns serialNumbers when updated_at change
     ]);
 });
 
+test('GET device registrations list includes branding-only program updates', function () {
+    $user = User::factory()->create();
+    $store = Store::factory()->create(['user_id' => $user->id]);
+    $customer = Customer::factory()->create();
+    $account = LoyaltyAccount::factory()->create([
+        'store_id' => $store->id,
+        'loyalty_program_id' => $store->resolvedDefaultProgram()->id,
+        'customer_id' => $customer->id,
+    ]);
+    $serialNumber = AppleWalletSerial::fromAccount($account);
+    $deviceId = 'branding-device-123';
+
+    AppleWalletRegistration::create([
+        'device_library_identifier' => $deviceId,
+        'pass_type_identifier' => 'pass.com.kawhe.loyalty',
+        'serial_number' => $serialNumber,
+        'push_token' => str_repeat('c', 64),
+        'loyalty_account_id' => $account->id,
+        'active' => true,
+    ]);
+
+    LoyaltyAccount::whereKey($account->id)->update(['updated_at' => now()->subMinutes(5)]);
+    $store->resolvedDefaultProgram()->forceFill(['wallet_branding_updated_at' => now()])->saveQuietly();
+    $since = now()->subMinute()->timestamp;
+
+    $response = $this->getJson("/wallet/v1/devices/{$deviceId}/registrations/pass.com.kawhe.loyalty?passesUpdatedSince={$since}");
+
+    $response->assertOk()->assertJson([
+        'serialNumbers' => [$serialNumber],
+    ]);
+});
+
 test('POST /wallet/v1/log does not require authentication', function () {
     $response = $this->postJson('/wallet/v1/log', [
         'logs' => [

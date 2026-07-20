@@ -136,7 +136,7 @@ Route::middleware(['auth', App\Http\Middleware\EnsureMerchantHasStore::class])->
     Route::get('/stores/{store}/qr', [StoreController::class, 'qr'])->withTrashed()->name('stores.qr');
     Route::get('/stores/{store}/qr/pdf', [StoreController::class, 'qrPdf'])->withTrashed()->name('stores.qr.pdf');
     Route::get('/stores/{store}/qr/image', [StoreController::class, 'qrImage'])->withTrashed()->name('stores.qr.image');
-    Route::post('/stores/{store}/refresh-wallets', [StoreController::class, 'refreshWallets'])->withTrashed()->name('stores.refresh-wallets');
+    Route::post('/stores/{store}/refresh-wallets', [StoreController::class, 'refreshWallets'])->withTrashed()->middleware('throttle:3,1')->name('stores.refresh-wallets');
     Route::get('/stores/{store}/programs', [LoyaltyProgramController::class, 'index'])->withTrashed()->name('stores.programs.index');
     Route::get('/stores/{store}/programs/create', [LoyaltyProgramController::class, 'create'])->withTrashed()->name('stores.programs.create');
     Route::post('/stores/{store}/programs', [LoyaltyProgramController::class, 'store'])->withTrashed()->name('stores.programs.store');
@@ -144,6 +144,10 @@ Route::middleware(['auth', App\Http\Middleware\EnsureMerchantHasStore::class])->
     Route::put('/stores/{store}/programs/{program}', [LoyaltyProgramController::class, 'update'])->withTrashed()->name('stores.programs.update');
     Route::delete('/stores/{store}/programs/{program}', [LoyaltyProgramController::class, 'destroy'])->withTrashed()->name('stores.programs.destroy');
     Route::post('/stores/{store}/programs/{program}/restore', [LoyaltyProgramController::class, 'restore'])->withTrashed()->name('stores.programs.restore');
+    Route::post('/stores/{store}/programs/{program}/refresh-wallets', [LoyaltyProgramController::class, 'refreshWallets'])
+        ->withTrashed()
+        ->middleware('throttle:3,1')
+        ->name('stores.programs.refresh-wallets');
     Route::get('/stores/{store}/programs/{program}/qr', [LoyaltyProgramController::class, 'qr'])->withTrashed()->name('stores.programs.qr');
     Route::get('/stores/{store}/programs/{program}/qr/pdf', [LoyaltyProgramController::class, 'qrPdf'])->withTrashed()->name('stores.programs.qr.pdf');
     Route::get('/stores/{store}/programs/{program}/qr/image', [LoyaltyProgramController::class, 'qrImage'])->withTrashed()->name('stores.programs.qr.image');
@@ -157,7 +161,7 @@ Route::middleware(['auth', App\Http\Middleware\EnsureMerchantHasStore::class])->
     Route::put('/customers/{loyaltyAccount}', [MerchantCustomersController::class, 'update'])->name('customers.update');
     Route::post('/customers/{loyaltyAccount}/resend-verification', [MerchantCustomersController::class, 'resendVerification'])->name('customers.resend-verification');
     Route::post('/customers/{loyaltyAccount}/resend-welcome', [MerchantCustomersController::class, 'resendWelcomeEmail'])->name('customers.resend-welcome');
-    Route::post('/customers/{loyaltyAccount}/sync-wallet', [MerchantCustomersController::class, 'syncWallet'])->name('customers.sync-wallet');
+    Route::post('/customers/{loyaltyAccount}/sync-wallet', [MerchantCustomersController::class, 'syncWallet'])->middleware('throttle:5,1')->name('customers.sync-wallet');
     Route::get('/support', [SupportLogController::class, 'merchantIndex'])->name('support.index');
 });
 

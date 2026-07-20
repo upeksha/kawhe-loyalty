@@ -6,11 +6,12 @@ use App\Http\Controllers\Controller;
 use App\Models\AppleWalletRegistration;
 use App\Models\LoyaltyAccount;
 use App\Services\Wallet\Apple\ApplePassService;
+use Byte5\PassGenerator;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
-use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Log;
-use Byte5\PassGenerator;
 
 class AppleWalletController extends Controller
 {
@@ -23,7 +24,7 @@ class AppleWalletController extends Controller
 
     /**
      * Register device for pass updates.
-     * 
+     *
      * POST /wallet/v1/devices/{deviceLibraryIdentifier}/registrations/{passTypeIdentifier}/{serialNumber}
      */
     public function registerDevice(Request $request, string $deviceLibraryIdentifier, string $passTypeIdentifier, string $serialNumber): Response
@@ -46,12 +47,13 @@ class AppleWalletController extends Controller
 
         // Resolve loyalty account from serial number
         $account = $this->passService->resolveLoyaltyAccount($serialNumber);
-        if (!$account) {
+        if (! $account) {
             Log::warning('Apple Wallet registration: Account not found', [
                 'serial_number' => $serialNumber,
                 'device_library_identifier' => $deviceLibraryIdentifier,
                 'pass_type_identifier' => $passTypeIdentifier,
             ]);
+
             return response('Pass not found', 404);
         }
 
@@ -64,6 +66,7 @@ class AppleWalletController extends Controller
                 'serial_number' => $serialNumber,
                 'device_library_identifier' => $deviceLibraryIdentifier,
             ]);
+
             return response('Invalid pass type', 400);
         }
 
@@ -104,7 +107,7 @@ class AppleWalletController extends Controller
 
     /**
      * Unregister device from pass updates.
-     * 
+     *
      * DELETE /wallet/v1/devices/{deviceLibraryIdentifier}/registrations/{passTypeIdentifier}/{serialNumber}
      */
     public function unregisterDevice(Request $request, string $deviceLibraryIdentifier, string $passTypeIdentifier, string $serialNumber): Response
@@ -134,7 +137,7 @@ class AppleWalletController extends Controller
 
     /**
      * Get updated pass file.
-     * 
+     *
      * GET /wallet/v1/passes/{passTypeIdentifier}/{serialNumber}
      */
     public function getPass(Request $request, string $passTypeIdentifier, string $serialNumber): Response
@@ -154,34 +157,37 @@ class AppleWalletController extends Controller
                 'received' => $passTypeIdentifier,
                 'serial_number' => $serialNumber,
             ]);
+
             return response('Invalid pass type', 400);
         }
 
         // Resolve loyalty account
         $account = $this->passService->resolveLoyaltyAccount($serialNumber);
-        if (!$account) {
+        if (! $account) {
             Log::warning('Apple Wallet pass retrieval: Account not found', [
                 'serial_number' => $serialNumber,
             ]);
+
             return response('Pass not found', 404);
         }
 
-        $account->load(['store', 'customer']);
+        $account->load(['store', 'customer', 'loyaltyProgram']);
+        $effectiveUpdatedAt = $this->effectiveUpdatedAt($account);
 
         // Check If-Modified-Since header for 304 Not Modified
         $ifModifiedSince = $request->header('If-Modified-Since');
         if ($ifModifiedSince) {
             $modifiedSince = strtotime($ifModifiedSince);
-            $accountUpdated = $account->updated_at->timestamp;
-            
+            $accountUpdated = $effectiveUpdatedAt->timestamp;
+
             if ($modifiedSince && $accountUpdated <= $modifiedSince) {
-                $lastModified = $account->updated_at->toRfc7231String();
+                $lastModified = $effectiveUpdatedAt->toRfc7231String();
                 Log::debug('Apple Wallet pass: 304 Not Modified', [
                     'serial_number' => $serialNumber,
                     'if_modified_since' => $ifModifiedSince,
                     'account_updated_at' => $lastModified,
                 ]);
-                
+
                 // Return 304 with required headers
                 // Using header() method to ensure Last-Modified is present
                 return response('', 304)
@@ -199,6 +205,7 @@ class AppleWalletController extends Controller
                 Log::error('Apple Wallet pass generation: Invalid ZIP', [
                     'serial_number' => $serialNumber,
                 ]);
+
                 return response('Pass generation failed', 500);
             }
 
@@ -219,22 +226,23 @@ class AppleWalletController extends Controller
                 'Content-Disposition' => 'attachment; filename="pass.pkpass"',
                 'Content-Length' => strlen($pkpassData),
                 'Cache-Control' => 'no-store',
-                'Last-Modified' => $account->updated_at->toRfc7231String(),
+                'Last-Modified' => $effectiveUpdatedAt->toRfc7231String(),
             ]);
         } catch (\Exception $e) {
             Log::error('Apple Wallet pass generation failed', [
                 'serial_number' => $serialNumber,
                 'error' => $e->getMessage(),
             ]);
+
             return response('Pass generation failed', 500);
         }
     }
 
     /**
      * Get list of updated serial numbers for a device.
-     * 
+     *
      * GET /wallet/v1/devices/{deviceLibraryIdentifier}/registrations/{passTypeIdentifier}?passesUpdatedSince=<timestamp>
-     * 
+     *
      * Returns only serial numbers where the pass actually changed since passesUpdatedSince.
      * Uses STRICT comparison (updated_at > passesUpdatedSince) to avoid false positives.
      */
@@ -254,7 +262,7 @@ class AppleWalletController extends Controller
             $registrations = AppleWalletRegistration::where('device_library_identifier', $deviceLibraryIdentifier)
                 ->where('pass_type_identifier', $passTypeIdentifier)
                 ->where('active', true)
-                ->with('loyaltyAccount')
+                ->with('loyaltyAccount.loyaltyProgram')
                 ->get();
 
             $serialNumbers = [];
@@ -264,7 +272,7 @@ class AppleWalletController extends Controller
                 // Normalize passesUpdatedSince: replace spaces with '+' (URL decoding issue)
                 // Apple may send "2026-01-20T21:52:23 00:00" instead of "2026-01-20T21:52:23+00:00"
                 $normalizedSince = str_replace(' ', '+', $passesUpdatedSince);
-                
+
                 Log::debug('Apple Wallet device updates: Parsing passesUpdatedSince', [
                     'raw' => $passesUpdatedSince,
                     'normalized' => $normalizedSince,
@@ -276,7 +284,7 @@ class AppleWalletController extends Controller
                     $since = \Carbon\Carbon::parse($normalizedSince);
                     // Ensure UTC timezone for consistent comparison
                     $since = $since->utc();
-                    
+
                     Log::debug('Apple Wallet device updates: Successfully parsed timestamp', [
                         'parsed' => $since->toIso8601String(),
                         'utc' => $since->utc()->toIso8601String(),
@@ -298,6 +306,7 @@ class AppleWalletController extends Controller
                             'passes_updated_since_normalized' => $normalizedSince,
                             'error' => $e->getMessage(),
                         ]);
+
                         // Return JSON with empty array and lastUpdated in Zulu format
                         return response()->json([
                             'lastUpdated' => now()->utc()->format('Y-m-d\TH:i:s\Z'),
@@ -308,22 +317,22 @@ class AppleWalletController extends Controller
 
                 // Filter registrations: only include if LoyaltyAccount->updated_at > passesUpdatedSince (STRICT)
                 foreach ($registrations as $registration) {
-                    if (!$registration->loyaltyAccount) {
+                    if (! $registration->loyaltyAccount) {
                         // Skip registrations without accounts
                         continue;
                     }
 
                     $account = $registration->loyaltyAccount;
-                    
+
                     // Ensure account has updated_at
-                    if (!$account->updated_at) {
+                    if (! $account->updated_at) {
                         continue;
                     }
 
                     // Use STRICT comparison: updated_at must be strictly greater than passesUpdatedSince
                     // This ensures we only return passes that actually changed
-                    $accountUpdated = $account->updated_at->utc();
-                    
+                    $accountUpdated = $this->effectiveUpdatedAt($account)->utc();
+
                     // Log comparison for debugging
                     $isNewer = $accountUpdated->gt($since);
                     Log::debug('Apple Wallet device updates: Checking account', [
@@ -336,7 +345,7 @@ class AppleWalletController extends Controller
                         'difference_seconds' => $accountUpdated->diffInSeconds($since, false),
                         'included' => $isNewer,
                     ]);
-                    
+
                     if ($isNewer) {
                         // Account was updated AFTER passesUpdatedSince - include it
                         $serialNumbers[] = $registration->serial_number;
@@ -357,16 +366,16 @@ class AppleWalletController extends Controller
                         'since_parsed' => $since->format('Y-m-d\TH:i:s\Z'),
                         'total_registrations' => $registrations->count(),
                     ]);
-                    
+
                     // Return 204 No Content when no updates
                     return response()->noContent();
                 }
 
                 // Calculate lastUpdated as max updated_at from the returned serials
-                if (!empty($updatedTimestamps)) {
+                if (! empty($updatedTimestamps)) {
                     $lastUpdated = collect($updatedTimestamps)->max();
                     // Ensure we have a valid Carbon instance
-                    if (!$lastUpdated instanceof \Carbon\Carbon) {
+                    if (! $lastUpdated instanceof \Carbon\Carbon) {
                         $lastUpdated = now()->utc();
                     }
                 } else {
@@ -376,18 +385,18 @@ class AppleWalletController extends Controller
             } else {
                 // No passesUpdatedSince provided - return all active registrations
                 $serialNumbers = $registrations->pluck('serial_number')->toArray();
-                
+
                 // Find latest updated_at from all accounts
                 foreach ($registrations as $registration) {
                     if ($registration->loyaltyAccount && $registration->loyaltyAccount->updated_at) {
-                        $updatedTimestamps[] = $registration->loyaltyAccount->updated_at->utc();
+                        $updatedTimestamps[] = $this->effectiveUpdatedAt($registration->loyaltyAccount)->utc();
                     }
                 }
-                
-                if (!empty($updatedTimestamps)) {
+
+                if (! empty($updatedTimestamps)) {
                     $lastUpdated = collect($updatedTimestamps)->max();
                     // Ensure we have a valid Carbon instance
-                    if (!$lastUpdated instanceof \Carbon\Carbon) {
+                    if (! $lastUpdated instanceof \Carbon\Carbon) {
                         $lastUpdated = now()->utc();
                     }
                 } else {
@@ -418,7 +427,7 @@ class AppleWalletController extends Controller
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
             ]);
-            
+
             // Return empty response on error (safer than crashing)
             // Use Zulu format (Z) instead of +00:00 to avoid URL encoding issues
             return response()->json([
@@ -430,7 +439,7 @@ class AppleWalletController extends Controller
 
     /**
      * Log endpoint for Apple Wallet.
-     * 
+     *
      * POST /wallet/v1/log
      * Note: This endpoint doesn't have a serial number, so authentication
      * must use the global web service auth token.
@@ -453,5 +462,17 @@ class AppleWalletController extends Controller
         }
 
         return response('', 200);
+    }
+
+    private function effectiveUpdatedAt(LoyaltyAccount $account): Carbon
+    {
+        $accountUpdatedAt = $account->updated_at ?? $account->created_at ?? now();
+        $brandingUpdatedAt = $account->resolvedProgram()?->wallet_branding_updated_at;
+
+        if ($brandingUpdatedAt && $brandingUpdatedAt->gt($accountUpdatedAt)) {
+            return $brandingUpdatedAt->copy();
+        }
+
+        return $accountUpdatedAt->copy();
     }
 }

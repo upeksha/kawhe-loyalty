@@ -3,6 +3,8 @@
 namespace App\Services\Wallet;
 
 use App\Models\LoyaltyAccount;
+use App\Models\LoyaltyProgram;
+use App\Services\Wallet\Artwork\WalletArtworkService;
 use App\Support\StoreAssets;
 use Google_Client;
 use Google_Service_Walletobjects;
@@ -15,23 +17,32 @@ use Illuminate\Support\Str;
 class GoogleWalletPassService
 {
     protected $client;
+
     protected $service;
+
     protected $issuerId;
+
     protected $classId;
+
     protected GoogleWalletStampStripRenderer $stampStripRenderer;
+
+    protected array $lastSyncDetails = [
+        'class' => ['status' => 'not_run'],
+        'object' => ['status' => 'not_run'],
+    ];
 
     public function __construct()
     {
         $this->issuerId = config('services.google_wallet.issuer_id');
         $this->classId = config('services.google_wallet.class_id', 'loyalty_class_kawhe');
         $this->stampStripRenderer = app(GoogleWalletStampStripRenderer::class);
-        
+
         // Initialize Google Client
-        $this->client = new Google_Client();
+        $this->client = new Google_Client;
         $this->client->setApplicationName('Kawhe Loyalty');
         // Use full scope URL for Wallet API
         $this->client->setScopes('https://www.googleapis.com/auth/wallet_object.issuer');
-        
+
         // Load service account credentials
         $configuredPath = config('services.google_wallet.service_account_key');
         if (! $configuredPath) {
@@ -43,10 +54,10 @@ class GoogleWalletPassService
         $candidates = [
             $configuredPath,
             base_path($configuredPath),
-            storage_path('app/private/' . $pathInPrivate),
+            storage_path('app/private/'.$pathInPrivate),
         ];
         if (($configuredPath !== $pathInPrivate) && $pathInPrivate !== '') {
-            $candidates[] = base_path('storage/app/private/' . $pathInPrivate);
+            $candidates[] = base_path('storage/app/private/'.$pathInPrivate);
         }
         $serviceAccountPath = null;
         foreach ($candidates as $candidate) {
@@ -57,37 +68,41 @@ class GoogleWalletPassService
         }
         if (! $serviceAccountPath) {
             $tried = implode(', ', array_filter($candidates));
-            throw new \Exception('Google Wallet service account key not found. Tried: ' . $tried . '. Place the JSON file in storage/app/private/google-wallet/service-account.json on the server and set GOOGLE_WALLET_SERVICE_ACCOUNT_KEY=google-wallet/service-account.json in .env');
+            throw new \Exception('Google Wallet service account key not found. Tried: '.$tried.'. Place the JSON file in storage/app/private/google-wallet/service-account.json on the server and set GOOGLE_WALLET_SERVICE_ACCOUNT_KEY=google-wallet/service-account.json in .env');
         }
-        
-        if (!is_readable($serviceAccountPath)) {
+
+        if (! is_readable($serviceAccountPath)) {
             throw new \Exception('Google Wallet service account key file is not readable. Check file permissions.');
         }
-        
+
         $this->client->setAuthConfig($serviceAccountPath);
-        
+
         $this->service = new Google_Service_Walletobjects($this->client);
     }
 
     /**
      * Get the Google Wallet service instance
-     *
-     * @return Google_Service_Walletobjects
      */
     public function getService(): Google_Service_Walletobjects
     {
         return $this->service;
     }
 
+    public function getLastSyncDetails(): array
+    {
+        return $this->lastSyncDetails;
+    }
+
     /**
      * Create or get loyalty class (template for passes)
      * This should be called once during setup
      *
-     * @param mixed $program
+     * @param  mixed  $program
      * @return Google_Service_Walletobjects_LoyaltyClass
      */
     public function createLoyaltyClass($program)
     {
+        $program = $this->ensureArtwork($program);
         $store = $program->store ?? $program;
         $classId = $this->getClassIdForProgram($program);
         $resourceId = "{$this->issuerId}.{$classId}";
@@ -96,15 +111,15 @@ class GoogleWalletPassService
 
         // Build logo, hero/logo image, and color (always use fallback so pass shows color and image)
         $logoUri = $this->getPassLogoUri($program);
-        if (!$logoUri) {
+        if (! $logoUri) {
             $logoUri = $this->getLogoUri($program);
         }
 
         $heroImage = $this->getPassHeroImageUri($program);
-        if (!$heroImage) {
+        if (! $heroImage) {
             $heroImage = $this->getPassLogoUri($program);
         }
-        if (!$heroImage) {
+        if (! $heroImage) {
             $heroImage = $this->getLogoUri($program);
         }
         $imageModulesData = $this->buildImageModulesData($heroImage);
@@ -116,7 +131,7 @@ class GoogleWalletPassService
         if (strlen($backgroundColor) === 3) {
             $backgroundColor = $backgroundColor[0].$backgroundColor[0].$backgroundColor[1].$backgroundColor[1].$backgroundColor[2].$backgroundColor[2];
         }
-        $backgroundColor = '#' . $backgroundColor;
+        $backgroundColor = '#'.$backgroundColor;
 
         try {
             // Class exists: patch to keep branding in sync
@@ -125,10 +140,12 @@ class GoogleWalletPassService
             $reviewStatus = $this->normalizeReviewStatusForPatch();
 
             if (! $this->shouldPatchLoyaltyClass($program, $existing, $logoUri, $heroImage, $backgroundColor, $rewardTarget)) {
+                $this->lastSyncDetails['class'] = ['status' => 'unchanged'];
                 Log::info('Google Wallet: Skipping loyalty class patch (no changes)', [
                     'program_id' => $program->id,
                     'class_id' => $resourceId,
                 ]);
+
                 return $existing;
             }
 
@@ -139,7 +156,7 @@ class GoogleWalletPassService
             ]);
 
             // Patch core fields first (name/color/text) so store name is always correct.
-            $basePatch = new \Google_Service_Walletobjects_LoyaltyClass();
+            $basePatch = new \Google_Service_Walletobjects_LoyaltyClass;
             $basePatch->setId($resourceId);
             $basePatch->setIssuerName(config('app.name', 'Kawhe'));
             $basePatch->setProgramName($store->name);
@@ -152,7 +169,9 @@ class GoogleWalletPassService
 
             try {
                 $this->service->loyaltyclass->patch($resourceId, $basePatch);
+                $this->lastSyncDetails['class']['base'] = 'updated';
             } catch (\Throwable $basePatchError) {
+                $this->lastSyncDetails['class']['base'] = 'failed';
                 Log::warning('Google Wallet: Failed to patch base loyalty class fields', [
                     'class_id' => $resourceId,
                     'error' => $basePatchError->getMessage(),
@@ -160,7 +179,7 @@ class GoogleWalletPassService
             }
 
             // Patch image branding separately so image issues don't block name/color updates.
-            $imagePatch = new \Google_Service_Walletobjects_LoyaltyClass();
+            $imagePatch = new \Google_Service_Walletobjects_LoyaltyClass;
             $imagePatch->setId($resourceId);
             if ($logoUri) {
                 $imagePatch->setProgramLogo($logoUri);
@@ -169,18 +188,28 @@ class GoogleWalletPassService
             $imagePatch->setReviewStatus($reviewStatus);
             try {
                 $result = $this->service->loyaltyclass->patch($resourceId, $imagePatch);
+                $this->lastSyncDetails['class']['images'] = 'updated';
+                $this->lastSyncDetails['class']['status'] = $this->lastSyncDetails['class']['base'] === 'updated'
+                    ? 'updated'
+                    : 'partial';
                 $this->cacheClassSync($program);
+
                 return $result;
             } catch (\Throwable $imagePatchError) {
+                $this->lastSyncDetails['class']['images'] = 'failed';
+                $this->lastSyncDetails['class']['status'] = $this->lastSyncDetails['class']['base'] === 'updated'
+                    ? 'partial'
+                    : 'failed';
                 Log::warning('Google Wallet: Failed to patch loyalty class images, using existing', [
                     'class_id' => $resourceId,
                     'error' => $imagePatchError->getMessage(),
                 ]);
+
                 return $existing;
             }
         } catch (\Exception $e) {
             // Class doesn't exist: create it with image and color
-            $loyaltyClass = new \Google_Service_Walletobjects_LoyaltyClass();
+            $loyaltyClass = new \Google_Service_Walletobjects_LoyaltyClass;
             $loyaltyClass->setId($resourceId);
             $loyaltyClass->setIssuerName(config('app.name', 'Kawhe'));
             $loyaltyClass->setProgramName($store->name);
@@ -196,7 +225,9 @@ class GoogleWalletPassService
             $loyaltyClass->setImageModulesData($imageModulesData);
             $loyaltyClass->setHexBackgroundColor($backgroundColor);
             $result = $this->service->loyaltyclass->insert($loyaltyClass);
+            $this->lastSyncDetails['class'] = ['status' => 'created'];
             $this->cacheClassSync($program);
+
             return $result;
         }
     }
@@ -204,11 +235,14 @@ class GoogleWalletPassService
     /**
      * Create or update loyalty object (individual pass for customer)
      *
-     * @param LoyaltyAccount $account
      * @return Google_Service_Walletobjects_LoyaltyObject
      */
     public function createOrUpdateLoyaltyObject(LoyaltyAccount $account)
     {
+        $this->lastSyncDetails = [
+            'class' => ['status' => 'not_run'],
+            'object' => ['status' => 'not_run'],
+        ];
         $account->load(['store', 'customer', 'loyaltyProgram']);
         $store = $account->store;
         $program = $account->resolvedProgram() ?? $store;
@@ -219,7 +253,7 @@ class GoogleWalletPassService
             $account->manual_entry_code = LoyaltyAccount::generateManualEntryCode($account->store_id);
             $account->saveQuietly();
         }
-        
+
         $objectId = $this->getObjectIdForAccount($account);
         $programName = $this->programName($program);
         $statusText = $this->statusText($account, $program);
@@ -228,68 +262,68 @@ class GoogleWalletPassService
                 ? $account->redeem_token
                 : $account->public_token
         );
-        
+
         // Ensure class exists
         $this->createLoyaltyClass($program);
-        
-        $loyaltyObject = new Google_Service_Walletobjects_LoyaltyObject();
+
+        $loyaltyObject = new Google_Service_Walletobjects_LoyaltyObject;
         $loyaltyObject->setId($objectId);
         $loyaltyObject->setClassId("{$this->issuerId}.{$this->getClassIdForProgram($program)}");
         $loyaltyObject->setState('ACTIVE');
-        
+
         // Account info - accountName must be a plain string, not LocalizedString
         $accountNameValue = $customer->name ?? $customer->email ?? 'Valued Customer';
         $loyaltyObject->setAccountName($accountNameValue);
-        
+
         // Account ID (stable identifier)
         $loyaltyObject->setAccountId((string) $account->id);
-        
+
         // Loyalty points (stamp count) – label so Google Wallet shows "Stamps" clearly
-        $loyaltyPoints = new \Google_Service_Walletobjects_LoyaltyPoints();
+        $loyaltyPoints = new \Google_Service_Walletobjects_LoyaltyPoints;
         $loyaltyPoints->setLabel('Stamps');
         $loyaltyPoints->setBalance(new \Google_Service_Walletobjects_LoyaltyPointsBalance([
             'int' => $account->stamp_count,
         ]));
         $loyaltyObject->setLoyaltyPoints($loyaltyPoints);
-        
+
         // Secondary points (rewards) – must show actual reward balance so the card displays it
         $rewardBalance = (int) ($account->reward_balance ?? 0);
-        $secondaryPoints = new \Google_Service_Walletobjects_LoyaltyPoints();
+        $secondaryPoints = new \Google_Service_Walletobjects_LoyaltyPoints;
         $secondaryPoints->setLabel('Rewards');
         $secondaryPoints->setBalance(new \Google_Service_Walletobjects_LoyaltyPointsBalance([
             'int' => $rewardBalance,
         ]));
         $loyaltyObject->setSecondaryLoyaltyPoints($secondaryPoints);
-        
+
         // Dynamic barcode: LR:{redeem_token} when reward available, else LA:{public_token}
         // This matches Apple Wallet behavior for consistency
         $barcodeValue = ($account->reward_balance ?? 0) > 0 && $account->redeem_token
-            ? 'LR:' . $account->redeem_token
-            : 'LA:' . $account->public_token;
-        
-        $barcode = new \Google_Service_Walletobjects_Barcode();
+            ? 'LR:'.$account->redeem_token
+            : 'LA:'.$account->public_token;
+
+        $barcode = new \Google_Service_Walletobjects_Barcode;
         $barcode->setType('QR_CODE');
         $barcode->setValue($barcodeValue);
-        $barcode->setAlternateText('Manual code: ' . $manualCode);
+        $barcode->setAlternateText('Manual code: '.$manualCode);
         $loyaltyObject->setBarcode($barcode);
-        
+
         // Hero image on the card (Pass Hero Image) – same as class so card shows it
         $heroImage = $this->getPassHeroImageUri($program);
-        if (!$heroImage) {
+        if (! $heroImage) {
             $heroImage = $this->getPassLogoUri($program);
         }
-        if (!$heroImage) {
+        if (! $heroImage) {
             $heroImage = $this->getLogoUri($program);
         }
         $stampStripImage = $this->buildStampStripImage($account);
         $objectImageModules = $this->buildObjectImageModulesData($stampStripImage, $heroImage);
-        if (!empty($objectImageModules)) {
+        if (! empty($objectImageModules)) {
             $loyaltyObject->setImageModulesData($objectImageModules);
         }
-        
+
         // Note: Background color is set on LoyaltyClass, not LoyaltyObject
         // The object inherits styling from the class
-        
+
         // Text modules: keep concise, visual progress comes from generated strip image
         $textModulesData = [
             [
@@ -322,33 +356,33 @@ class GoogleWalletPassService
             'account_name' => $accountNameValue,
             'public_token' => $account->public_token,
         ]);
-        
+
         try {
             // First, try to get existing object to check if it exists
             try {
                 $existing = $this->service->loyaltyobject->get($objectId);
-                
+
                 // Check if there's a significant change that warrants a notification
                 $previousStampCount = $existing->getLoyaltyPoints()?->getBalance()?->getInt() ?? 0;
                 $previousRewardBalance = $existing->getSecondaryLoyaltyPoints()?->getBalance()?->getInt() ?? 0;
-                
+
                 $stampChanged = $previousStampCount !== $account->stamp_count;
                 $rewardChanged = $previousRewardBalance !== ($account->reward_balance ?? 0);
                 $rewardEarned = ($account->reward_balance ?? 0) > $previousRewardBalance;
                 $rewardRedeemed = ($account->reward_balance ?? 0) < $previousRewardBalance;
-                
+
                 // Add notification message for significant changes
                 // Note: Google limits to 3 notifications per 24 hours per pass
                 if ($stampChanged || $rewardChanged) {
                     $messages = [];
-                    
+
                     if ($rewardEarned) {
                         // Reward earned - most important notification
                         $messages[] = [
                             'header' => '🎉 Reward Earned!',
                             'body' => sprintf('You earned %d %s!', ($account->reward_balance ?? 0) - $previousRewardBalance, $program->reward_title ?? 'reward'),
                             'actionUri' => [
-                                'uri' => config('app.url') . '/c/' . $account->public_token,
+                                'uri' => config('app.url').'/c/'.$account->public_token,
                                 'description' => 'View Card',
                             ],
                         ];
@@ -377,8 +411,8 @@ class GoogleWalletPassService
                             ];
                         }
                     }
-                    
-                    if (!empty($messages)) {
+
+                    if (! empty($messages)) {
                         $loyaltyObject->setMessages($messages);
                         Log::info('Google Wallet: Adding notification message', [
                             'object_id' => $objectId,
@@ -386,7 +420,7 @@ class GoogleWalletPassService
                         ]);
                     }
                 }
-                
+
                 // Object exists - use patch for partial update (more efficient and safer)
                 // Patch only updates the fields we send, preserving other fields
                 Log::info('Google Wallet: Patching existing loyalty object', [
@@ -396,8 +430,11 @@ class GoogleWalletPassService
                     'stamp_changed' => $stampChanged,
                     'reward_changed' => $rewardChanged,
                 ]);
-                
-                return $this->service->loyaltyobject->patch($objectId, $loyaltyObject);
+
+                $result = $this->service->loyaltyobject->patch($objectId, $loyaltyObject);
+                $this->lastSyncDetails['object'] = ['status' => 'updated'];
+
+                return $result;
             } catch (\Google\Service\Exception $e) {
                 if ($e->getCode() === 404) {
                     // Object doesn't exist, create it
@@ -406,7 +443,11 @@ class GoogleWalletPassService
                         'stamp_count' => $account->stamp_count,
                         'reward_balance' => $account->reward_balance ?? 0,
                     ]);
-                    return $this->service->loyaltyobject->insert($loyaltyObject);
+
+                    $result = $this->service->loyaltyobject->insert($loyaltyObject);
+                    $this->lastSyncDetails['object'] = ['status' => 'created'];
+
+                    return $result;
                 }
                 throw $e;
             }
@@ -423,7 +464,6 @@ class GoogleWalletPassService
     /**
      * Generate "Save to Google Wallet" JWT link
      *
-     * @param LoyaltyAccount $account
      * @return string Full URL for "Save to Google Wallet"
      */
     public function generateSaveLink(LoyaltyAccount $account): string
@@ -453,13 +493,13 @@ class GoogleWalletPassService
             }
             $objectId = $this->getObjectIdForAccount($account);
         }
-        
+
         // Get service account email from credentials
         $serviceAccountPath = config('services.google_wallet.service_account_key');
-        
+
         // Resolve path (same logic as constructor)
-        if (!file_exists($serviceAccountPath)) {
-            $relativePath = storage_path('app/private/' . $serviceAccountPath);
+        if (! file_exists($serviceAccountPath)) {
+            $relativePath = storage_path('app/private/'.$serviceAccountPath);
             if (file_exists($relativePath)) {
                 $serviceAccountPath = $relativePath;
             } else {
@@ -467,26 +507,26 @@ class GoogleWalletPassService
                 if (file_exists($absolutePath)) {
                     $serviceAccountPath = $absolutePath;
                 } else {
-                    throw new \Exception('Service account key file not found. Tried: ' . config('services.google_wallet.service_account_key') . ', ' . $relativePath . ', ' . $absolutePath);
+                    throw new \Exception('Service account key file not found. Tried: '.config('services.google_wallet.service_account_key').', '.$relativePath.', '.$absolutePath);
                 }
             }
         }
-        
-        if (!is_readable($serviceAccountPath)) {
-            throw new \Exception('Service account key file is not readable: ' . $serviceAccountPath);
+
+        if (! is_readable($serviceAccountPath)) {
+            throw new \Exception('Service account key file is not readable: '.$serviceAccountPath);
         }
-        
+
         $credentials = json_decode(file_get_contents($serviceAccountPath), true);
         if (json_last_error() !== JSON_ERROR_NONE) {
-            throw new \Exception('Invalid JSON in service account key file: ' . json_last_error_msg());
+            throw new \Exception('Invalid JSON in service account key file: '.json_last_error_msg());
         }
-        
+
         $serviceAccountEmail = $credentials['client_email'] ?? null;
-        
-        if (!$serviceAccountEmail) {
+
+        if (! $serviceAccountEmail) {
             throw new \Exception('Service account email not found in credentials');
         }
-        
+
         // Create JWT payload for Google Wallet (generic or loyalty)
         $now = time();
         $payloadKey = $useGeneric ? 'genericObjects' : 'loyaltyObjects';
@@ -502,20 +542,16 @@ class GoogleWalletPassService
                 ],
             ],
         ];
-        
+
         // Sign JWT using service account private key
         $jwt = $this->signJwt($payload, $credentials['private_key']);
-        
+
         // Return full Google Wallet save URL
-        return 'https://pay.google.com/gp/v/save/' . $jwt;
+        return 'https://pay.google.com/gp/v/save/'.$jwt;
     }
 
     /**
      * Sign JWT using service account private key
-     *
-     * @param array $payload
-     * @param string $privateKey
-     * @return string
      */
     protected function signJwt(array $payload, string $privateKey): string
     {
@@ -523,37 +559,34 @@ class GoogleWalletPassService
             'alg' => 'RS256',
             'typ' => 'JWT',
         ];
-        
+
         $segments = [];
         $segments[] = $this->base64UrlEncode(json_encode($header));
         $segments[] = $this->base64UrlEncode(json_encode($payload));
-        
+
         $signingInput = implode('.', $segments);
-        
+
         // Load private key resource
         $keyResource = openssl_pkey_get_private($privateKey);
-        if (!$keyResource) {
-            throw new \Exception('Failed to load private key: ' . openssl_error_string());
+        if (! $keyResource) {
+            throw new \Exception('Failed to load private key: '.openssl_error_string());
         }
-        
+
         $signature = '';
-        if (!openssl_sign($signingInput, $signature, $keyResource, OPENSSL_ALGO_SHA256)) {
+        if (! openssl_sign($signingInput, $signature, $keyResource, OPENSSL_ALGO_SHA256)) {
             // Key resource is automatically freed in PHP 8.0+
-            throw new \Exception('Failed to sign JWT: ' . openssl_error_string());
+            throw new \Exception('Failed to sign JWT: '.openssl_error_string());
         }
-        
+
         // Key resource is automatically freed in PHP 8.0+ (no need for openssl_free_key)
-        
+
         $segments[] = $this->base64UrlEncode($signature);
-        
+
         return implode('.', $segments);
     }
 
     /**
      * Base64 URL encode (without padding)
-     *
-     * @param string $data
-     * @return string
      */
     protected function base64UrlEncode(string $data): string
     {
@@ -603,8 +636,7 @@ class GoogleWalletPassService
     /**
      * Build image modules using proper API objects.
      *
-     * @param \Google_Service_Walletobjects_Image|null $heroImage
-     * @return array
+     * @param  \Google_Service_Walletobjects_Image|null  $heroImage
      */
     protected function buildImageModulesData($heroImage): array
     {
@@ -612,8 +644,9 @@ class GoogleWalletPassService
             return [];
         }
 
-        $imageModule = new \Google_Service_Walletobjects_ImageModuleData();
+        $imageModule = new \Google_Service_Walletobjects_ImageModuleData;
         $imageModule->setMainImage($heroImage);
+
         return [$imageModule];
     }
 
@@ -625,13 +658,13 @@ class GoogleWalletPassService
         $modules = [];
 
         if ($stampStripImage) {
-            $stampModule = new \Google_Service_Walletobjects_ImageModuleData();
+            $stampModule = new \Google_Service_Walletobjects_ImageModuleData;
             $stampModule->setMainImage($stampStripImage);
             $modules[] = $stampModule;
         }
 
         if ($heroImage) {
-            $heroModule = new \Google_Service_Walletobjects_ImageModuleData();
+            $heroModule = new \Google_Service_Walletobjects_ImageModuleData;
             $heroModule->setMainImage($heroImage);
             $modules[] = $heroModule;
         }
@@ -651,8 +684,8 @@ class GoogleWalletPassService
 
         $imageUrl = $this->ensureHttps((string) StoreAssets::url($relativePath));
 
-        $image = new \Google_Service_Walletobjects_Image();
-        $imageUri = new \Google_Service_Walletobjects_ImageUri();
+        $image = new \Google_Service_Walletobjects_Image;
+        $imageUri = new \Google_Service_Walletobjects_ImageUri;
         $imageUri->setUri($imageUrl);
         $image->setSourceUri($imageUri);
 
@@ -697,7 +730,7 @@ class GoogleWalletPassService
         $existingLogoUri = $this->extractImageUri($existing->getProgramLogo());
         $existingHeroUri = null;
         $existingImageModules = $existing->getImageModulesData() ?? [];
-        if (!empty($existingImageModules)) {
+        if (! empty($existingImageModules)) {
             $existingHeroUri = $this->extractImageUri($existingImageModules[0]?->getMainImage());
         }
 
@@ -737,14 +770,14 @@ class GoogleWalletPassService
         }
 
         $source = $image->getSourceUri();
+
         return $source ? $source->getUri() : null;
     }
 
     /**
      * Get stable class ID for a store
      *
-     * @param \App\Models\Store $store
-     * @return string
+     * @param  \App\Models\Store  $store
      */
     protected function getClassIdForProgram($program): string
     {
@@ -753,9 +786,6 @@ class GoogleWalletPassService
 
     /**
      * Get stable object ID for a loyalty account
-     *
-     * @param LoyaltyAccount $account
-     * @return string
      */
     protected function getObjectIdForAccount(LoyaltyAccount $account): string
     {
@@ -783,11 +813,12 @@ class GoogleWalletPassService
      */
     protected function makeLocalizedString(string $value): \Google_Service_Walletobjects_LocalizedString
     {
-        $translated = new \Google_Service_Walletobjects_TranslatedString();
+        $translated = new \Google_Service_Walletobjects_TranslatedString;
         $translated->setLanguage('en-US');
         $translated->setValue($value);
-        $localized = new \Google_Service_Walletobjects_LocalizedString();
+        $localized = new \Google_Service_Walletobjects_LocalizedString;
         $localized->setDefaultValue($translated);
+
         return $localized;
     }
 
@@ -802,16 +833,23 @@ class GoogleWalletPassService
 
         // GenericClass in the API only supports id and template/text/image modules; logo/color live on the Object.
         try {
-            return $this->service->genericclass->get($resourceId);
+            $result = $this->service->genericclass->get($resourceId);
+            $this->lastSyncDetails['class'] = ['status' => 'unchanged'];
+
+            return $result;
         } catch (\Google\Service\Exception $e) {
             if ($e->getCode() !== 404) {
                 throw $e;
             }
         }
 
-        $newClass = new \Google_Service_Walletobjects_GenericClass();
+        $newClass = new \Google_Service_Walletobjects_GenericClass;
         $newClass->setId($resourceId);
-        return $this->service->genericclass->insert($newClass);
+
+        $result = $this->service->genericclass->insert($newClass);
+        $this->lastSyncDetails['class'] = ['status' => 'created'];
+
+        return $result;
     }
 
     /**
@@ -820,9 +858,14 @@ class GoogleWalletPassService
      */
     public function createOrUpdateGenericObject(LoyaltyAccount $account): \Google_Service_Walletobjects_GenericObject
     {
+        $this->lastSyncDetails = [
+            'class' => ['status' => 'not_run'],
+            'object' => ['status' => 'not_run'],
+        ];
         $account->load(['store', 'customer', 'loyaltyProgram']);
         $store = $account->store;
         $program = $account->resolvedProgram() ?? $store;
+        $program = $this->ensureArtwork($program);
         $customer = $account->customer;
 
         if (empty($account->manual_entry_code) && $account->store_id) {
@@ -842,12 +885,12 @@ class GoogleWalletPassService
         if (strlen($backgroundColor) === 3) {
             $backgroundColor = $backgroundColor[0].$backgroundColor[0].$backgroundColor[1].$backgroundColor[1].$backgroundColor[2].$backgroundColor[2];
         }
-        $backgroundColor = '#' . $backgroundColor;
+        $backgroundColor = '#'.$backgroundColor;
 
         $barcodeValue = ($account->reward_balance ?? 0) > 0 && $account->redeem_token
-            ? 'LR:' . $account->redeem_token
-            : 'LA:' . $account->public_token;
-        $barcode = new \Google_Service_Walletobjects_Barcode();
+            ? 'LR:'.$account->redeem_token
+            : 'LA:'.$account->public_token;
+        $barcode = new \Google_Service_Walletobjects_Barcode;
         $barcode->setType('QR_CODE');
         $barcode->setValue($barcodeValue);
         $manualCode = $account->manual_entry_code ?? $this->formatTokenForManualEntry(
@@ -855,7 +898,7 @@ class GoogleWalletPassService
                 ? $account->redeem_token
                 : $account->public_token
         );
-        $barcode->setAlternateText('Manual code: ' . $manualCode);
+        $barcode->setAlternateText('Manual code: '.$manualCode);
 
         $customerName = $this->frontCustomerName($customer->name ?? $customer->email ?? 'Valued Customer');
         $programName = $this->programName($program);
@@ -882,7 +925,7 @@ class GoogleWalletPassService
             ]);
         }
 
-        $genericObject = new \Google_Service_Walletobjects_GenericObject();
+        $genericObject = new \Google_Service_Walletobjects_GenericObject;
         $genericObject->setId($objectId);
         $genericObject->setClassId($classId);
         $genericObject->setState('ACTIVE');
@@ -906,19 +949,27 @@ class GoogleWalletPassService
 
         try {
             $existing = $this->service->genericobject->get($objectId);
-            return $this->service->genericobject->update($objectId, $genericObject);
+
+            $result = $this->service->genericobject->update($objectId, $genericObject);
+            $this->lastSyncDetails['object'] = ['status' => 'updated'];
+
+            return $result;
         } catch (\Google\Service\Exception $e) {
             if ($e->getCode() !== 404) {
                 throw $e;
             }
         }
-        return $this->service->genericobject->insert($genericObject);
+
+        $result = $this->service->genericobject->insert($genericObject);
+        $this->lastSyncDetails['object'] = ['status' => 'created'];
+
+        return $result;
     }
 
     /**
      * Get logo Image object for store
      *
-     * @param \App\Models\Store $store
+     * @param  \App\Models\Store  $store
      * @return \Google_Service_Walletobjects_Image|null
      */
     /**
@@ -926,22 +977,22 @@ class GoogleWalletPassService
      */
     protected function ensureHttps(string $url): string
     {
-        return str_starts_with($url, 'http://') ? 'https://' . substr($url, 7) : $url;
+        return str_starts_with($url, 'http://') ? 'https://'.substr($url, 7) : $url;
     }
 
     protected function getLogoUri($store)
     {
-        if (!$store->logo_path) {
+        if (! $store->logo_path) {
             return null;
         }
-        
+
         $logoUrl = $this->ensureHttps((string) StoreAssets::url($store->logo_path));
-        
-        $image = new \Google_Service_Walletobjects_Image();
-        $imageUri = new \Google_Service_Walletobjects_ImageUri();
+
+        $image = new \Google_Service_Walletobjects_Image;
+        $imageUri = new \Google_Service_Walletobjects_ImageUri;
         $imageUri->setUri($logoUrl);
         $image->setSourceUri($imageUri);
-        
+
         return $image;
     }
 
@@ -952,69 +1003,91 @@ class GoogleWalletPassService
     {
         $defaultLogoPath = 'wallet/google/program-logo.png';
         $appUrl = rtrim(config('app.url'), '/');
-        $defaultLogoUrl = $this->ensureHttps($appUrl . '/' . $defaultLogoPath);
-        
-        if (!file_exists(public_path($defaultLogoPath))) {
+        $defaultLogoUrl = $this->ensureHttps($appUrl.'/'.$defaultLogoPath);
+
+        if (! file_exists(public_path($defaultLogoPath))) {
             return null;
         }
 
-        $image = new \Google_Service_Walletobjects_Image();
-        $imageUri = new \Google_Service_Walletobjects_ImageUri();
+        $image = new \Google_Service_Walletobjects_Image;
+        $imageUri = new \Google_Service_Walletobjects_ImageUri;
         $imageUri->setUri($defaultLogoUrl);
         $image->setSourceUri($imageUri);
-        
+
         return $image;
     }
 
     /**
      * Get pass logo Image object for store (for wallet passes)
      *
-     * @param \App\Models\Store $store
+     * @param  \App\Models\Store  $store
      * @return \Google_Service_Walletobjects_Image|null
      */
     protected function getPassLogoUri($store)
     {
-        if (!$store->pass_logo_path) {
+        $manifestPath = $store instanceof LoyaltyProgram
+            ? $store->walletAssetPath('google', 'program_logo')
+            : null;
+        $path = $manifestPath ?: $store->pass_logo_path;
+        if (! $path) {
             return null;
         }
-        
-        $logoUrl = $this->ensureHttps((string) StoreAssets::url($store->pass_logo_path));
-        
-        $image = new \Google_Service_Walletobjects_Image();
-        $imageUri = new \Google_Service_Walletobjects_ImageUri();
+
+        $logoUrl = $this->ensureHttps((string) StoreAssets::url($path));
+
+        $image = new \Google_Service_Walletobjects_Image;
+        $imageUri = new \Google_Service_Walletobjects_ImageUri;
         $imageUri->setUri($logoUrl);
         $image->setSourceUri($imageUri);
-        
+
         return $image;
     }
 
     /**
      * Get pass hero image Image object for store (for wallet passes)
      *
-     * @param \App\Models\Store $store
+     * @param  \App\Models\Store  $store
      * @return \Google_Service_Walletobjects_Image|null
      */
     protected function getPassHeroImageUri($store)
     {
-        if (!$store->pass_hero_image_path) {
+        $manifestPath = $store instanceof LoyaltyProgram
+            ? $store->walletAssetPath('google', 'hero')
+            : null;
+        $path = $manifestPath ?: $store->pass_hero_image_path;
+        if (! $path) {
             return null;
         }
-        
-        $heroUrl = $this->ensureHttps((string) StoreAssets::url($store->pass_hero_image_path));
-        
-        $image = new \Google_Service_Walletobjects_Image();
-        $imageUri = new \Google_Service_Walletobjects_ImageUri();
+
+        $heroUrl = $this->ensureHttps((string) StoreAssets::url($path));
+
+        $image = new \Google_Service_Walletobjects_Image;
+        $imageUri = new \Google_Service_Walletobjects_ImageUri;
         $imageUri->setUri($heroUrl);
         $image->setSourceUri($imageUri);
-        
+
         return $image;
+    }
+
+    protected function ensureArtwork($program)
+    {
+        if (! $program instanceof LoyaltyProgram) {
+            return $program;
+        }
+
+        $result = app(WalletArtworkService::class)->syncForProgram($program, false);
+        $program->wallet_asset_manifest = $result->manifest;
+        $program->wallet_design_hash = $result->designHash;
+        $program->wallet_design_version = $result->designVersion;
+
+        return $program;
     }
 
     /**
      * Format token for manual entry (adds dashes for readability).
      * Works for any length; 16-char example: "abcd1234efgh5678" -> "abcd-1234-efgh-5678".
      *
-     * @param string $token The token to format
+     * @param  string  $token  The token to format
      * @return string Formatted token with dashes every 4 characters
      */
     protected function formatTokenForManualEntry(string $token): string

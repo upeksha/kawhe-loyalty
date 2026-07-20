@@ -3,6 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\Store;
+use App\Services\Wallet\Artwork\WalletArtworkService;
+use App\Services\Wallet\Artwork\WalletImageValidator;
+use App\Services\Wallet\WalletPreviewDataFactory;
 use App\Support\RegistrationFormConfig;
 use App\Support\StoreAssets;
 use App\Support\StoreBrandingRules;
@@ -11,6 +14,12 @@ use Illuminate\Support\Facades\Auth;
 
 class MerchantOnboardingWizardController extends Controller
 {
+    public function __construct(
+        private readonly WalletArtworkService $walletArtworkService,
+        private readonly WalletImageValidator $walletImageValidator,
+        private readonly WalletPreviewDataFactory $walletPreviewDataFactory,
+    ) {}
+
     public const STEP_STORE_BASICS = 'store_basics';
 
     public const STEP_CARD_DESIGN = 'card_design';
@@ -103,6 +112,10 @@ class MerchantOnboardingWizardController extends Controller
                 'onboarding_step' => Store::ONBOARDING_STEP_CARD_DESIGN,
             ]));
             $existing->syncDefaultProgramFromStore();
+            $program = $existing->resolvedDefaultProgram();
+            if ($program?->pass_logo_path && $program?->pass_hero_image_path) {
+                $this->walletArtworkService->syncForProgram($program);
+            }
 
             return redirect()->route('merchant.onboarding.wizard.card-design')
                 ->with('success', 'Store updated. Continue with branding.');
@@ -141,7 +154,9 @@ class MerchantOnboardingWizardController extends Controller
             return $this->index();
         }
 
-        return view('merchant.onboarding.wizard.card-design', compact('store'));
+        $walletPreview = $this->walletPreviewDataFactory->forStore($store);
+
+        return view('merchant.onboarding.wizard.card-design', compact('store', 'walletPreview'));
     }
 
     public function storeCardDesign(Request $request)
@@ -152,6 +167,11 @@ class MerchantOnboardingWizardController extends Controller
         }
 
         $validated = $request->validate(StoreBrandingRules::validationRules($store));
+        $imageWarnings = $this->walletImageValidator->warningsForRequest($request, [
+            'logo' => 'logo',
+            'pass_logo' => 'logo',
+            'pass_hero_image' => 'hero',
+        ]);
 
         $updates = [
             'brand_color' => $validated['brand_color'],
@@ -159,24 +179,26 @@ class MerchantOnboardingWizardController extends Controller
         ];
 
         if ($request->hasFile('logo')) {
-            StoreAssets::delete($store->logo_path);
             $updates['logo_path'] = StoreAssets::storeUploaded($request->file('logo'), 'logos');
         }
         if ($request->hasFile('pass_logo')) {
-            StoreAssets::delete($store->pass_logo_path);
             $updates['pass_logo_path'] = StoreAssets::storeUploaded($request->file('pass_logo'), 'pass-logos');
         }
         if ($request->hasFile('pass_hero_image')) {
-            StoreAssets::delete($store->pass_hero_image_path);
             $updates['pass_hero_image_path'] = StoreAssets::storeUploaded($request->file('pass_hero_image'), 'pass-heroes');
         }
 
         $updates['onboarding_step'] = Store::ONBOARDING_STEP_CUSTOMER_FORM;
         $store->update($updates);
         $store->syncDefaultProgramFromStore();
+        $program = $store->fresh()->resolvedDefaultProgram();
+        if ($program) {
+            $this->walletArtworkService->syncForProgram($program);
+        }
 
         return redirect()->route('merchant.onboarding.wizard.customer-form')
-            ->with('success', 'Branding saved. Configure which fields to collect from customers.');
+            ->with('success', 'Branding saved. Configure which fields to collect from customers.')
+            ->with('wallet_image_warnings', $imageWarnings);
     }
 
     // --- Step 3: Customer Form ---

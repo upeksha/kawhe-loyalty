@@ -1,62 +1,162 @@
 # Kawhe Full System Documentation
 
-> **Handover:** For a concise onboarding guide for new developers, read [`DEVELOPER_HANDOVER.md`](DEVELOPER_HANDOVER.md) first.
+**Last updated:** July 20, 2026
+**Current app state:** Single standard wallet card visual style. The previous Abstract/card-type experiment has been removed.
+**Audience:** Owner, operators, support, and engineers who need to understand how the app works end to end.
 
-## 1. Overview
+This document explains how Kawhe works from merchant setup through customer joining, digital wallet pass creation, scanner operations, billing, support, admin diagnostics, and mobile app integration.
 
-Kawhe is a loyalty platform built around one Laravel backend that serves three connected experiences:
+For a shorter engineer handover, also read `docs/DEVELOPER_HANDOVER.md`.
 
-1. Merchant web app
-- Merchant onboarding
-- Store setup and branding
-- Customer join QR/poster generation
-- Customer management
-- Scanner/stamp/redeem flows
-- Billing and subscription management
+---
 
-2. Customer loyalty card experience
-- Customer joins via QR code or short URL
-- Customer gets a web loyalty card
-- Customer can save the card to Apple Wallet or Google Wallet
-- Card state updates when stamps or rewards change
+## 1. Product Summary
 
-3. Merchant mobile app integration
-- A Flutter merchant app connects to this same Laravel backend via `/api/v1`
-- It authenticates merchants, loads their stores, and uses scanner preview/stamp/redeem APIs
+Kawhe is a self-serve SaaS loyalty platform for merchants such as cafes and retail stores.
 
-This means the system is not split across multiple backends. The web app, wallet services, and merchant mobile API are all part of the same Laravel codebase.
+The app lets a merchant:
 
-## 2. System Shape
+- Register and create a store.
+- Configure a loyalty card reward rule, branding, wallet images, and customer join form.
+- Share a QR code or join link with customers.
+- Let customers join without downloading an app.
+- Let customers save their loyalty card to Apple Wallet or Google Wallet.
+- Scan customer cards to add stamps or redeem rewards.
+- View customers, card progress, recent activity, wallet state, and support logs.
+- Manage plan and billing through Stripe.
 
-At a high level, the platform works like this:
+The app lets a customer:
 
-1. Merchant creates a store
-2. Merchant configures branding, reward settings, and customer registration fields
-3. Merchant shares a QR code / short join link
-4. Customer joins a specific store's loyalty program
-5. A loyalty account is created for that store/customer pair
-6. Merchant scans the customer card to stamp or redeem
-7. The backend updates loyalty state, logs the event, broadcasts real-time updates, and syncs wallet passes
+- Scan a merchant QR code.
+- Join a loyalty card with email and optional fields configured by the merchant.
+- See their web loyalty card.
+- Save the card to Apple Wallet or Google Wallet.
+- Show the card QR/manual code at checkout to collect stamps or redeem rewards.
+- Verify their email if the merchant requires verification before redemption.
 
-## 3. Core Domain Model
+The same Laravel backend powers:
 
-### 3.1 `Store`
-File: `/Users/robertcalvert/Desktop/kawhe 2.0/app/Models/Store.php`
+- Merchant web dashboard.
+- Customer join/card web pages.
+- Apple Wallet pass downloads and Apple Wallet web-service updates.
+- Google Wallet save-link/object updates.
+- Merchant mobile app API under `/api/v1`.
+- Admin dashboard and support diagnostics.
 
-A `Store` is the merchant's loyalty program configuration.
+---
 
-Responsibilities:
-- Merchant ownership (`user_id` relationship)
-- Store identity and address
-- Reward rules
-- Join URLs and short code
-- Branding and pass assets
-- Onboarding state
-- Customer registration form configuration
+## 2. Technology Stack
+
+| Area | Current implementation |
+| --- | --- |
+| Backend | Laravel 12, PHP 8.2+ |
+| Web auth | Laravel Breeze session auth |
+| Mobile auth | Laravel Sanctum API tokens |
+| Frontend | Blade, Tailwind CSS, Alpine.js, Vite |
+| Dashboard charts | Chart.js initialized from Blade data attributes |
+| Billing | Laravel Cashier + Stripe Checkout + Stripe Billing Portal |
+| Queue jobs | Laravel queues, `UpdateWalletPassJob` for wallet sync |
+| Realtime | Laravel Reverb and Echo for card/stamp updates |
+| Wallets | Apple PassKit `.pkpass`, Google Wallet API |
+| Assets | `StoreAssets` using configured `filesystems.assets_disk` |
+| Tests | Pest / PHPUnit |
+
+Common local commands:
+
+```bash
+composer install
+npm install
+php artisan migrate
+php artisan serve --port=8000
+npm run dev
+php artisan test
+npm run build
+```
+
+Production/testing deploys use the scripts in `ops/`, for example `ops/deploy-testing.sh` on the testing server.
+
+---
+
+## 3. Current Product Boundaries
+
+### 3.1 One wallet card visual style
+
+The app currently has one standard wallet card style. Merchants do not choose between card types.
+
+Wallet card customisation currently uses:
+
+- Brand color.
+- Background color.
+- Store/customer-card logo.
+- Wallet logo.
+- Wallet hero image.
+- Reward title.
+- Reward target.
+- Join form fields.
+- Email verification setting.
+
+The following options are intentionally not present in the current app state:
+
+- Abstract icon card type.
+- Wallet card type selector.
+- Background pattern selector.
+- Pattern color selector.
+- Custom uploaded stamp icon.
+
+### 3.2 Loyalty cards vs wallet card style
+
+The word "card" is used in two related ways:
+
+- **Loyalty card / loyalty program:** A merchant reward program customers join, such as "Buy 8, get 1 free". Paid plans can run multiple loyalty cards per store.
+- **Wallet card visual style:** The visual pass layout used in Apple Wallet and Google Wallet. There is currently only one standard visual style.
+
+This distinction matters. The app can support multiple loyalty programs per store based on billing limits, but all of them use the same standard wallet rendering method.
+
+---
+
+## 4. Core Domain Model
+
+### 4.1 Merchant user
+
+Model: `app/Models/User.php`
+
+A merchant user owns stores and logs into the merchant control panel. A user can also be marked as a super admin with `is_super_admin`.
+
+Merchant users can:
+
+- Manage their own stores.
+- Manage loyalty cards/programs under those stores.
+- Scan cards for their own stores.
+- View their own customers and support logs.
+- Manage billing.
+
+Super admins can:
+
+- Access `/admin/dashboard`.
+- Access `/admin/support`.
+- View platform-level diagnostics.
+
+### 4.2 Store
+
+Model: `app/Models/Store.php`
+
+A store represents a merchant location or merchant workspace container.
+
+Important responsibilities:
+
+- Store identity: name, slug, address.
+- Merchant ownership through `user_id`.
+- Onboarding state.
+- Default loyalty program relationship.
+- Legacy/fallback reward and branding fields.
+- Store-level QR and launch readiness panels.
+- Archive/restore behavior.
 
 Important fields:
+
 - `name`
 - `slug`
+- `address`
 - `reward_target`
 - `reward_title`
 - `join_token`
@@ -70,23 +170,72 @@ Important fields:
 - `registration_form_config`
 - `onboarding_step`
 - `onboarding_completed_at`
+- `default_loyalty_program_id`
+- `deleted_at`
 
 Important behavior:
-- Auto-generates slug, join token, and short join code on create
-- Exposes `join_url`
-- Merges registration form config with sensible defaults
-- Deletes related branding assets and generated wallet strip images when the store is deleted
 
-### 3.2 `Customer`
-File: `/Users/robertcalvert/Desktop/kawhe 2.0/app/Models/Customer.php`
+- Generates slug, join token, and short join code on create.
+- Ensures a default `LoyaltyProgram` exists.
+- Syncs onboarding store fields to the default program during onboarding.
+- Uses soft delete for archive flows.
+- Deletes image assets only on force delete.
 
-A `Customer` is the real person in the system.
+### 4.3 LoyaltyProgram
 
-Responsibilities:
-- Stores customer identity and contact info
-- Can belong to many loyalty accounts across stores
+Model: `app/Models/LoyaltyProgram.php`
+
+A loyalty program is what the merchant UI calls a **Loyalty Card**.
+
+Each loyalty program has its own:
+
+- Join URL.
+- Short QR code.
+- Reward target.
+- Reward title.
+- Branding colors.
+- Store logo.
+- Wallet logo.
+- Wallet hero image.
+- Customer join form config.
+- Redemption verification setting.
 
 Important fields:
+
+- `store_id`
+- `name`
+- `slug`
+- `reward_target`
+- `reward_title`
+- `join_token`
+- `join_short_code`
+- `brand_color`
+- `background_color`
+- `logo_path`
+- `pass_logo_path`
+- `pass_hero_image_path`
+- `require_verification_for_redemption`
+- `registration_form_config`
+- `sort_order`
+- `is_default`
+- `deleted_at`
+
+Important behavior:
+
+- Generates slug, join token, and short code on create.
+- Has a public `join_url` accessor.
+- Can be archived/restored using soft delete.
+- The default program is created with the store.
+- Reward target is locked after customers have joined that program.
+
+### 4.4 Customer
+
+Model: `app/Models/Customer.php`
+
+A customer is the person who joined one or more loyalty cards.
+
+Important fields:
+
 - `name`
 - `first_name`
 - `last_name`
@@ -95,44 +244,19 @@ Important fields:
 - `birthday`
 - `email_verified_at`
 
-### 3.3 `LoyaltyProgram`
-File: `app/Models/LoyaltyProgram.php`
+The app can match an existing customer by email, and by phone when phone lookup is enabled for that program.
 
-A **loyalty card** is what customers actually join. Each store has one or more programs; exactly one is `is_default`.
+### 4.5 LoyaltyAccount
 
-Responsibilities:
-- Own join URL (`slug`, `join_token`, `join_short_code`)
-- Reward rules, branding, wallet assets, registration form config per card
-- Soft-delete (archive) while preserving customer history
+Model: `app/Models/LoyaltyAccount.php`
+
+A loyalty account is one customer's membership in one loyalty program.
 
 Important fields:
-- `store_id`, `name`, `slug`, `is_default`
-- `reward_target`, `reward_title`
-- `join_token`, `join_short_code`
-- `brand_color`, `background_color`, `logo_path`, `pass_logo_path`, `pass_hero_image_path`
-- `registration_form_config`, `require_verification_for_redemption`
 
-Customer join resolves **program** slug + token first; legacy store slug/token fall back to the store’s default program.
-
-### 3.4 `LoyaltyAccount`
-File: `app/Models/LoyaltyAccount.php`
-
-A `LoyaltyAccount` is the customer's loyalty membership for **one loyalty program** (one card).
-
-This is the main stateful record of the loyalty program.
-
-Responsibilities:
-- Current stamp count
-- Current reward balance
-- Public card token
-- Redeem token
-- Wallet auth token
-- Manual entry code
-- Program-specific email verification state
-- Versioning / optimistic-state tracking
-
-Important fields:
-- `store_id`, `loyalty_program_id`, `customer_id`
+- `store_id`
+- `loyalty_program_id`
+- `customer_id`
 - `stamp_count`
 - `reward_balance`
 - `public_token`
@@ -143,652 +267,1132 @@ Important fields:
 - `reward_available_at`
 - `reward_redeemed_at`
 - `verified_at`
+- `email_verification_token_hash`
+- `email_verification_expires_at`
+- `email_verification_sent_at`
 - `version`
 
 Important behavior:
-- Auto-generates `public_token`, `wallet_auth_token`, and `manual_entry_code`
-- Unique per `(loyalty_program_id, customer_id)` — one customer can hold multiple cards across programs
-- Apple Wallet serial: `kawhe-{loyalty_account_id}` (legacy `kawhe-{store_id}-{customer_id}` still resolves)
-- Deletes generated Google Wallet stamp-strip assets when deleted
-- Supports route-notification email delivery using the linked customer email
 
-### 3.5 `StampEvent`
-File: `/Users/robertcalvert/Desktop/kawhe 2.0/app/Models/StampEvent.php`
+- Generates a public card token.
+- Generates a separate wallet auth token for Apple Wallet web service security.
+- Generates a 4-character manual entry code per store.
+- Resolves program settings from `loyalty_program_id`, falling back to the store default program if needed.
+- Deletes generated Google Wallet stamp-strip images when the account is deleted.
 
-This is the audit/event table for scanner actions.
+### 4.6 StampEvent
 
-Responsibilities:
-- Tracks stamp and redeem events
-- Stores idempotency keys
-- Stores user agent / IP for auditing
+Model: `app/Models/StampEvent.php`
 
-### 3.6 `PointsTransaction`
-File: `/Users/robertcalvert/Desktop/kawhe 2.0/app/Models/PointsTransaction.php`
+Audit/event record for scanner actions.
 
-This is the ledger table.
+Used for:
 
-Responsibilities:
-- Logs earning and redemption point movements
-- Provides audit trail and transaction history
-- Powers card transaction history APIs/views
+- Stamp history.
+- Redeem history.
+- Idempotency checks.
+- Merchant/admin activity timelines.
+- Dashboard trends.
 
-Important fields:
-- `type` (`earn`, `redeem`)
-- `points`
-- `idempotency_key`
-- `metadata`
+### 4.7 PointsTransaction
 
-## 4. Main Functional Areas
+Model: `app/Models/PointsTransaction.php`
 
-### 4.1 Merchant Web App
+Ledger-style transaction record for earn/redeem movements.
 
-Key routes are defined in:
-- `/Users/robertcalvert/Desktop/kawhe 2.0/routes/web.php`
+Used for:
 
-Main merchant features:
-- Onboarding wizard
-- Dashboard
-- Store CRUD
-- QR/join poster generation
-- Scanner UI
-- Merchant customer views
-- Billing
+- Reward earned calculations.
+- Reward redeemed calculations.
+- Customer card transaction history.
+- Merchant analytics.
 
-### 4.2 Customer Join + Card Experience
+### 4.8 SupportAuditLog
 
-Customer-facing flows:
-- Join landing
-- New registration
-- Existing-customer lookup
-- Card page
-- Wallet add flows
-- Email verification for redemption if enabled
+Model: `app/Models/SupportAuditLog.php`
 
-### 4.3 Wallet Integrations
+Support/audit log for wallet sync attempts, billing issues, verification sends, welcome email sends, manual support actions, and store wallet refresh requests.
 
-Two wallet systems are supported:
-- Apple Wallet
-- Google Wallet
+Used by:
 
-These are synchronized from the same `LoyaltyAccount` state.
+- Merchant support logs.
+- Customer detail support timeline.
+- Admin support diagnostics.
+- Admin dashboard repeated-issue detection.
 
-### 4.4 Merchant Mobile App API
+---
 
-The Flutter merchant app uses the authenticated API under `/api/v1`.
+## 5. Merchant Control Panel
 
-Routes are defined in:
-- `/Users/robertcalvert/Desktop/kawhe 2.0/routes/api.php`
+Main layout: `resources/views/layouts/merchant.blade.php` and `resources/views/components/merchant-layout.blade.php`
 
-## 5. Route Map
+Primary merchant navigation:
 
-### 5.1 Public / Customer Routes
-- `/start` - merchant onboarding landing
-- `/` - app landing page
-- `/j/{code}` - short join URL redirect
-- `/join/{slug}` - join landing page
-- `/join/{slug}/new` - new customer join page + submit
-- `/join/{slug}/existing` - existing customer recovery page + submit
-- `/c/{public_token}` - customer card page
-- `/api/card/{public_token}` - customer card JSON API
-- `/api/card/{public_token}/transactions` - customer card transaction history
+- Dashboard.
+- Stores.
+- Cards.
+- Customers.
+- Scanner.
+- Billing.
+- Profile/logout.
 
-### 5.2 Wallet Routes
-- Apple Wallet pass generation/download routes
-- Google Wallet save-link routes
-- Apple Wallet web service routes under `/wallet/v1/...`
-- Email verification routes for loyalty redemption
+Support logs are available at `/merchant/support` and are linked from wallet/support areas.
 
-### 5.3 Merchant Authenticated Web Routes
-- `/merchant/dashboard`
-- `/merchant/stores/*`
-- `/merchant/scanner`
-- `/merchant/customers/*`
-- `/billing/*`
+### 5.1 Dashboard
 
-### 5.4 Merchant Mobile API Routes
-Files:
-- `/Users/robertcalvert/Desktop/kawhe 2.0/app/Http/Controllers/Api/AuthController.php`
-- `/Users/robertcalvert/Desktop/kawhe 2.0/app/Http/Controllers/Api/StoreController.php`
+Route: `GET /merchant/dashboard`
+View: `resources/views/dashboard.blade.php`
+Analytics service: `app/Services/Analytics/MerchantAnalyticsService.php`
 
-Endpoints:
+The merchant dashboard shows:
+
+- Quick actions for scanner, store QR, and customers.
+- Active customers.
+- Joins in the recent window.
+- Rewards earned.
+- Rewards redeemed.
+- Loyalty activity chart.
+- Card growth chart.
+- Store readiness and wallet readiness summaries.
+- Recent activity.
+
+Analytics are built from:
+
+- `LoyaltyAccount` joins and activity timestamps.
+- `StampEvent` stamp/redeem activity.
+- `PointsTransaction` reward earned/redeemed metadata.
+
+### 5.2 Stores
+
+Routes:
+
+- `GET /merchant/stores`
+- `GET /merchant/stores/create`
+- `POST /merchant/stores`
+- `GET /merchant/stores/{store}/edit`
+- `PUT /merchant/stores/{store}`
+- `DELETE /merchant/stores/{store}`
+- `POST /merchant/stores/{store}/restore`
+- `GET /merchant/stores/{store}/qr`
+- `GET /merchant/stores/{store}/qr/pdf`
+- `GET /merchant/stores/{store}/qr/image`
+- `POST /merchant/stores/{store}/refresh-wallets`
+
+Controller: `app/Http/Controllers/StoreController.php`
+
+Merchants can:
+
+- View active and archived stores.
+- Create stores within plan limits.
+- Edit store name/address and store-level fallback branding.
+- View default loyalty card information from the store edit page.
+- Open the default card editor from the store edit page.
+- See wallet health and launch quality indicators.
+- Queue wallet refresh for all cards in the store.
+- Archive a store instead of hard deleting it.
+- Restore an archived store.
+- View/download the store QR and poster.
+
+Archive behavior:
+
+- New joins and QR sharing are paused.
+- Customer records and history are preserved.
+- Wallet cards may remain on customer phones.
+- Restore reactivates joins and QR sharing.
+
+Store creation requires these assets through `StoreBrandingRules`:
+
+- `brand_color`
+- `background_color`
+- store `logo`
+- `pass_logo`
+- `pass_hero_image`
+
+Accepted image formats:
+
+- PNG.
+- JPG/JPEG.
+- WebP.
+- Max 2 MB.
+
+### 5.3 Cards / Loyalty Programs
+
+Routes:
+
+- `GET /merchant/programs`
+- `GET /merchant/stores/{store}/programs`
+- `GET /merchant/stores/{store}/programs/create`
+- `POST /merchant/stores/{store}/programs`
+- `GET /merchant/stores/{store}/programs/{program}/edit`
+- `PUT /merchant/stores/{store}/programs/{program}`
+- `DELETE /merchant/stores/{store}/programs/{program}`
+- `POST /merchant/stores/{store}/programs/{program}/restore`
+- `GET /merchant/stores/{store}/programs/{program}/qr`
+- `GET /merchant/stores/{store}/programs/{program}/qr/pdf`
+- `GET /merchant/stores/{store}/programs/{program}/qr/image`
+
+Controller: `app/Http/Controllers/LoyaltyProgramController.php`
+
+A loyalty program is the customer-facing loyalty card.
+
+Merchants can:
+
+- View cards grouped by store.
+- Create additional cards if the plan allows it.
+- Edit card name.
+- Edit reward target before customers join.
+- Edit reward title.
+- Edit card brand color/background color.
+- Upload card-specific logo, wallet logo, and wallet hero image.
+- Configure whether email verification is required before redemption.
+- Configure customer join form fields.
+- View card QR and poster.
+- Archive non-default cards.
+- Restore archived cards.
+
+Important behavior:
+
+- Each card has its own join link and QR code.
+- Customers who join one card keep progress separate from other cards.
+- Reward target locks after customers have joined that card. This prevents silently changing progress rules for existing customers.
+- The default card cannot be archived from the cards screen.
+- New card creation can inherit store images if no card-specific images are uploaded.
+
+### 5.4 Customer Join Form Config
+
+Code: `app/Support/RegistrationFormConfig.php`
+Component: `resources/views/components/registration-form-config-editor.blade.php`
+
+Email is always enabled and required.
+
+Optional fields:
+
+- First name.
+- Last name.
+- Phone.
+- Birthday.
+
+For each optional field, a merchant can choose:
+
+- Enabled or disabled.
+- Required or optional.
+
+If phone is enabled, existing-card lookup can use email or phone. If phone is disabled, lookup is email-only.
+
+### 5.5 Customers
+
+Routes:
+
+- `GET /merchant/customers`
+- `GET /merchant/customers/export`
+- `GET /merchant/customers/{loyaltyAccount}`
+- `GET /merchant/customers/{loyaltyAccount}/edit`
+- `PUT /merchant/customers/{loyaltyAccount}`
+- `POST /merchant/customers/{loyaltyAccount}/resend-verification`
+- `POST /merchant/customers/{loyaltyAccount}/resend-welcome`
+- `POST /merchant/customers/{loyaltyAccount}/sync-wallet`
+
+Controller: `app/Http/Controllers/MerchantCustomersController.php`
+
+Merchants can:
+
+- Search customers.
+- Filter customers by store.
+- View customer loyalty card details.
+- See stamps, reward balance, reward target, manual code, and verification state.
+- Edit customer contact details.
+- Export customers to CSV on Pro.
+- Resend verification email.
+- Resend welcome email.
+- Queue a wallet sync for an individual customer card.
+- View support timeline for wallet registrations, verification sends, stamp/redeem activity, and support actions.
+
+CSV export includes:
+
+- Store.
+- Loyalty card.
+- First name.
+- Last name.
+- Full name.
+- Email.
+- Phone.
+- Birthday.
+- Manual code.
+- Stamps.
+- Reward target.
+- Reward status.
+- Email verified.
+- Last stamped.
+- Joined date.
+
+### 5.6 Scanner
+
+Routes:
+
+- `GET /merchant/scanner`
+- `POST /scanner/preview`
+- `POST /stamp`
+- `POST /redeem/info`
+- `POST /redeem`
+
+Controller: `app/Http/Controllers/ScannerController.php`
+Stamp service: `app/Services/Loyalty/StampLoyaltyService.php`
+
+The scanner supports:
+
+- Web camera QR scanning as a backup scanner.
+- Mobile app download promotion for easier scanning.
+- Store selection.
+- Previewing a scanned card before action.
+- Adding one or more stamps.
+- Redeeming one or more rewards.
+- Manual entry by 4-character manual code.
+- Handling stamp QR tokens and redeem QR tokens.
+- Cooldown and duplicate-scan protection.
+- Idempotency keys from clients.
+
+Accepted token formats:
+
+- `LA:{public_token}` for stamp card QR.
+- `LR:{redeem_token}` for reward redemption QR.
+- `REDEEM:{redeem_token}` legacy redemption format.
+- Plain public token.
+- Plain redeem token.
+- 4-character manual code when a store is selected.
+
+Stamp behavior:
+
+- Checks merchant access to the card's store.
+- Locks the loyalty account row in a transaction.
+- Adds stamp count.
+- Rolls over stamps into reward balance when target is reached.
+- Creates stamp event and points transaction.
+- Queues wallet sync after transaction commit.
+- Broadcasts realtime update.
+
+Redeem behavior:
+
+- Checks merchant access to the selected store.
+- Checks reward balance.
+- Checks email verification if required.
+- Deducts reward balance.
+- Writes event/ledger history.
+- Queues wallet sync.
+
+### 5.7 Billing
+
+Routes:
+
+- `GET /billing`
+- `POST /billing/checkout`
+- `POST /billing/portal`
+- `GET /billing/success`
+- `POST /billing/sync`
+- `GET /billing/cancel`
+- `POST /stripe/webhook`
+
+Controller: `app/Http/Controllers/BillingController.php`
+Usage service: `app/Services/Billing/UsageService.php`
+Plan config: `config/billing.php`
+
+The billing page is intentionally simple:
+
+- One hero status section.
+- One plan comparison section.
+- One usage card area.
+- Main action: upgrade, manage subscription, or refresh status.
+
+Plans:
+
+| Plan | Stores | Loyalty cards per store | Customers per card |
+| --- | ---: | ---: | ---: |
+| Free | 1 | 1 | 100 |
+| Pro | 3 | 5 | Unlimited |
+| Business | Unlimited | Unlimited | Unlimited, not sold yet |
+
+Billing behavior:
+
+- Free users can run 1 store, 1 card, and 100 customers on that card.
+- Pro unlocks up to 3 stores, 5 loyalty cards per store, and unlimited customers.
+- Existing stores, cards, and customers are not deleted when limits change.
+- Limits block new growth, not existing access.
+- Checkout creates a Stripe Checkout subscription session.
+- Billing portal lets subscribed users manage payment method, invoices, and subscription.
+- Success page tries to sync the Stripe subscription immediately.
+- Manual sync can recover after Stripe/webhook timing delays or Stripe account changes.
+- Billing issues are written to support audit logs.
+
+### 5.8 Support Logs
+
+Merchant route: `GET /merchant/support`
+Admin route: `GET /admin/support`
+Controller: `app/Http/Controllers/SupportLogController.php`
+
+Merchant support logs show events only for stores owned by the merchant.
+
+Merchants can filter by:
+
+- Store.
+- Event type.
+- Status.
+- Search term for customer email/name, public token, or manual code.
+
+Admin support logs show platform-wide support events.
+
+Admin can filter by:
+
+- Issues only.
+- Event type.
+- Status.
+- Store.
+- Search term.
+
+Common event types include:
+
+- `wallet_sync`
+- `billing_issue`
+- `verification_send`
+- `welcome_email_send`
+- `manual_support_action`
+- `store_wallet_refresh`
+
+---
+
+## 6. Merchant Onboarding Flow
+
+Routes are under `/merchant/onboarding/wizard`.
+
+Controller: `app/Http/Controllers/MerchantOnboardingWizardController.php`
+
+Onboarding is separate from the normal merchant sidebar layout. It is designed to force a new merchant through the minimum setup needed before they can launch.
+
+### Step 1: Store basics
+
+Route:
+
+- `GET /merchant/onboarding/wizard/store-basics`
+- `POST /merchant/onboarding/wizard/store-basics`
+
+Collects:
+
+- Store name.
+- Address.
+- Reward target.
+- Reward title.
+
+Creates or updates the onboarding store, creates the default loyalty program, and moves to card design.
+
+### Step 2: Card design
+
+Route:
+
+- `GET /merchant/onboarding/wizard/card-design`
+- `POST /merchant/onboarding/wizard/card-design`
+
+Collects required wallet/branding assets:
+
+- Brand color.
+- Background color.
+- Store logo.
+- Wallet logo.
+- Wallet hero image.
+
+These are validated by `StoreBrandingRules`.
+
+After saving, the store syncs to the default loyalty program.
+
+### Step 3: Customer form
+
+Route:
+
+- `GET /merchant/onboarding/wizard/customer-form`
+- `POST /merchant/onboarding/wizard/customer-form`
+
+Collects customer join form choices:
+
+- Email always required.
+- First name optional/enabled/required.
+- Last name optional/enabled/required.
+- Phone optional/enabled/required.
+- Birthday optional/enabled/required.
+
+After saving, the store syncs to the default loyalty program.
+
+### Step 4: Card ready
+
+Route:
+
+- `GET /merchant/onboarding/wizard/card-ready`
+- `POST /merchant/onboarding/wizard/card-ready`
+- `POST /merchant/onboarding/wizard/complete`
+
+Shows:
+
+- Join URL.
+- QR code.
+- Launch/share guidance.
+
+Completing onboarding clears `onboarding_step`, sets `onboarding_completed_at`, and redirects to the store QR page.
+
+---
+
+## 7. Customer End-to-End Flow
+
+Controller: `app/Http/Controllers/JoinController.php`
+
+### 7.1 Entry points
+
+Customer routes:
+
+- `/j/{code}` short join redirect.
+- `/join/{slug}?t={token}` join landing page.
+- `/join/{slug}/new?t={token}` new customer join form.
+- `/join/{slug}/existing?t={token}` existing card lookup.
+- `/c/{public_token}` customer card.
+
+The app resolves joins by loyalty program first. Legacy store join URLs still fall back to the store default program.
+
+### 7.2 Join landing
+
+The landing page lets the customer choose:
+
+- Create a new card.
+- Find an existing card.
+
+If the store or loyalty card is archived, the app shows an archived/invalid state instead of allowing a join.
+
+### 7.3 New customer join
+
+On submit:
+
+1. The app validates fields based on the loyalty program's registration form config.
+2. The app finds an existing customer by email or phone where available.
+3. If no customer exists, it creates one.
+4. If the customer already has a loyalty account for this program, it redirects to the existing card.
+5. If the program is at the plan customer limit, it shows the limit reached page.
+6. Otherwise it creates a `LoyaltyAccount`.
+7. It sends or queues the welcome email with verification token when an email exists.
+8. It redirects to the customer card page.
+
+### 7.4 Existing card lookup
+
+Existing lookup is program-scoped.
+
+- If phone lookup is disabled, lookup uses email only.
+- If phone lookup is enabled, lookup accepts email or phone.
+- If found, the customer is redirected to their card.
+- If not found, the customer can try again or create a new card.
+
+### 7.5 Customer card page
+
+Route: `/c/{public_token}`
+Controller: `app/Http/Controllers/CardController.php`
+View: `resources/views/card/show.blade.php`
+
+The card page shows:
+
+- Store/program branding.
+- Customer name.
+- Stamp progress.
+- Reward status.
+- QR code for stamping or redemption.
+- Manual code.
+- Recent activity.
+- Apple Wallet button.
+- Google Wallet button.
+- Email verification actions when needed.
+
+The web card can also expose:
+
+- `/api/card/{public_token}` JSON state.
+- `/api/card/{public_token}/transactions` recent transactions.
+- `/c/{public_token}/manifest.webmanifest` PWA manifest.
+
+---
+
+## 8. Email Verification
+
+Controllers:
+
+- `app/Http/Controllers/CustomerEmailVerificationController.php`
+- `app/Http/Controllers/VerificationController.php`
+
+Verification is tied to the `LoyaltyAccount`, not just the global customer record.
+
+The app stores:
+
+- `email_verification_token_hash`
+- `email_verification_expires_at`
+- `email_verification_sent_at`
+- `verified_at`
+
+Current token lifetime is 1 day.
+
+Verification is required before redemption when the program setting `require_verification_for_redemption` is enabled and the customer has an email address.
+
+Customers without an email are treated as not requiring email verification.
+
+---
+
+## 9. Wallet Pass Creation and Customisation
+
+Current wallet customisation is standardised. There is one wallet card layout and merchants customise the content/assets that feed that layout.
+
+### 9.1 Merchant-customisable wallet inputs
+
+Configured during onboarding, store creation, store edit, or card edit:
+
+- Brand color: hex color used as accent/branding.
+- Background color: hex color used for card/page/wallet background.
+- Store logo: used on customer web card and as a fallback image.
+- Wallet logo: used as Apple pass logo and Google program logo.
+- Wallet hero image: used as Apple strip image and Google hero/image module source.
+- Reward target: number of stamps needed.
+- Reward title: reward earned by the customer.
+- Card name/program name.
+- Redemption verification setting.
+- Join form fields.
+
+Recommended image guidance in the UI:
+
+- Wallet logo: PNG/JPG/WebP, max 2 MB, recommended around 160x50 px.
+- Wallet hero: PNG/JPG/WebP, max 2 MB, recommended around 640x180 px or 640x200 px.
+- Store logo: PNG/JPG/WebP, max 2 MB.
+
+### 9.2 Important customisation rule
+
+For the active customer-facing loyalty card, use the **Cards** screen to edit card-specific reward rules, join form fields, colors, and wallet images.
+
+The **Store Edit** screen edits store-level identity and fallback/legacy branding, and links to the default loyalty card editor.
+
+During onboarding, store fields are synced into the default loyalty card automatically.
+
+### 9.3 Apple Wallet pass generation
+
+Download route:
+
+- `GET /wallet/apple/{public_token}/download`
+
+Service:
+
+- `app/Services/Wallet/AppleWalletPassService.php`
+
+Apple web service routes:
+
+- `POST /wallet/v1/devices/{deviceLibraryIdentifier}/registrations/{passTypeIdentifier}/{serialNumber}`
+- `DELETE /wallet/v1/devices/{deviceLibraryIdentifier}/registrations/{passTypeIdentifier}/{serialNumber}`
+- `GET /wallet/v1/passes/{passTypeIdentifier}/{serialNumber}`
+- `GET /wallet/v1/devices/{deviceLibraryIdentifier}/registrations/{passTypeIdentifier}`
+- `POST /wallet/v1/log`
+
+Apple pass structure:
+
+- `formatVersion`: 1.
+- `passTypeIdentifier`: from passgenerator config.
+- `teamIdentifier`: from passgenerator config.
+- `organizationName`: from passgenerator config.
+- `serialNumber`: `kawhe-{loyalty_account_id}`.
+- `logoText`: store name.
+- `webServiceURL`: app URL plus `/wallet`.
+- `authenticationToken`: loyalty account wallet auth token.
+- `storeCard`: primary, secondary, auxiliary, and back fields.
+- `barcode`: QR code with dynamic stamp/redeem token.
+
+Apple front fields:
+
+- Primary field: stamp indicator circles.
+- Secondary field: customer name.
+- Auxiliary field: status such as `4/9 stamps` or `Ready`.
+
+Apple back fields:
+
+- Program.
+- Progress.
+- Status.
+- Manual code.
+- Reward rule.
+- Verification requirement.
+- How to use.
+- Store name.
+
+Apple assets are generated from the merchant's source uploads using platform-specific, immutable derivatives:
+
+- `logo.png`, `logo@2x.png`, and `logo@3x.png`: transparent rectangular contain-fit logos. Merchant artwork is never circularly masked or stretched.
+- `strip.png`, `strip@2x.png`, and `strip@3x.png`: centre-cropped cover derivatives of the wallet hero image.
+- `icon.png`: default/fallback wallet icon.
+- `background.png`: default/fallback background asset.
+
+Apple barcode behavior:
+
+- If no reward is available, barcode message is `LA:{public_token}` for stamping.
+- If reward is available and a redeem token exists, barcode message is `LR:{redeem_token}` for redemption.
+- Alt text shows `Manual code: {manual_entry_code}`.
+
+Apple update behavior:
+
+- When a customer adds a pass, Apple registers the device using the Apple Wallet web service.
+- Registrations are stored in `AppleWalletRegistration`.
+- On stamp/redeem, `UpdateWalletPassJob` queues wallet sync.
+- Apple push notifications are sent through the wallet sync service.
+- Wallet asks `/wallet/v1/passes/...` for the updated pass.
+- The app returns `304 Not Modified` only when neither account state nor programme branding changed since Apple's timestamp.
+
+### 9.4 Google Wallet pass generation
+
+Save route:
+
+- `GET /wallet/google/{public_token}/save`
+
+Service:
+
+- `app/Services/Wallet/GoogleWalletPassService.php`
+- `app/Services/Wallet/GoogleWalletStampStripRenderer.php`
+
+Google Wallet creates/updates:
+
+- A loyalty class for the loyalty program.
+- A loyalty object for the individual customer card.
+- A signed JWT save link that redirects the customer to Google Wallet.
+
+Google class content:
+
+- Issuer name.
+- Store/program name.
+- Programme logo from a 660x660 circular-safe Google derivative.
+- Hero/image module from a 1032x812 Google derivative or fallback logo.
+- Background color.
+- Text modules for program and reward rule.
+
+Google object content:
+
+- Account name.
+- Account ID.
+- Loyalty points labeled `Stamps`.
+- Secondary points labeled `Rewards`.
+- Barcode with `LA:{public_token}` or `LR:{redeem_token}`.
+- Alternate text with manual code.
+- Status text modules.
+- Generated image modules, including the stamp-strip renderer.
+
+Google stamp-strip rendering:
+
+- File path: `wallet/google/stamp-strips/...` on the assets disk.
+- Renderer version: `v5` in the current app state.
+- Uses program background color, brand color, foreground contrast color, reward target, current stamp count, and wallet hero image.
+- Draws filled and empty stamp circles over the hero/background.
+- Generates a hash-based filename so updated progress/branding creates a new image path.
+
+Google update behavior:
+
+- On stamp/redeem, `UpdateWalletPassJob` queues sync.
+- The sync service updates the Google Wallet object.
+- If the class already exists, the service patches changed branding fields when needed.
+- If image patching fails, base fields can still update.
+
+### 9.5 Wallet sync triggers
+
+Wallet sync can be triggered by:
+
+- Customer adding a wallet pass.
+- Stamp action.
+- Redeem action.
+- Merchant customer detail `sync wallet` action.
+- Store QR/edit `queue wallet refresh for all cards` action.
+- Support recovery flows.
+
+Wallet sync is designed not to block the scanner response. The scanner updates the database first, then queues wallet jobs.
+
+### 9.6 Wallet artwork versioning and reliability
+
+`LoyaltyProgram` stores an explicit wallet design version, deterministic design hash, generated-artwork manifest, generated timestamp, and branding-update timestamp.
+
+The artwork renderer:
+
+- Keeps original `pass_logo_path` and `pass_hero_image_path` uploads unchanged.
+- Generates separate Apple and Google PNG outputs.
+- Uses versioned/hash-based filenames for provider cache-busting.
+- Retains the immediately previous manifest for rollback safety.
+- Queues programme refresh work after visible branding changes.
+
+Wallet account jobs use bounded retries, exponential-style backoff, unique account keys, and overlap protection. Apple and Google failures are isolated so one provider is still attempted when the other fails. Merchant-safe results are stored in support audit logs.
+
+Onboarding and card edit show separate Apple and Google previews. Card edit also shows provider health and a queued retry action. Apple and Google still control final device typography and spacing.
+
+---
+
+## 10. QR Codes and Posters
+
+The app generates QR codes for:
+
+- Store default join link.
+- Individual loyalty program/card join link.
+- Customer web card stamping/redeeming.
+- Wallet pass barcode.
+
+Merchant QR pages:
+
+- `resources/views/stores/qr.blade.php`
+- `resources/views/programs/qr.blade.php`
+
+Poster downloads:
+
+- Store poster PDF/image.
+- Program/card poster PDF/image.
+
+QR sharing behavior:
+
+- If a store is archived, QR sharing is blocked and the merchant is redirected to restore/edit.
+- If a loyalty card is archived, card QR sharing is blocked until restored.
+
+---
+
+## 11. Billing and Self-Serve SaaS Limits
+
+Plan enforcement is handled by `UsageService`.
+
+Current self-serve limits:
+
+- Free: 1 store, 1 loyalty card per store, 100 customers per card.
+- Pro: 3 stores, 5 loyalty cards per store, unlimited customers per card.
+- Business: reserved, not currently sold.
+
+Limits are checked when:
+
+- Creating a store.
+- Creating a loyalty card.
+- Accepting a new customer join.
+- Exporting customers.
+
+Limits do not delete existing stores, cards, or customers. They block new growth only.
+
+Billing recovery behavior:
+
+- Checkout handles missing Stripe config with user-safe errors.
+- Checkout retries once if a stale Stripe customer ID is detected.
+- Billing portal clears stale Stripe IDs when a Stripe account change makes the old customer unavailable.
+- Success page tries Cashier sync first and then direct Stripe subscription sync.
+- Manual sync can sync by checkout session or Stripe customer.
+- Billing failures are written to `SupportAuditLog` with event type `billing_issue`.
+
+---
+
+## 12. Merchant Mobile App Integration
+
+API routes: `routes/api.php`
+
+Auth endpoints:
+
 - `POST /api/v1/auth/login`
 - `POST /api/v1/auth/logout`
 - `GET /api/v1/auth/me`
+
+Store endpoint:
+
 - `GET /api/v1/stores`
+
+Scanner endpoints:
+
 - `POST /api/v1/scanner/preview`
 - `POST /api/v1/stamp`
 - `POST /api/v1/redeem/info`
 - `POST /api/v1/redeem`
 
-## 6. Merchant Onboarding Flow
+The mobile app uses Sanctum tokens.
 
-Controller:
+Important mobile behavior:
+
+- Login returns the API token and user details.
+- Store list returns merchant-owned stores and branding fields.
+- Scanner/stamp/redeem endpoints reuse the same scanner controller logic as the web scanner.
+- Verified middleware applies to scanner actions in the API route group.
+
+---
+
+## 13. Admin Panel
+
+Routes:
+
+- `GET /admin/dashboard`
+- `GET /admin/support`
+
+Middleware:
+
+- Authenticated user.
+- Super admin middleware.
+
+Admin dashboard controller:
+
+- `app/Http/Controllers/AdminDashboardController.php`
+
+Admin dashboard shows:
+
+- Total users.
+- Total stores.
+- Today's stamp count.
+- Support events in the last 7 days.
+- Recent stores.
+- Recent stamp activity.
+- Recent support activity.
+- Activity trends for joins, stamps, redeems.
+- Store growth trend.
+- Merchant diagnostics for repeated billing or wallet issues.
+
+Admin support logs show:
+
+- All support audit logs.
+- Filters by event type, status, store, search term, issues only.
+- Summary cards for failed, wallet, and billing issue counts.
+
+---
+
+## 14. Important Files by Area
+
+### Routing
+
+- `routes/web.php`
+- `routes/api.php`
+- `routes/auth.php`
+
+### Merchant control panel
+
+- `resources/views/layouts/merchant.blade.php`
+- `resources/views/components/merchant-layout.blade.php`
+- `resources/views/dashboard.blade.php`
+- `resources/views/stores/index.blade.php`
+- `resources/views/stores/edit.blade.php`
+- `resources/views/stores/qr.blade.php`
+- `resources/views/programs/index.blade.php`
+- `resources/views/programs/partials/form.blade.php`
+- `resources/views/merchant/customers/index.blade.php`
+- `resources/views/merchant/customers/show.blade.php`
+- `resources/views/scanner/index.blade.php`
+- `resources/views/billing/index.blade.php`
+
+### Controllers
+
 - `app/Http/Controllers/MerchantOnboardingWizardController.php`
-
-Support:
-- `app/Support/StoreBrandingRules.php` — required colors + logo/wallet assets
-- `app/Support/RegistrationFormConfig.php` — join form field config from requests
-- `Store::syncDefaultProgramFromStore()` — keeps default program aligned with store during wizard
-
-The onboarding wizard is a **4-step** setup flow for a merchant's first store. Uses `onboarding-layout` (no sidebar).
-
-Steps:
-1. `store_basics` — name, address, reward target/title
-2. `card_design` — brand colors, store logo, wallet logo, wallet hero (**all required**)
-3. `customer_form` — registration field toggles via shared `registration-form-config-editor` component
-4. `card_ready` — join link/QR preview; complete onboarding → store QR page
-
-State tracking:
-- `stores.onboarding_step`, `stores.onboarding_completed_at`
-
-Legacy:
-- `POST /merchant/onboarding/store` redirects to wizard (no direct store create)
-- `continue_trial` step removed; route redirects to `card_ready`
-
-Registration (`RegisteredUserController`) creates user + store + default program and redirects to wizard step 1.
-
-## 7. Store Creation / Editing / Loyalty Cards
-
-Controllers:
-- `app/Http/Controllers/StoreController.php` — stores CRUD; create uses `StoreBrandingRules`
-- `app/Http/Controllers/LoyaltyProgramController.php` — loyalty cards (programs) per store
-
-Responsibilities:
-- Create and update stores and programs
-- Validate reward configuration and **required** branding uploads on create/onboarding
-- Persist `registration_form_config` via `RegistrationFormConfig::fromRequest()`
-- Generate QR and poster views (store and per-program)
-- Archive/restore programs (soft delete)
-
-Important notes:
-- Asset uploads via `StoreAssets`; replacing images deletes old assets
-- Program reward target locks after customers join
-- Free plan limits enforced by `UsageService::canCreateProgram()`
-- Default program synced from store during onboarding wizard
-
-## 8. Customer Join Flow
-
-Controller:
+- `app/Http/Controllers/StoreController.php`
+- `app/Http/Controllers/LoyaltyProgramController.php`
 - `app/Http/Controllers/JoinController.php`
+- `app/Http/Controllers/CardController.php`
+- `app/Http/Controllers/ScannerController.php`
+- `app/Http/Controllers/WalletController.php`
+- `app/Http/Controllers/BillingController.php`
+- `app/Http/Controllers/MerchantCustomersController.php`
+- `app/Http/Controllers/SupportLogController.php`
+- `app/Http/Controllers/AdminDashboardController.php`
 
-### 8.1 Entry
-The customer starts from either:
-- short join URL `/j/{code}` (program or store default program)
-- full join URL `/join/{slug}?t={join_token}` (program slug + token; legacy store tokens supported)
-
-Invalid links → branded `join.invalid` (404). Archived store/program → `join.archived`.
-
-### 8.2 Landing
-Landing validates program (or store default) slug + token. Primary CTA: get new card; secondary: find existing card.
-
-### 8.3 New Join
-Form fields from **`program.registration_form_config`**.
-
-Behavior:
-- Legacy `name` field still supported
-- Match/create `Customer` by email, then phone
-- Unique account per `(loyalty_program_id, customer_id)`
-- If account exists for program → redirect to existing card
-- Welcome / verification email when customer has email
-- Session: `registered`, `show_wallet_nudge` (first visit only)
-
-Submit shows loading state on join form.
-
-### 8.4 Existing Customer Recovery
-Route: `POST join.lookup` (10/min throttle).
-
-Behavior:
-- **Email** lookup always available
-- If program has **phone enabled** in form config → email **or** phone (at least one)
-- Finds customer, then loyalty account for **this program only**
-- Redirects to card page or field-specific error
-- Submit loading state + `<x-input-error>` styling
-
-## 9. Customer Card Flow
-
-Controller:
-- `/Users/robertcalvert/Desktop/kawhe 2.0/app/Http/Controllers/CardController.php`
-
-The card page is the customer-facing loyalty card.
-
-Responsibilities:
-- Show card UI
-- Reconcile reward/redeem token state
-- Provide JSON API for the card UI
-- Provide transaction history
-- Provide web app manifest for install/PWA behavior
-
-Important behavior:
-- Ensures `redeem_token` exists when reward balance is available
-- Clears stale redeemed state when a customer has continued stamping again
-- Returns card state including reward availability, customer name, reward title, and token status
-
-## 10. Scanner / Stamp / Redeem Flow
-
-Controller:
-- `/Users/robertcalvert/Desktop/kawhe 2.0/app/Http/Controllers/ScannerController.php`
-
-Service:
-- `/Users/robertcalvert/Desktop/kawhe 2.0/app/Services/Loyalty/StampLoyaltyService.php`
-
-This is one of the most important parts of the system.
-
-### 10.1 Token Types
-The scanner supports several token forms:
-- `LA:{public_token}` for stamp-mode QR
-- `LR:{redeem_token}` or `REDEEM:{redeem_token}` for redeem-mode QR
-- 4-character manual entry code
-- plain `public_token`
-- plain `redeem_token`
-
-### 10.2 Preview Flow
-`POST /api/v1/scanner/preview`
-
-Purpose:
-- Inspect the scanned token before action
-- Determine whether the customer has rewards available
-- Determine whether the QR is a stamp QR or redeem QR
-- Confirm store ownership/access
-
-Response includes:
-- reward balance
-- reward title
-- stamp count
-- reward target
-- customer name
-- store name
-- store ID
-- whether it is a redeem QR
-- both public token and redeem token where helpful for UI switching
-
-### 10.3 Stamp Flow
-`POST /stamp` or `POST /api/v1/stamp`
-
-Behavior:
-- Validates token and store access
-- Resolves manual codes and prefixed QR tokens
-- Supports client idempotency key
-- Enforces cooldown rules
-- Enforces hard duplicate-scan suppression window
-- Delegates stamp transaction to `StampLoyaltyService`
-- Returns receipt-like response with updated counts
-
-### 10.4 Redemption Flow
-`POST /redeem/info`
-- looks up reward balance and verification requirements
-
-`POST /redeem`
-- validates store ownership
-- validates reward availability
-- validates requested redemption quantity
-- checks store-specific verification requirement
-- decrements `reward_balance`
-- rotates or clears `redeem_token`
-- logs redemption to `PointsTransaction`
-- dispatches real-time and wallet update work
-
-### 10.5 Inactive / Missing Card Handling
-The scanner has a stable inactive-card response:
-- HTTP `404`
-- `code = CARD_NOT_ACTIVE`
-- message tells merchant the card is no longer active
-
-This is important for deleted accounts or deleted stores whose old passes may still exist on customer devices.
-
-## 11. Stamping Service Details
-
-Service:
-- `/Users/robertcalvert/Desktop/kawhe 2.0/app/Services/Loyalty/StampLoyaltyService.php`
-
-Responsibilities:
-- Validate merchant access to store/account
-- Apply stamps in a transaction
-- Use row locking for concurrency safety
-- Use `StampEvent` for idempotency and auditing
-- Update reward balance when threshold is crossed
-- Ensure `redeem_token` exists when rewards are available
-- Create ledger entry in `PointsTransaction`
-- Dispatch wallet update job after commit
-- Broadcast `StampUpdated`
-
-The service is designed to be safe against:
-- duplicate client submissions
-- concurrent scans
-- wallet update failures breaking the scanner response
-
-## 12. Real-Time Updates
-
-Event:
-- `/Users/robertcalvert/Desktop/kawhe 2.0/app/Events/StampUpdated.php`
-
-Behavior:
-- Broadcasts immediately (`ShouldBroadcastNow`)
-- Channel: `loyalty-card.{public_token}`
-- Payload contains current stamps, rewards, store name, reward title, token state, and customer name
-
-Purpose:
-- Keep open card views in sync in real time
-- Power live loyalty card updates in the browser
-
-Infrastructure:
-- Laravel Reverb is used for real-time transport
-
-## 13. Wallet System
-
-## 13.1 Wallet Sync Orchestrator
-Service:
-- `/Users/robertcalvert/Desktop/kawhe 2.0/app/Services/Wallet/WalletSyncService.php`
-
-Responsibilities:
-- Load latest loyalty account state
-- Trigger Apple Wallet push notifications
-- Trigger Google Wallet object updates
-- Log failures without breaking the main scanner flow
-
-This service is called asynchronously through a queue job.
-
-## 13.2 Wallet Update Job
-Job:
-- `/Users/robertcalvert/Desktop/kawhe 2.0/app/Jobs/UpdateWalletPassJob.php`
-
-Responsibilities:
-- Load account by ID
-- Call `WalletSyncService`
-- Retry on failure
-- Log final failures
-
-## 13.3 Apple Wallet
-Service:
-- `/Users/robertcalvert/Desktop/kawhe 2.0/app/Services/Wallet/AppleWalletPassService.php`
-
-Responsibilities:
-- Build Apple `.pkpass` payload
-- Embed current QR token state
-- Build front and back pass fields
-- Use store branding for colors/logo/hero image
-- Provide fallback assets if store assets are missing
-- Attach wallet web service configuration for update notifications
-
-Important Apple behaviors:
-- Uses `wallet_auth_token` as the wallet authentication token
-- Uses centralized serial number generation
-- Uses reward-aware QR mode:
-  - normal mode -> `LA:{public_token}`
-  - redeem mode -> `LR:{redeem_token}`
-- Uses pass assets like `logo.png`, `strip.png`, `icon.png`, `background.png`
-- Apple updates are triggered through APNs push notifications and pass web service registration flow
-
-## 13.4 Google Wallet
-Service:
-- `/Users/robertcalvert/Desktop/kawhe 2.0/app/Services/Wallet/GoogleWalletPassService.php`
-
-Responsibilities:
-- Create/update Google Wallet class and object records
-- Apply store branding, images, hero images, and background colors
-- Keep Google Wallet object synchronized with current account reward/stamp state
-- Support generic pass rendering path and loyalty object rendering path
-
-Important behaviors:
-- Uses a Google service account JSON key
-- Ensures pass class exists before object updates
-- Applies store-specific branding to both class and object
-- Uses generated visual stamp-strip assets for the Google front-card design
-
-## 14. Asset Storage and Branding
-
-Support layer:
-- `StoreAssets`
-
-Public assets include:
-- store logos
-- pass logos
-- pass hero images
-- generated Google Wallet stamp-strip images
-
-Current storage model:
-- Public assets are served from DigitalOcean Spaces
-- Asset URLs are used in web views and Google Wallet rendering
-- Apple Wallet bundles images into the pass package at generation time
-
-Cleanup behavior:
-- Replacing store assets deletes old ones
-- Deleting a store deletes owned brand assets and generated stamp strips
-- Deleting a loyalty account deletes generated stamp strips for that account
-
-## 15. QR / Poster Generation
-
-Controller:
-- `/Users/robertcalvert/Desktop/kawhe 2.0/app/Http/Controllers/StoreController.php`
-
-Features:
-- Store-specific join QR view
-- A4 poster generation as HTML or PDF
-- Uses store branding and wallet badges
-- Generates QR codes dynamically from join URLs
-
-The poster is meant for print and customer onboarding in-store.
-
-## 16. Billing and Subscription Model
-
-Controller:
-- `/Users/robertcalvert/Desktop/kawhe 2.0/app/Http/Controllers/BillingController.php`
-
-Service:
-- `/Users/robertcalvert/Desktop/kawhe 2.0/app/Services/Billing/UsageService.php`
-
-### 16.1 Free Plan
-- Free merchants can create up to 50 loyalty cards
-
-### 16.2 Paid Plan
-- Subscription removes the card limit
-- Stripe Checkout and Cashier are used
-
-### 16.3 Usage Rules
-`UsageService` handles:
-- card counting across all merchant stores
-- free-limit enforcement
-- subscription status checks
-- grandfathering logic for cancelled subscriptions
-
-Grandfathering behavior:
-- If a merchant cancels, cards created before cancellation may remain active
-- New cards created after cancellation count toward the free plan rules
-
-## 17. Merchant Mobile App Integration
-
-The merchant mobile app lives outside this repo, but it uses this backend directly.
-
-Known integration shape:
-- Mobile app authenticates using `POST /api/v1/auth/login`
-- Stores token using Laravel Sanctum token auth
-- Loads merchant-owned stores via `GET /api/v1/stores`
-- Uses scanner APIs for preview/stamp/redeem
-- Uses returned store branding (`brand_color`, `background_color`, `logo_url`) to theme the mobile UI per selected store
-
-This is important architecturally:
-- the mobile app does not own loyalty logic
-- the mobile app is a client of the same scanner and store APIs used by the web system
-
-### 17.1 Mobile App Expected Flow
-1. Merchant logs in
-2. App fetches stores
-3. Merchant selects a store
-4. App scans QR or manual code
-5. App calls preview API
-6. App decides whether to stamp or redeem
-7. App calls stamp or redeem endpoint
-8. App shows result and cooldown UI
-9. Backend updates loyalty state and wallets
-
-### 17.2 Mobile App Error Model
-The backend already supports stable scanner errors used by the mobile app, including:
-- bad credentials
-- access denied to store
-- card not active
-- verification required
-- cooldown / duplicate scan responses
-
-## 18. Security / Integrity Patterns
-
-The codebase uses several important integrity patterns:
-
-1. Idempotency keys
-- Prevent duplicate stamp/redeem processing
-
-2. Row locking in stamping/redeeming
-- Protect against concurrent scanner actions
-
-3. Store ownership checks
-- Merchant cannot stamp or redeem another merchant's accounts
-
-4. Wallet auth token separation
-- Wallet auth token is different from public card token
-
-5. Store-specific verification checks
-- Reward redemption verification is enforced at the store/account layer, not globally
-
-## 19. Frontend Structure
-
-Frontend is primarily Blade + Tailwind + Alpine.
-
-Main frontend groups:
-- onboarding wizard views
-- store create/edit views
-- join flow views
-- card views
-- scanner view
-- billing views
-
-Patterns used:
-- Blade server rendering for most pages
-- JSON endpoints for card and mobile/scanner flows
-- Alpine for richer live previews and form UI
-- Tailwind for styling
-
-## 20. Queue / Async Work
-
-Important async jobs and background work:
-- wallet update job after stamp/redeem
-- welcome/verification emails
-- Stripe webhook processing / Cashier sync flows
-
-Operationally, this app depends on a running queue worker in production.
-
-## 21. Realtime / WebSocket Layer
-
-Realtime updates are powered by:
-- Laravel broadcasting
-- Reverb
-
-Primary known broadcast use:
-- loyalty card update channel after stamp/redeem
-
-## 22. Operational Notes
-
-Production setup currently includes:
-- Laravel app on server
-- queue worker
-- Reverb
-- Nginx proxying
-- backups and health checks
-- Discord webhook alerts
-- public asset storage in DigitalOcean Spaces
-- DB backups uploaded to Spaces
-
-These are not just ops details. They matter to how wallet updates, scanner stability, and customer card freshness behave.
-
-## 23. Critical Paths
-
-### 23.1 New Merchant Path
-1. Merchant registers/logs in
-2. Onboarding creates first store
-3. Merchant configures branding and form
-4. Merchant gets join QR/poster
-
-### 23.2 New Customer Path
-1. Customer scans join QR
-2. Opens join page
-3. Submits form
-4. `Customer` is created or matched
-5. `LoyaltyAccount` is created
-6. Customer lands on card page
-7. Customer optionally adds wallet pass
-
-### 23.3 Stamp Path
-1. Merchant scans customer pass
-2. Preview resolves token/account/store
-3. Merchant confirms stamp
-4. `StampLoyaltyService` updates account
-5. `StampEvent` + `PointsTransaction` are written
-6. `StampUpdated` broadcasts
-7. `UpdateWalletPassJob` runs
-8. Apple/Google passes sync
-
-### 23.4 Redeem Path
-1. Merchant scans redeem QR or manual code
-2. Preview/redeem-info confirms reward balance
-3. Verification requirement is checked
-4. Reward is redeemed in transaction
-5. Ledger/event records written
-6. Real-time + wallet sync triggered
-
-## 24. Where To Edit What
-
-### Branding and pass visuals
-- `StoreController`
-- onboarding views
-- wallet pass services
-- `StoreAssets`
-
-### Scanner behavior
-- `ScannerController`
-- `StampLoyaltyService`
-- mobile app client behavior (in the Flutter repo)
-
-### Card/customer-facing UI
-- `CardController`
-- join views
-- card views
-- broadcast event payloads
-
-### Billing and plan rules
-- `BillingController`
-- `UsageService`
-
-### Wallet behavior
-- `AppleWalletPassService`
-- `GoogleWalletPassService`
-- `WalletSyncService`
-- `UpdateWalletPassJob`
-
-## 25. Summary
-
-This app is a single-system loyalty platform with:
-- one backend
-- one merchant web app
-- one customer loyalty card experience
-- one merchant mobile API surface
-- two wallet integrations
-
-The system revolves around:
-- `Store` as the configured loyalty program
-- `Customer` as the person
-- `LoyaltyAccount` as the store-specific card/state container
-
-The most important technical flows are:
-- onboarding
-- join/create card
-- stamp/redeem
-- wallet sync
-- billing limits
-
-The mobile app is not separate business logic. It is another client of the same backend scanner/store/auth APIs.
-
-## 26. Recommended Next Documentation Additions
-
-If needed later, this document can be expanded with:
-1. ERD / database schema diagram
-2. request/response examples for every scanner endpoint
-3. deployment runbook
-4. wallet credential/config setup guide
-5. Flutter merchant app code-level integration document
+### Domain models
+
+- `app/Models/User.php`
+- `app/Models/Store.php`
+- `app/Models/LoyaltyProgram.php`
+- `app/Models/Customer.php`
+- `app/Models/LoyaltyAccount.php`
+- `app/Models/StampEvent.php`
+- `app/Models/PointsTransaction.php`
+- `app/Models/AppleWalletRegistration.php`
+- `app/Models/SupportAuditLog.php`
+
+### Services and support classes
+
+- `app/Services/Loyalty/StampLoyaltyService.php`
+- `app/Services/Analytics/MerchantAnalyticsService.php`
+- `app/Services/Billing/UsageService.php`
+- `app/Services/Support/SupportAuditService.php`
+- `app/Services/Support/MerchantRecoveryService.php`
+- `app/Support/StoreBrandingRules.php`
+- `app/Support/StoreAssets.php`
+- `app/Support/RegistrationFormConfig.php`
+
+### Wallet
+
+- `app/Jobs/UpdateWalletPassJob.php`
+- `app/Services/Wallet/WalletSyncService.php`
+- `app/Services/Wallet/AppleWalletPassService.php`
+- `app/Services/Wallet/Apple/ApplePassService.php`
+- `app/Services/Wallet/Apple/ApplePushService.php`
+- `app/Services/Wallet/Apple/AppleWalletSerial.php`
+- `app/Http/Controllers/Wallet/AppleWalletController.php`
+- `app/Services/Wallet/GoogleWalletPassService.php`
+- `app/Services/Wallet/GoogleWalletStampStripRenderer.php`
+- `resource_path('wallet/apple/default')` for default Apple assets.
+
+### Billing and Stripe
+
+- `app/Http/Controllers/BillingController.php`
+- `app/Services/Billing/UsageService.php`
+- `config/billing.php`
+- `config/cashier.php`
+- `routes/web.php` Stripe webhook route.
+
+---
+
+## 15. Data and Safety Notes
+
+### Tenant boundaries
+
+Most merchant queries must be scoped by the authenticated user's stores.
+
+Use:
+
+- `Store::queryForUser($user)` for store access.
+- Ownership checks in scanner/customer controllers.
+- Super admin only for platform-level routes.
+
+### Destructive flows
+
+Stores and loyalty programs use archive/restore rather than immediate hard delete.
+
+Archive impact:
+
+- New joins pause.
+- QR sharing pauses.
+- Existing customer records remain.
+- Existing wallet passes may remain installed.
+- History remains available for support.
+
+### Scanner safety
+
+Scanner logic includes:
+
+- Merchant ownership checks.
+- Account row locking.
+- Idempotency keys.
+- Duplicate scan window.
+- Configurable cooldown.
+- Audit records.
+- Wallet sync after database commit.
+
+### Wallet safety
+
+Wallet pass auth uses a separate `wallet_auth_token`. Public card tokens are not used as Apple web-service auth tokens.
+
+### Billing safety
+
+Billing limits block new resource creation and new joins. They do not delete existing data.
+
+### Secrets
+
+Never commit:
+
+- `.env`
+- Stripe keys.
+- Stripe webhook secrets.
+- Apple Wallet certificates/keys.
+- Google Wallet service account JSON.
+- SMTP/SendGrid credentials.
+
+---
+
+## 16. Operational Notes
+
+### Local development
+
+Run Laravel and Vite separately unless using the project's combined dev command:
+
+```bash
+php artisan serve --port=8000
+npm run dev
+```
+
+If realtime stamp updates are being tested, run Reverb as well:
+
+```bash
+php artisan reverb:start
+```
+
+### Testing
+
+Focused tests used often for wallet/store/billing safety:
+
+```bash
+php artisan test tests/Feature/GoogleWalletStampStripRendererTest.php tests/Feature/SelfServeSaasBaselineTest.php tests/Feature/StoreTest.php tests/Feature/BillingAndWalletEntrypointsTest.php
+```
+
+Full suite:
+
+```bash
+php artisan test
+```
+
+Build check:
+
+```bash
+npm run build
+```
+
+### Deployment
+
+Testing deploys currently use:
+
+```bash
+ssh root@134.199.159.188 'cd /var/www/kawhe-testing && ./ops/deploy-testing.sh <commit-sha>'
+```
+
+Production deploys should follow the production ops docs and only deploy reviewed commits.
+
+Important deployment steps:
+
+- Pull/checkout target commit.
+- Install Composer dependencies if needed.
+- Build Vite assets.
+- Run migrations.
+- Clear/cache config, routes, events, and views.
+- Ensure queues and Reverb are running.
+- Run health checks.
+
+### Testing health warning
+
+The testing server may report a health warning because `APP_ENV=testing` and `APP_DEBUG=true`. That is not the same as a Laravel boot failure.
+
+---
+
+## 17. Current Launch Readiness Checklist
+
+Before considering the app ready for broad self-serve SaaS promotion, verify:
+
+- Merchant registration works end to end.
+- Onboarding wizard creates a default store and default loyalty card.
+- Store/logo/wallet hero uploads work in production storage.
+- Join QR opens correctly on mobile.
+- New customer join works.
+- Existing card lookup works.
+- Email verification email is delivered.
+- Apple Wallet pass downloads and installs on iPhone.
+- Apple Wallet pass updates after stamp/redeem.
+- Google Wallet save link works on Android.
+- Google Wallet object updates after stamp/redeem.
+- Scanner web flow works.
+- Merchant mobile scanner flow works.
+- Stripe checkout uses live keys in production.
+- Stripe webhook is configured and receiving events.
+- Billing sync works after checkout.
+- Support logs capture wallet, email, manual support, and billing failures.
+- Admin dashboard/support logs are accessible only to super admins.
+- Queue workers are running.
+- Reverb is running if realtime updates are expected.
+- Backups and server monitoring are in place.
+
+---
+
+## 18. What To Avoid Reintroducing Without A Plan
+
+Do not casually reintroduce:
+
+- Multiple wallet visual card types.
+- Abstract wallet pattern rendering.
+- Custom stamp icon uploads.
+- Apple Wallet asset experiments without real device testing.
+- Hard deletes for stores/cards.
+- Scanner contract changes that would break the mobile app.
+- Join URL/token changes that would break printed QR posters.
+
+If wallet design variants are revisited later, they should be implemented as a separate planned project with:
+
+- Data model migration plan.
+- Backward compatibility plan.
+- Apple Wallet on-device test matrix.
+- Google Wallet Android test matrix.
+- Merchant preview parity requirements.
+- Rollback plan.

@@ -6,8 +6,11 @@ use App\Models\AppleWalletRegistration;
 use App\Models\LoyaltyAccount;
 use App\Models\Store;
 use App\Models\SupportAuditLog;
+use App\Rules\ValidWalletImage;
 use App\Services\Billing\UsageService;
 use App\Services\Support\MerchantRecoveryService;
+use App\Services\Wallet\Artwork\WalletArtworkService;
+use App\Services\Wallet\Artwork\WalletImageValidator;
 use App\Support\StoreAssets;
 use App\Support\StoreBrandingRules;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -22,7 +25,9 @@ class StoreController extends Controller
     use AuthorizesRequests;
 
     public function __construct(
-        protected MerchantRecoveryService $merchantRecoveryService
+        protected MerchantRecoveryService $merchantRecoveryService,
+        private readonly WalletArtworkService $walletArtworkService,
+        private readonly WalletImageValidator $walletImageValidator,
     ) {}
 
     /**
@@ -70,6 +75,11 @@ class StoreController extends Controller
             'reward_target' => ['required', 'integer', 'min:1'],
             'reward_title' => ['required', 'string', 'max:255'],
         ], StoreBrandingRules::validationRules()));
+        $imageWarnings = $this->walletImageValidator->warningsForRequest($request, [
+            'logo' => 'logo',
+            'pass_logo' => 'logo',
+            'pass_hero_image' => 'hero',
+        ]);
 
         $validated['logo_path'] = StoreAssets::storeUploaded($request->file('logo'), 'logos');
         $validated['pass_logo_path'] = StoreAssets::storeUploaded($request->file('pass_logo'), 'pass-logos');
@@ -98,8 +108,11 @@ class StoreController extends Controller
         ]);
 
         $store->forceFill(['default_loyalty_program_id' => $program->id])->save();
+        $this->walletArtworkService->syncForProgram($program);
 
-        return redirect()->route('merchant.stores.index')->with('success', 'Store created successfully.');
+        return redirect()->route('merchant.stores.index')
+            ->with('success', 'Store created successfully.')
+            ->with('wallet_image_warnings', $imageWarnings);
     }
 
     /**
@@ -126,28 +139,30 @@ class StoreController extends Controller
             'address' => ['nullable', 'string', 'max:255'],
             'brand_color' => ['nullable', 'string', 'regex:/^#[0-9A-Fa-f]{6}$/'],
             'background_color' => ['nullable', 'string', 'regex:/^#[0-9A-Fa-f]{6}$/'],
-            'logo' => ['nullable', 'image', 'mimes:png,jpg,jpeg,webp', 'max:2048'],
-            'pass_logo' => ['nullable', 'image', 'mimes:png,jpg,jpeg,webp', 'max:2048'],
-            'pass_hero_image' => ['nullable', 'image', 'mimes:png,jpg,jpeg,webp', 'max:2048'],
+            'logo' => ['nullable', 'image', 'mimes:png,jpg,jpeg,webp', 'max:2048', new ValidWalletImage('logo')],
+            'pass_logo' => ['nullable', 'image', 'mimes:png,jpg,jpeg,webp', 'max:2048', new ValidWalletImage('logo')],
+            'pass_hero_image' => ['nullable', 'image', 'mimes:png,jpg,jpeg,webp', 'max:2048', new ValidWalletImage('hero')],
+        ]);
+        $imageWarnings = $this->walletImageValidator->warningsForRequest($request, [
+            'logo' => 'logo',
+            'pass_logo' => 'logo',
+            'pass_hero_image' => 'hero',
         ]);
 
         // Handle logo upload
         if ($request->hasFile('logo')) {
-            StoreAssets::delete($store->logo_path);
             $logoPath = StoreAssets::storeUploaded($request->file('logo'), 'logos');
             $validated['logo_path'] = $logoPath;
         }
 
         // Handle pass logo upload
         if ($request->hasFile('pass_logo')) {
-            StoreAssets::delete($store->pass_logo_path);
             $passLogoPath = StoreAssets::storeUploaded($request->file('pass_logo'), 'pass-logos');
             $validated['pass_logo_path'] = $passLogoPath;
         }
 
         // Handle pass hero image upload
         if ($request->hasFile('pass_hero_image')) {
-            StoreAssets::delete($store->pass_hero_image_path);
             $passHeroPath = StoreAssets::storeUploaded($request->file('pass_hero_image'), 'pass-heroes');
             $validated['pass_hero_image_path'] = $passHeroPath;
         }
@@ -168,7 +183,13 @@ class StoreController extends Controller
 
         $store->update($validated);
 
-        return redirect()->route('merchant.stores.index')->with('success', 'Store updated successfully.');
+        foreach ($store->loyaltyPrograms()->get() as $program) {
+            $this->walletArtworkService->syncForProgram($program);
+        }
+
+        return redirect()->route('merchant.stores.index')
+            ->with('success', 'Store updated successfully.')
+            ->with('wallet_image_warnings', $imageWarnings);
     }
 
     /**

@@ -58,6 +58,17 @@
         @endif
     </div>
 
+    @if(session('wallet_image_warnings'))
+        <div class="mb-6 rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 text-sm text-amber-900">
+            <p class="font-semibold">Artwork quality notes</p>
+            <ul class="mt-2 list-disc space-y-1 pl-5">
+                @foreach(session('wallet_image_warnings') as $warning)
+                    <li>{{ $warning }}</li>
+                @endforeach
+            </ul>
+        </div>
+    @endif
+
     <form method="POST" action="{{ $action }}" enctype="multipart/form-data" class="grid gap-8 lg:grid-cols-[minmax(0,1fr)_320px]">
         @csrf
         @if($method !== 'POST')
@@ -181,13 +192,51 @@
             </div>
         </div>
 
-        <div class="rounded-3xl border border-stone-200 bg-stone-50 p-6 shadow-sm h-fit">
-            <h2 class="text-lg font-semibold text-stone-900">How this works</h2>
-            <ul class="mt-3 space-y-2 text-sm text-stone-600">
-                <li>Each loyalty card gets its own join link and QR code.</li>
-                <li>Customers who join this card keep separate progress from your other cards.</li>
-                <li>If customers already joined, the reward target locks to protect their existing progress.</li>
-            </ul>
+        <div class="space-y-5 h-fit">
+            <x-wallet-pass-preview :preview-data="$walletPreview ?? []" />
+
+            @if($isEdit && isset($walletHealth))
+                <section class="rounded-2xl border border-stone-200 bg-white p-5 shadow-sm" aria-labelledby="wallet-health-title">
+                    <div class="flex items-start justify-between gap-3">
+                        <div>
+                            <h2 id="wallet-health-title" class="text-base font-semibold text-stone-900">Wallet health</h2>
+                            <p class="mt-1 text-xs text-stone-500">Design version {{ $walletHealth['design_version'] }} · {{ $walletHealth['assets_current'] ? 'Artwork current' : 'Artwork processing' }}</p>
+                        </div>
+                        <form method="POST" action="{{ route('merchant.stores.programs.refresh-wallets', [$store, $program]) }}">
+                            @csrf
+                            <button type="submit" class="text-xs font-semibold text-brand-700 hover:text-brand-800">Retry updates</button>
+                        </form>
+                    </div>
+
+                    <div class="mt-4 divide-y divide-stone-100">
+                        @foreach(['apple' => 'Apple Wallet', 'google' => 'Google Wallet'] as $platform => $label)
+                            @php($health = $walletHealth[$platform])
+                            <div class="py-3 first:pt-0 last:pb-0">
+                                <div class="flex items-center justify-between gap-3">
+                                    <p class="text-sm font-semibold text-stone-800">{{ $label }}</p>
+                                    <span class="rounded-full px-2.5 py-1 text-[11px] font-semibold {{ $health['tone'] }}">{{ $health['label'] }}</span>
+                                </div>
+                                <p class="mt-1 text-xs leading-relaxed text-stone-500">{{ $health['message'] }}</p>
+                                @if($platform === 'apple')
+                                    <p class="mt-1 text-[11px] text-stone-400">Installed registrations: {{ $health['registrations'] ?? 0 }}</p>
+                                @endif
+                                @if($health['last_success_at'])
+                                    <p class="mt-1 text-[11px] text-stone-400">Last successful update: {{ $health['last_success_at']->format('j M Y, g:i a') }}</p>
+                                @endif
+                            </div>
+                        @endforeach
+                    </div>
+                </section>
+            @endif
+
+            <div class="rounded-2xl border border-stone-200 bg-stone-50 p-5">
+                <h2 class="text-base font-semibold text-stone-900">How this works</h2>
+                <ul class="mt-3 space-y-2 text-sm text-stone-600">
+                    <li>Each loyalty card gets its own join link and QR code.</li>
+                    <li>Customers who join this card keep separate progress from your other cards.</li>
+                    <li>If customers already joined, the reward target locks to protect their existing progress.</li>
+                </ul>
+            </div>
             @if(!$isEdit && isset($usageStats))
                 <div class="mt-4 rounded-2xl border border-stone-200 bg-white p-4 text-sm text-stone-600">
                     <p class="font-semibold text-stone-800">Plan limit</p>

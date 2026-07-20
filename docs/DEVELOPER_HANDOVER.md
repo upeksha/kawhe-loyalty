@@ -1,11 +1,11 @@
 # Kawhe Loyalty — Developer Handover
 
-**Last updated:** June 2026  
+**Last updated:** July 20, 2026
 **Audience:** Engineers joining the project with no prior context.
 
 This document describes how the product works today: domain model, user flows, key files, validation rules, and where to change things safely.
 
-For deeper operational guides (wallet setup, billing, production ops), see the linked docs at the end.
+For the full current end-to-end product documentation, read [`FULL_SYSTEM_DOCUMENTATION.md`](FULL_SYSTEM_DOCUMENTATION.md). For deeper operational guides (wallet setup, billing, production ops), see the linked docs at the end.
 
 ---
 
@@ -142,7 +142,7 @@ After each step that changes store fields, **`syncDefaultProgramFromStore()`** r
 
 Configured fields: **email** (always on/required), optional **first_name**, **last_name**, **phone**, **birthday** — each can be enabled and optionally required.
 
-Shared UI: `resources/views/components/registration-form-config-editor.blade.php`  
+Shared UI: `resources/views/components/registration-form-config-editor.blade.php`
 Shared parsing: `RegistrationFormConfig::fromRequest()`
 
 Presets in UI: Fastest, Balanced, Marketing-friendly.
@@ -164,7 +164,7 @@ Controller: **`JoinController`**
 
 **Slug + token** resolve to `LoyaltyProgram` first; legacy store slug/token still work via `resolvedDefaultProgram()`.
 
-Invalid slug/token → **`join.invalid`** (branded 404, not generic abort).  
+Invalid slug/token → **`join.invalid`** (branded 404, not generic abort).
 Archived store/program → **`join.archived`**.
 
 ### New join (`POST join.store`)
@@ -202,6 +202,20 @@ Store/program verification for redemption uses **`require_verification_for_redem
 ---
 
 ## 7. Wallet Integrations
+
+### Platform artwork
+
+The merchant still uploads one wallet logo and one wallet hero image. `WalletArtworkService` keeps those source paths unchanged and generates separate immutable Apple and Google derivatives recorded in `loyalty_programs.wallet_asset_manifest`.
+
+- Apple uses rectangular transparent logo assets at 1x/2x/3x and strip assets at 1x/2x/3x.
+- Google uses a circular-safe 660x660 programme logo and 1032x812 hero image.
+- Visible branding changes increment `wallet_design_version`, change derivative URLs, and queue chunked wallet refresh work.
+- Apple effective modification time is the later of account activity and `wallet_branding_updated_at`.
+- Google wallet-sync audit entries retain separate class and customer-object outcomes without changing their IDs.
+- Merchant wallet health treats provider credentials as configured only when the referenced local credential file is readable.
+- Account sync jobs retry transient failures and isolate Apple from Google.
+
+Main classes: `App\Services\Wallet\Artwork\WalletArtworkService`, `WalletHealthService`, `RefreshProgramWalletsJob`, and `UpdateWalletPassJob`.
 
 ### Apple Wallet serial numbers
 

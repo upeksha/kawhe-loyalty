@@ -15,6 +15,7 @@ class LoyaltyProgram extends Model
     use HasFactory, SoftDeletes;
 
     public const JOIN_SHORT_CODE_LENGTH = 6;
+
     private const JOIN_SHORT_CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 
     protected $fillable = [
@@ -30,6 +31,11 @@ class LoyaltyProgram extends Model
         'background_color',
         'pass_logo_path',
         'pass_hero_image_path',
+        'wallet_design_version',
+        'wallet_design_hash',
+        'wallet_asset_manifest',
+        'wallet_assets_generated_at',
+        'wallet_branding_updated_at',
         'require_verification_for_redemption',
         'registration_form_config',
         'sort_order',
@@ -38,6 +44,10 @@ class LoyaltyProgram extends Model
 
     protected $casts = [
         'registration_form_config' => 'array',
+        'wallet_asset_manifest' => 'array',
+        'wallet_design_version' => 'integer',
+        'wallet_assets_generated_at' => 'datetime',
+        'wallet_branding_updated_at' => 'datetime',
         'is_default' => 'boolean',
         'deleted_at' => 'datetime',
     ];
@@ -49,7 +59,7 @@ class LoyaltyProgram extends Model
         static::creating(function (self $program) {
             if (empty($program->slug)) {
                 $base = $program->store?->name ?: $program->name ?: 'program';
-                $program->slug = Str::slug($base) . '-' . Str::random(6);
+                $program->slug = Str::slug($base).'-'.Str::random(6);
             }
 
             if (empty($program->join_token)) {
@@ -77,6 +87,10 @@ class LoyaltyProgram extends Model
             StoreAssets::delete($program->logo_path);
             StoreAssets::delete($program->pass_logo_path);
             StoreAssets::delete($program->pass_hero_image_path);
+
+            foreach (self::walletManifestPaths($program->wallet_asset_manifest) as $path) {
+                StoreAssets::delete($path);
+            }
         });
     }
 
@@ -127,5 +141,36 @@ class LoyaltyProgram extends Model
     public function getPassHeroImageUrlAttribute(): ?string
     {
         return StoreAssets::url($this->pass_hero_image_path);
+    }
+
+    public function walletAssetPath(string $platform, string $asset): ?string
+    {
+        $path = data_get($this->wallet_asset_manifest, "{$platform}.{$asset}");
+
+        return is_string($path) && $path !== '' ? $path : null;
+    }
+
+    public function walletAssetUrl(string $platform, string $asset): ?string
+    {
+        return StoreAssets::url($this->walletAssetPath($platform, $asset));
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    public static function walletManifestPaths(?array $manifest): array
+    {
+        if (! $manifest) {
+            return [];
+        }
+
+        $paths = [];
+        array_walk_recursive($manifest, function ($value, $key) use (&$paths) {
+            if (is_string($value) && str_starts_with($value, 'wallet/programs/')) {
+                $paths[] = $value;
+            }
+        });
+
+        return array_values(array_unique($paths));
     }
 }

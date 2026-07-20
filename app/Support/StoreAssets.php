@@ -3,7 +3,6 @@
 namespace App\Support;
 
 use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Storage;
 
 class StoreAssets
@@ -58,6 +57,32 @@ class StoreAssets
         static::disk()->put($path, $contents);
     }
 
+    public static function putImmutablePng(string $path, string $contents): void
+    {
+        static::disk()->put($path, $contents, [
+            'visibility' => 'public',
+            'ContentType' => 'image/png',
+            'CacheControl' => 'public, max-age=31536000, immutable',
+        ]);
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    public static function files(string $directory): array
+    {
+        return static::disk()->allFiles($directory);
+    }
+
+    public static function lastModified(string $path): ?int
+    {
+        try {
+            return static::disk()->lastModified($path);
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
     public static function deleteMatching(string $directory, callable $predicate): int
     {
         $paths = collect(static::disk()->allFiles($directory))
@@ -103,7 +128,7 @@ class StoreAssets
             return null;
         }
 
-        $target = $tmp . '.' . ltrim($extension, '.');
+        $target = $tmp.'.'.ltrim($extension, '.');
         rename($tmp, $target);
         file_put_contents($target, $contents);
 

@@ -6,7 +6,12 @@ use App\Models\LoyaltyAccount;
 use App\Models\LoyaltyProgram;
 use App\Models\Store;
 use App\Models\User;
+use App\Rules\ValidWalletImage;
 use App\Services\Billing\UsageService;
+use App\Services\Wallet\Artwork\WalletArtworkService;
+use App\Services\Wallet\Artwork\WalletImageValidator;
+use App\Services\Wallet\WalletHealthService;
+use App\Services\Wallet\WalletPreviewDataFactory;
 use App\Support\StoreAssets;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
@@ -17,6 +22,13 @@ use SimpleSoftwareIO\QrCode\Facades\QrCode;
 
 class LoyaltyProgramController extends Controller
 {
+    public function __construct(
+        private readonly WalletArtworkService $walletArtworkService,
+        private readonly WalletImageValidator $walletImageValidator,
+        private readonly WalletHealthService $walletHealthService,
+        private readonly WalletPreviewDataFactory $walletPreviewDataFactory,
+    ) {}
+
     public function indexAll()
     {
         $usageService = app(UsageService::class);
@@ -68,8 +80,9 @@ class LoyaltyProgramController extends Controller
         }
 
         $usageStats = $usageService->getUsageStats(Auth::user());
+        $walletPreview = $this->walletPreviewDataFactory->forStore($store);
 
-        return view('programs.create', compact('store', 'usageStats'));
+        return view('programs.create', compact('store', 'usageStats', 'walletPreview'));
     }
 
     public function store(Request $request, Store $store)
@@ -96,9 +109,14 @@ class LoyaltyProgramController extends Controller
             'brand_color' => ['nullable', 'string', 'regex:/^#[0-9A-Fa-f]{6}$/'],
             'background_color' => ['nullable', 'string', 'regex:/^#[0-9A-Fa-f]{6}$/'],
             'require_verification_for_redemption' => ['nullable', 'boolean'],
-            'logo' => ['nullable', 'image', 'mimes:png,jpg,jpeg,webp', 'max:2048'],
-            'pass_logo' => ['nullable', 'image', 'mimes:png,jpg,jpeg,webp', 'max:2048'],
-            'pass_hero_image' => ['nullable', 'image', 'mimes:png,jpg,jpeg,webp', 'max:2048'],
+            'logo' => ['nullable', 'image', 'mimes:png,jpg,jpeg,webp', 'max:2048', new ValidWalletImage('logo')],
+            'pass_logo' => ['nullable', 'image', 'mimes:png,jpg,jpeg,webp', 'max:2048', new ValidWalletImage('logo')],
+            'pass_hero_image' => ['nullable', 'image', 'mimes:png,jpg,jpeg,webp', 'max:2048', new ValidWalletImage('hero')],
+        ]);
+        $imageWarnings = $this->walletImageValidator->warningsForRequest($request, [
+            'logo' => 'logo',
+            'pass_logo' => 'logo',
+            'pass_hero_image' => 'hero',
         ]);
 
         if ($request->hasFile('logo')) {
@@ -124,18 +142,22 @@ class LoyaltyProgramController extends Controller
         $validated['sort_order'] = ((int) $store->loyaltyPrograms()->max('sort_order')) + 1;
 
         $program = $store->loyaltyPrograms()->create($validated);
+        $this->walletArtworkService->syncForProgram($program);
         $this->syncLegacyStoreFieldsFromDefaultProgram($store, $program);
 
         return redirect()->route('merchant.stores.programs.edit', [$store, $program])
-            ->with('success', 'Loyalty card created successfully.');
+            ->with('success', 'Loyalty card created successfully.')
+            ->with('wallet_image_warnings', $imageWarnings);
     }
 
     public function edit(Store $store, LoyaltyProgram $program)
     {
         [$store, $program] = $this->resolveProgram($store, $program);
         $hasIssuedCards = LoyaltyAccount::where('loyalty_program_id', $program->id)->exists();
+        $walletHealth = $this->walletHealthService->forProgram($program);
+        $walletPreview = $this->walletPreviewDataFactory->forProgram($program);
 
-        return view('programs.edit', compact('store', 'program', 'hasIssuedCards'));
+        return view('programs.edit', compact('store', 'program', 'hasIssuedCards', 'walletHealth', 'walletPreview'));
     }
 
     public function update(Request $request, Store $store, LoyaltyProgram $program)
@@ -150,9 +172,14 @@ class LoyaltyProgramController extends Controller
             'brand_color' => ['nullable', 'string', 'regex:/^#[0-9A-Fa-f]{6}$/'],
             'background_color' => ['nullable', 'string', 'regex:/^#[0-9A-Fa-f]{6}$/'],
             'require_verification_for_redemption' => ['nullable', 'boolean'],
-            'logo' => ['nullable', 'image', 'mimes:png,jpg,jpeg,webp', 'max:2048'],
-            'pass_logo' => ['nullable', 'image', 'mimes:png,jpg,jpeg,webp', 'max:2048'],
-            'pass_hero_image' => ['nullable', 'image', 'mimes:png,jpg,jpeg,webp', 'max:2048'],
+            'logo' => ['nullable', 'image', 'mimes:png,jpg,jpeg,webp', 'max:2048', new ValidWalletImage('logo')],
+            'pass_logo' => ['nullable', 'image', 'mimes:png,jpg,jpeg,webp', 'max:2048', new ValidWalletImage('logo')],
+            'pass_hero_image' => ['nullable', 'image', 'mimes:png,jpg,jpeg,webp', 'max:2048', new ValidWalletImage('hero')],
+        ]);
+        $imageWarnings = $this->walletImageValidator->warningsForRequest($request, [
+            'logo' => 'logo',
+            'pass_logo' => 'logo',
+            'pass_hero_image' => 'hero',
         ]);
 
         if ($hasIssuedCards) {
@@ -166,15 +193,12 @@ class LoyaltyProgramController extends Controller
         }
 
         if ($request->hasFile('logo')) {
-            StoreAssets::delete($program->logo_path);
             $validated['logo_path'] = StoreAssets::storeUploaded($request->file('logo'), 'logos');
         }
         if ($request->hasFile('pass_logo')) {
-            StoreAssets::delete($program->pass_logo_path);
             $validated['pass_logo_path'] = StoreAssets::storeUploaded($request->file('pass_logo'), 'pass-logos');
         }
         if ($request->hasFile('pass_hero_image')) {
-            StoreAssets::delete($program->pass_hero_image_path);
             $validated['pass_hero_image_path'] = StoreAssets::storeUploaded($request->file('pass_hero_image'), 'pass-heroes');
         }
 
@@ -184,10 +208,23 @@ class LoyaltyProgramController extends Controller
         $validated['require_verification_for_redemption'] = $request->boolean('require_verification_for_redemption');
 
         $program->update($validated);
+        $this->walletArtworkService->syncForProgram($program->fresh('store'));
         $this->syncLegacyStoreFieldsFromDefaultProgram($store, $program->fresh());
 
         return redirect()->route('merchant.stores.programs.edit', [$store, $program])
-            ->with('success', 'Loyalty card updated successfully.');
+            ->with('success', 'Loyalty card updated successfully.')
+            ->with('wallet_image_warnings', $imageWarnings);
+    }
+
+    public function refreshWallets(Store $store, LoyaltyProgram $program)
+    {
+        [$store, $program] = $this->resolveProgram($store, $program);
+        abort_if($store->trashed() || $program->trashed(), 422, 'Restore this loyalty card before refreshing wallets.');
+
+        $this->walletArtworkService->syncForProgram($program, false);
+        $this->walletArtworkService->queueProgramRefresh($program->fresh(), Auth::id(), 'merchant');
+
+        return back()->with('success', 'Wallet artwork and customer refreshes have been queued.');
     }
 
     public function destroy(Store $store, LoyaltyProgram $program)

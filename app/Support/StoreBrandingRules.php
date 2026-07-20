@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use App\Models\Store;
+use App\Rules\ValidWalletImage;
 use Illuminate\Validation\Rule;
 
 class StoreBrandingRules
@@ -22,9 +23,9 @@ class StoreBrandingRules
         return [
             'brand_color' => ['required', 'string', 'regex:/^#[0-9A-Fa-f]{6}$/'],
             'background_color' => ['required', 'string', 'regex:/^#[0-9A-Fa-f]{6}$/'],
-            'logo' => self::imageFieldRules($store, 'logo_path', $imageRules),
-            'pass_logo' => self::imageFieldRules($store, 'pass_logo_path', $imageRules),
-            'pass_hero_image' => self::imageFieldRules($store, 'pass_hero_image_path', $imageRules),
+            'logo' => self::imageFieldRules($store, 'logo_path', [...$imageRules, new ValidWalletImage('logo')]),
+            'pass_logo' => self::imageFieldRules($store, 'pass_logo_path', [...$imageRules, new ValidWalletImage('logo')]),
+            'pass_hero_image' => self::imageFieldRules($store, 'pass_hero_image_path', [...$imageRules, new ValidWalletImage('hero')]),
         ];
     }
 

@@ -4,6 +4,7 @@ namespace App\Services\Wallet;
 
 use App\Models\LoyaltyAccount;
 use App\Services\Wallet\Apple\AppleWalletSerial;
+use App\Services\Wallet\Artwork\WalletArtworkService;
 use App\Support\StoreAssets;
 use Byte5\PassGenerator;
 use Illuminate\Support\Str;
@@ -13,8 +14,8 @@ class AppleWalletPassService
     /**
      * Generate Apple Wallet pass (.pkpass) for a loyalty account
      *
-     * @param LoyaltyAccount $account
      * @return string Raw pkpass binary data
+     *
      * @throws \Exception
      */
     public function generatePass(LoyaltyAccount $account): string
@@ -52,17 +53,17 @@ class AppleWalletPassService
             'logoText' => $store->name,
             // Apple Wallet Web Service configuration (required for push notifications)
             // Note: Apple automatically appends /v1 to webServiceURL, so we only specify /wallet
-            'webServiceURL' => rtrim(config('app.url'), '/') . '/wallet',
+            'webServiceURL' => rtrim(config('app.url'), '/').'/wallet',
             // Use wallet_auth_token as authenticationToken for per-pass security
             // This is separate from public_token for security (QR code contains public_token, not wallet_auth_token)
             'authenticationToken' => $account->wallet_auth_token,
             'barcode' => [
                 // Dynamic QR message: LR:{redeem_token} when reward available, else LA:{public_token}
                 'message' => ($account->reward_balance ?? 0) > 0 && $account->redeem_token
-                    ? 'LR:' . $account->redeem_token
-                    : 'LA:' . $account->public_token,
+                    ? 'LR:'.$account->redeem_token
+                    : 'LA:'.$account->public_token,
                 // Show the manual entry code directly under the QR code
-                'altText' => 'Manual code: ' . $manualCode,
+                'altText' => 'Manual code: '.$manualCode,
                 'format' => 'PKBarcodeFormatQR',
                 'messageEncoding' => 'utf-8',
             ],
@@ -138,7 +139,7 @@ class AppleWalletPassService
         // Add colors from store branding (with fallbacks)
         $backgroundColor = $program->background_color ?? '#1F2937';
         $foregroundColor = $this->bestContrastTextColor($backgroundColor);
-        
+
         $passDefinition['backgroundColor'] = $this->hexToRgb($backgroundColor);
         $passDefinition['foregroundColor'] = $this->hexToRgb($foregroundColor);
         $passDefinition['labelColor'] = $this->hexToRgb($foregroundColor);
@@ -149,127 +150,120 @@ class AppleWalletPassService
         // Set replaceExistent=true to allow regenerating passes (e.g., after stamp updates)
         $passIdentifier = AppleWalletSerial::fromAccount($account);
         $pass = new PassGenerator($passIdentifier, true); // true = replace existing pass
-        
+
         // Set pass definition
         $pass->setPassDefinition($passDefinition);
 
-        // Add assets (images) - addAsset() expects file paths, not file contents
-        // Apple Wallet requires specific filenames: logo.png, strip.png, icon.png, background.png
+        // Apple Wallet assets use immutable platform-specific derivatives.
         $assetsPath = resource_path('wallet/apple/default');
         $brandColor = $program->brand_color ?? '#8B4513';
         $backgroundColor = $program->background_color ?? '#FBF8F4';
-        
-        // Create unique temp directory for this pass generation to avoid filename conflicts
-        $tempDir = sys_get_temp_dir() . '/apple_wallet_' . uniqid();
-        if (!is_dir($tempDir)) {
-            mkdir($tempDir, 0755, true);
+
+        $tempDir = sys_get_temp_dir().'/apple_wallet_'.uniqid('', true);
+        if (! is_dir($tempDir) && ! mkdir($tempDir, 0755, true) && ! is_dir($tempDir)) {
+            throw new \RuntimeException('Unable to create the Apple Wallet asset workspace.');
         }
-        
+
         $assetsAdded = [];
-        
-        // Use store pass logo if available, otherwise fallback to default
-        if ($program->pass_logo_path && StoreAssets::exists($program->pass_logo_path)) {
-            $passLogoPath = StoreAssets::localTempPath($program->pass_logo_path, pathinfo($program->pass_logo_path, PATHINFO_EXTENSION) ?: 'img');
-            if ($passLogoPath && file_exists($passLogoPath)) {
-                $tempLogoPath = $tempDir . '/logo.png';
-                if ($this->createCircularLogoPng($passLogoPath, $tempLogoPath) || copy($passLogoPath, $tempLogoPath)) {
-                    $pass->addAsset($tempLogoPath);
-                    $assetsAdded[] = 'logo (store)';
-                }
-            }
-        } elseif (file_exists($assetsPath . '/logo.png')) {
-            $pass->addAsset($assetsPath . '/logo.png');
-            $assetsAdded[] = 'logo (default)';
-        } else {
-            $tempLogoPath = $tempDir . '/logo.png';
-            if ($this->createFallbackPng($tempLogoPath, 320, 100, $brandColor, $backgroundColor)) {
-                $pass->addAsset($tempLogoPath);
-                $assetsAdded[] = 'logo (fallback)';
-            }
-        }
-        
-        // Use store pass hero image if available, otherwise fallback to default strip
-        if ($program->pass_hero_image_path && StoreAssets::exists($program->pass_hero_image_path)) {
-            $passHeroPath = StoreAssets::localTempPath($program->pass_hero_image_path, pathinfo($program->pass_hero_image_path, PATHINFO_EXTENSION) ?: 'img');
-            if ($passHeroPath && file_exists($passHeroPath)) {
-                // Copy to temp file with exact name (strip.png) so PassGenerator recognizes it
-                $tempStripPath = $tempDir . '/strip.png';
-                if (copy($passHeroPath, $tempStripPath)) {
-                    $pass->addAsset($tempStripPath);
-                    $assetsAdded[] = 'strip (store)';
-                }
-            }
-        } elseif (file_exists($assetsPath . '/strip.png')) {
-            $pass->addAsset($assetsPath . '/strip.png');
-            $assetsAdded[] = 'strip (default)';
-        } else {
-            $tempStripPath = $tempDir . '/strip.png';
-            if ($this->createFallbackPng($tempStripPath, 750, 246, $brandColor, $backgroundColor)) {
-                $pass->addAsset($tempStripPath);
-                $assetsAdded[] = 'strip (fallback)';
-            }
-        }
-        
-        // Always add icon and background (required by Apple Wallet)
-        if (file_exists($assetsPath . '/icon.png')) {
-            $pass->addAsset($assetsPath . '/icon.png');
-            $assetsAdded[] = 'icon';
-        } else {
-            $tempIconPath = $tempDir . '/icon.png';
-            if ($this->createFallbackPng($tempIconPath, 87, 87, $brandColor, $backgroundColor)) {
-                $pass->addAsset($tempIconPath);
-                $assetsAdded[] = 'icon (fallback)';
-            }
-        }
-        if (file_exists($assetsPath . '/background.png')) {
-            $pass->addAsset($assetsPath . '/background.png');
-            $assetsAdded[] = 'background';
-        } else {
-            $tempBgPath = $tempDir . '/background.png';
-            if ($this->createFallbackPng($tempBgPath, 360, 440, $brandColor, $backgroundColor)) {
-                $pass->addAsset($tempBgPath);
-                $assetsAdded[] = 'background (fallback)';
-            }
-        }
-        
-        // Log which assets were added for debugging
-        \Log::info('Apple Wallet: Assets added', [
-            'account_id' => $account->id,
-            'store_id' => $store->id,
-            'assets' => $assetsAdded,
-            'has_store_logo' => !empty($program->pass_logo_path),
-            'has_store_hero' => !empty($program->pass_hero_image_path),
-        ]);
-        
-        // Clean up temp directory after pass generation
-        // Note: We don't delete immediately as PassGenerator may still need the files during create()
-        register_shutdown_function(function() use ($tempDir) {
-            if (is_dir($tempDir)) {
-                array_map('unlink', glob("$tempDir/*"));
-                @rmdir($tempDir);
-            }
-        });
 
-        // Generate and return pkpass binary
-        return $pass->create();
+        try {
+            try {
+                $artwork = app(WalletArtworkService::class)->syncForProgram($program, false);
+                $appleManifest = $artwork->manifest['apple'] ?? [];
+            } catch (\Throwable $exception) {
+                \Log::warning('Apple Wallet: Generated artwork unavailable, using fallbacks', [
+                    'account_id' => $account->id,
+                    'program_id' => $program->id ?? null,
+                    'error_type' => class_basename($exception),
+                ]);
+                $appleManifest = [];
+            }
+
+            $assetNames = [
+                'logo' => 'logo.png',
+                'logo_2x' => 'logo@2x.png',
+                'logo_3x' => 'logo@3x.png',
+                'strip' => 'strip.png',
+                'strip_2x' => 'strip@2x.png',
+                'strip_3x' => 'strip@3x.png',
+            ];
+            foreach ($assetNames as $manifestKey => $fileName) {
+                $relativePath = $appleManifest[$manifestKey] ?? null;
+                $contents = $relativePath ? StoreAssets::get($relativePath) : null;
+                if ($contents === null) {
+                    continue;
+                }
+
+                $localPath = $tempDir.'/'.$fileName;
+                file_put_contents($localPath, $contents);
+                $pass->addAsset($localPath);
+                $assetsAdded[] = $fileName;
+            }
+
+            if (! in_array('logo.png', $assetsAdded, true)) {
+                $fallbackLogo = $tempDir.'/logo.png';
+                $this->createFallbackPng($fallbackLogo, 160, 50, $brandColor, $backgroundColor);
+                $pass->addAsset($fallbackLogo);
+                $assetsAdded[] = 'logo.png (fallback)';
+            }
+            if (! in_array('strip.png', $assetsAdded, true)) {
+                $fallbackStrip = $tempDir.'/strip.png';
+                $this->createFallbackPng($fallbackStrip, 375, 144, $brandColor, $backgroundColor);
+                $pass->addAsset($fallbackStrip);
+                $assetsAdded[] = 'strip.png (fallback)';
+            }
+
+            if (file_exists($assetsPath.'/icon.png')) {
+                $pass->addAsset($assetsPath.'/icon.png');
+                $assetsAdded[] = 'icon.png';
+            } else {
+                $tempIconPath = $tempDir.'/icon.png';
+                if ($this->createFallbackPng($tempIconPath, 87, 87, $brandColor, $backgroundColor)) {
+                    $pass->addAsset($tempIconPath);
+                    $assetsAdded[] = 'icon.png (fallback)';
+                }
+            }
+
+            if (file_exists($assetsPath.'/background.png')) {
+                $pass->addAsset($assetsPath.'/background.png');
+                $assetsAdded[] = 'background.png';
+            } else {
+                $tempBgPath = $tempDir.'/background.png';
+                if ($this->createFallbackPng($tempBgPath, 360, 440, $brandColor, $backgroundColor)) {
+                    $pass->addAsset($tempBgPath);
+                    $assetsAdded[] = 'background.png (fallback)';
+                }
+            }
+
+            \Log::info('Apple Wallet: Assets added', [
+                'account_id' => $account->id,
+                'store_id' => $store->id,
+                'assets' => $assetsAdded,
+                'wallet_design_version' => $program->wallet_design_version ?? 1,
+            ]);
+
+            return $pass->create();
+        } finally {
+            foreach (glob($tempDir.'/*') ?: [] as $file) {
+                @unlink($file);
+            }
+            @rmdir($tempDir);
+        }
     }
-
 
     /**
      * Convert hex color to RGB format for Apple Wallet
-     *
-     * @param string $hex
-     * @return string
      */
     protected function hexToRgb(string $hex): string
     {
         $hex = ltrim($hex, '#');
         if (strlen($hex) === 3) {
-            $hex = $hex[0] . $hex[0] . $hex[1] . $hex[1] . $hex[2] . $hex[2];
+            $hex = $hex[0].$hex[0].$hex[1].$hex[1].$hex[2].$hex[2];
         }
         $r = hexdec(substr($hex, 0, 2));
         $g = hexdec(substr($hex, 2, 2));
         $b = hexdec(substr($hex, 4, 2));
+
         return sprintf('rgb(%d,%d,%d)', $r, $g, $b);
     }
 
@@ -277,8 +271,8 @@ class AppleWalletPassService
      * Generate circle indicators for stamp progress
      * Example: "●●●○○" for 3 stamps out of 5
      *
-     * @param int $stampCount Current stamp count
-     * @param int $rewardTarget Target stamps needed
+     * @param  int  $stampCount  Current stamp count
+     * @param  int  $rewardTarget  Target stamps needed
      * @return string Circle indicators string
      */
     protected function generateCircleIndicators(int $stampCount, int $rewardTarget): string
@@ -286,89 +280,16 @@ class AppleWalletPassService
         // Clamp stamp count to valid range (0 to reward_target)
         $filled = max(0, min($stampCount, $rewardTarget));
         $empty = $rewardTarget - $filled;
-        
+
         // Unicode circles: filled = ● (U+25CF), empty = ○ (U+25CB)
-        return str_repeat('●', $filled) . str_repeat('○', $empty);
-    }
-
-    /**
-     * Convert an uploaded logo into a circular transparent PNG so Apple Wallet
-     * renders it consistently even when the merchant uploads a square asset.
-     */
-    protected function createCircularLogoPng(string $sourcePath, string $destinationPath, int $size = 160): bool
-    {
-        if (!function_exists('imagecreatetruecolor') || !function_exists('imagecreatefromstring')) {
-            return false;
-        }
-
-        $raw = @file_get_contents($sourcePath);
-        if ($raw === false) {
-            return false;
-        }
-
-        $source = @imagecreatefromstring($raw);
-        if (!$source) {
-            return false;
-        }
-
-        $sourceWidth = imagesx($source);
-        $sourceHeight = imagesy($source);
-        if ($sourceWidth <= 0 || $sourceHeight <= 0) {
-            imagedestroy($source);
-            return false;
-        }
-
-        $canvas = imagecreatetruecolor($size, $size);
-        imagealphablending($canvas, false);
-        imagesavealpha($canvas, true);
-        $transparent = imagecolorallocatealpha($canvas, 0, 0, 0, 127);
-        imagefill($canvas, 0, 0, $transparent);
-
-        $scale = max($size / $sourceWidth, $size / $sourceHeight);
-        $resizedWidth = (int) ceil($sourceWidth * $scale);
-        $resizedHeight = (int) ceil($sourceHeight * $scale);
-        $destinationX = (int) floor(($size - $resizedWidth) / 2);
-        $destinationY = (int) floor(($size - $resizedHeight) / 2);
-
-        imagealphablending($canvas, true);
-        imagecopyresampled(
-            $canvas,
-            $source,
-            $destinationX,
-            $destinationY,
-            0,
-            0,
-            $resizedWidth,
-            $resizedHeight,
-            $sourceWidth,
-            $sourceHeight
-        );
-
-        imagealphablending($canvas, false);
-        $radius = $size / 2;
-        for ($x = 0; $x < $size; $x++) {
-            for ($y = 0; $y < $size; $y++) {
-                $dx = $x - $radius + 0.5;
-                $dy = $y - $radius + 0.5;
-                if (($dx * $dx) + ($dy * $dy) > ($radius * $radius)) {
-                    imagesetpixel($canvas, $x, $y, $transparent);
-                }
-            }
-        }
-
-        $written = imagepng($canvas, $destinationPath);
-
-        imagedestroy($source);
-        imagedestroy($canvas);
-
-        return (bool) $written;
+        return str_repeat('●', $filled).str_repeat('○', $empty);
     }
 
     /**
      * Format token for manual entry (adds dashes for readability).
      * Works for any length; 16-char example: "abcd1234efgh5678" -> "abcd-1234-efgh-5678".
      *
-     * @param string $token The token to format
+     * @param  string  $token  The token to format
      * @return string Formatted token with dashes every 4 characters
      */
     protected function formatTokenForManualEntry(string $token): string
@@ -454,10 +375,11 @@ class AppleWalletPassService
      */
     protected function createFallbackPng(string $path, int $width, int $height, string $badgeHex, string $bgHex): bool
     {
-        if (!function_exists('imagecreatetruecolor')) {
+        if (! function_exists('imagecreatetruecolor')) {
             \Log::warning('Apple Wallet: GD not available for fallback images', [
                 'path' => $path,
             ]);
+
             return false;
         }
 
@@ -489,7 +411,7 @@ class AppleWalletPassService
     {
         $hex = ltrim($hex, '#');
         if (strlen($hex) === 3) {
-            $hex = $hex[0] . $hex[0] . $hex[1] . $hex[1] . $hex[2] . $hex[2];
+            $hex = $hex[0].$hex[0].$hex[1].$hex[1].$hex[2].$hex[2];
         }
 
         return [
