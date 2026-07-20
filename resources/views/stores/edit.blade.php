@@ -1,424 +1,147 @@
 <x-merchant-layout>
-    <x-slot name="header">
-        {{ __('Edit Store') }}
-    </x-slot>
+    <x-slot name="header">Store settings</x-slot>
 
-    @php
-        $usageStats = $usageStats ?? app(\App\Services\Billing\UsageService::class)->getUsageStats(request()->user());
-        $walletReady = !empty($store->reward_title)
-            && (int) ($store->reward_target ?? 0) > 0
-            && !empty($store->background_color)
-            && (!empty($store->logo_path) || !empty($store->pass_logo_path));
-        $billingReady = isset($usageStats)
-            ? (bool) ($usageStats['can_create_program'] ?? false)
-            : true;
-        $launchChecks = [
-            !empty($store->reward_title) && (int) ($store->reward_target ?? 0) > 0,
-            !empty($store->brand_color) && !empty($store->background_color),
-            !empty($store->logo_path),
-            !empty($store->pass_logo_path) || !empty($store->pass_hero_image_path),
-            $billingReady,
-        ];
-        $launchScore = collect($launchChecks)->filter()->count();
-        $launchLabel = $launchScore >= 5
-            ? 'Good to launch'
-            : ($launchScore >= 3 ? 'Launchable, but could be improved' : 'Needs review');
-        $launchIcon = $launchScore >= 5 ? 'check' : ($launchScore >= 3 ? 'review' : 'alert');
-        $launchTone = $launchScore >= 5
-            ? 'bg-emerald-100 text-emerald-700'
-            : ($launchScore >= 3 ? 'bg-amber-100 text-amber-700' : 'bg-accent-100 text-accent-700');
-    @endphp
+    <div class="mx-auto max-w-7xl space-y-6">
+        <nav aria-label="Breadcrumb" class="flex flex-wrap items-center gap-2 text-sm text-stone-500">
+            <a href="{{ route('merchant.stores.index') }}" class="font-medium hover:text-brand-700">Stores</a>
+            <span aria-hidden="true">/</span>
+            <span class="text-stone-800" aria-current="page">{{ $store->name }}</span>
+        </nav>
 
-    <div class="mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div class="lg:col-span-2">
-        <x-ui.card class="p-6">
-                    @if($store->trashed())
-                        <div class="mb-6 rounded-2xl border border-amber-200 bg-amber-50 p-4">
-                            <div class="flex items-start justify-between gap-4">
-                                <div>
-                                    <p class="text-sm font-semibold text-amber-800">This store is archived</p>
-                                    <p class="mt-1 text-sm leading-relaxed text-amber-700">
-                                        New joins are paused, QR sharing is disabled, and customers can no longer stamp or redeem through this store until you restore it. Customer records, wallet history, and branding are still preserved.
-                                    </p>
-                                </div>
-                                <form method="POST" action="{{ route('merchant.stores.restore', $store) }}">
-                                    @csrf
-                                    <x-ui.button type="submit" variant="secondary" size="sm">
-                                        Restore Store
-                                    </x-ui.button>
-                                </form>
-                            </div>
-                        </div>
-                    @endif
-
-                    <form
-                        method="POST"
-                        action="{{ route('merchant.stores.update', $store) }}"
-                        enctype="multipart/form-data"
-                        class="max-w-md mx-auto"
-                        id="store-edit-form"
-                        x-data="{
-                            brandColor: @js(old('brand_color', $store->brand_color ?? '#0EA5E9')),
-                            bgColor: @js(old('background_color', $store->background_color ?? '#1F2937')),
-                            hexToRgb(hex) {
-                                const cleaned = (hex || '').replace('#', '');
-                                if (cleaned.length !== 6) return null;
-                                const value = parseInt(cleaned, 16);
-                                if (Number.isNaN(value)) return null;
-                                return { r: (value >> 16) & 255, g: (value >> 8) & 255, b: value & 255 };
-                            },
-                            luminance(hex) {
-                                const rgb = this.hexToRgb(hex);
-                                if (!rgb) return 0;
-                                const convert = (channel) => {
-                                    const normalized = channel / 255;
-                                    return normalized <= 0.03928
-                                        ? normalized / 12.92
-                                        : Math.pow((normalized + 0.055) / 1.055, 2.4);
-                                };
-                                return (0.2126 * convert(rgb.r)) + (0.7152 * convert(rgb.g)) + (0.0722 * convert(rgb.b));
-                            },
-                            contrastRatio(a, b) {
-                                const l1 = this.luminance(a);
-                                const l2 = this.luminance(b);
-                                const lighter = Math.max(l1, l2);
-                                const darker = Math.min(l1, l2);
-                                return (lighter + 0.05) / (darker + 0.05);
-                            },
-                            get hasLowContrastPreview() {
-                                return this.contrastRatio(this.brandColor, this.bgColor) < 3;
-                            },
-                            get hasBlockedContrast() {
-                                return this.contrastRatio(this.brandColor, this.bgColor) < 2;
-                            },
-                            get hasVeryLightBackground() {
-                                return this.luminance(this.bgColor) > 0.9;
-                            }
-                        }"
-                        x-init="
-                            $refs.brandColor.addEventListener('input', e => { brandColor = e.target.value; $refs.brandColorText.value = e.target.value; });
-                            $refs.brandColorText.addEventListener('input', e => { if (/^#[0-9A-Fa-f]{6}$/.test(e.target.value)) { brandColor = e.target.value; $refs.brandColor.value = e.target.value; } });
-                            $refs.bgColor.addEventListener('input', e => { bgColor = e.target.value; $refs.bgColorText.value = e.target.value; });
-                            $refs.bgColorText.addEventListener('input', e => { if (/^#[0-9A-Fa-f]{6}$/.test(e.target.value)) { bgColor = e.target.value; $refs.bgColor.value = e.target.value; } });
-                        "
-                    >
-                        @csrf
-                        @method('PUT')
-                        <x-form-error-summary form-id="store-edit-form" />
-
-                        <!-- Name -->
-                        <div class="mb-5">
-                            <label for="name" class="block mb-2 text-sm font-medium text-stone-700">Store Name</label>
-                            <x-ui.input type="text" id="name" name="name" value="{{ old('name', $store->name) }}" required />
-                            <x-input-error :messages="$errors->get('name')" class="mt-2" />
-                        </div>
-
-                        <!-- Address -->
-                        <div class="mb-5">
-                            <label for="address" class="block mb-2 text-sm font-medium text-stone-700">Address (Optional)</label>
-                            <x-ui.input type="text" id="address" name="address" value="{{ old('address', $store->address) }}" />
-                            <x-input-error :messages="$errors->get('address')" class="mt-2" />
-                        </div>
-
-                        <div class="mb-6 rounded-2xl border border-stone-200 bg-stone-50/70 p-4">
-                            <p class="text-sm font-semibold text-stone-900">Default loyalty card</p>
-                            <p class="mt-1 text-sm text-stone-600">Reward rules, verification, and join form fields are managed from the default card screen.</p>
-                            @if($defaultProgram)
-                                @php
-                                    $defaultFormConfig = $defaultProgram->registration_form_config ?? [];
-                                    $enabledJoinFields = collect(['first_name', 'last_name', 'phone', 'birthday'])
-                                        ->filter(fn ($field) => data_get($defaultFormConfig, "{$field}.enabled"))
-                                        ->map(fn ($field) => str($field)->replace('_', ' ')->title())
-                                        ->values();
-                                @endphp
-                                <div class="mt-4 rounded-2xl border border-stone-200 bg-white p-4">
-                                    <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                                        <div class="space-y-2">
-                                            <p class="font-semibold text-stone-900">{{ $defaultProgram->name }}</p>
-                                            <p class="text-sm text-stone-600">{{ $defaultProgram->reward_target }} stamps for {{ $defaultProgram->reward_title }}</p>
-                                            <p class="text-xs text-stone-500">
-                                                Redemption verification: {{ $defaultProgram->require_verification_for_redemption ? 'Required' : 'Optional' }}
-                                            </p>
-                                            <p class="text-xs text-stone-500">
-                                                Join fields:
-                                                {{ $enabledJoinFields->isNotEmpty() ? $enabledJoinFields->join(', ') : 'Email only' }}
-                                            </p>
-                                        </div>
-                                        <div class="flex flex-wrap gap-2">
-                                            <x-ui.button href="{{ route('merchant.stores.programs.edit', [$store, $defaultProgram]) }}" variant="secondary" size="sm">
-                                                Edit Default Card
-                                            </x-ui.button>
-                                            <x-ui.button href="{{ route('merchant.stores.programs.index', $store) }}" variant="ghost" size="sm">
-                                                View All Cards
-                                            </x-ui.button>
-                                        </div>
-                                    </div>
-                                </div>
-                            @endif
-                        </div>
-
-                        <div class="mb-5">
-                            <x-input-error :messages="$errors->get('reward_target')" class="mt-2" />
-                            <x-input-error :messages="$errors->get('reward_title')" class="mt-2" />
-                            <x-input-error :messages="$errors->get('require_verification_for_redemption')" class="mt-2" />
-                        </div>
-                        
-                        <!-- Brand Color -->
-                        <div class="mb-5">
-                            <label for="brand_color" class="block mb-2 text-sm font-medium text-stone-700">Brand Color</label>
-                            <div class="flex gap-2">
-                                <input type="color" id="brand_color" name="brand_color" x-ref="brandColor" value="{{ old('brand_color', $store->brand_color ?? '#0EA5E9') }}" class="color-swatch-input h-11 w-11 rounded-full border-2 cursor-pointer flex-shrink-0 overflow-hidden p-0 bg-transparent appearance-none" x-bind:class="hasBlockedContrast ? 'border-red-300' : 'border-stone-300'">
-                                <x-ui.input type="text" id="brand_color_text" x-ref="brandColorText" value="{{ old('brand_color', $store->brand_color ?? '#0EA5E9') }}" placeholder="#0EA5E9" pattern="^#[0-9A-Fa-f]{6}$" class="flex-1" x-bind:class="hasBlockedContrast ? '!border-red-300' : ''" />
-                            </div>
-                            <p class="mt-1 text-xs text-stone-500">Used for customer card styling</p>
-                            <x-input-error :messages="$errors->get('brand_color')" class="mt-2" />
-                        </div>
-
-                        <!-- Background Color -->
-                        <div class="mb-5">
-                            <label for="background_color" class="block mb-2 text-sm font-medium text-stone-700">Background Color</label>
-                            <div class="flex gap-2">
-                                <input type="color" id="background_color" name="background_color" x-ref="bgColor" value="{{ old('background_color', $store->background_color ?? '#1F2937') }}" class="color-swatch-input h-11 w-11 rounded-full border-2 cursor-pointer flex-shrink-0 overflow-hidden p-0 bg-transparent appearance-none" x-bind:class="hasBlockedContrast ? 'border-red-300' : 'border-stone-300'">
-                                <x-ui.input type="text" id="background_color_text" x-ref="bgColorText" value="{{ old('background_color', $store->background_color ?? '#1F2937') }}" placeholder="#1F2937" pattern="^#[0-9A-Fa-f]{6}$" class="flex-1" x-bind:class="hasBlockedContrast ? '!border-red-300' : ''" />
-                            </div>
-                            <p class="mt-1 text-xs text-stone-500">Used for customer card page background</p>
-                            <x-input-error :messages="$errors->get('background_color')" class="mt-2" />
-                        </div>
-
-                        <div x-show="hasBlockedContrast" x-cloak class="mb-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900">
-                            <p class="font-semibold">Colors need more contrast</p>
-                            <p class="mt-1 leading-relaxed">
-                                Your brand and background colors are too close together, so the join page and saved card can become unreadable. Use a darker background, a brighter accent, or increase the contrast between them before saving.
-                            </p>
-                        </div>
-
-                        <div x-show="!hasBlockedContrast && (hasLowContrastPreview || hasVeryLightBackground)" x-cloak class="mb-5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-                            <p class="font-semibold">Preview warning</p>
-                            <p class="mt-1 leading-relaxed">
-                                This combination will save, but it may still look washed out on the join page or wallet handoff. The safest fix is a darker background and a more distinct accent color.
-                            </p>
-                        </div>
-
-                        <div class="mb-5 grid grid-cols-1 items-stretch gap-4 sm:grid-cols-3">
-                            <x-ui.image-upload-field
-                                id="logo"
-                                label="Store logo"
-                                :preview-url="$store->logo_url"
-                                img-class="h-20 w-20 object-contain"
-                                helper="PNG, JPG, or WebP (max 2MB). Used for customer card page."
-                            >
-                                <x-input-error :messages="$errors->get('logo')" class="mt-2" />
-                            </x-ui.image-upload-field>
-
-                            <x-ui.image-upload-field
-                                id="pass_logo"
-                                label="Wallet logo"
-                                :preview-url="$store->pass_logo_url"
-                                img-class="h-12 w-20 object-contain"
-                                helper="PNG, JPG, or WebP (max 2MB). Recommended: 160x50px."
-                            >
-                                <x-input-error :messages="$errors->get('pass_logo')" class="mt-2" />
-                            </x-ui.image-upload-field>
-
-                            <x-ui.image-upload-field
-                                id="pass_hero_image"
-                                label="Wallet hero"
-                                :preview-url="$store->pass_hero_image_url"
-                                img-class="h-20 w-32 object-cover"
-                                helper="PNG, JPG, or WebP (max 2MB). Recommended: 640x180px or 640x200px."
-                            >
-                                <x-input-error :messages="$errors->get('pass_hero_image')" class="mt-2" />
-                            </x-ui.image-upload-field>
-                        </div>
-
-                        <div class="flex items-center justify-end gap-4">
-                            <x-ui.button type="submit" variant="primary" x-bind:disabled="hasBlockedContrast" x-bind:aria-disabled="hasBlockedContrast ? 'true' : 'false'">
-                                Update Store
-                            </x-ui.button>
-                        </div>
-                    </form>
-
-                    <div class="mt-8 pt-6 border-t border-stone-200">
-                        <div class="rounded-2xl border border-accent-200 bg-accent-50 p-4">
-                            <p class="text-sm font-semibold text-accent-800">{{ $store->trashed() ? 'Archived store' : 'Archive this store' }}</p>
-                            <ul class="mt-2 space-y-1 text-sm leading-relaxed text-accent-700 list-disc list-inside">
-                                <li>Join links and QR codes stop accepting new customers.</li>
-                                <li>Existing customer cards and history stay preserved for support and restore.</li>
-                                <li>Wallet cards may remain on customer phones, but new stamp or redeem actions should stop.</li>
-                            </ul>
-                            <div class="mt-4 flex flex-wrap gap-2">
-                                @if($store->trashed())
-                                    <form method="POST" action="{{ route('merchant.stores.restore', $store) }}">
-                                        @csrf
-                                        <x-ui.button type="submit" variant="secondary">
-                                            Restore Store
-                                        </x-ui.button>
-                                    </form>
-                                @else
-                                    <form method="POST" action="{{ route('merchant.stores.destroy', $store) }}" onsubmit="return confirm('Archive this store? Customers and history will stay preserved, but new joins and QR sharing will stop until you restore it.');">
-                                        @csrf
-                                        @method('DELETE')
-                                        <x-ui.button type="submit" variant="danger">
-                                            Archive Store
-                                        </x-ui.button>
-                                    </form>
-                                @endif
-                            </div>
-                        </div>
-                    </div>
-                </x-ui.card>
+        <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+                <p class="text-sm font-semibold uppercase tracking-[0.18em] text-brand-700">Store</p>
+                <h1 class="mt-1 text-2xl font-semibold tracking-tight text-stone-900 sm:text-3xl">{{ $store->name }}</h1>
+                <p class="mt-2 max-w-2xl text-sm leading-6 text-stone-600">Manage this location and move to its loyalty cards when you need to change rewards, customer fields, colours, or Wallet images.</p>
+            </div>
+            @if(!$store->trashed() && $defaultProgram)
+                <x-ui.button href="{{ route('merchant.stores.programs.edit', [$store, $defaultProgram]) }}" variant="primary">
+                    Edit loyalty card
+                </x-ui.button>
+            @endif
         </div>
 
-        <div class="lg:col-span-1 space-y-4">
-            <x-ui.card class="p-5 mb-4">
-                <div class="flex items-start justify-between gap-3">
-                    <div>
-                        <h3 class="text-base font-bold text-stone-900">Wallet Health</h3>
-                        <p class="mt-1 text-sm text-stone-600">Use this before launch or when a merchant reports a stale pass.</p>
-                    </div>
-                    <x-ui.status-icon-badge
-                        :icon="$walletHealth['status_icon'] ?? 'attention'"
-                        :label="$walletHealth['status_label']"
-                        :tone="$walletHealth['status_tone']"
-                    />
-                </div>
-                <div class="mt-4 grid gap-3 sm:grid-cols-2">
-                    <div class="rounded-xl border border-stone-200 bg-stone-50/70 p-3">
-                        <p class="text-xs font-semibold uppercase tracking-wide text-stone-500">Active cards</p>
-                        <p class="mt-1 text-lg font-semibold text-stone-900">{{ $walletHealth['active_cards'] }}</p>
-                    </div>
-                    <div class="rounded-xl border border-stone-200 bg-stone-50/70 p-3">
-                        <p class="text-xs font-semibold uppercase tracking-wide text-stone-500">Wallet issues (7 days)</p>
-                        <p class="mt-1 text-lg font-semibold text-stone-900">{{ $walletHealth['wallet_failures_last_7_days'] }}</p>
-                    </div>
-                </div>
-                <div class="mt-4 rounded-xl border border-stone-200 bg-white p-4">
-                    <p class="text-sm font-semibold text-stone-800">Recommended next action</p>
-                    <p class="mt-2 text-sm leading-relaxed text-stone-600">{{ $walletHealth['recommended_action'] }}</p>
-                    <div class="mt-4 flex flex-wrap gap-2">
-                        @unless($store->trashed())
-                            <form method="POST" action="{{ route('merchant.stores.refresh-wallets', $store) }}">
-                                @csrf
-                                <x-ui.button type="submit" variant="secondary" size="sm">
-                                    Queue Wallet Refresh for All Cards
-                                </x-ui.button>
-                            </form>
-                        @endunless
-                        <x-ui.button href="{{ route('merchant.support.index', ['event_type' => 'wallet_sync', 'store_id' => $store->id]) }}" variant="ghost" size="sm">
-                            Review Wallet Logs
-                        </x-ui.button>
-                    </div>
-                </div>
-            </x-ui.card>
+        @if($errors->any())
+            <x-form-error-summary form-id="store-edit-form" />
+        @endif
 
-            <x-ui.card class="p-5">
-                <div class="flex items-start justify-between gap-3">
-                    <div>
-                        <h3 class="text-base font-bold text-stone-900">Launch Quality</h3>
-                        <p class="mt-1 text-sm text-stone-600">A quick overall read on whether this store feels ready to share publicly.</p>
+        @if($store->trashed())
+            <x-ui.alert variant="warning">
+                <p class="font-semibold">This store is archived</p>
+                <p class="mt-1">New joins, QR sharing, stamping, and redemption are paused. Customer records and Wallet history are preserved.</p>
+            </x-ui.alert>
+        @endif
+
+        <div class="grid gap-6 xl:grid-cols-[minmax(0,1fr)_22rem]">
+            <div class="space-y-6">
+                <section class="rounded-2xl border border-stone-200 bg-white p-5 shadow-sm sm:p-6" aria-labelledby="store-information-title">
+                    <div class="border-b border-stone-100 pb-4">
+                        <h2 id="store-information-title" class="text-lg font-semibold text-stone-900">Store information</h2>
+                        <p class="mt-1 text-sm text-stone-600">This identifies the physical location or merchant workspace.</p>
                     </div>
-                    <x-ui.status-icon-badge
-                        :icon="$launchIcon"
-                        :label="$launchLabel"
-                        :tone="$launchTone"
-                    />
-                </div>
-                <p class="mt-4 text-sm text-stone-600">{{ $launchScore }}/5 launch signals are in a strong place.</p>
-                <p class="mt-3 text-xs leading-relaxed text-stone-500">This score is guidance only. It helps merchants catch branding or plan issues before they print posters or publish the join link.</p>
-            </x-ui.card>
 
-            <x-ui.card class="p-5">
-                <div class="flex items-start justify-between gap-3">
-                    <div>
-                        <h3 class="text-base font-bold text-stone-900">Wallet Readiness</h3>
-                        <p class="mt-1 text-sm text-stone-600">Check whether this store is visually ready for Apple Wallet and Google Wallet.</p>
+                    <form id="store-edit-form" method="POST" action="{{ route('merchant.stores.update', $store) }}" class="mt-5 space-y-5">
+                        @csrf
+                        @method('PUT')
+
+                        <div>
+                            <label for="name" class="mb-1.5 block text-sm font-medium text-stone-800">Store name <span class="text-red-600" aria-hidden="true">*</span></label>
+                            <x-ui.input id="name" name="name" type="text" value="{{ old('name', $store->name) }}" autocomplete="organization" required aria-describedby="name-help name-error" />
+                            <p id="name-help" class="mt-1.5 text-xs text-stone-500">The location name merchants use to recognise this workspace.</p>
+                            <x-input-error id="name-error" :messages="$errors->get('name')" class="mt-2" />
+                        </div>
+
+                        <div>
+                            <label for="address" class="mb-1.5 block text-sm font-medium text-stone-800">Address <span class="font-normal text-stone-500">(optional)</span></label>
+                            <x-ui.input id="address" name="address" type="text" value="{{ old('address', $store->address) }}" autocomplete="street-address" aria-describedby="address-help address-error" />
+                            <p id="address-help" class="mt-1.5 text-xs text-stone-500">Useful when you manage more than one location.</p>
+                            <x-input-error id="address-error" :messages="$errors->get('address')" class="mt-2" />
+                        </div>
+
+                        <div class="flex justify-end">
+                            <x-ui.button type="submit" variant="primary" loading-text="Saving…">Save store</x-ui.button>
+                        </div>
+                    </form>
+                </section>
+
+                <section class="rounded-2xl border border-stone-200 bg-white p-5 shadow-sm sm:p-6" aria-labelledby="loyalty-cards-title">
+                    <div class="flex flex-col gap-4 border-b border-stone-100 pb-4 sm:flex-row sm:items-start sm:justify-between">
+                        <div>
+                            <h2 id="loyalty-cards-title" class="text-lg font-semibold text-stone-900">Loyalty cards</h2>
+                            <p class="mt-1 max-w-2xl text-sm text-stone-600">Reward settings, customer fields, colours and Wallet images are managed on the loyalty card.</p>
+                        </div>
+                        <x-ui.button href="{{ route('merchant.stores.programs.index', $store) }}" variant="secondary" size="sm">View all cards</x-ui.button>
                     </div>
-                    <x-ui.status-icon-badge
-                        :icon="$walletReady ? 'check' : 'review'"
-                        :label="$walletReady ? 'Ready' : 'Needs review'"
-                        :tone="$walletReady ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'"
-                    />
-                </div>
 
-                <ul class="mt-4 space-y-3 text-sm">
-                    <li class="flex items-center justify-between rounded-xl border border-stone-200 bg-stone-50/80 px-4 py-3">
-                        <span class="text-stone-700">Reward setup</span>
-                        <span class="font-medium {{ !empty($store->reward_title) && (int) ($store->reward_target ?? 0) > 0 ? 'text-emerald-700' : 'text-stone-500' }}">
-                            {{ !empty($store->reward_title) && (int) ($store->reward_target ?? 0) > 0 ? 'Ready' : 'Needed' }}
-                        </span>
-                    </li>
-                    <li class="flex items-center justify-between rounded-xl border border-stone-200 bg-stone-50/80 px-4 py-3">
-                        <span class="text-stone-700">Store branding</span>
-                        <span class="font-medium {{ !empty($store->logo_path) ? 'text-emerald-700' : 'text-amber-700' }}">
-                            {{ !empty($store->logo_path) ? 'Ready' : 'Optional' }}
-                        </span>
-                    </li>
-                    <li class="flex items-center justify-between rounded-xl border border-stone-200 bg-stone-50/80 px-4 py-3">
-                        <span class="text-stone-700">Wallet assets</span>
-                        <span class="font-medium {{ (!empty($store->pass_logo_path) || !empty($store->pass_hero_image_path)) ? 'text-emerald-700' : 'text-amber-700' }}">
-                            {{ (!empty($store->pass_logo_path) || !empty($store->pass_hero_image_path)) ? 'Ready' : 'Optional' }}
-                        </span>
-                    </li>
-                    <li class="flex items-center justify-between rounded-xl border border-stone-200 bg-stone-50/80 px-4 py-3">
-                        <span class="text-stone-700">Background styling</span>
-                        <span class="font-medium {{ !empty($store->background_color) ? 'text-emerald-700' : 'text-stone-500' }}">
-                            {{ !empty($store->background_color) ? 'Ready' : 'Needed' }}
-                        </span>
-                    </li>
-                </ul>
-            </x-ui.card>
-
-            <x-ui.card class="p-5">
-                <div class="flex items-start justify-between gap-3">
-                    <div>
-                        <h3 class="text-base font-bold text-stone-900">Billing Readiness</h3>
-                        <p class="mt-1 text-sm text-stone-600">Check whether your current plan still allows another loyalty card for this store.</p>
-                    </div>
-                    <x-ui.status-icon-badge
-                        :icon="$billingReady ? 'check' : 'billing'"
-                        :label="$billingReady ? 'Ready' : 'Review plan'"
-                        :tone="$billingReady ? 'bg-emerald-100 text-emerald-700' : 'bg-accent-100 text-accent-700'"
-                    />
-                </div>
-
-                <ul class="mt-4 space-y-3 text-sm">
-                    <li class="flex items-center justify-between rounded-xl border border-stone-200 bg-stone-50/80 px-4 py-3">
-                        <span class="text-stone-700">Can add more cards</span>
-                        <span class="font-medium {{ $billingReady ? 'text-emerald-700' : 'text-accent-700' }}">
-                            {{ $billingReady ? 'Yes' : 'No' }}
-                        </span>
-                    </li>
-                    <li class="flex items-center justify-between rounded-xl border border-stone-200 bg-stone-50/80 px-4 py-3">
-                        <span class="text-stone-700">Verification policy</span>
-                        <span class="font-medium text-stone-900">
-                            {{ ($store->require_verification_for_redemption ?? true) ? 'Protected' : 'Open' }}
-                        </span>
-                    </li>
-                </ul>
-
-                <div class="mt-4 flex flex-wrap gap-2">
-                    <x-ui.button href="{{ route('billing.index') }}" variant="secondary" size="sm">
-                        Open Billing
-                    </x-ui.button>
-                    @if(!$store->trashed())
-                        <x-ui.button href="{{ route('merchant.stores.qr', $store) }}" variant="ghost" size="sm">
-                            Open default QR
-                        </x-ui.button>
-                        <x-ui.button href="{{ route('merchant.stores.programs.index', $store) }}" variant="ghost" size="sm">
-                            Loyalty Cards
-                        </x-ui.button>
+                    @if($defaultProgram)
+                        <div class="mt-5 flex flex-col gap-5 rounded-2xl bg-stone-50 p-4 sm:flex-row sm:items-center sm:justify-between">
+                            <div class="min-w-0">
+                                <div class="flex flex-wrap items-center gap-2">
+                                    <h3 class="truncate font-semibold text-stone-900">{{ $defaultProgram->name }}</h3>
+                                    <x-ui.badge variant="success">Default card</x-ui.badge>
+                                    @if($defaultProgram->trashed())
+                                        <x-ui.badge variant="warning">Archived</x-ui.badge>
+                                    @endif
+                                </div>
+                                <dl class="mt-3 grid grid-cols-2 gap-x-6 gap-y-2 text-sm sm:grid-cols-3">
+                                    <div><dt class="text-stone-500">Reward</dt><dd class="font-medium text-stone-900">{{ $defaultProgram->reward_target }} stamps</dd></div>
+                                    <div><dt class="text-stone-500">Benefit</dt><dd class="font-medium text-stone-900">{{ $defaultProgram->reward_title }}</dd></div>
+                                    <div><dt class="text-stone-500">Customers</dt><dd class="font-medium text-stone-900">{{ number_format($defaultProgram->loyalty_accounts_count ?? 0) }}</dd></div>
+                                </dl>
+                            </div>
+                            <div class="flex flex-col gap-2 sm:items-end">
+                                <x-ui.button href="{{ route('merchant.stores.programs.edit', [$store, $defaultProgram]) }}" variant="primary" size="sm">Edit loyalty card</x-ui.button>
+                                <a href="{{ route('merchant.stores.programs.qr', [$store, $defaultProgram]) }}" class="inline-flex min-h-11 items-center justify-center text-sm font-semibold text-brand-700 hover:text-brand-800">View card QR</a>
+                            </div>
+                        </div>
+                    @else
+                        <x-ui.empty-state class="mt-5" heading="No loyalty card found" description="Create a loyalty card before sharing a join QR." />
                     @endif
-                </div>
-            </x-ui.card>
+                </section>
 
-            <x-ui.card class="p-5">
-                <h3 class="text-base font-bold text-stone-900">Asset guidance</h3>
-                <ul class="mt-4 space-y-3 text-sm leading-relaxed text-stone-600">
-                    <li>Use a clean logo with space around it so it still reads at wallet size.</li>
-                    <li>Choose one strong hero image rather than a busy collage with small text.</li>
-                    <li>If you only upload one thing, make it the store logo. It improves the most screens at once.</li>
-                </ul>
-            </x-ui.card>
+                <details class="rounded-2xl border border-stone-200 bg-white p-5 shadow-sm sm:p-6">
+                    <summary class="cursor-pointer font-semibold text-stone-900 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2">Legacy fallback settings</summary>
+                    <p class="mt-3 text-sm leading-6 text-stone-600">These stored values support legacy Store join links and onboarding compatibility. Card settings remain the customer-facing source of truth and should be edited from the loyalty card.</p>
+                    <dl class="mt-4 grid gap-3 text-sm sm:grid-cols-2">
+                        <div><dt class="text-stone-500">Fallback reward</dt><dd class="font-medium text-stone-900">{{ $store->reward_target }} stamps for {{ $store->reward_title }}</dd></div>
+                        <div><dt class="text-stone-500">Fallback colours</dt><dd class="mt-1 flex items-center gap-2 font-medium text-stone-900"><span class="h-5 w-5 rounded-full border border-stone-300" style="background: {{ $store->brand_color }}"></span><span class="h-5 w-5 rounded-full border border-stone-300" style="background: {{ $store->background_color }}"></span></dd></div>
+                    </dl>
+                </details>
+
+                <section class="rounded-2xl border border-red-200 bg-red-50 p-5 sm:p-6" aria-labelledby="archive-store-title">
+                    <h2 id="archive-store-title" class="font-semibold text-red-900">{{ $store->trashed() ? 'Restore store' : 'Archive store' }}</h2>
+                    <p class="mt-2 text-sm leading-6 text-red-800">{{ $store->trashed() ? 'Restoring re-enables join links, QR sharing, stamping, and redemption.' : 'Archiving pauses new joins and store activity. Existing customers, passes, and history remain preserved.' }}</p>
+                    <form method="POST" action="{{ $store->trashed() ? route('merchant.stores.restore', $store) : route('merchant.stores.destroy', $store) }}" class="mt-4" @unless($store->trashed()) onsubmit="return confirm('Archive this store? New joins, stamping, and redemption will pause. Customer history will remain preserved.');" @endunless>
+                        @csrf
+                        @unless($store->trashed()) @method('DELETE') @endunless
+                        <x-ui.button type="submit" :variant="$store->trashed() ? 'secondary' : 'danger'" :loading-text="$store->trashed() ? 'Restoring…' : 'Archiving…'">{{ $store->trashed() ? 'Restore store' : 'Archive store' }}</x-ui.button>
+                    </form>
+                </section>
+            </div>
+
+            <aside class="space-y-4" aria-label="Store status">
+                <section class="rounded-2xl border border-stone-200 bg-white p-5 shadow-sm">
+                    <div class="flex items-start justify-between gap-3">
+                        <div><h2 class="font-semibold text-stone-900">Store readiness</h2><p class="mt-1 text-xs text-stone-500">Operational status for this location.</p></div>
+                        <x-ui.status-icon-badge :icon="$walletHealth['status_icon']" :label="$walletHealth['status_label']" :tone="$walletHealth['status_tone']" />
+                    </div>
+                    <p class="mt-4 text-sm leading-6 text-stone-600">{{ $walletHealth['recommended_action'] }}</p>
+                    <dl class="mt-4 grid grid-cols-2 gap-3 border-t border-stone-100 pt-4 text-sm">
+                        <div><dt class="text-stone-500">Customer cards</dt><dd class="mt-1 font-semibold text-stone-900">{{ number_format($walletHealth['active_cards']) }}</dd></div>
+                        <div><dt class="text-stone-500">Apple installs</dt><dd class="mt-1 font-semibold text-stone-900">{{ number_format($walletHealth['active_apple_registrations']) }}</dd></div>
+                    </dl>
+                </section>
+
+                @if(!$store->trashed())
+                    <section class="rounded-2xl border border-stone-200 bg-stone-50 p-5">
+                        <h2 class="font-semibold text-stone-900">Store links</h2>
+                        <div class="mt-3 grid gap-2">
+                            <a href="{{ route('merchant.stores.qr', $store) }}" class="inline-flex min-h-11 items-center text-sm font-semibold text-brand-700 hover:text-brand-800">Open store QR</a>
+                            <a href="{{ route('merchant.stores.programs.index', $store) }}" class="inline-flex min-h-11 items-center text-sm font-semibold text-brand-700 hover:text-brand-800">Manage loyalty cards</a>
+                        </div>
+                    </section>
+                @endif
+            </aside>
         </div>
     </div>
 </x-merchant-layout>

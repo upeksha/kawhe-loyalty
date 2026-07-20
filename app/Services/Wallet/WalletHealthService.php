@@ -68,12 +68,12 @@ class WalletHealthService
         if (! $context['configured']) {
             [$label, $tone, $message] = ['Not configured', 'bg-stone-100 text-stone-700', 'Wallet provider credentials need to be configured by support.'];
         } elseif (! $context['assets_current']) {
-            [$label, $tone, $message] = ['Processing', 'bg-blue-100 text-blue-700', 'Wallet artwork is being generated or refreshed.'];
+            [$label, $tone, $message] = ['Processing', 'bg-blue-100 text-blue-700', 'Wallet artwork is being generated. Loyalty balances remain safe.'];
         } elseif ($recentFailure) {
             $retryable = (bool) data_get($lastFailure->metadata, "{$platform}.retryable", false);
             [$label, $tone, $message] = $retryable
-                ? ['Update delayed', 'bg-amber-100 text-amber-700', 'The wallet provider is temporarily delaying updates. A retry is safe.']
-                : ['Needs attention', 'bg-red-100 text-red-700', 'A recent wallet update needs support attention.'];
+                ? ['Update delayed', 'bg-amber-100 text-amber-700', 'Customer balances are correct, but saved passes may update later. A retry is safe.']
+                : ['Needs attention', 'bg-red-100 text-red-700', 'Customer balances are safe. A recent saved-pass update needs support attention.'];
         } elseif (! $context['used']) {
             [$label, $tone, $message] = ['Not yet used', 'bg-stone-100 text-stone-700', 'No customer activity has been recorded for this wallet provider yet.'];
         } else {

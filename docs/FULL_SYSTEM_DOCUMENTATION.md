@@ -384,7 +384,7 @@ Merchants can:
 
 - View active and archived stores.
 - Create stores within plan limits.
-- Edit store name/address and store-level fallback branding.
+- Edit store name and address.
 - View default loyalty card information from the store edit page.
 - Open the default card editor from the store edit page.
 - See wallet health and launch quality indicators.
@@ -392,6 +392,8 @@ Merchants can:
 - Archive a store instead of hard deleting it.
 - Restore an archived store.
 - View/download the store QR and poster.
+
+The Store edit page treats Store as the location and operational container. Reward settings, registration fields, colours, and Wallet images are managed on the associated loyalty card. Legacy Store branding values remain in the database for onboarding and compatibility and are shown only as read-only fallback information after onboarding.
 
 Archive behavior:
 
@@ -754,10 +756,10 @@ The app resolves joins by loyalty program first. Legacy store join URLs still fa
 
 ### 7.2 Join landing
 
-The landing page lets the customer choose:
+The landing page presents the store, loyalty-card name, reward rule, and no-app-required message before offering:
 
-- Create a new card.
-- Find an existing card.
+- A primary `Join loyalty card` action.
+- A secondary `Find my card` action for returning customers.
 
 If the store or loyalty card is archived, the app shows an archived/invalid state instead of allowing a join.
 
@@ -793,14 +795,14 @@ The card page shows:
 
 - Store/program branding.
 - Customer name.
-- Stamp progress.
-- Reward status.
+- Stamp progress in `N of N stamps` language.
+- The number of stamps remaining or a clear reward-ready state.
 - QR code for stamping or redemption.
-- Manual code.
-- Recent activity.
+- Scan guidance and the manual code immediately below the QR.
 - Apple Wallet button.
 - Google Wallet button.
-- Email verification actions when needed.
+- Card-active verification guidance and resend actions when needed.
+- A short, customer-friendly recent activity list.
 
 The web card can also expose:
 

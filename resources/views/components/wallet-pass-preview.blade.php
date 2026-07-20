@@ -40,6 +40,7 @@
         customerName: @js($preview['example_customer']),
         exampleRewards: {{ max(0, (int) $preview['example_rewards']) }},
         manualCode: @js($preview['example_manual_code']),
+        temporaryUrls: {},
         get exampleStamps() {
             return Math.min(4, Math.max(0, this.rewardTarget - 1));
         },
@@ -69,7 +70,11 @@
                 const file = event.target.files?.[0];
                 if (!file) return;
                 const url = URL.createObjectURL(file);
-                properties.forEach(property => { this[property] = url; });
+                properties.forEach(property => {
+                    if (this.temporaryUrls[property]) URL.revokeObjectURL(this.temporaryUrls[property]);
+                    this.temporaryUrls[property] = url;
+                    this[property] = url;
+                });
             });
         },
         initPreview() {
@@ -80,6 +85,9 @@
             this.bindField('background_color', 'bgColor');
             this.bindFile('pass_logo', ['appleLogo', 'googleLogo']);
             this.bindFile('pass_hero_image', ['appleHero', 'googleHero']);
+            window.addEventListener('pagehide', () => {
+                [...new Set(Object.values(this.temporaryUrls))].forEach(url => URL.revokeObjectURL(url));
+            }, { once: true });
         }
     }"
     x-init="initPreview()"
@@ -90,8 +98,8 @@
             <p class="mt-1 text-sm text-stone-600">Review each platform before saving.</p>
         </div>
         <div class="inline-flex rounded-xl border border-stone-200 bg-white p-1 shadow-sm" role="tablist" aria-label="Wallet platform preview">
-            <button type="button" role="tab" id="apple-preview-tab" :aria-selected="platform === 'apple'" aria-controls="apple-preview-panel" @click="platform = 'apple'" @keydown.right.prevent="platform = 'google'; $nextTick(() => $refs.googleTab.focus())" x-ref="appleTab" class="rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors" :class="platform === 'apple' ? 'bg-[#2b1e18] text-white' : 'text-stone-600 hover:bg-stone-50'">Apple</button>
-            <button type="button" role="tab" id="google-preview-tab" :aria-selected="platform === 'google'" aria-controls="google-preview-panel" @click="platform = 'google'" @keydown.left.prevent="platform = 'apple'; $nextTick(() => $refs.appleTab.focus())" x-ref="googleTab" class="rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors" :class="platform === 'google' ? 'bg-[#2b1e18] text-white' : 'text-stone-600 hover:bg-stone-50'">Google</button>
+            <button type="button" role="tab" id="apple-preview-tab" :aria-selected="platform === 'apple'" aria-controls="apple-preview-panel" @click="platform = 'apple'" @keydown.right.prevent="platform = 'google'; $nextTick(() => $refs.googleTab.focus())" x-ref="appleTab" class="rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors" :class="platform === 'apple' ? 'bg-[#2b1e18] text-white' : 'text-stone-600 hover:bg-stone-50'">Apple Wallet</button>
+            <button type="button" role="tab" id="google-preview-tab" :aria-selected="platform === 'google'" aria-controls="google-preview-panel" @click="platform = 'google'" @keydown.left.prevent="platform = 'apple'; $nextTick(() => $refs.appleTab.focus())" x-ref="googleTab" class="rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors" :class="platform === 'google' ? 'bg-[#2b1e18] text-white' : 'text-stone-600 hover:bg-stone-50'">Google Wallet</button>
         </div>
     </div>
 

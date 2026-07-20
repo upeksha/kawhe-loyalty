@@ -4,7 +4,6 @@ use App\Models\Customer;
 use App\Models\LoyaltyAccount;
 use App\Models\Store;
 use App\Models\User;
-use Illuminate\Support\Carbon;
 
 test('reward becomes available when target reached', function () {
     $user = User::factory()->create();
@@ -106,11 +105,10 @@ test('card page shows redeem qr when available', function () {
     $response = $this->get(route('card.show', ['public_token' => $account->public_token]));
 
     $response->assertOk();
-    // Use assertSee with false to avoid escaping issues with SVG content, 
-    // or just check for the reward text as proxy
-    $response->assertSee('Reward Unlocked!');
+    $response->assertSee('is ready');
+    $response->assertSee('Redeem reward');
     // Verify the redeem token is passed to the QR generator
-    $response->assertViewHas('account', function ($viewAccount) use ($account) {
+    $response->assertViewHas('account', function ($viewAccount) {
         return $viewAccount->redeem_token === 'visible-redeem-token';
     });
 });
@@ -134,7 +132,7 @@ test('multi-reward: stamping 12 stamps on 5-target card earns 2 rewards with 2 r
 
     $response->assertOk();
     $account->refresh();
-    
+
     expect($account->stamp_count)->toBe(2); // 12 % 5 = 2
     expect($account->reward_balance)->toBe(2); // floor(12 / 5) = 2
     expect($account->reward_available_at)->not->toBeNull();
@@ -162,7 +160,7 @@ test('multi-reward: redeem one reward decrements balance but keeps stamp_count',
 
     $response->assertOk();
     $account->refresh();
-    
+
     expect($account->reward_balance)->toBe(1); // Decremented by 1
     expect($account->stamp_count)->toBe(2); // Unchanged
     expect($account->reward_available_at)->not->toBeNull(); // Still available
@@ -190,7 +188,7 @@ test('multi-reward: redeem second reward clears availability when balance reache
 
     $response->assertOk();
     $account->refresh();
-    
+
     expect($account->reward_balance)->toBe(0);
     expect($account->stamp_count)->toBe(2); // Unchanged
     expect($account->reward_available_at)->toBeNull(); // Cleared
@@ -216,7 +214,7 @@ test('multi-reward: old single-reward scenario still works', function () {
 
     $response->assertOk();
     $account->refresh();
-    
+
     expect($account->stamp_count)->toBe(0); // 5 % 5 = 0
     expect($account->reward_balance)->toBe(1); // floor(5 / 5) = 1
     expect($account->reward_available_at)->not->toBeNull();
@@ -260,7 +258,7 @@ test('multi-reward: idempotency still works with new math', function () {
     $response2->assertOk();
     $response2->assertJson(['message' => 'Already processed']);
     $account->refresh();
-    
+
     expect($account->stamp_count)->toBe($stampCountAfterFirst);
     expect($account->reward_balance)->toBe($rewardBalanceAfterFirst);
 });

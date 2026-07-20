@@ -28,7 +28,7 @@
         <style>{!! $theme->cssVariableBlock('.customer-page') !!}</style>
         @stack('head')
     </head>
-    <body {{ $attributes->merge(['class' => 'font-sans antialiased customer-page min-h-screen min-h-[100dvh] flex flex-col']) }}>
+    <body {{ $attributes->merge(['class' => 'overflow-x-hidden font-sans antialiased customer-page min-h-screen min-h-[100dvh] flex flex-col']) }}>
         <div @class([
             'customer-shell flex-1',
             'customer-shell--centered py-8 sm:py-10 lg:py-12' => $centered,

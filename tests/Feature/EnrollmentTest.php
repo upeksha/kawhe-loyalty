@@ -91,6 +91,6 @@ test('card page displays correct info', function () {
     $response->assertOk();
     $response->assertSee($store->name);
     $response->assertSee('Free Cake');
-    $response->assertSee('5 / 9'); // 9 is default target
+    $response->assertSee('5 of 9 stamps'); // 9 is default target
     $response->assertSee('Jane Doe');
 });

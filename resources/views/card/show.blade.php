@@ -61,111 +61,32 @@
                     </div>
                 @endif
                 
-                <!-- Reward Unlocked Card (Top) -->
-                @if(($account->reward_balance ?? 0) > 0)
-                    <div x-show="rewardBalance > 0" class="bg-gradient-to-r from-yellow-400 via-yellow-500 to-yellow-600 rounded-2xl shadow-xl overflow-hidden mb-4">
-                        <div class="p-6 text-white">
-                            <div class="flex items-start gap-3 mb-4">
-                                <div class="text-4xl">🎉</div>
-                                <div class="flex-1">
-                                    <h2 class="text-2xl font-bold mb-1">Reward{{ ($account->reward_balance ?? 0) > 1 ? 's' : '' }} Unlocked!</h2>
-                                    <p class="text-sm opacity-90">
-                                        <span id="reward-balance-banner" class="font-semibold text-lg">{{ $account->reward_balance ?? 0 }}</span> 
-                                        <span id="reward-title-available" class="font-semibold">{{ $account->reward_title }}</span>
-                                        @if(($account->reward_balance ?? 0) > 1)
-                                            <span> available</span>
-                                        @endif
-                                    </p>
-                                </div>
-                            </div>
-                            
-                            @if(!$account->verified_at && $account->customer->email)
-                                <div class="bg-white/20 backdrop-blur-sm rounded-xl p-4 mt-4">
-                                    <div class="flex gap-2">
-                                        <button @click="sendVerification()" :disabled="verifying" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-4 py-2.5 rounded-lg disabled:opacity-50 transition">
-                                            <span x-text="verifying ? 'Sending...' : 'Verify Email'"></span>
-                                        </button>
-                                        <button @click="bannerDismissed = true" class="flex-1 bg-white/30 hover:bg-white/40 text-white text-sm font-semibold px-4 py-2.5 rounded-lg transition">
-                                            Maybe Later
-                                        </button>
-                                    </div>
-                                    <template x-if="verifyMessage">
-                                        <p class="mt-2 text-xs font-semibold text-green-200" x-text="verifyMessage"></p>
-                                    </template>
-                                    @if($errors->has('email'))
-                                        <p class="mt-2 text-xs font-semibold text-red-200">{{ $errors->first('email') }}</p>
-                                    @endif
-                                </div>
-                            @endif
-                        </div>
-                    </div>
-                @endif
-
                 <!-- Main Loyalty Card -->
                 <div class="loyalty-card rounded-2xl shadow-2xl overflow-hidden mb-4">
                     <!-- Ambient Glow -->
                     <div class="card-glow"></div>
                     
                     <div class="p-6 relative">
-                        <!-- Store Logo (if available) -->
-                        @if($account->program_logo_url)
-                            <div class="flex justify-center mb-4">
-                                <img src="{{ $account->program_logo_url }}" alt="{{ $account->store->name }} logo" class="program-logo-frame h-20 w-20 object-contain rounded-lg bg-white/10 backdrop-blur-sm p-2 border-2">
-                            </div>
-                        @endif
-                        
-                        <!-- Always Visible QR Code for Stamping -->
-                        <div class="flex flex-col items-center justify-center mb-6">
-                            <!-- Mode Badge -->
-                            <div class="card-badge mb-2 px-3 py-1 rounded-full text-xs font-bold shadow-md">
-                                STAMP MODE
-                            </div>
-                            <div class="bg-white rounded-xl p-3 shadow-lg border-2 card-qr-border">
-                                <div id="stamp-qr-container">
-                                    {!! SimpleSoftwareIO\QrCode\Facades\QrCode::size(200)->errorCorrection('L')->margin(1)->generate('LA:' . $account->public_token) !!}
-                                </div>
-                            </div>
-                            <p class="mt-2 text-xs card-muted text-center">Scan to add stamps</p>
-                            @if($account->manual_entry_code ?? null)
-                                <p class="mt-1 text-sm font-mono font-bold card-text tracking-widest">{{ $account->manual_entry_code }}</p>
-                                <p class="text-xs card-muted">If scan fails, tell staff this code</p>
+                        <div class="mb-5 flex items-center justify-center gap-3 text-center">
+                            @if($account->program_logo_url)
+                                <img src="{{ $account->program_logo_url }}" alt="{{ $account->store->name }} logo" class="program-logo-frame h-14 w-14 rounded-full border-2 bg-white/10 object-contain p-1.5">
                             @endif
+                            <div class="min-w-0 text-left">
+                                <p class="card-muted text-xs font-semibold uppercase tracking-wider">{{ $account->store->name }}</p>
+                                <h1 class="card-text truncate text-xl font-bold">{{ $account->program_name }}</h1>
+                                <p id="customer-name" class="card-muted truncate text-sm">{{ $account->customer->name ?? 'Valued Customer' }}</p>
+                            </div>
                         </div>
-                        
-                        <!-- Redeem Reward Button (when reward available and not redeemed) -->
-                        <div x-show="rewardBalance > 0 && hasRedeemToken" class="flex flex-col items-center justify-center mb-6">
-                            <!-- Redeem Button -->
-                            <button 
-                                @click="showRedeemModal = true"
-                                class="w-full bg-gradient-to-r from-yellow-400 via-yellow-500 to-yellow-600 hover:from-yellow-500 hover:via-yellow-600 hover:to-yellow-700 text-white font-bold py-4 px-6 rounded-xl shadow-lg transition-all duration-200 transform hover:scale-105 flex items-center justify-center gap-2"
-                            >
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                </svg>
-                                <span>Redeem My Reward</span>
-                                <span x-show="rewardBalance > 1" class="text-sm opacity-90" x-text="`(${rewardBalance} available)`"></span>
-                            </button>
-                        </div>
-
-                        <!-- Customer Name -->
-                        <p id="customer-name" class="card-text text-lg font-semibold text-center mb-2">{{ $account->customer->name ?? 'Valued Customer' }}</p>
-                        
-                        <!-- Reward Title (hidden when reward unlocked) -->
-                        @if(($account->reward_balance ?? 0) == 0)
-                            <p id="reward-title" class="card-muted text-xs text-center mb-4">{{ $account->reward_title }} at {{ $account->reward_target }} stamps</p>
-                        @endif
 
                         <!-- Progress Section -->
                         <div class="mb-6">
-                            <div class="flex justify-between items-center mb-3">
-                                <span class="card-muted text-sm font-medium">Progress</span>
-                                <span id="stamp-count" class="card-text text-sm font-bold">{{ $account->stamp_count }} / {{ $account->reward_target }}</span>
-                            </div>
-                            @if(($account->reward_balance ?? 0) > 0)
-                                <p id="reward-balance-display" class="text-yellow-400 text-center text-sm font-semibold mb-2">
-                                    Rewards Available: {{ $account->reward_balance }}
-                                </p>
-                            @endif
+                            <p id="stamp-count" class="card-text text-center text-3xl font-bold">{{ $account->stamp_count }} of {{ $account->reward_target }} stamps</p>
+                            <p x-show="rewardBalance <= 0" x-cloak id="reward-title" class="card-muted mt-1 text-center text-sm">
+                                {{ max(0, $account->reward_target - $account->stamp_count) }} more until {{ strtolower($account->reward_title) }}
+                            </p>
+                            <p x-show="rewardBalance > 0" x-cloak id="reward-balance-display" class="mt-1 text-center text-base font-semibold text-yellow-300">
+                                Your {{ strtolower($account->reward_title) }} is ready
+                            </p>
                             <!-- Circular Checkmarks Row -->
                             <div id="stamp-circles-container" class="flex gap-2 justify-center flex-wrap">
                                 @for ($i = 1; $i <= $account->reward_target; $i++)
@@ -184,12 +105,23 @@
                             </div>
                         </div>
 
-                        <!-- Recent Activity Section -->
-                        <div class="border-t card-divider pt-4">
-                            <h3 class="card-muted text-sm font-semibold mb-3">Recent Activity</h3>
-                            <div id="transaction-history" class="space-y-2">
-                                <p class="text-sm card-muted text-center py-2">Loading transaction history...</p>
+                        <div class="flex flex-col items-center justify-center border-t card-divider pt-6">
+                            <p class="card-text mb-3 text-center text-sm font-semibold" x-text="rewardBalance > 0 ? 'Show this code to redeem your reward' : 'Show this code when you buy a coffee'"></p>
+                            <div class="rounded-xl bg-white p-3 shadow-lg">
+                                <div id="stamp-qr-container" class="customer-qr">
+                                    {!! SimpleSoftwareIO\QrCode\Facades\QrCode::size(220)->errorCorrection('L')->margin(2)->generate('LA:' . $account->public_token) !!}
+                                </div>
                             </div>
+                            @if($account->manual_entry_code ?? null)
+                                <p class="card-muted mt-3 text-xs">Can’t scan?</p>
+                                <p class="card-text mt-1 text-center text-sm">Tell the barista this code: <strong class="font-mono text-base tracking-[0.2em]">{{ $account->manual_entry_code }}</strong></p>
+                            @endif
+                        </div>
+
+                        <div x-show="rewardBalance > 0 && hasRedeemToken" x-cloak class="mt-5">
+                            <button @click="showRedeemModal = true" class="flex min-h-12 w-full items-center justify-center rounded-xl bg-yellow-500 px-5 py-3 font-bold text-stone-950 transition hover:bg-yellow-400">
+                                Redeem reward <span x-show="rewardBalance > 1" class="ml-1" x-text="`(${rewardBalance} available)`"></span>
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -262,6 +194,25 @@
                         </div>
                     </div>
                 </div>
+
+                @if(!$account->verified_at && $account->customer->email)
+                    <section class="card-surface mb-4 rounded-2xl p-5 shadow-xl" aria-labelledby="verification-title">
+                        <h2 id="verification-title" class="card-text text-lg font-semibold">Your card is active</h2>
+                        <p class="card-muted mt-1 text-sm leading-6">You can collect stamps now. Verify your email before redeeming a reward.</p>
+                        <button type="button" @click="sendVerification()" :disabled="verifying" class="card-btn mt-4 min-h-11 w-full rounded-xl px-4 py-2.5 text-sm font-semibold disabled:opacity-60">
+                            <span x-text="verifying ? 'Sending…' : 'Send verification email'"></span>
+                        </button>
+                        <p class="card-muted mt-2 text-xs">Check your inbox and spam folder. Expired links can be replaced by sending a new email.</p>
+                        <p x-show="verifyMessage" x-text="verifyMessage" class="mt-2 text-sm font-semibold" role="status" aria-live="polite"></p>
+                    </section>
+                @endif
+
+                <section class="card-surface mb-4 rounded-2xl p-5 shadow-xl" aria-labelledby="recent-activity-title">
+                    <h2 id="recent-activity-title" class="card-text text-base font-semibold">Recent activity</h2>
+                    <div id="transaction-history" class="mt-3 space-y-2" aria-live="polite">
+                        <p class="card-muted py-2 text-center text-sm">Loading recent activity…</p>
+                    </div>
+                </section>
 
                     <!-- Add to Home Screen Card -->
                 <div class="card-surface rounded-2xl shadow-xl overflow-hidden mb-4" x-show="showInstallPrompt" x-cloak>
@@ -740,9 +691,7 @@
                                         <p class="tx-history-date text-xs">${tx.formatted_date}</p>
                                     </div>
                                 </div>
-                                <span class="tx-history-points text-sm font-bold">
-                                    +${tx.points}
-                                </span>
+                                <span class="tx-history-points text-sm font-bold">${tx.points > 0 ? '+' : ''}${tx.points}</span>
                             </div>
                         `).join('');
                     },
@@ -751,7 +700,7 @@
                         // Update stamp count
                         const stampCountEl = document.getElementById('stamp-count');
                         if (stampCountEl) {
-                            stampCountEl.textContent = `${data.stamp_count} / ${data.reward_target}`;
+                            stampCountEl.textContent = `${data.stamp_count} of ${data.reward_target} stamps`;
                         }
 
                         // Update reward balance (Alpine.js reactive state)
@@ -774,11 +723,16 @@
                         const rewardBalanceEl = document.getElementById('reward-balance-display');
                         if (rewardBalanceEl) {
                             if (rewardBalance > 0) {
-                                rewardBalanceEl.textContent = `Rewards Available: ${rewardBalance}`;
+                                rewardBalanceEl.textContent = `Your ${String(data.reward_title || 'reward').toLowerCase()} is ready`;
                                 rewardBalanceEl.style.display = 'block';
                             } else {
                                 rewardBalanceEl.style.display = 'none';
                             }
+                        }
+
+                        const progressCopyEl = document.getElementById('reward-title');
+                        if (progressCopyEl && rewardBalance <= 0) {
+                            progressCopyEl.textContent = `${Math.max(0, data.reward_target - data.stamp_count)} more until ${String(data.reward_title || 'your reward').toLowerCase()}`;
                         }
 
                         // Update progress circles - ALWAYS update them, even after redemption

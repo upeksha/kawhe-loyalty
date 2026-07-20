@@ -28,15 +28,33 @@
             }
         </style>
     </head>
-    <body class="font-sans antialiased bg-stone-50">
+    <body class="overflow-x-hidden font-sans antialiased bg-stone-50">
         @php
             $storesNavActive = request()->routeIs('merchant.stores.*');
             $cardsNavActive = request()->routeIs('merchant.programs.index') || request()->routeIs('merchant.stores.programs.*');
             $storesNavOpenDefault = $cardsNavActive;
         @endphp
-        <div x-data="{ sidebarOpen: false }" class="min-h-screen">
+        <div
+            x-data="{
+                sidebarOpen: false,
+                sidebarOpener: null,
+                openSidebar() {
+                    this.sidebarOpener = document.activeElement;
+                    this.sidebarOpen = true;
+                    this.$nextTick(() => this.$refs.sidebarClose?.focus());
+                },
+                closeSidebar() {
+                    this.sidebarOpen = false;
+                    this.$nextTick(() => this.sidebarOpener?.focus());
+                }
+            }"
+            @keydown.escape.window="if (sidebarOpen) closeSidebar()"
+            class="min-h-screen"
+        >
             <!-- Sidebar -->
             <aside 
+                id="merchant-sidebar"
+                x-cloak
                 :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'"
                 class="fixed inset-y-0 left-0 z-50 h-screen w-64 bg-white border-r border-stone-200 transform transition-transform duration-200 ease-in-out overflow-visible lg:translate-x-0"
             >
@@ -47,8 +65,10 @@
                             <x-application-logo class="block h-8 w-auto fill-current text-brand-600" />
                         </a>
                         <button 
-                            @click="sidebarOpen = false"
-                            class="lg:hidden text-stone-500 hover:text-stone-700"
+                            x-ref="sidebarClose"
+                            @click="closeSidebar()"
+                            class="flex h-11 w-11 items-center justify-center rounded-lg text-stone-500 hover:bg-stone-100 hover:text-stone-700 lg:hidden"
+                            aria-label="Close navigation"
                         >
                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -228,7 +248,7 @@
             <!-- Overlay for mobile -->
             <div 
                 x-show="sidebarOpen"
-                @click="sidebarOpen = false"
+                @click="closeSidebar()"
                 x-transition:enter="transition-opacity ease-linear duration-300"
                 x-transition:enter-start="opacity-0"
                 x-transition:enter-end="opacity-100"
@@ -246,8 +266,11 @@
                     <div class="flex items-center justify-between h-16 px-4 sm:px-6 lg:px-8">
                         <div class="flex items-center">
                             <button 
-                                @click="sidebarOpen = true"
-                                class="lg:hidden text-stone-500 hover:text-stone-700 mr-4"
+                                @click="openSidebar()"
+                                class="mr-4 flex h-11 w-11 items-center justify-center rounded-lg text-stone-500 hover:bg-stone-100 hover:text-stone-700 lg:hidden"
+                                aria-label="Open navigation"
+                                aria-controls="merchant-sidebar"
+                                :aria-expanded="sidebarOpen"
                             >
                                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />

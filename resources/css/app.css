@@ -4,6 +4,10 @@
 @tailwind components;
 @tailwind utilities;
 
+[x-cloak] {
+    display: none !important;
+}
+
 /* Ensure color input swatches render as true circles, not inner rectangles. */
 .color-swatch-input {
     -webkit-appearance: none;

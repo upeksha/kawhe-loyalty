@@ -1,6 +1,6 @@
 @props([
     'formId' => null,
-    'title' => 'Please fix the highlighted fields before continuing.',
+    'title' => 'Please check the highlighted fields.',
     'maxItems' => 5,
 ])
 

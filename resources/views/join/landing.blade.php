@@ -9,15 +9,15 @@
     <x-slot name="hero">
         <div class="text-center mb-6 sm:mb-8">
             @if($program->logo_path)
-                <img src="{{ $program->logo_url }}" alt="{{ $cardTitle }}" class="mx-auto h-16 w-auto object-contain sm:h-20" style="max-height: 5rem;">
-            @else
-                <h1 class="text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight">{{ $cardTitle }}</h1>
+                <img src="{{ $program->logo_url }}" alt="{{ $store->name }} logo" class="mx-auto mb-4 h-14 max-w-[12rem] object-contain sm:h-16">
             @endif
+            <p class="text-sm font-semibold customer-muted">{{ $store->name }}</p>
+            <h1 class="mt-1 text-2xl font-bold tracking-tight sm:text-3xl">{{ $cardTitle }}</h1>
             @if($cardSubtitle)
                 <p class="mt-1 text-sm sm:text-base customer-muted">{{ $cardSubtitle }}</p>
             @endif
-            <p class="mt-2 sm:mt-3 text-sm sm:text-base customer-muted">
-                Collect {{ $program->reward_target }} stamps to earn {{ strtolower($program->reward_title ?: 'a reward') }}.
+            <p class="mt-3 text-base font-semibold sm:text-lg">
+                Collect {{ $program->reward_target }} stamps and get {{ strtolower($program->reward_title ?: 'a reward') }}.
             </p>
         </div>
     </x-slot>
@@ -37,16 +37,16 @@
 
             <div>
                 <a href="{{ route('join.show', ['slug' => $program->slug, 't' => $token]) }}" class="customer-btn customer-btn-primary">
-                    Get my loyalty card
+                    Join loyalty card
                 </a>
                 <p class="customer-card-body mt-2 text-center text-xs sm:text-sm">
-                    Takes under a minute. Add to Apple Wallet or Google Wallet after you join.
+                    Takes under a minute. No customer app required.
                 </p>
             </div>
 
             <div>
                 <a href="{{ route('join.existing', ['slug' => $program->slug, 't' => $token]) }}" class="customer-btn customer-btn-secondary">
-                    I already joined
+                    Find my card
                 </a>
                 <p class="customer-card-body mt-2 text-center text-xs">
                     Use the same email you signed up with for this card.

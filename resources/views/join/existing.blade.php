@@ -32,6 +32,7 @@
 
         <form action="{{ route('join.lookup', ['slug' => $program->slug, 't' => $token]) }}" method="POST" class="space-y-4 sm:space-y-5" id="lookup-form">
             @csrf
+            <x-form-error-summary form-id="lookup-form" />
             <div>
                 <label for="email" class="customer-card-label mb-1.5 block text-sm font-medium">
                     Email address
@@ -66,8 +67,8 @@
             @endif
 
             <div class="pt-1">
-                <button type="submit" class="customer-btn customer-btn-primary" data-loading-text="Opening your card...">
-                    Open my card
+                <button type="submit" class="customer-btn customer-btn-primary" data-loading-text="Finding your card…">
+                    Find my card
                 </button>
             </div>
         </form>
@@ -82,13 +83,6 @@
 
     @push('scripts')
         <script>
-            document.getElementById('lookup-form')?.addEventListener('submit', function () {
-                const btn = this.querySelector('[type="submit"]');
-                if (btn && !btn.disabled) {
-                    btn.disabled = true;
-                    btn.textContent = btn.dataset.loadingText || 'Please wait...';
-                }
-            });
             function prefillEmail() {
                 try {
                     var savedEmail = localStorage.getItem('kawhe_last_email_{{ $program->id }}')@if($program->is_default ?? false)

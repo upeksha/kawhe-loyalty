@@ -2,6 +2,7 @@
     'variant' => 'primary', // primary, secondary, danger, ghost
     'size' => 'md', // sm, md, lg
     'type' => 'button',
+    'loadingText' => null,
 ])
 
 @php
@@ -28,7 +29,11 @@
         {{ $slot }}
     </a>
 @else
-    <button type="{{ $type }}" {{ $attributes->merge(['class' => $classes]) }}>
+    <button
+        type="{{ $type }}"
+        @if($loadingText) data-loading-text="{{ $loadingText }}" @endif
+        {{ $attributes->merge(['class' => $classes]) }}
+    >
         {{ $slot }}
     </button>
 @endif

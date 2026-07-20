@@ -127,7 +127,11 @@
                     <div x-show="webScannerRevealed" x-cloak>
                     <!-- Store Selector -->
                     <div class="mb-6">
-                        <label for="store_id" class="mb-2 block text-sm font-medium text-stone-700">Select active location</label>
+                        <div class="mb-3 rounded-xl border border-brand-200 bg-brand-50 px-4 py-3">
+                            <p class="text-xs font-semibold uppercase tracking-[0.16em] text-brand-700">Active store</p>
+                            <p class="mt-1 text-lg font-semibold text-stone-900" x-text="activeStoreName || 'Choose a store before scanning'"></p>
+                        </div>
+                        <label for="store_id" class="mb-2 block text-sm font-medium text-stone-700">Switch store</label>
                         <x-ui.select id="store_id" x-model="activeStoreId" class="rounded-lg">
                             <option value="">-- Choose a location --</option>
                             @foreach($stores as $store)
@@ -138,23 +142,13 @@
 
                     <!-- Scanner Controls -->
                     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-2">
-                        <p class="text-sm text-stone-600" x-text="cameraStatus"></p>
+                        <p class="text-sm text-stone-600" x-text="scannerState" role="status" aria-live="polite"></p>
                         <div class="flex items-center gap-2 flex-wrap">
                             <span
                                 class="inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-semibold tracking-wide"
                                 :class="cooldownActive ? 'bg-amber-50 text-amber-700 border-amber-100' : (isProcessingScan ? 'bg-brand-50 text-brand-700 border-brand-100' : 'bg-emerald-50 text-emerald-700 border-emerald-100')"
-                                x-text="cooldownActive ? 'Cooldown' : (isProcessingScan ? 'Processing' : 'Ready')"
+                                x-text="cooldownActive ? 'Cooldown' : (isProcessingScan || actionProcessing ? 'Processing' : 'Ready')"
                             ></span>
-                            <x-ui.button
-                                type="button"
-                                x-show="!isScanning"
-                                @click="startScanner()"
-                                x-bind:disabled="isProcessingScan"
-                                variant="primary"
-                                size="md"
-                            >
-                                Start Camera
-                            </x-ui.button>
                             <x-ui.button
                                 type="button"
                                 @click="switchCamera()"
@@ -202,8 +196,12 @@
                     </div>
 
                     <!-- Scanner Container with Cooldown Overlay -->
-                    <div class="relative w-full mb-6 bg-black rounded-lg overflow-hidden" style="min-height: 280px; position: relative;">
+                    <div class="relative mb-6 w-full overflow-hidden rounded-2xl bg-black" style="min-height: 360px; position: relative;">
                         <div id="reader" class="w-full" style="min-height: 280px; width: 100%; position: relative; background: #000;"></div>
+                        <div x-show="isScanning && !isProcessingScan && !cooldownActive" class="pointer-events-none absolute inset-0 z-30 flex flex-col items-center justify-center p-8">
+                            <div class="aspect-square w-full max-w-[250px] rounded-3xl border-2 border-white/90 shadow-[0_0_0_999px_rgba(0,0,0,0.28)]"></div>
+                            <p class="mt-5 rounded-full bg-black/65 px-4 py-2 text-center text-sm font-medium text-white">Place the customer QR code inside the frame</p>
+                        </div>
                         
                         <!-- Start Camera Button (shown when camera not started) -->
                         <div 
@@ -214,10 +212,10 @@
                             <button
                                 type="button"
                                 @click="startScanner()"
-                                :disabled="isProcessingScan"
+                                :disabled="isProcessingScan || !activeStoreId"
                                 class="px-6 py-3.5 text-base font-semibold rounded-xl bg-brand-600 hover:bg-brand-700 text-white transition shadow-lg disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px]"
                             >
-                                Start Camera
+                                <span x-text="activeStoreId ? 'Start camera' : 'Choose a store first'"></span>
                             </button>
                         </div>
 
@@ -227,7 +225,7 @@
                             class="absolute inset-0 bg-black/60 flex flex-col items-center justify-center z-50 rounded-lg"
                         >
                             <div class="h-9 w-9 rounded-full border-2 border-white/40 border-t-white animate-spin"></div>
-                            <p class="mt-3 text-sm font-medium text-white">Processing scan…</p>
+                            <p class="mt-3 text-sm font-medium text-white" x-text="cameraStatus"></p>
                         </div>
                         
                         <!-- Cooldown Overlay -->
@@ -271,11 +269,11 @@
 
                     <!-- Manual Input -->
                     <div class="mb-6">
-                        <label for="manual_token" class="block mb-2 text-sm font-medium text-stone-700">Or enter code manually</label>
+                        <label for="manual_token" class="block mb-2 text-sm font-medium text-stone-700">Enter the customer’s 4-character code</label>
                         <div class="flex flex-col sm:flex-row gap-2">
                             <x-ui.input type="text" id="manual_token" x-model="manualToken" placeholder="e.g. A3CX or LA:..." class="flex-1" maxlength="50" />
-                            <x-ui.button @click="handleScan(manualToken)" x-bind:disabled="isProcessingScan || !manualToken" type="button" variant="primary" size="lg" class="w-full sm:w-auto min-h-[44px]">
-                                Scan
+                            <x-ui.button @click="handleScan(manualToken)" x-bind:disabled="isProcessingScan || !manualToken || !activeStoreId" type="button" variant="primary" size="lg" class="w-full sm:w-auto min-h-[44px]">
+                                Check card
                             </x-ui.button>
                         </div>
                         <p class="mt-2 text-xs text-stone-500">Scanner pauses briefly while each scan is validated to prevent double actions.</p>
@@ -306,6 +304,10 @@
                                         <span x-show="scannedRewardTarget && scannedRewardTitle"> for </span>
                                         <span x-show="scannedRewardTitle" x-text="scannedRewardTitle"></span>
                                     </p>
+                                    <div x-show="previewData" class="mt-3 grid grid-cols-2 gap-2 border-t border-stone-200 pt-3 text-xs">
+                                        <p><span class="block text-stone-500">Current progress</span><strong class="text-stone-900" x-text="(previewData && previewData.stamp_count !== undefined ? previewData.stamp_count : 0) + ' of ' + (previewData && previewData.reward_target !== undefined ? previewData.reward_target : 0)"></strong></p>
+                                        <p><span class="block text-stone-500">Rewards available</span><strong class="text-stone-900" x-text="previewData && previewData.reward_balance !== undefined ? previewData.reward_balance : 0"></strong></p>
+                                    </div>
                                 </div>
                                 <div x-show="showModeToggle" class="mt-3 p-1 rounded-lg bg-stone-100 grid grid-cols-2 gap-1">
                                     <button
@@ -329,8 +331,8 @@
                                     
                             <div x-show="verificationRequired" class="mb-4">
                                 <div class="bg-accent-50 border-l-4 border-accent-500 text-accent-700 p-4 mb-4 rounded-r" role="alert">
-                                    <p class="font-bold mb-1" x-text="verificationData.customer_name || 'Customer'"></p>
-                                    <p class="text-sm" x-text="'Email: ' + (verificationData.customer_email || 'Not provided')"></p>
+                                    <p class="font-bold mb-1" x-text="verificationData && verificationData.customer_name ? verificationData.customer_name : 'Customer'"></p>
+                                    <p class="text-sm" x-text="'Email: ' + (verificationData && verificationData.customer_email ? verificationData.customer_email : 'Not provided')"></p>
                                     <p class="text-xs mt-2 text-stone-600">
                                         This customer must verify their email address before redeeming rewards.
                                     </p>
@@ -430,11 +432,12 @@
                                 <button 
                                     x-show="!verificationRequired"
                                     @click="confirmAction()" 
+                                    :disabled="actionProcessing"
                                     :class="isRedeem 
                                         ? 'bg-accent-600 hover:bg-accent-700 focus:ring-accent-500' 
                                         : 'bg-brand-600 hover:bg-brand-700 focus:ring-brand-500'"
-                                    class="w-full sm:w-auto px-4 py-2.5 text-sm font-medium text-white rounded-lg transition focus:outline-none focus:ring-2" 
-                                    x-text="isRedeem ? (rewardBalance > 1 ? 'Redeem ' + redeemQuantity : 'Redeem') : 'Add Stamps'"
+                                    class="w-full sm:w-auto px-4 py-2.5 text-sm font-medium text-white rounded-lg transition focus:outline-none focus:ring-2 disabled:opacity-60"
+                                    x-text="actionProcessing ? (isRedeem ? 'Redeeming…' : 'Adding stamp…') : (isRedeem ? (rewardBalance > 1 ? 'Redeem ' + redeemQuantity : 'Redeem reward') : (stampCount > 1 ? 'Add ' + stampCount + ' stamps' : 'Add stamp'))"
                                 >
                                 </button>
                             </div>
@@ -461,7 +464,7 @@
                     </div>
 
                     <!-- Store Switched Banner -->
-                    <x-ui.alert x-show="storeSwitched" x-transition variant="info" class="mb-4" role="status" aria-live="polite">
+                    <x-ui.alert x-show="storeSwitched" variant="info" class="mb-4" role="status" aria-live="polite">
                         <p class="font-medium">Store switched</p>
                         <p class="mt-1" x-text="'Switched to ' + switchedStoreName + ' for this scan'"></p>
                     </x-ui.alert>
@@ -469,7 +472,7 @@
                     <!-- Feedback -->
                     <div x-show="message" x-transition class="mb-4 rounded-xl border px-4 py-4 text-sm sm:px-5 sm:py-5" :class="success ? (isRedeem ? 'border-accent-200 bg-accent-50 text-accent-900' : 'border-brand-200 bg-brand-50 text-brand-900') : 'border-red-200 bg-red-50 text-red-900'" role="status" :aria-live="success ? 'polite' : 'assertive'">
                         <div class="flex items-center gap-2 mb-2">
-                            <span class="font-medium" x-text="success ? (isRedeem ? '🎁 Reward Redeemed!' : '✅ Stamped!') : '❌ Error!'"></span>
+                            <span class="font-medium" x-text="success ? (isRedeem ? 'Reward redeemed' : 'Stamp added') : 'Action not completed'"></span>
                             <span x-show="success && isRedeem" class="text-xs font-semibold px-2 py-0.5 rounded bg-accent-200 text-accent-900">REDEEM</span>
                             <span x-show="success && !isRedeem" class="text-xs font-semibold px-2 py-0.5 rounded bg-brand-200 text-brand-900">STAMP</span>
                         </div>
@@ -485,7 +488,7 @@
                                 <p x-show="cooldownActive" class="text-xs mt-2 text-stone-600">Next scan ready in <span x-text="cooldownSeconds"></span>s</p>
                                 <div class="mt-3 flex flex-col sm:flex-row gap-2">
                                     <button type="button" @click="repeatLastAction()" class="w-full sm:w-auto px-3 py-2 text-xs font-medium rounded-lg bg-white border border-stone-300 text-stone-800 hover:bg-stone-50">Repeat same action</button>
-                                    <button type="button" @click="clearResultAndResume()" class="w-full sm:w-auto px-3 py-2 text-xs font-medium rounded-lg bg-white border border-stone-300 text-stone-800 hover:bg-stone-50">Scan next card</button>
+                                    <button type="button" @click="clearResultAndResume()" class="w-full sm:w-auto min-h-11 px-3 py-2 text-xs font-medium rounded-lg bg-white border border-stone-300 text-stone-800 hover:bg-stone-50">Scan next customer</button>
                                 </div>
                             </div>
                         </template>
@@ -539,13 +542,15 @@
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
     <script>
         document.addEventListener('alpine:init', () => {
-            Alpine.data('scannerApp', () => ({
-                activeStoreId: '{{ $stores->first()->id ?? "" }}',
+	            Alpine.data('scannerApp', () => ({
+	                stores: @js($stores->map(fn ($store) => ['id' => (string) $store->id, 'name' => $store->name])->values()),
+	                activeStoreId: '{{ $stores->first()->id ?? "" }}',
                 manualToken: '',
                 message: '',
                 success: false,
                 resultData: null,
                 isScanning: false,
+                actionProcessing: false,
                 webScannerRevealed: false,
                 showModal: false,
                 showModeToggle: false, // Toggle between stamp/redeem in a single modal
@@ -617,6 +622,20 @@
 
                                 get canSwitchCamera() {
                                     return (this.cameras && this.cameras.length > 1);
+                                },
+
+                                get activeStoreName() {
+                                    return this.stores.find((store) => store.id === String(this.activeStoreId))?.name || '';
+                                },
+
+                                get scannerState() {
+                                    if (!this.activeStoreId) return 'Choose a store before scanning';
+                                    if (this.actionProcessing) return this.isRedeem ? 'Redeeming reward' : 'Adding stamp';
+                                    if (this.isProcessingScan) return 'Checking card';
+                                    if (this.cooldownActive) return 'Duplicate protection active';
+                                    if (this.failureContext.type) return this.failureContext.title;
+                                    if (this.isScanning) return 'Ready to scan';
+                                    return this.cameraStatus || 'Camera not started';
                                 },
 
                                 setFailureContext(type, title, detail) {
@@ -1102,18 +1121,21 @@
                                     }
                                     
                                     if (this.isProcessingScan) return;
-                                    this.isProcessingScan = true;
                                     this.pauseScanner();
-                                    try {
-                                        await this.handleScan(decodedText);
-                                    } finally {
-                                        // handleScan opens modals; scanner will be resumed on confirm/cancel.
-                                        this.isProcessingScan = false;
-                                    }
+                                    await this.handleScan(decodedText);
                                 },
 
                 async handleScan(token) {
-                    if (!token) return;
+                    if (!token || this.isProcessingScan) return;
+                    if (!this.activeStoreId) {
+                        this.success = false;
+                        this.message = 'Choose a store before scanning a customer card.';
+                        this.focusManualEntry();
+                        return;
+                    }
+
+                    this.isProcessingScan = true;
+                    this.cameraStatus = 'Checking card';
                     
                     this.pendingToken = token;
                     
@@ -1136,7 +1158,7 @@
                         
                         if (!previewResult.success) {
                             this.success = false;
-                            this.message = previewResult.message || 'Could not process QR code. Please try again.';
+                            this.message = this.friendlyScanMessage(previewResult.message);
                             this.setFailureContext(
                                 'scan_invalid',
                                 'QR could not be processed',
@@ -1175,7 +1197,24 @@
                             'Check your connection, then retry.'
                         );
                         this.resumeScanner();
+                    } finally {
+                        this.isProcessingScan = false;
                     }
+                },
+
+                friendlyScanMessage(message) {
+                    const raw = String(message || '').toLowerCase();
+                    if (raw.includes('duplicate') || raw.includes('idempotency')) {
+                        return 'This action has already been completed.';
+                    }
+                    if (raw.includes('not found') || raw.includes('not active')) {
+                        return 'We could not find this loyalty card. Try scanning again or enter the manual code.';
+                    }
+                    if (raw.includes('selected store') || raw.includes('does not match')) {
+                        return 'This card belongs to a different store. Check the active store before continuing.';
+                    }
+
+                    return message || 'We could not check this card. Try scanning again or enter the manual code.';
                 },
                 
                 chooseRedeem() {
@@ -1414,6 +1453,8 @@
                 },
 
                 async redeem(token, quantity = 1) {
+                    if (this.actionProcessing) return;
+                    this.actionProcessing = true;
                     this.message = '';
                     this.success = false;
                     this.resultData = null;
@@ -1444,7 +1485,7 @@
 
                         if (response.ok) {
                             this.success = true;
-                            this.message = data.message || 'Reward redeemed successfully!';
+                            this.message = `${this.scannedCustomerName || data.customerLabel || 'Customer'} used ${quantity} ${quantity === 1 ? 'reward' : 'rewards'}.`;
                             this.clearFailureContext();
                             this.resultData = { 
                                 customerLabel: data.customerLabel,
@@ -1461,7 +1502,7 @@
                         } else {
                             this.success = false;
                             // Use improved error messages from server
-                            this.message = data.message || data.errors?.token?.[0] || data.errors?.quantity?.[0] || 'Redemption failed. Please try again.';
+                            this.message = this.friendlyScanMessage(data.message || data.errors?.token?.[0] || data.errors?.quantity?.[0]);
                         }
                     } catch (error) {
                         console.error('Error:', error);
@@ -1472,10 +1513,14 @@
                             'Could not complete redemption',
                             'Check your connection and retry.'
                         );
+                    } finally {
+                        this.actionProcessing = false;
                     }
                 },
 
                 async stamp(token, count = 1, overrideCooldown = false) {
+                    if (this.actionProcessing) return;
+                    this.actionProcessing = true;
                     this.message = '';
                     this.success = false;
                     this.resultData = null;
@@ -1524,20 +1569,26 @@
                             // Clear any error message since we're showing the modal
                             this.message = '';
                             this.success = false;
+                            this.actionProcessing = false;
                             return;
                         }
 
                         if (data.status === 'duplicate') {
                             // Show subtle duplicate message
                             this.success = false;
-                            this.message = 'Duplicate scan ignored';
+                            this.message = 'This card was just scanned. Wait a moment before adding another stamp.';
                             this.storeSwitched = false;
+                            this.actionProcessing = false;
                             return;
                         }
 
                         if (response.ok && (data.status === 'success' || data.success)) {
                             this.success = true;
-                            this.message = data.message || `${count} stamp(s) added successfully!`;
+                            const updatedCount = data.stampCount ?? data.stamp_count;
+                            const target = data.rewardTarget ?? data.reward_target;
+                            this.message = updatedCount !== undefined && target !== undefined
+                                ? `${this.scannedCustomerName || data.customerLabel || 'Customer'} now has ${updatedCount} of ${target} stamps.`
+                                : `${count === 1 ? 'Stamp' : `${count} stamps`} added.`;
                             this.clearFailureContext();
                             this.resultData = data;
                             this.manualToken = ''; // Clear manual input
@@ -1570,7 +1621,7 @@
                             this.success = false;
                             this.storeSwitched = false;
                             // Use improved error messages from server
-                            this.message = data.message || data.errors?.token?.[0] || 'Something went wrong. Please try again.';
+                            this.message = this.friendlyScanMessage(data.message || data.errors?.token?.[0]);
                         }
                     } catch (error) {
                         console.error('Error:', error);
@@ -1581,6 +1632,8 @@
                             'Could not complete stamp action',
                             'Check your connection and retry.'
                         );
+                    } finally {
+                        this.actionProcessing = false;
                     }
                 },
 

@@ -188,6 +188,8 @@ Archived store/program → **`join.archived`**.
 - localStorage keys use **`loyalty_program_id`** (legacy store keys cleaned up on load)
 - “You’re in!” banner when `session('registered')`
 - Wallet nudge when `session('show_wallet_nudge')` — not every visit
+- Progress, reward state, QR guidance, and manual code are the primary mobile hierarchy
+- Only the 10 most recent transactions are loaded for the initial activity list
 
 ---
 
@@ -198,6 +200,8 @@ Unchanged architecturally — see `StampLoyaltyService`, `ScannerController`, `/
 Token formats: `LA:{public_token}`, `LR:{redeem_token}`, 4-char manual codes, plain tokens.
 
 Store/program verification for redemption uses **`require_verification_for_redemption`** on the program (synced from store for default card).
+
+The merchant web scanner is presented as a backup to the mobile app. Its Alpine UI exposes one camera start path, a visible active Store, card progress before action, processing locks, plain-language failures, and a `Scan next customer` reset. These are presentation changes only; server-side ownership, cooldown, duplicate protection, idempotency, stamp/reward calculations, and API responses remain authoritative and unchanged.
 
 ---
 
@@ -256,7 +260,7 @@ Full detail: `docs/BILLING_IMPLEMENTATION_SUMMARY.md`
 | Merchant dashboard | `x-merchant-layout` + sidebar nav (“Cards”, Stores, Scanner, …) |
 | Onboarding wizard | `x-onboarding-layout` — no sidebar; logo, help, logout |
 | Join pages | Standalone HTML; program branding (`brand_color`, `background_color`, logo) |
-| Forms | `<x-input-error>`, submit loading via `data-loading-text` + small inline script |
+| Forms | `<x-form-error-summary>`, `<x-input-error>`, and global submit loading via `data-loading-text` |
 | Programs empty state | `programs/index.blade.php` when no active/archived cards |
 
 ---

@@ -20,9 +20,17 @@ document.addEventListener('submit', (event) => {
         : Array.from(form.querySelectorAll('button[type="submit"], input[type="submit"]'));
 
     targets.forEach((el) => {
+        const currentWidth = el.getBoundingClientRect().width;
+        if (currentWidth > 0) {
+            el.style.minWidth = `${Math.ceil(currentWidth)}px`;
+        }
+
         if ('disabled' in el) {
             el.disabled = true;
         }
+
+        el.setAttribute('aria-disabled', 'true');
+        el.setAttribute('aria-busy', 'true');
 
         if (!(el instanceof HTMLButtonElement)) return;
         if (el.dataset.originalText) return;
