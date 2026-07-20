@@ -1,7 +1,7 @@
 # Wallet Quality and Reliability Upgrade
 
 **Implementation date:** 20 July 2026
-**Status:** Local Stage 1 implementation complete; testing deployment and physical-device verification pending.
+**Status:** Stage 1 and testing-environment deployment complete; physical-device verification pending.
 
 ## Investigation
 
@@ -232,6 +232,26 @@ The two skipped tests require real Apple signing certificates. The unrelated ful
 
 ## Deployment
 
+### Testing deployment record
+
+- Application code commit: `52dafaca44ee005955e048bd4c5a88144413b2a7`
+- Environment: `https://testing.kawhe.shop`
+- Deployment date: 20 July 2026
+- Frontend production build: passed
+- Migration: applied successfully
+- Laravel boot check: passed
+- Laravel health check: passed with the expected `APP_ENV=testing` warning
+- `APP_DEBUG`: disabled on the public testing environment
+- Queue workers: restarted and active
+- Pending/failed testing jobs after smoke test: 0/0
+- Apple and Google credential files: present and readable
+- Asset-disk write/delete probe: passed
+- Generated artwork: all eight derivatives present at the required dimensions
+- Generated image URLs: direct HTTPS `200` responses with no redirect
+- Testing Nginx wallet-artwork cache policy: `public, max-age=31536000, immutable`
+- Authenticated editor smoke test: Apple and Google previews, health states, fallback generation, design revision, and previous-manifest retention passed
+- Temporary smoke-test merchant/store/program: removed after verification
+
 ### Testing rollout
 
 1. Commit and push the reviewed branch.
@@ -261,7 +281,6 @@ The configured `filesystems.assets_disk` must support read, write, list, delete,
 
 ## Pending Work
 
-- Testing-environment deployment is not performed in this local implementation.
 - Apple physical-device checks are pending.
 - Android/Google Wallet physical-device checks are pending.
 - Existing installed-pass upgrade checks are pending.

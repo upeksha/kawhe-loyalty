@@ -4,14 +4,29 @@
 
 | Field | Value |
 | --- | --- |
-| Build/commit tested | Local working tree based on `195d8e4` (not committed or deployed) |
-| Environment URL | `http://127.0.0.1:8000` only |
+| Build/commit tested | `52dafaca44ee005955e048bd4c5a88144413b2a7` |
+| Environment URL | `https://testing.kawhe.shop` |
 | Test date | 20 July 2026 |
-| Tester | Automated checks by Codex; physical-device tester pending |
-| Test programme | Pending |
-| Test loyalty account | Pending |
+| Tester | Automated staging checks by Codex; physical-device tester pending |
+| Test programme | Temporary `Wallet Testing Cafe` programme; removed after smoke testing |
+| Test loyalty account | No physical-device account yet |
 
-No physical-device testing was performed during this implementation. Automated rendering, feature, regression, and build checks are recorded in `docs/WALLET_QUALITY_RELIABILITY_UPGRADE.md`. All checks below remain `PENDING` until the branch is deployed to the testing environment and a human records device evidence.
+No physical-device testing was performed during this implementation. Automated rendering, feature, regression, build, deployment, and authenticated testing-environment checks are recorded in `docs/WALLET_QUALITY_RELIABILITY_UPGRADE.md`. Device checks below remain `PENDING` until a human records physical-device evidence.
+
+## Testing Environment Smoke Test
+
+| Check | Expected result | Actual result | Status |
+| --- | --- | --- | --- |
+| Deployment | Exact reviewed application commit deployed | `52dafac` deployed, built and migrated | PASS |
+| Wallet editor | Apple and Google previews render independently | Both previews rendered with `Alex`, `4/8`, rewards and example QR | PASS |
+| Artwork generation | Eight platform derivatives generated | Required Apple and Google dimensions verified | PASS |
+| Design version | Visible colour change increments version once | Version changed from 1 to 2 | PASS |
+| Cache busting | Visible design change creates new image paths | Google and Apple hash filenames changed | PASS |
+| Rollback window | Previous derivative version retained | Current and previous Google logo both remained readable | PASS |
+| Public images | Direct HTTPS, PNG MIME, no redirect | Direct `200 image/png`, no redirect | PASS |
+| Cache headers | Immutable generated assets receive long cache policy | `public, max-age=31536000, immutable` | PASS |
+| Wallet health | Generated state becomes current after save | Apple and Google changed from Processing to Not yet used | PASS |
+| Queue state | Refresh remains asynchronous and drains | 0 pending and 0 failed jobs after smoke test | PASS |
 
 ## Apple Device
 
