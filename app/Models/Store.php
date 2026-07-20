@@ -57,6 +57,15 @@ class Store extends Model
 
     public const DEFAULT_BACKGROUND_COLOR = '#1F2937';
 
+    public const WALLET_CARD_STYLE_CLASSIC = 'classic';
+
+    public const WALLET_CARD_STYLE_ABSTRACT = 'abstract';
+
+    public const WALLET_CARD_STYLES = [
+        self::WALLET_CARD_STYLE_CLASSIC,
+        self::WALLET_CARD_STYLE_ABSTRACT,
+    ];
+
     protected $fillable = [
         'name',
         'default_loyalty_program_id',
@@ -71,6 +80,7 @@ class Store extends Model
         'background_color',
         'pass_logo_path',
         'pass_hero_image_path',
+        'wallet_card_style',
         'require_verification_for_redemption',
         'onboarding_step',
         'onboarding_completed_at',
@@ -102,6 +112,9 @@ class Store extends Model
             }
             if (empty($store->background_color)) {
                 $store->background_color = self::DEFAULT_BACKGROUND_COLOR;
+            }
+            if (empty($store->wallet_card_style) || ! in_array($store->wallet_card_style, self::WALLET_CARD_STYLES, true)) {
+                $store->wallet_card_style = self::WALLET_CARD_STYLE_CLASSIC;
             }
             if (empty($store->registration_form_config)) {
                 $store->registration_form_config = self::defaultRegistrationFormConfig();

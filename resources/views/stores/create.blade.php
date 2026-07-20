@@ -2,6 +2,7 @@
     $inputClass = 'block w-full rounded-xl border border-stone-300 bg-white px-4 py-2.5 text-sm text-stone-900 placeholder-stone-400 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500';
     $brandColor = old('brand_color', '#0EA5E9');
     $bgColor = old('background_color', '#1F2937');
+    $walletCardStyle = old('wallet_card_style', \App\Models\Store::WALLET_CARD_STYLE_CLASSIC);
     $rewardTarget = (int) old('reward_target', 9);
     $rewardTitle = old('reward_title', 'Free coffee');
     $storeName = old('name', '');
@@ -32,6 +33,7 @@
                             rewardTitle: @js($rewardTitle),
                             brandColor: @js($brandColor),
                             bgColor: @js($bgColor),
+                            walletCardStyle: @js($walletCardStyle),
                             logoPreview: null,
                             passLogoPreview: null,
                             passHeroPreview: null,
@@ -184,6 +186,22 @@
                                             </ul>
                                         </div>
                                     </div>
+                                </x-onboarding-form-section>
+
+                                <x-onboarding-form-section title="Wallet card style">
+                                    <div class="grid gap-3 sm:grid-cols-2">
+                                        <label class="cursor-pointer rounded-2xl border p-4 transition-all" :class="walletCardStyle === 'classic' ? 'border-stone-900 bg-stone-50 ring-2 ring-stone-900/10' : 'border-stone-200 bg-white hover:border-stone-300'">
+                                            <input type="radio" name="wallet_card_style" value="classic" x-model="walletCardStyle" class="sr-only">
+                                            <span class="block text-sm font-semibold text-stone-900">Classic</span>
+                                            <span class="mt-1 block text-sm leading-relaxed text-stone-600">The existing wallet card look and the safest default for launch.</span>
+                                        </label>
+                                        <label class="cursor-pointer rounded-2xl border p-4 transition-all" :class="walletCardStyle === 'abstract' ? 'border-stone-900 bg-stone-50 ring-2 ring-stone-900/10' : 'border-stone-200 bg-white hover:border-stone-300'">
+                                            <input type="radio" name="wallet_card_style" value="abstract" x-model="walletCardStyle" class="sr-only">
+                                            <span class="block text-sm font-semibold text-stone-900">Abstract icon card</span>
+                                            <span class="mt-1 block text-sm leading-relaxed text-stone-600">Brand-color artwork with icon stamps and a gift reward marker.</span>
+                                        </label>
+                                    </div>
+                                    <x-input-error :messages="$errors->get('wallet_card_style')" class="mt-2" />
                                 </x-onboarding-form-section>
 
                                 <x-onboarding-form-section title="Store branding">

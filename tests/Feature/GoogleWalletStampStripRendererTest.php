@@ -68,3 +68,36 @@ test('changes stamp strip filename when progress or branding changes', function 
     expect($firstPath)->not->toEqual($secondPath);
     expect($secondPath)->not->toEqual($thirdPath);
 });
+
+test('changes stamp strip filename when wallet card style changes', function () {
+    if (! function_exists('imagecreatetruecolor')) {
+        $this->markTestSkipped('GD extension not available in test environment.');
+    }
+
+    Storage::fake('public');
+
+    $store = Store::factory()->create([
+        'background_color' => '#123456',
+        'brand_color' => '#F4E6D8',
+        'reward_target' => 8,
+        'wallet_card_style' => Store::WALLET_CARD_STYLE_CLASSIC,
+    ]);
+
+    $account = LoyaltyAccount::factory()->create([
+        'store_id' => $store->id,
+        'loyalty_program_id' => $store->resolvedDefaultProgram()->id,
+        'stamp_count' => 7,
+    ]);
+
+    $renderer = app(GoogleWalletStampStripRenderer::class);
+    $classicPath = $renderer->generateForAccount($account);
+
+    $store->forceFill(['wallet_card_style' => Store::WALLET_CARD_STYLE_ABSTRACT])->save();
+    $abstractPath = $renderer->generateForAccount($account->fresh());
+
+    expect($classicPath)->not->toBeNull()
+        ->and($abstractPath)->not->toBeNull()
+        ->and($classicPath)->not->toEqual($abstractPath);
+
+    Storage::disk('public')->assertExists($abstractPath);
+});

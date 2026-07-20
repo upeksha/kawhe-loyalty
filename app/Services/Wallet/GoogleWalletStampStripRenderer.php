@@ -3,12 +3,13 @@
 namespace App\Services\Wallet;
 
 use App\Models\LoyaltyAccount;
+use App\Models\Store;
 use App\Support\StoreAssets;
 use Illuminate\Support\Facades\Log;
 
 class GoogleWalletStampStripRenderer
 {
-    private const RENDER_VERSION = 'v5';
+    private const RENDER_VERSION = 'v6';
 
     /**
      * Generate a stamp-strip PNG on the configured asset disk and return its relative path.
@@ -39,9 +40,13 @@ class GoogleWalletStampStripRenderer
 
         $accent = $this->normalizeHexColor($program->brand_color) ?? '#FFFFFF';
         $foreground = $this->bestContrastTextColor($background);
+        $walletCardStyle = in_array($store->wallet_card_style, Store::WALLET_CARD_STYLES, true)
+            ? $store->wallet_card_style
+            : Store::WALLET_CARD_STYLE_CLASSIC;
 
         $stateHash = substr(sha1(implode('|', [
             self::RENDER_VERSION,
+            $walletCardStyle,
             $target,
             $stamps,
             $background,
@@ -60,7 +65,7 @@ class GoogleWalletStampStripRenderer
             $heroBinary = StoreAssets::get($program->pass_hero_image_path);
         }
 
-        $pngBinary = $this->renderPng($target, $stamps, $background, $accent, $foreground, $heroBinary);
+        $pngBinary = $this->renderPng($target, $stamps, $background, $accent, $foreground, $heroBinary, $walletCardStyle);
         if (! $pngBinary) {
             return null;
         }
@@ -75,7 +80,8 @@ class GoogleWalletStampStripRenderer
         string $backgroundHex,
         string $accentHex,
         string $foregroundHex,
-        ?string $heroBinary = null
+        ?string $heroBinary = null,
+        string $walletCardStyle = Store::WALLET_CARD_STYLE_CLASSIC
     ): ?string
     {
         $width = 1032;
@@ -98,6 +104,10 @@ class GoogleWalletStampStripRenderer
         $fgColor = imagecolorallocate($image, $fgR, $fgG, $fgB);
         imagefill($image, 0, 0, $bgColor);
 
+        if ($walletCardStyle === Store::WALLET_CARD_STYLE_ABSTRACT) {
+            $this->drawAbstractBackground($image, $width, $height, $backgroundHex, $accentHex, $foregroundHex);
+        }
+
         // Blend store hero image under circles for front-card visual parity.
         if ($heroBinary) {
             $heroSource = @imagecreatefromstring($heroBinary);
@@ -117,7 +127,8 @@ class GoogleWalletStampStripRenderer
         }
 
         // Slight dark overlay for consistent circle contrast.
-        $overlay = imagecolorallocatealpha($image, $bgR, $bgG, $bgB, 82);
+        $overlayAlpha = $walletCardStyle === Store::WALLET_CARD_STYLE_ABSTRACT ? 72 : 82;
+        $overlay = imagecolorallocatealpha($image, $bgR, $bgG, $bgB, $overlayAlpha);
         imagefilledrectangle($image, 0, 0, $width, $height, $overlay);
 
         $columns = min(max($target, 1), 10);
@@ -150,9 +161,18 @@ class GoogleWalletStampStripRenderer
                 if ($index <= $stamps) {
                     imagefilledellipse($image, $x, $y, $circleDiameter, $circleDiameter, $fgColor);
                     imageellipse($image, $x, $y, $circleDiameter, $circleDiameter, $fgColor);
+                    if ($walletCardStyle === Store::WALLET_CARD_STYLE_ABSTRACT) {
+                        $this->drawStampIcon($image, $x, $y, $circleDiameter, $bgColor, $index === $target);
+                    }
                 } else {
-                    imagefilledellipse($image, $x, $y, $circleDiameter, $circleDiameter, $bgColor);
+                    $emptyFill = $walletCardStyle === Store::WALLET_CARD_STYLE_ABSTRACT
+                        ? imagecolorallocatealpha($image, $bgR, $bgG, $bgB, 62)
+                        : $bgColor;
+                    imagefilledellipse($image, $x, $y, $circleDiameter, $circleDiameter, $emptyFill);
                     imageellipse($image, $x, $y, $circleDiameter, $circleDiameter, $fgColor);
+                    if ($walletCardStyle === Store::WALLET_CARD_STYLE_ABSTRACT && $index === $target) {
+                        $this->drawGiftIcon($image, $x, $y, $circleDiameter, $fgColor);
+                    }
                 }
             }
         }
@@ -164,6 +184,75 @@ class GoogleWalletStampStripRenderer
         imagedestroy($image);
 
         return $png !== false ? $png : null;
+    }
+
+    protected function drawAbstractBackground($image, int $width, int $height, string $backgroundHex, string $accentHex, string $foregroundHex): void
+    {
+        [$bgR, $bgG, $bgB] = $this->hexToRgb($backgroundHex);
+        [$acR, $acG, $acB] = $this->hexToRgb($accentHex);
+        [$fgR, $fgG, $fgB] = $this->hexToRgb($foregroundHex);
+
+        for ($y = 0; $y < $height; $y++) {
+            $ratio = $height > 1 ? $y / ($height - 1) : 0;
+            $r = (int) round(($bgR * (1 - $ratio)) + ($acR * $ratio * 0.55) + ($bgR * $ratio * 0.45));
+            $g = (int) round(($bgG * (1 - $ratio)) + ($acG * $ratio * 0.55) + ($bgG * $ratio * 0.45));
+            $b = (int) round(($bgB * (1 - $ratio)) + ($acB * $ratio * 0.55) + ($bgB * $ratio * 0.45));
+            imageline($image, 0, $y, $width, $y, imagecolorallocate($image, $r, $g, $b));
+        }
+
+        $accentSoft = imagecolorallocatealpha($image, $acR, $acG, $acB, 54);
+        $foregroundSoft = imagecolorallocatealpha($image, $fgR, $fgG, $fgB, 94);
+        imagefilledellipse($image, (int) ($width * 0.12), (int) ($height * 0.2), 340, 180, $accentSoft);
+        imagefilledellipse($image, (int) ($width * 0.9), (int) ($height * 0.72), 420, 220, $foregroundSoft);
+
+        imagesetthickness($image, 4);
+        $line = imagecolorallocatealpha($image, $fgR, $fgG, $fgB, 76);
+        imagearc($image, (int) ($width * 0.16), (int) ($height * 0.95), 420, 220, 205, 350, $line);
+        imagearc($image, (int) ($width * 0.86), (int) ($height * 0.08), 360, 190, 20, 175, $line);
+        imagesetthickness($image, 1);
+    }
+
+    protected function drawStampIcon($image, int $centerX, int $centerY, int $circleDiameter, int $color, bool $isGift): void
+    {
+        if ($isGift) {
+            $this->drawGiftIcon($image, $centerX, $centerY, $circleDiameter, $color);
+            return;
+        }
+
+        $scale = max(0.4, $circleDiameter / 88);
+        $cupW = (int) round(26 * $scale);
+        $cupH = (int) round(17 * $scale);
+        $cupX = $centerX - (int) floor($cupW / 2);
+        $cupY = $centerY - (int) floor($cupH / 2) + (int) round(5 * $scale);
+
+        imagesetthickness($image, max(2, (int) round(4 * $scale)));
+        imagearc($image, $centerX, $cupY + (int) round(2 * $scale), $cupW, (int) round(13 * $scale), 0, 180, $color);
+        imageline($image, $cupX, $cupY + (int) round(2 * $scale), $cupX + (int) round(4 * $scale), $cupY + $cupH, $color);
+        imageline($image, $cupX + $cupW, $cupY + (int) round(2 * $scale), $cupX + $cupW - (int) round(4 * $scale), $cupY + $cupH, $color);
+        imagearc($image, $cupX + $cupW + (int) round(6 * $scale), $cupY + (int) round(9 * $scale), (int) round(14 * $scale), (int) round(14 * $scale), 270, 90, $color);
+        imageline($image, $cupX + (int) round(2 * $scale), $cupY + $cupH + (int) round(4 * $scale), $cupX + $cupW - (int) round(2 * $scale), $cupY + $cupH + (int) round(4 * $scale), $color);
+        imagesetthickness($image, max(1, (int) round(2 * $scale)));
+        imagearc($image, $centerX - (int) round(6 * $scale), $cupY - (int) round(8 * $scale), (int) round(10 * $scale), (int) round(15 * $scale), 260, 75, $color);
+        imagearc($image, $centerX + (int) round(6 * $scale), $cupY - (int) round(8 * $scale), (int) round(10 * $scale), (int) round(15 * $scale), 260, 75, $color);
+        imagesetthickness($image, 1);
+    }
+
+    protected function drawGiftIcon($image, int $centerX, int $centerY, int $circleDiameter, int $color): void
+    {
+        $scale = max(0.4, $circleDiameter / 88);
+        $boxW = (int) round(30 * $scale);
+        $boxH = (int) round(24 * $scale);
+        $x = $centerX - (int) floor($boxW / 2);
+        $y = $centerY - (int) floor($boxH / 2) + (int) round(4 * $scale);
+        $lidH = (int) round(8 * $scale);
+
+        imagesetthickness($image, max(2, (int) round(4 * $scale)));
+        imagerectangle($image, $x, $y, $x + $boxW, $y + $lidH, $color);
+        imagerectangle($image, $x + (int) round(3 * $scale), $y + $lidH, $x + $boxW - (int) round(3 * $scale), $y + $boxH, $color);
+        imageline($image, $centerX, $y, $centerX, $y + $boxH, $color);
+        imagearc($image, $centerX - (int) round(7 * $scale), $y - (int) round(2 * $scale), (int) round(15 * $scale), (int) round(12 * $scale), 195, 25, $color);
+        imagearc($image, $centerX + (int) round(7 * $scale), $y - (int) round(2 * $scale), (int) round(15 * $scale), (int) round(12 * $scale), 155, 345, $color);
+        imagesetthickness($image, 1);
     }
 
     protected function normalizeHexColor(?string $hex): ?string

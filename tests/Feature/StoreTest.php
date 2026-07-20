@@ -139,6 +139,7 @@ test('merchant can update store details without card settings in the payload', f
         'address' => '99 Harbour Street',
         'brand_color' => '#111827',
         'background_color' => '#F5F5F4',
+        'wallet_card_style' => Store::WALLET_CARD_STYLE_ABSTRACT,
     ]);
 
     $response->assertRedirect(route('merchant.stores.index'));
@@ -148,6 +149,7 @@ test('merchant can update store details without card settings in the payload', f
     expect($updated->address)->toBe('99 Harbour Street');
     expect($updated->brand_color)->toBe('#111827');
     expect($updated->background_color)->toBe('#F5F5F4');
+    expect($updated->wallet_card_style)->toBe(Store::WALLET_CARD_STYLE_ABSTRACT);
     expect($updated->reward_target)->toBe(9);
     expect($updated->reward_title)->toBe('Free Coffee');
     expect((bool) $updated->require_verification_for_redemption)->toBeTrue();
