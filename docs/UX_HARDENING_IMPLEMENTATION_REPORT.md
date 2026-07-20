@@ -6,7 +6,7 @@
 
 **Base commit:** `f234be7ead0fedd807f5808298e631bc551d8d24`
 
-**Status:** Implemented and locally verified. Staging and physical-device verification remain pending.
+**Status:** Implemented, locally verified, and deployed to testing. Authenticated walkthroughs and physical-device verification remain pending.
 
 ## Baseline
 
@@ -130,3 +130,20 @@ The following were not claimed as complete locally and must be tested on staging
 ## Rollback
 
 This batch contains no migration or destructive data operation. Roll back by reverting the UX-hardening commit, rebuilding frontend assets, and clearing Laravel caches. Existing Store/Card data, loyalty balances, wallet identifiers, QR codes, and API contracts require no data rollback.
+
+## Testing Deployment
+
+- Application commit: `e569e75c340dbdd31f1b7d9143614f8fa1eac370`
+- Environment: `https://testing.kawhe.shop`
+- Deployment date: 21 July 2026
+- Testing checkout: clean and detached at the exact reviewed commit
+- Frontend production build: passed
+- Database migrations: no pending migrations
+- Laravel boot and health checks: passed
+- `APP_ENV`: `testing`
+- `APP_DEBUG`: `false`
+- Pending/failed testing jobs: 0/0
+- Login page and generated JavaScript asset: HTTPS `200`
+- Valid join page: HTTPS `200`, with primary and secondary actions present
+- Valid customer card: HTTPS `200`, with progress and manual-code guidance present
+- Authenticated merchant walkthrough and real camera/Wallet-device checks: pending
