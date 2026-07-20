@@ -198,9 +198,7 @@ class AppleWalletPassService
         
         // Abstract cards use generated brand-color artwork instead of requiring a hero image.
         if ($walletCardStyle === Store::WALLET_CARD_STYLE_ABSTRACT) {
-            $tempStripPath = $tempDir . '/strip.png';
-            if ($this->createAbstractPatternPng($tempStripPath, 750, 246, $backgroundColor, $walletPatternColor, $walletPattern)) {
-                $pass->addAsset($tempStripPath);
+            if ($this->addAbstractPatternAssetPair($pass, $tempDir, 'strip', 375, 123, $backgroundColor, $walletPatternColor, $walletPattern)) {
                 $assetsAdded[] = 'strip (abstract pattern)';
             }
         } elseif ($program->pass_hero_image_path && StoreAssets::exists($program->pass_hero_image_path)) {
@@ -236,9 +234,7 @@ class AppleWalletPassService
             }
         }
         if ($walletCardStyle === Store::WALLET_CARD_STYLE_ABSTRACT) {
-            $tempBgPath = $tempDir . '/background.png';
-            if ($this->createAbstractPatternPng($tempBgPath, 360, 440, $backgroundColor, $walletPatternColor, $walletPattern)) {
-                $pass->addAsset($tempBgPath);
+            if ($this->addAbstractPatternAssetPair($pass, $tempDir, 'background', 180, 220, $backgroundColor, $walletPatternColor, $walletPattern)) {
                 $assetsAdded[] = 'background (abstract pattern)';
             }
         } elseif (file_exists($assetsPath . '/background.png')) {
@@ -471,6 +467,37 @@ class AppleWalletPassService
         return Str::limit($normalized, 18, '…');
     }
 
+    protected function addAbstractPatternAssetPair(
+        PassGenerator $pass,
+        string $tempDir,
+        string $assetName,
+        int $width,
+        int $height,
+        string $backgroundColor,
+        string $patternColor,
+        string $pattern
+    ): bool {
+        $standardPath = $tempDir . '/' . $assetName . '.png';
+        $retinaPath = $tempDir . '/' . $assetName . '@2x.png';
+
+        $standardCreated = $this->createAbstractPatternPng($standardPath, $width, $height, $backgroundColor, $patternColor, $pattern);
+        $retinaCreated = $this->createAbstractPatternPng($retinaPath, $width * 2, $height * 2, $backgroundColor, $patternColor, $pattern);
+
+        if (! $standardCreated && ! $retinaCreated) {
+            return false;
+        }
+
+        if ($standardCreated) {
+            $pass->addAsset($standardPath, $assetName . '.png');
+        }
+
+        if ($retinaCreated) {
+            $pass->addAsset($retinaPath, $assetName . '@2x.png');
+        }
+
+        return true;
+    }
+
     protected function rewardRuleText($store): string
     {
         $rewardTarget = max(1, (int) ($store->reward_target ?? 10));
@@ -520,44 +547,53 @@ class AppleWalletPassService
 
         for ($y = 0; $y < $height; $y++) {
             $ratio = $height > 1 ? $y / ($height - 1) : 0;
-            $r = (int) round(($bgR * (1 - $ratio)) + (($acR * 0.55 + $bgR * 0.45) * $ratio));
-            $g = (int) round(($bgG * (1 - $ratio)) + (($acG * 0.55 + $bgG * 0.45) * $ratio));
-            $b = (int) round(($bgB * (1 - $ratio)) + (($acB * 0.55 + $bgB * 0.45) * $ratio));
+            $r = (int) round(($bgR * (1 - $ratio)) + (($acR * 0.32 + $bgR * 0.68) * $ratio));
+            $g = (int) round(($bgG * (1 - $ratio)) + (($acG * 0.32 + $bgG * 0.68) * $ratio));
+            $b = (int) round(($bgB * (1 - $ratio)) + (($acB * 0.32 + $bgB * 0.68) * $ratio));
             imageline($img, 0, $y, $width, $y, imagecolorallocate($img, $r, $g, $b));
         }
 
-        $accentSoft = imagecolorallocatealpha($img, $acR, $acG, $acB, 58);
-        $line = imagecolorallocatealpha($img, 255, 255, 255, 84);
+        $accentSoft = imagecolorallocatealpha($img, $acR, $acG, $acB, 32);
+        $accentStrong = imagecolorallocatealpha($img, $acR, $acG, $acB, 12);
+        $line = imagecolorallocatealpha($img, 255, 255, 255, 52);
+        $darkLine = imagecolorallocatealpha($img, max(0, $bgR - 55), max(0, $bgG - 55), max(0, $bgB - 55), 42);
 
         if ($pattern === Store::WALLET_BACKGROUND_PATTERN_DOTS) {
-            for ($y = 18; $y < $height; $y += 26) {
-                for ($x = 18; $x < $width; $x += 26) {
-                    imagefilledellipse($img, $x, $y, 5, 5, $accentSoft);
+            $gap = max(16, (int) round($width / 14));
+            $diameter = max(5, (int) round($gap * 0.28));
+            for ($y = (int) ($gap * 0.65); $y < $height; $y += $gap) {
+                for ($x = (int) ($gap * 0.65); $x < $width; $x += $gap) {
+                    imagefilledellipse($img, $x, $y, $diameter, $diameter, $accentStrong);
                 }
             }
         } elseif ($pattern === Store::WALLET_BACKGROUND_PATTERN_GRID) {
-            imagesetthickness($img, 1);
-            for ($x = 0; $x < $width; $x += 36) {
+            imagesetthickness($img, max(1, (int) round($width / 260)));
+            $gap = max(22, (int) round($width / 10));
+            for ($x = 0; $x < $width; $x += $gap) {
                 imageline($img, $x, 0, $x, $height, $accentSoft);
             }
-            for ($y = 0; $y < $height; $y += 36) {
+            for ($y = 0; $y < $height; $y += $gap) {
                 imageline($img, 0, $y, $width, $y, $accentSoft);
             }
         } elseif ($pattern === Store::WALLET_BACKGROUND_PATTERN_DIAGONAL) {
-            imagesetthickness($img, 2);
-            for ($x = -$height; $x < $width; $x += 30) {
+            imagesetthickness($img, max(2, (int) round($width / 190)));
+            $gap = max(20, (int) round($width / 13));
+            for ($x = -$height; $x < $width; $x += $gap) {
                 imageline($img, $x, $height, $x + $height, 0, $accentSoft);
             }
         } elseif ($pattern === Store::WALLET_BACKGROUND_PATTERN_WAVES) {
-            imagesetthickness($img, 3);
-            for ($y = -20; $y < $height + 60; $y += 44) {
-                imagearc($img, (int) ($width * 0.25), $y, (int) ($width * 0.7), 86, 0, 180, $accentSoft);
-                imagearc($img, (int) ($width * 0.75), $y, (int) ($width * 0.7), 86, 180, 360, $accentSoft);
+            imagesetthickness($img, max(2, (int) round($width / 170)));
+            $waveHeight = max(42, (int) round($height * 0.36));
+            $step = max(28, (int) round($height * 0.22));
+            for ($y = -$waveHeight; $y < $height + $waveHeight; $y += $step) {
+                imagearc($img, (int) ($width * 0.25), $y, (int) ($width * 0.7), $waveHeight, 0, 180, $accentSoft);
+                imagearc($img, (int) ($width * 0.75), $y, (int) ($width * 0.7), $waveHeight, 180, 360, $accentSoft);
             }
         } else {
-            imagefilledellipse($img, (int) ($width * 0.12), (int) ($height * 0.18), (int) ($width * 0.36), (int) ($height * 0.72), $accentSoft);
-            imagefilledellipse($img, (int) ($width * 0.88), (int) ($height * 0.78), (int) ($width * 0.48), (int) ($height * 0.82), imagecolorallocatealpha($img, 255, 255, 255, 98));
-            imagesetthickness($img, 3);
+            imagefilledellipse($img, (int) ($width * 0.08), (int) ($height * 0.12), (int) ($width * 0.54), (int) ($height * 0.92), $accentSoft);
+            imagefilledellipse($img, (int) ($width * 0.92), (int) ($height * 0.88), (int) ($width * 0.64), (int) ($height * 0.96), imagecolorallocatealpha($img, 255, 255, 255, 76));
+            imagefilledellipse($img, (int) ($width * 0.72), (int) ($height * 0.08), (int) ($width * 0.42), (int) ($height * 0.58), $darkLine);
+            imagesetthickness($img, max(2, (int) round($width / 160)));
             imagearc($img, (int) ($width * 0.15), (int) ($height * 0.95), (int) ($width * 0.55), (int) ($height * 0.52), 205, 350, $line);
             imagearc($img, (int) ($width * 0.86), (int) ($height * 0.08), (int) ($width * 0.48), (int) ($height * 0.42), 20, 175, $line);
         }
