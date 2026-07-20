@@ -2,8 +2,6 @@
     $brandColor = old('brand_color', $store->brand_color ?? '#0EA5E9');
     $bgColor = old('background_color', $store->background_color ?? '#1F2937');
     $walletCardStyle = old('wallet_card_style', $store->wallet_card_style ?? \App\Models\Store::WALLET_CARD_STYLE_CLASSIC);
-    $walletBackgroundPattern = old('wallet_background_pattern', $store->wallet_background_pattern ?? \App\Models\Store::WALLET_BACKGROUND_PATTERN_ORGANIC);
-    $walletPatternColor = old('wallet_pattern_color', $store->wallet_pattern_color ?? $brandColor);
     $inputClass = 'block w-full rounded-xl border border-stone-300 bg-white px-4 py-2.5 text-sm text-stone-900 placeholder-stone-400 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500';
 @endphp
 <x-onboarding-layout>
@@ -24,12 +22,9 @@
             brandColor: '{{ $brandColor }}',
             bgColor: '{{ $bgColor }}',
             walletCardStyle: '{{ $walletCardStyle }}',
-            walletBackgroundPattern: '{{ $walletBackgroundPattern }}',
-            walletPatternColor: '{{ $walletPatternColor }}',
             logoPreview: '{{ $store->logo_url ?? '' }}',
             passLogoPreview: '{{ $store->pass_logo_url ?? '' }}',
             passHeroPreview: '{{ $store->pass_hero_image_url ?? '' }}',
-            stampIconPreview: '{{ $store->wallet_stamp_icon_url ?? '' }}',
             hexToRgb(hex) {
                 const cleaned = (hex || '').replace('#', '');
                 if (cleaned.length !== 6) return null;
@@ -60,7 +55,7 @@
                 return (lighter + 0.05) / (darker + 0.05);
             },
             get hasRequiredAssets() {
-                return Boolean(this.logoPreview && this.passLogoPreview && (this.walletCardStyle === 'abstract' || this.passHeroPreview));
+                return Boolean(this.logoPreview && this.passLogoPreview && this.passHeroPreview);
             },
             get launchScore() {
                 let score = 0;
@@ -68,7 +63,7 @@
                 if (this.bgColor) score++;
                 if (this.logoPreview) score++;
                 if (this.passLogoPreview) score++;
-                if (this.walletCardStyle === 'abstract' || this.passHeroPreview) score++;
+                if (this.passHeroPreview) score++;
                 if (!this.hasLowContrastPreview && !this.hasVeryLightBackground) score++;
                 return score;
             },
@@ -100,7 +95,6 @@
             $refs.logoInput && $refs.logoInput.addEventListener('change', e => { const f = e.target.files[0]; if (f) logoPreview = URL.createObjectURL(f); });
             $refs.passLogoInput && $refs.passLogoInput.addEventListener('change', e => { const f = e.target.files[0]; if (f) passLogoPreview = URL.createObjectURL(f); });
             $refs.passHeroInput && $refs.passHeroInput.addEventListener('change', e => { const f = e.target.files[0]; if (f) passHeroPreview = URL.createObjectURL(f); });
-            $refs.stampIconInput && $refs.stampIconInput.addEventListener('change', e => { const f = e.target.files[0]; if (f) stampIconPreview = URL.createObjectURL(f); });
         "
         >
             @csrf
@@ -167,29 +161,6 @@
                                 <span class="mt-1 block text-sm leading-relaxed text-stone-600">A richer brand-color look with icon stamps and a gift marker for the reward stamp.</span>
                             </label>
                         </div>
-                        <div x-show="walletCardStyle === 'abstract'" x-cloak class="mt-5 space-y-4 rounded-2xl border border-stone-200 bg-stone-50/70 p-4">
-                            <div>
-                                <label class="block text-sm font-semibold text-stone-800">Abstract background pattern</label>
-                                <div class="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-5">
-                                    @foreach(\App\Models\Store::WALLET_BACKGROUND_PATTERNS as $pattern)
-                                        <label class="cursor-pointer rounded-xl border bg-white p-3 text-center text-xs font-semibold capitalize transition-all" :class="walletBackgroundPattern === '{{ $pattern }}' ? 'border-stone-900 ring-2 ring-stone-900/10' : 'border-stone-200 hover:border-stone-300'">
-                                            <input type="radio" name="wallet_background_pattern" value="{{ $pattern }}" x-model="walletBackgroundPattern" class="sr-only">
-                                            {{ $pattern }}
-                                        </label>
-                                    @endforeach
-                                </div>
-                                <x-input-error :messages="$errors->get('wallet_background_pattern')" class="mt-2" />
-                            </div>
-                            <div>
-                                <label for="wallet_pattern_color" class="block text-sm font-medium text-stone-700 mb-1.5">Pattern color</label>
-                                <div class="flex gap-3">
-                                    <input type="color" id="wallet_pattern_color" name="wallet_pattern_color" x-model="walletPatternColor" value="{{ $walletPatternColor }}" class="color-swatch-input h-11 w-11 rounded-full border-2 border-stone-300 cursor-pointer flex-shrink-0 overflow-hidden p-0 bg-transparent appearance-none" />
-                                    <input type="text" x-model="walletPatternColor" placeholder="#D6A24A" autocapitalize="off" spellcheck="false" class="{{ $inputClass }}" />
-                                </div>
-                                <p class="mt-2 text-xs leading-relaxed text-stone-500">Used only for the Abstract preview/pattern. Leave it close to your brand color for a safer look.</p>
-                                <x-input-error :messages="$errors->get('wallet_pattern_color')" class="mt-2" />
-                            </div>
-                        </div>
                         <x-input-error :messages="$errors->get('wallet_card_style')" class="mt-2" />
                     </x-onboarding-form-section>
 
@@ -233,10 +204,7 @@
                                 <x-input-error :messages="$errors->get('pass_logo')" class="mt-2" />
                             </div>
                             <div>
-                                <label for="pass_hero_image" class="block text-sm font-medium text-stone-700 mb-1.5">
-                                    Pass hero image <span x-show="walletCardStyle === 'classic'" class="text-red-500">*</span>
-                                    <span x-show="walletCardStyle === 'abstract'" x-cloak class="text-stone-400 font-normal">(optional for Abstract)</span>
-                                </label>
+                                <label for="pass_hero_image" class="block text-sm font-medium text-stone-700 mb-1.5">Pass hero image <span class="text-red-500">*</span></label>
                                 <div class="mt-2 flex flex-col sm:flex-row sm:items-start gap-4">
                                     <div x-show="passHeroPreview" class="flex-shrink-0">
                                         <p class="text-xs font-medium text-stone-500 mb-1.5">Preview</p>
@@ -249,21 +217,6 @@
                                 </div>
                                 <x-onboarding-helper-note>Banner. Recommended: 640×180px (Apple) or 640×200px (Google).</x-onboarding-helper-note>
                                 <x-input-error :messages="$errors->get('pass_hero_image')" class="mt-2" />
-                            </div>
-                            <div x-show="walletCardStyle === 'abstract'" x-cloak>
-                                <label for="wallet_stamp_icon" class="block text-sm font-medium text-stone-700 mb-1.5">Stamp icon <span class="text-stone-400 font-normal">(optional)</span></label>
-                                <div class="mt-2 flex flex-col sm:flex-row sm:items-start gap-4">
-                                    <div x-show="stampIconPreview" class="flex-shrink-0">
-                                        <p class="text-xs font-medium text-stone-500 mb-1.5">Preview</p>
-                                        <img :src="stampIconPreview" alt="Stamp icon preview" class="h-12 w-12 object-contain rounded-xl border border-stone-200 bg-white p-1 shadow-sm">
-                                    </div>
-                                    <label class="rounded-xl border-2 border-dashed border-stone-300 hover:border-stone-400 bg-stone-50/30 hover:bg-stone-50/50 px-4 py-3 text-center cursor-pointer transition-all flex-1">
-                                        <span class="text-sm font-medium text-stone-600">Choose PNG or SVG</span>
-                                        <input type="file" id="wallet_stamp_icon" name="wallet_stamp_icon" x-ref="stampIconInput" accept="image/png,image/jpeg,image/jpg,image/webp,image/svg+xml,.svg" class="sr-only" />
-                                    </label>
-                                </div>
-                                <x-onboarding-helper-note>Used in the Abstract browser preview now. Wallet rendering support comes in Phase 1B.</x-onboarding-helper-note>
-                                <x-input-error :messages="$errors->get('wallet_stamp_icon')" class="mt-2" />
                             </div>
                         </div>
                     </x-onboarding-form-section>
@@ -314,7 +267,7 @@
                                 </x-ui.readiness-row>
                                 <x-ui.readiness-row label="Pass hero image">
                                     <x-slot name="status">
-                                        <span class="font-medium" x-bind:class="(walletCardStyle === 'abstract' || passHeroPreview) ? 'text-emerald-700' : 'text-stone-500'" x-text="walletCardStyle === 'abstract' ? 'Optional' : (passHeroPreview ? 'Ready' : 'Needed')"></span>
+                                        <span class="font-medium" x-bind:class="passHeroPreview ? 'text-emerald-700' : 'text-stone-500'" x-text="passHeroPreview ? 'Ready' : 'Needed'"></span>
                                     </x-slot>
                                 </x-ui.readiness-row>
                                 <x-ui.readiness-row label="Visual contrast">

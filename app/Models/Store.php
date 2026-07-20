@@ -66,24 +66,6 @@ class Store extends Model
         self::WALLET_CARD_STYLE_ABSTRACT,
     ];
 
-    public const WALLET_BACKGROUND_PATTERN_ORGANIC = 'organic';
-
-    public const WALLET_BACKGROUND_PATTERN_DOTS = 'dots';
-
-    public const WALLET_BACKGROUND_PATTERN_GRID = 'grid';
-
-    public const WALLET_BACKGROUND_PATTERN_DIAGONAL = 'diagonal';
-
-    public const WALLET_BACKGROUND_PATTERN_WAVES = 'waves';
-
-    public const WALLET_BACKGROUND_PATTERNS = [
-        self::WALLET_BACKGROUND_PATTERN_ORGANIC,
-        self::WALLET_BACKGROUND_PATTERN_DOTS,
-        self::WALLET_BACKGROUND_PATTERN_GRID,
-        self::WALLET_BACKGROUND_PATTERN_DIAGONAL,
-        self::WALLET_BACKGROUND_PATTERN_WAVES,
-    ];
-
     protected $fillable = [
         'name',
         'default_loyalty_program_id',
@@ -99,9 +81,6 @@ class Store extends Model
         'pass_logo_path',
         'pass_hero_image_path',
         'wallet_card_style',
-        'wallet_background_pattern',
-        'wallet_pattern_color',
-        'wallet_stamp_icon_path',
         'require_verification_for_redemption',
         'onboarding_step',
         'onboarding_completed_at',
@@ -137,9 +116,6 @@ class Store extends Model
             if (empty($store->wallet_card_style) || ! in_array($store->wallet_card_style, self::WALLET_CARD_STYLES, true)) {
                 $store->wallet_card_style = self::WALLET_CARD_STYLE_CLASSIC;
             }
-            if (empty($store->wallet_background_pattern) || ! in_array($store->wallet_background_pattern, self::WALLET_BACKGROUND_PATTERNS, true)) {
-                $store->wallet_background_pattern = self::WALLET_BACKGROUND_PATTERN_ORGANIC;
-            }
             if (empty($store->registration_form_config)) {
                 $store->registration_form_config = self::defaultRegistrationFormConfig();
             }
@@ -153,7 +129,6 @@ class Store extends Model
             StoreAssets::delete($store->logo_path);
             StoreAssets::delete($store->pass_logo_path);
             StoreAssets::delete($store->pass_hero_image_path);
-            StoreAssets::delete($store->wallet_stamp_icon_path);
             StoreAssets::deleteGeneratedStampStripsForStore($store->id);
         });
     }
@@ -347,10 +322,5 @@ class Store extends Model
     public function getPassHeroImageUrlAttribute(): ?string
     {
         return StoreAssets::url($this->pass_hero_image_path);
-    }
-
-    public function getWalletStampIconUrlAttribute(): ?string
-    {
-        return StoreAssets::url($this->wallet_stamp_icon_path);
     }
 }

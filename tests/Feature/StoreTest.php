@@ -140,9 +140,6 @@ test('merchant can update store details without card settings in the payload', f
         'brand_color' => '#111827',
         'background_color' => '#F5F5F4',
         'wallet_card_style' => Store::WALLET_CARD_STYLE_ABSTRACT,
-        'wallet_background_pattern' => Store::WALLET_BACKGROUND_PATTERN_WAVES,
-        'wallet_pattern_color' => '#A7C7A1',
-        'wallet_stamp_icon' => UploadedFile::fake()->image('stamp-icon.png', 64, 64),
     ]);
 
     $response->assertRedirect(route('merchant.stores.index'));
@@ -153,9 +150,6 @@ test('merchant can update store details without card settings in the payload', f
     expect($updated->brand_color)->toBe('#111827');
     expect($updated->background_color)->toBe('#F5F5F4');
     expect($updated->wallet_card_style)->toBe(Store::WALLET_CARD_STYLE_ABSTRACT);
-    expect($updated->wallet_background_pattern)->toBe(Store::WALLET_BACKGROUND_PATTERN_WAVES);
-    expect($updated->wallet_pattern_color)->toBe('#A7C7A1');
-    expect($updated->wallet_stamp_icon_path)->not->toBeNull();
     expect($updated->reward_target)->toBe(9);
     expect($updated->reward_title)->toBe('Free Coffee');
     expect((bool) $updated->require_verification_for_redemption)->toBeTrue();
@@ -191,27 +185,6 @@ test('merchant can still update other store details after customers have joined'
     expect($updated->brand_color)->toBe('#111827');
     expect($updated->background_color)->toBe('#F5F5F4');
     expect($updated->reward_target)->toBe(9);
-});
-
-test('merchant cannot switch hero-less abstract store back to classic without hero image', function () {
-    $owner = User::factory()->create();
-    $store = Store::factory()->create([
-        'user_id' => $owner->id,
-        'wallet_card_style' => Store::WALLET_CARD_STYLE_ABSTRACT,
-        'pass_hero_image_path' => null,
-    ]);
-
-    $this->actingAs($owner)
-        ->from(route('merchant.stores.edit', $store))
-        ->put(route('merchant.stores.update', $store), [
-            'name' => $store->name,
-            'address' => $store->address,
-            'brand_color' => '#111827',
-            'background_color' => '#F5F5F4',
-            'wallet_card_style' => Store::WALLET_CARD_STYLE_CLASSIC,
-        ])
-        ->assertRedirect(route('merchant.stores.edit', $store))
-        ->assertSessionHasErrors('pass_hero_image');
 });
 
 test('free merchant cannot create a second store because it would add another default card', function () {

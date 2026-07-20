@@ -157,8 +157,6 @@ class MerchantOnboardingWizardController extends Controller
             'brand_color' => $validated['brand_color'],
             'background_color' => $validated['background_color'],
             'wallet_card_style' => $validated['wallet_card_style'] ?? Store::WALLET_CARD_STYLE_CLASSIC,
-            'wallet_background_pattern' => $validated['wallet_background_pattern'] ?? Store::WALLET_BACKGROUND_PATTERN_ORGANIC,
-            'wallet_pattern_color' => $validated['wallet_pattern_color'] ?? null,
         ];
 
         if ($request->hasFile('logo')) {
@@ -172,10 +170,6 @@ class MerchantOnboardingWizardController extends Controller
         if ($request->hasFile('pass_hero_image')) {
             StoreAssets::delete($store->pass_hero_image_path);
             $updates['pass_hero_image_path'] = StoreAssets::storeUploaded($request->file('pass_hero_image'), 'pass-heroes');
-        }
-        if ($request->hasFile('wallet_stamp_icon')) {
-            StoreAssets::delete($store->wallet_stamp_icon_path);
-            $updates['wallet_stamp_icon_path'] = StoreAssets::storeUploaded($request->file('wallet_stamp_icon'), 'wallet-stamp-icons');
         }
 
         $updates['onboarding_step'] = Store::ONBOARDING_STEP_CUSTOMER_FORM;

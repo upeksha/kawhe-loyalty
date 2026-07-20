@@ -61,8 +61,6 @@
                             brandColor: @js(old('brand_color', $store->brand_color ?? '#0EA5E9')),
                             bgColor: @js(old('background_color', $store->background_color ?? '#1F2937')),
                             walletCardStyle: @js(old('wallet_card_style', $store->wallet_card_style ?? \App\Models\Store::WALLET_CARD_STYLE_CLASSIC)),
-                            walletBackgroundPattern: @js(old('wallet_background_pattern', $store->wallet_background_pattern ?? \App\Models\Store::WALLET_BACKGROUND_PATTERN_ORGANIC)),
-                            walletPatternColor: @js(old('wallet_pattern_color', $store->wallet_pattern_color ?? $store->brand_color ?? '#0EA5E9')),
                             hexToRgb(hex) {
                                 const cleaned = (hex || '').replace('#', '');
                                 if (cleaned.length !== 6) return null;
@@ -205,29 +203,6 @@
                             <x-input-error :messages="$errors->get('wallet_card_style')" class="mt-2" />
                         </div>
 
-                        <div x-show="walletCardStyle === 'abstract'" x-cloak class="mb-5 space-y-4 rounded-2xl border border-stone-200 bg-stone-50/70 p-4">
-                            <div>
-                                <label class="block text-sm font-semibold text-stone-800">Abstract background pattern</label>
-                                <div class="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-5">
-                                    @foreach(\App\Models\Store::WALLET_BACKGROUND_PATTERNS as $pattern)
-                                        <label class="cursor-pointer rounded-xl border bg-white p-3 text-center text-xs font-semibold capitalize transition-all" :class="walletBackgroundPattern === '{{ $pattern }}' ? 'border-stone-900 ring-2 ring-stone-900/10' : 'border-stone-200 hover:border-stone-300'">
-                                            <input type="radio" name="wallet_background_pattern" value="{{ $pattern }}" x-model="walletBackgroundPattern" class="sr-only">
-                                            {{ $pattern }}
-                                        </label>
-                                    @endforeach
-                                </div>
-                                <x-input-error :messages="$errors->get('wallet_background_pattern')" class="mt-2" />
-                            </div>
-                            <div>
-                                <label for="wallet_pattern_color" class="block text-sm font-medium text-stone-700 mb-1.5">Pattern color</label>
-                                <div class="flex gap-2">
-                                    <input type="color" id="wallet_pattern_color" name="wallet_pattern_color" x-model="walletPatternColor" value="{{ old('wallet_pattern_color', $store->wallet_pattern_color ?? $store->brand_color ?? '#0EA5E9') }}" class="color-swatch-input h-11 w-11 rounded-full border-2 border-stone-300 cursor-pointer flex-shrink-0 overflow-hidden p-0 bg-transparent appearance-none">
-                                    <x-ui.input type="text" x-model="walletPatternColor" placeholder="#D6A24A" class="flex-1" />
-                                </div>
-                                <x-input-error :messages="$errors->get('wallet_pattern_color')" class="mt-2" />
-                            </div>
-                        </div>
-
                         <div x-show="hasBlockedContrast" x-cloak class="mb-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900">
                             <p class="font-semibold">Colors need more contrast</p>
                             <p class="mt-1 leading-relaxed">
@@ -271,17 +246,6 @@
                                 helper="PNG, JPG, or WebP (max 2MB). Recommended: 640x180px or 640x200px."
                             >
                                 <x-input-error :messages="$errors->get('pass_hero_image')" class="mt-2" />
-                            </x-ui.image-upload-field>
-
-                            <x-ui.image-upload-field
-                                id="wallet_stamp_icon"
-                                label="Stamp icon"
-                                :preview-url="$store->wallet_stamp_icon_url"
-                                img-class="h-12 w-12 object-contain"
-                                helper="Optional for Abstract cards. PNG, JPG, WebP, or SVG up to 1MB."
-                                accept="image/png,image/jpeg,image/jpg,image/webp,image/svg+xml,.svg"
-                            >
-                                <x-input-error :messages="$errors->get('wallet_stamp_icon')" class="mt-2" />
                             </x-ui.image-upload-field>
                         </div>
 

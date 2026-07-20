@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Log;
 
 class GoogleWalletStampStripRenderer
 {
-    private const RENDER_VERSION = 'v7';
+    private const RENDER_VERSION = 'v6';
 
     /**
      * Generate a stamp-strip PNG on the configured asset disk and return its relative path.
@@ -43,17 +43,10 @@ class GoogleWalletStampStripRenderer
         $walletCardStyle = in_array($store->wallet_card_style, Store::WALLET_CARD_STYLES, true)
             ? $store->wallet_card_style
             : Store::WALLET_CARD_STYLE_CLASSIC;
-        $walletPattern = in_array($store->wallet_background_pattern, Store::WALLET_BACKGROUND_PATTERNS, true)
-            ? $store->wallet_background_pattern
-            : Store::WALLET_BACKGROUND_PATTERN_ORGANIC;
-        $walletPatternColor = $this->normalizeHexColor($store->wallet_pattern_color) ?? $accent;
 
         $stateHash = substr(sha1(implode('|', [
             self::RENDER_VERSION,
             $walletCardStyle,
-            $walletPattern,
-            $walletPatternColor,
-            (string) ($store->wallet_stamp_icon_path ?? ''),
             $target,
             $stamps,
             $background,
@@ -72,23 +65,7 @@ class GoogleWalletStampStripRenderer
             $heroBinary = StoreAssets::get($program->pass_hero_image_path);
         }
 
-        $stampIconBinary = null;
-        if ($walletCardStyle === Store::WALLET_CARD_STYLE_ABSTRACT && $this->isRasterIconPath($store->wallet_stamp_icon_path) && StoreAssets::exists($store->wallet_stamp_icon_path)) {
-            $stampIconBinary = StoreAssets::get($store->wallet_stamp_icon_path);
-        }
-
-        $pngBinary = $this->renderPng(
-            target: $target,
-            stamps: $stamps,
-            backgroundHex: $background,
-            accentHex: $accent,
-            foregroundHex: $foreground,
-            heroBinary: $heroBinary,
-            walletCardStyle: $walletCardStyle,
-            walletPattern: $walletPattern,
-            patternHex: $walletPatternColor,
-            stampIconBinary: $stampIconBinary
-        );
+        $pngBinary = $this->renderPng($target, $stamps, $background, $accent, $foreground, $heroBinary, $walletCardStyle);
         if (! $pngBinary) {
             return null;
         }
@@ -104,10 +81,7 @@ class GoogleWalletStampStripRenderer
         string $accentHex,
         string $foregroundHex,
         ?string $heroBinary = null,
-        string $walletCardStyle = Store::WALLET_CARD_STYLE_CLASSIC,
-        string $walletPattern = Store::WALLET_BACKGROUND_PATTERN_ORGANIC,
-        ?string $patternHex = null,
-        ?string $stampIconBinary = null
+        string $walletCardStyle = Store::WALLET_CARD_STYLE_CLASSIC
     ): ?string
     {
         $width = 1032;
@@ -131,7 +105,7 @@ class GoogleWalletStampStripRenderer
         imagefill($image, 0, 0, $bgColor);
 
         if ($walletCardStyle === Store::WALLET_CARD_STYLE_ABSTRACT) {
-            $this->drawAbstractBackground($image, $width, $height, $backgroundHex, $patternHex ?? $accentHex, $foregroundHex, $walletPattern);
+            $this->drawAbstractBackground($image, $width, $height, $backgroundHex, $accentHex, $foregroundHex);
         }
 
         // Blend store hero image under circles for front-card visual parity.
@@ -188,7 +162,7 @@ class GoogleWalletStampStripRenderer
                     imagefilledellipse($image, $x, $y, $circleDiameter, $circleDiameter, $fgColor);
                     imageellipse($image, $x, $y, $circleDiameter, $circleDiameter, $fgColor);
                     if ($walletCardStyle === Store::WALLET_CARD_STYLE_ABSTRACT) {
-                        $this->drawStampIcon($image, $x, $y, $circleDiameter, $bgColor, $index === $target, $stampIconBinary);
+                        $this->drawStampIcon($image, $x, $y, $circleDiameter, $bgColor, $index === $target);
                     }
                 } else {
                     $emptyFill = $walletCardStyle === Store::WALLET_CARD_STYLE_ABSTRACT
@@ -212,7 +186,7 @@ class GoogleWalletStampStripRenderer
         return $png !== false ? $png : null;
     }
 
-    protected function drawAbstractBackground($image, int $width, int $height, string $backgroundHex, string $accentHex, string $foregroundHex, string $walletPattern): void
+    protected function drawAbstractBackground($image, int $width, int $height, string $backgroundHex, string $accentHex, string $foregroundHex): void
     {
         [$bgR, $bgG, $bgB] = $this->hexToRgb($backgroundHex);
         [$acR, $acG, $acB] = $this->hexToRgb($accentHex);
@@ -228,53 +202,20 @@ class GoogleWalletStampStripRenderer
 
         $accentSoft = imagecolorallocatealpha($image, $acR, $acG, $acB, 54);
         $foregroundSoft = imagecolorallocatealpha($image, $fgR, $fgG, $fgB, 94);
+        imagefilledellipse($image, (int) ($width * 0.12), (int) ($height * 0.2), 340, 180, $accentSoft);
+        imagefilledellipse($image, (int) ($width * 0.9), (int) ($height * 0.72), 420, 220, $foregroundSoft);
+
+        imagesetthickness($image, 4);
         $line = imagecolorallocatealpha($image, $fgR, $fgG, $fgB, 76);
-        $accentLine = imagecolorallocatealpha($image, $acR, $acG, $acB, 58);
-
-        if ($walletPattern === Store::WALLET_BACKGROUND_PATTERN_DOTS) {
-            for ($y = 22; $y < $height; $y += 28) {
-                for ($x = 22; $x < $width; $x += 28) {
-                    imagefilledellipse($image, $x, $y, 5, 5, $accentLine);
-                }
-            }
-        } elseif ($walletPattern === Store::WALLET_BACKGROUND_PATTERN_GRID) {
-            imagesetthickness($image, 2);
-            for ($x = 0; $x < $width; $x += 42) {
-                imageline($image, $x, 0, $x, $height, $accentLine);
-            }
-            for ($y = 0; $y < $height; $y += 42) {
-                imageline($image, 0, $y, $width, $y, $accentLine);
-            }
-        } elseif ($walletPattern === Store::WALLET_BACKGROUND_PATTERN_DIAGONAL) {
-            imagesetthickness($image, 3);
-            for ($x = -$height; $x < $width; $x += 34) {
-                imageline($image, $x, $height, $x + $height, 0, $accentLine);
-            }
-        } elseif ($walletPattern === Store::WALLET_BACKGROUND_PATTERN_WAVES) {
-            imagesetthickness($image, 4);
-            for ($y = -20; $y < $height + 60; $y += 42) {
-                imagearc($image, (int) ($width * 0.25), $y, (int) ($width * 0.7), 90, 0, 180, $accentLine);
-                imagearc($image, (int) ($width * 0.75), $y, (int) ($width * 0.7), 90, 180, 360, $accentLine);
-            }
-        } else {
-            imagefilledellipse($image, (int) ($width * 0.12), (int) ($height * 0.2), 340, 180, $accentSoft);
-            imagefilledellipse($image, (int) ($width * 0.9), (int) ($height * 0.72), 420, 220, $foregroundSoft);
-            imagesetthickness($image, 4);
-            imagearc($image, (int) ($width * 0.16), (int) ($height * 0.95), 420, 220, 205, 350, $line);
-            imagearc($image, (int) ($width * 0.86), (int) ($height * 0.08), 360, 190, 20, 175, $line);
-        }
-
+        imagearc($image, (int) ($width * 0.16), (int) ($height * 0.95), 420, 220, 205, 350, $line);
+        imagearc($image, (int) ($width * 0.86), (int) ($height * 0.08), 360, 190, 20, 175, $line);
         imagesetthickness($image, 1);
     }
 
-    protected function drawStampIcon($image, int $centerX, int $centerY, int $circleDiameter, int $color, bool $isGift, ?string $stampIconBinary = null): void
+    protected function drawStampIcon($image, int $centerX, int $centerY, int $circleDiameter, int $color, bool $isGift): void
     {
         if ($isGift) {
             $this->drawGiftIcon($image, $centerX, $centerY, $circleDiameter, $color);
-            return;
-        }
-
-        if ($stampIconBinary && $this->drawUploadedStampIcon($image, $stampIconBinary, $centerX, $centerY, $circleDiameter)) {
             return;
         }
 
@@ -294,37 +235,6 @@ class GoogleWalletStampStripRenderer
         imagearc($image, $centerX - (int) round(6 * $scale), $cupY - (int) round(8 * $scale), (int) round(10 * $scale), (int) round(15 * $scale), 260, 75, $color);
         imagearc($image, $centerX + (int) round(6 * $scale), $cupY - (int) round(8 * $scale), (int) round(10 * $scale), (int) round(15 * $scale), 260, 75, $color);
         imagesetthickness($image, 1);
-    }
-
-    protected function drawUploadedStampIcon($image, string $stampIconBinary, int $centerX, int $centerY, int $circleDiameter): bool
-    {
-        if (! function_exists('imagecreatefromstring')) {
-            return false;
-        }
-
-        $source = @imagecreatefromstring($stampIconBinary);
-        if (! $source) {
-            return false;
-        }
-
-        $srcW = imagesx($source);
-        $srcH = imagesy($source);
-        if ($srcW <= 0 || $srcH <= 0) {
-            imagedestroy($source);
-            return false;
-        }
-
-        $maxSize = (int) floor($circleDiameter * 0.56);
-        $scale = min($maxSize / $srcW, $maxSize / $srcH);
-        $drawW = max(1, (int) floor($srcW * $scale));
-        $drawH = max(1, (int) floor($srcH * $scale));
-        $dstX = $centerX - (int) floor($drawW / 2);
-        $dstY = $centerY - (int) floor($drawH / 2);
-
-        imagecopyresampled($image, $source, $dstX, $dstY, 0, 0, $drawW, $drawH, $srcW, $srcH);
-        imagedestroy($source);
-
-        return true;
     }
 
     protected function drawGiftIcon($image, int $centerX, int $centerY, int $circleDiameter, int $color): void
@@ -373,15 +283,6 @@ class GoogleWalletStampStripRenderer
         }
 
         return strtoupper($hex);
-    }
-
-    protected function isRasterIconPath(?string $path): bool
-    {
-        if (! $path) {
-            return false;
-        }
-
-        return in_array(strtolower(pathinfo($path, PATHINFO_EXTENSION)), ['png', 'jpg', 'jpeg', 'webp'], true);
     }
 
     protected function bestContrastTextColor(string $backgroundHex): string

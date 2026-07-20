@@ -162,10 +162,6 @@ class AppleWalletPassService
         $assetsPath = resource_path('wallet/apple/default');
         $brandColor = $program->brand_color ?? '#8B4513';
         $backgroundColor = $program->background_color ?? '#FBF8F4';
-        $walletPattern = in_array($store->wallet_background_pattern, Store::WALLET_BACKGROUND_PATTERNS, true)
-            ? $store->wallet_background_pattern
-            : Store::WALLET_BACKGROUND_PATTERN_ORGANIC;
-        $walletPatternColor = $this->normalizeHexColor($store->wallet_pattern_color ?? null) ?? $brandColor;
         
         // Create unique temp directory for this pass generation to avoid filename conflicts
         $tempDir = sys_get_temp_dir() . '/apple_wallet_' . uniqid();
@@ -196,14 +192,8 @@ class AppleWalletPassService
             }
         }
         
-        // Abstract cards use generated brand-color artwork instead of requiring a hero image.
-        if ($walletCardStyle === Store::WALLET_CARD_STYLE_ABSTRACT) {
-            $tempStripPath = $tempDir . '/strip.png';
-            if ($this->createAbstractPatternPng($tempStripPath, 750, 246, $backgroundColor, $walletPatternColor, $walletPattern)) {
-                $pass->addAsset($tempStripPath);
-                $assetsAdded[] = 'strip (abstract pattern)';
-            }
-        } elseif ($program->pass_hero_image_path && StoreAssets::exists($program->pass_hero_image_path)) {
+        // Use store pass hero image if available, otherwise fallback to default strip
+        if ($program->pass_hero_image_path && StoreAssets::exists($program->pass_hero_image_path)) {
             $passHeroPath = StoreAssets::localTempPath($program->pass_hero_image_path, pathinfo($program->pass_hero_image_path, PATHINFO_EXTENSION) ?: 'img');
             if ($passHeroPath && file_exists($passHeroPath)) {
                 // Copy to temp file with exact name (strip.png) so PassGenerator recognizes it
@@ -235,13 +225,7 @@ class AppleWalletPassService
                 $assetsAdded[] = 'icon (fallback)';
             }
         }
-        if ($walletCardStyle === Store::WALLET_CARD_STYLE_ABSTRACT) {
-            $tempBgPath = $tempDir . '/background.png';
-            if ($this->createAbstractPatternPng($tempBgPath, 360, 440, $backgroundColor, $walletPatternColor, $walletPattern)) {
-                $pass->addAsset($tempBgPath);
-                $assetsAdded[] = 'background (abstract pattern)';
-            }
-        } elseif (file_exists($assetsPath . '/background.png')) {
+        if (file_exists($assetsPath . '/background.png')) {
             $pass->addAsset($assetsPath . '/background.png');
             $assetsAdded[] = 'background';
         } else {
@@ -490,81 +474,6 @@ class AppleWalletPassService
         return $luminance > 146 ? '#111111' : '#FFFFFF';
     }
 
-    protected function createAbstractPatternPng(string $path, int $width, int $height, string $bgHex, string $accentHex, string $pattern): bool
-    {
-        if (!function_exists('imagecreatetruecolor')) {
-            \Log::warning('Apple Wallet: GD not available for abstract images', [
-                'path' => $path,
-            ]);
-            return false;
-        }
-
-        $img = imagecreatetruecolor($width, $height);
-        if (! $img) {
-            return false;
-        }
-
-        imageantialias($img, true);
-        $this->drawPatternBackground($img, $width, $height, $bgHex, $accentHex, $pattern);
-
-        $saved = imagepng($img, $path);
-        imagedestroy($img);
-
-        return $saved && file_exists($path);
-    }
-
-    protected function drawPatternBackground($img, int $width, int $height, string $bgHex, string $accentHex, string $pattern): void
-    {
-        [$bgR, $bgG, $bgB] = $this->hexToRgbArray($bgHex);
-        [$acR, $acG, $acB] = $this->hexToRgbArray($accentHex);
-
-        for ($y = 0; $y < $height; $y++) {
-            $ratio = $height > 1 ? $y / ($height - 1) : 0;
-            $r = (int) round(($bgR * (1 - $ratio)) + (($acR * 0.55 + $bgR * 0.45) * $ratio));
-            $g = (int) round(($bgG * (1 - $ratio)) + (($acG * 0.55 + $bgG * 0.45) * $ratio));
-            $b = (int) round(($bgB * (1 - $ratio)) + (($acB * 0.55 + $bgB * 0.45) * $ratio));
-            imageline($img, 0, $y, $width, $y, imagecolorallocate($img, $r, $g, $b));
-        }
-
-        $accentSoft = imagecolorallocatealpha($img, $acR, $acG, $acB, 58);
-        $line = imagecolorallocatealpha($img, 255, 255, 255, 84);
-
-        if ($pattern === Store::WALLET_BACKGROUND_PATTERN_DOTS) {
-            for ($y = 18; $y < $height; $y += 26) {
-                for ($x = 18; $x < $width; $x += 26) {
-                    imagefilledellipse($img, $x, $y, 5, 5, $accentSoft);
-                }
-            }
-        } elseif ($pattern === Store::WALLET_BACKGROUND_PATTERN_GRID) {
-            imagesetthickness($img, 1);
-            for ($x = 0; $x < $width; $x += 36) {
-                imageline($img, $x, 0, $x, $height, $accentSoft);
-            }
-            for ($y = 0; $y < $height; $y += 36) {
-                imageline($img, 0, $y, $width, $y, $accentSoft);
-            }
-        } elseif ($pattern === Store::WALLET_BACKGROUND_PATTERN_DIAGONAL) {
-            imagesetthickness($img, 2);
-            for ($x = -$height; $x < $width; $x += 30) {
-                imageline($img, $x, $height, $x + $height, 0, $accentSoft);
-            }
-        } elseif ($pattern === Store::WALLET_BACKGROUND_PATTERN_WAVES) {
-            imagesetthickness($img, 3);
-            for ($y = -20; $y < $height + 60; $y += 44) {
-                imagearc($img, (int) ($width * 0.25), $y, (int) ($width * 0.7), 86, 0, 180, $accentSoft);
-                imagearc($img, (int) ($width * 0.75), $y, (int) ($width * 0.7), 86, 180, 360, $accentSoft);
-            }
-        } else {
-            imagefilledellipse($img, (int) ($width * 0.12), (int) ($height * 0.18), (int) ($width * 0.36), (int) ($height * 0.72), $accentSoft);
-            imagefilledellipse($img, (int) ($width * 0.88), (int) ($height * 0.78), (int) ($width * 0.48), (int) ($height * 0.82), imagecolorallocatealpha($img, 255, 255, 255, 98));
-            imagesetthickness($img, 3);
-            imagearc($img, (int) ($width * 0.15), (int) ($height * 0.95), (int) ($width * 0.55), (int) ($height * 0.52), 205, 350, $line);
-            imagearc($img, (int) ($width * 0.86), (int) ($height * 0.08), (int) ($width * 0.48), (int) ($height * 0.42), 20, 175, $line);
-        }
-
-        imagesetthickness($img, 1);
-    }
-
     /**
      * Create a simple fallback PNG asset if defaults are missing.
      * This prevents invalid pkpass files when required images aren't present.
@@ -597,24 +506,6 @@ class AppleWalletPassService
         imagedestroy($img);
 
         return $saved && file_exists($path);
-    }
-
-    protected function normalizeHexColor(?string $hex): ?string
-    {
-        if (! $hex) {
-            return null;
-        }
-
-        $hex = trim($hex);
-        if (! str_starts_with($hex, '#')) {
-            $hex = '#'.$hex;
-        }
-
-        if (! preg_match('/^#[0-9A-Fa-f]{6}$/', $hex)) {
-            return null;
-        }
-
-        return strtoupper($hex);
     }
 
     /**

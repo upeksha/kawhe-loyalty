@@ -11,29 +11,6 @@
     },
     get isAbstractWalletCard() {
         return this.activeWalletCardStyle === 'abstract';
-    },
-    get activeWalletPattern() {
-        return typeof walletBackgroundPattern !== 'undefined' ? walletBackgroundPattern : 'organic';
-    },
-    get activeWalletPatternColor() {
-        return typeof walletPatternColor !== 'undefined' && walletPatternColor ? walletPatternColor : (brandColor || '#d6a24a');
-    },
-    walletPatternCss() {
-        const bg = bgColor || '#562300';
-        const accent = this.activeWalletPatternColor;
-        if (this.activeWalletPattern === 'dots') {
-            return `radial-gradient(circle at 1px 1px, ${accent} 1.6px, transparent 0), linear-gradient(145deg, ${bg} 0%, ${accent} 170%)`;
-        }
-        if (this.activeWalletPattern === 'grid') {
-            return `linear-gradient(${accent}33 1px, transparent 1px), linear-gradient(90deg, ${accent}33 1px, transparent 1px), linear-gradient(145deg, ${bg} 0%, ${accent} 170%)`;
-        }
-        if (this.activeWalletPattern === 'diagonal') {
-            return `repeating-linear-gradient(135deg, ${accent}33 0 2px, transparent 2px 16px), linear-gradient(145deg, ${bg} 0%, ${accent} 170%)`;
-        }
-        if (this.activeWalletPattern === 'waves') {
-            return `radial-gradient(ellipse at 20% 120%, ${accent}66 0 22%, transparent 23%), radial-gradient(ellipse at 76% -10%, rgba(255,255,255,.18) 0 18%, transparent 19%), repeating-radial-gradient(ellipse at center, ${accent}2e 0 2px, transparent 2px 24px), linear-gradient(145deg, ${bg} 0%, ${accent} 170%)`;
-        }
-        return `radial-gradient(circle at 18% 8%, ${accent} 0 12%, transparent 13%), radial-gradient(circle at 90% 18%, rgba(255,255,255,.16) 0 15%, transparent 16%), linear-gradient(145deg, ${bg} 0%, ${accent} 160%)`;
     }
 }">
     <div class="flex items-center justify-between gap-3">
@@ -52,8 +29,7 @@
              :style="isAbstractWalletCard
                 ? {
                     backgroundColor: bgColor || '#562300',
-                    backgroundImage: walletPatternCss(),
-                    backgroundSize: activeWalletPattern === 'dots' || activeWalletPattern === 'grid' ? '18px 18px, auto' : 'cover'
+                    backgroundImage: `radial-gradient(circle at 18% 8%, ${brandColor || '#d6a24a'} 0 12%, transparent 13%), radial-gradient(circle at 90% 18%, rgba(255,255,255,.16) 0 15%, transparent 16%), linear-gradient(145deg, ${bgColor || '#562300'} 0%, ${brandColor || '#d6a24a'} 160%)`
                 }
                 : { backgroundColor: bgColor || '#562300' }">
             <div class="flex h-[72px] items-center gap-3 px-4">
@@ -73,7 +49,7 @@
                 :style="passHeroPreview
                     ? `background-image: url('${passHeroPreview}'); background-size: cover; background-position: center; background-repeat: no-repeat;`
                     : (isAbstractWalletCard
-                        ? `background-image: ${walletPatternCss()}; background-size: ${activeWalletPattern === 'dots' || activeWalletPattern === 'grid' ? '18px 18px, auto' : 'cover'}; background-position: center; background-repeat: repeat;`
+                        ? `background-image: radial-gradient(circle at 20% 18%, ${brandColor || '#d6a24a'} 0 14%, transparent 15%), radial-gradient(circle at 84% 76%, rgba(255,255,255,.18) 0 18%, transparent 19%), linear-gradient(135deg, ${bgColor || '#562300'} 0%, ${brandColor || '#d6a24a'} 180%); background-size: cover; background-position: center; background-repeat: no-repeat;`
                         : `background-image: url('{{ $fallbackHeroUrl }}'); background-size: 140px auto; background-position: center; background-repeat: repeat;`)"
             >
                 <div x-show="isAbstractWalletCard" class="pointer-events-none absolute inset-0 opacity-45">
@@ -99,19 +75,12 @@
                                 </svg>
                             </template>
                             <template x-if="isAbstractWalletCard && stamp !== Math.min(Math.max(Number(rewardTarget) || 1, 1), 5)">
-                                <span class="inline-flex h-full w-full items-center justify-center">
-                                    <template x-if="typeof stampIconPreview !== 'undefined' && stampIconPreview">
-                                        <img :src="stampIconPreview" alt="" class="h-[15px] w-[15px] object-contain">
-                                    </template>
-                                    <template x-if="!(typeof stampIconPreview !== 'undefined' && stampIconPreview)">
-                                        <svg viewBox="0 0 24 24" class="h-[15px] w-[15px]" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                                            <path d="M6 10h10v5a4 4 0 0 1-4 4H10a4 4 0 0 1-4-4v-5Z"/>
-                                            <path d="M16 11h1.5a2.5 2.5 0 0 1 0 5H16"/>
-                                            <path d="M8 7c1-1 .2-1.8 1.2-3"/>
-                                            <path d="M12 7c1-1 .2-1.8 1.2-3"/>
-                                        </svg>
-                                    </template>
-                                </span>
+                                <svg viewBox="0 0 24 24" class="h-[15px] w-[15px]" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                                    <path d="M6 10h10v5a4 4 0 0 1-4 4H10a4 4 0 0 1-4-4v-5Z"/>
+                                    <path d="M16 11h1.5a2.5 2.5 0 0 1 0 5H16"/>
+                                    <path d="M8 7c1-1 .2-1.8 1.2-3"/>
+                                    <path d="M12 7c1-1 .2-1.8 1.2-3"/>
+                                </svg>
                             </template>
                         </span>
                     </template>
