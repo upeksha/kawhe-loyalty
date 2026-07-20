@@ -3,7 +3,6 @@
 namespace App\Services\Wallet;
 
 use App\Models\LoyaltyAccount;
-use App\Models\Store;
 use App\Services\Wallet\Apple\AppleWalletSerial;
 use App\Support\StoreAssets;
 use Byte5\PassGenerator;
@@ -41,9 +40,6 @@ class AppleWalletPassService
                 : $account->public_token
         );
         $rewardTarget = max(1, (int) ($program->reward_target ?? 10));
-        $walletCardStyle = in_array($store->wallet_card_style, Store::WALLET_CARD_STYLES, true)
-            ? $store->wallet_card_style
-            : Store::WALLET_CARD_STYLE_CLASSIC;
 
         // Build pass definition
         $passDefinition = [
@@ -75,7 +71,7 @@ class AppleWalletPassService
                     [
                         'key' => 'stamps',
                         'label' => ' ',
-                        'value' => $this->generateStampIndicators($account, $rewardTarget, $walletCardStyle),
+                        'value' => $this->generateCircleIndicators($account->stamp_count, $rewardTarget),
                     ],
                 ],
                 'secondaryFields' => [
@@ -293,28 +289,6 @@ class AppleWalletPassService
         
         // Unicode circles: filled = ● (U+25CF), empty = ○ (U+25CB)
         return str_repeat('●', $filled) . str_repeat('○', $empty);
-    }
-
-    protected function generateStampIndicators(LoyaltyAccount $account, int $rewardTarget, string $walletCardStyle): string
-    {
-        if ($walletCardStyle !== Store::WALLET_CARD_STYLE_ABSTRACT) {
-            return $this->generateCircleIndicators((int) $account->stamp_count, $rewardTarget);
-        }
-
-        $filled = max(0, min((int) $account->stamp_count, $rewardTarget));
-        $rewardReady = (int) ($account->reward_balance ?? 0) > 0;
-        $icons = [];
-
-        for ($index = 1; $index <= $rewardTarget; $index++) {
-            if ($index === $rewardTarget) {
-                $icons[] = '🎁';
-                continue;
-            }
-
-            $icons[] = $rewardReady || $index <= $filled ? '☕' : '○';
-        }
-
-        return implode(' ', $icons);
     }
 
     /**

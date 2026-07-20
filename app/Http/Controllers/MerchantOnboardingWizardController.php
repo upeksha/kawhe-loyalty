@@ -156,7 +156,6 @@ class MerchantOnboardingWizardController extends Controller
         $updates = [
             'brand_color' => $validated['brand_color'],
             'background_color' => $validated['background_color'],
-            'wallet_card_style' => $validated['wallet_card_style'] ?? Store::WALLET_CARD_STYLE_CLASSIC,
         ];
 
         if ($request->hasFile('logo')) {

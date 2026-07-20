@@ -60,7 +60,6 @@
                         x-data="{
                             brandColor: @js(old('brand_color', $store->brand_color ?? '#0EA5E9')),
                             bgColor: @js(old('background_color', $store->background_color ?? '#1F2937')),
-                            walletCardStyle: @js(old('wallet_card_style', $store->wallet_card_style ?? \App\Models\Store::WALLET_CARD_STYLE_CLASSIC)),
                             hexToRgb(hex) {
                                 const cleaned = (hex || '').replace('#', '');
                                 if (cleaned.length !== 6) return null;
@@ -184,23 +183,6 @@
                             </div>
                             <p class="mt-1 text-xs text-stone-500">Used for customer card page background</p>
                             <x-input-error :messages="$errors->get('background_color')" class="mt-2" />
-                        </div>
-
-                        <div class="mb-5">
-                            <label class="block mb-2 text-sm font-medium text-stone-700">Wallet Card Style</label>
-                            <div class="grid gap-3 sm:grid-cols-2">
-                                <label class="cursor-pointer rounded-2xl border p-4 transition-all" :class="walletCardStyle === 'classic' ? 'border-stone-900 bg-stone-50 ring-2 ring-stone-900/10' : 'border-stone-200 bg-white hover:border-stone-300'">
-                                    <input type="radio" name="wallet_card_style" value="classic" x-model="walletCardStyle" class="sr-only">
-                                    <span class="block text-sm font-semibold text-stone-900">Classic</span>
-                                    <span class="mt-1 block text-sm leading-relaxed text-stone-600">Keep the current wallet card design.</span>
-                                </label>
-                                <label class="cursor-pointer rounded-2xl border p-4 transition-all" :class="walletCardStyle === 'abstract' ? 'border-stone-900 bg-stone-50 ring-2 ring-stone-900/10' : 'border-stone-200 bg-white hover:border-stone-300'">
-                                    <input type="radio" name="wallet_card_style" value="abstract" x-model="walletCardStyle" class="sr-only">
-                                    <span class="block text-sm font-semibold text-stone-900">Abstract icon card</span>
-                                    <span class="mt-1 block text-sm leading-relaxed text-stone-600">Use branded abstract artwork, icon stamps, and a gift marker.</span>
-                                </label>
-                            </div>
-                            <x-input-error :messages="$errors->get('wallet_card_style')" class="mt-2" />
                         </div>
 
                         <div x-show="hasBlockedContrast" x-cloak class="mb-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900">

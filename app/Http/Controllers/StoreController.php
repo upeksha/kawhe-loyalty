@@ -126,7 +126,6 @@ class StoreController extends Controller
             'address' => ['nullable', 'string', 'max:255'],
             'brand_color' => ['nullable', 'string', 'regex:/^#[0-9A-Fa-f]{6}$/'],
             'background_color' => ['nullable', 'string', 'regex:/^#[0-9A-Fa-f]{6}$/'],
-            'wallet_card_style' => ['nullable', 'string', \Illuminate\Validation\Rule::in(Store::WALLET_CARD_STYLES)],
             'logo' => ['nullable', 'image', 'mimes:png,jpg,jpeg,webp', 'max:2048'],
             'pass_logo' => ['nullable', 'image', 'mimes:png,jpg,jpeg,webp', 'max:2048'],
             'pass_hero_image' => ['nullable', 'image', 'mimes:png,jpg,jpeg,webp', 'max:2048'],

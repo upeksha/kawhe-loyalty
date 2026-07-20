@@ -26,7 +26,6 @@ test('onboarding wizard can create and advance a first store with safe defaults'
 
     expect($store->brand_color)->toBe(Store::DEFAULT_BRAND_COLOR)
         ->and($store->background_color)->toBe(Store::DEFAULT_BACKGROUND_COLOR)
-        ->and($store->wallet_card_style)->toBe(Store::WALLET_CARD_STYLE_CLASSIC)
         ->and($store->registration_form_config['email']['enabled'])->toBeTrue()
         ->and($store->onboarding_step)->toBe(Store::ONBOARDING_STEP_CARD_DESIGN)
         ->and($defaultProgram)->not->toBeNull()
@@ -38,7 +37,6 @@ test('onboarding wizard can create and advance a first store with safe defaults'
         ->post(route('merchant.onboarding.wizard.card-design.store'), [
             'brand_color' => '#123456',
             'background_color' => '#654321',
-            'wallet_card_style' => Store::WALLET_CARD_STYLE_ABSTRACT,
             'logo' => UploadedFile::fake()->image('logo.png', 200, 200),
             'pass_logo' => UploadedFile::fake()->image('pass-logo.png', 160, 50),
             'pass_hero_image' => UploadedFile::fake()->image('pass-hero.png', 640, 180),
@@ -50,7 +48,6 @@ test('onboarding wizard can create and advance a first store with safe defaults'
 
     expect($store->brand_color)->toBe('#123456')
         ->and($store->background_color)->toBe('#654321')
-        ->and($store->wallet_card_style)->toBe(Store::WALLET_CARD_STYLE_ABSTRACT)
         ->and($store->logo_path)->not->toBeNull()
         ->and($store->pass_logo_path)->not->toBeNull()
         ->and($store->pass_hero_image_path)->not->toBeNull()
@@ -135,7 +132,6 @@ test('create store requires branding assets and saves them on the default card',
             'reward_title' => 'Free pastry',
             'brand_color' => '#123456',
             'background_color' => '#654321',
-            'wallet_card_style' => Store::WALLET_CARD_STYLE_ABSTRACT,
             'logo' => UploadedFile::fake()->image('logo.png', 200, 200),
             'pass_logo' => UploadedFile::fake()->image('pass-logo.png', 160, 50),
             'pass_hero_image' => UploadedFile::fake()->image('pass-hero.png', 640, 180),
@@ -149,7 +145,6 @@ test('create store requires branding assets and saves them on the default card',
 
     expect($store->brand_color)->toBe('#123456')
         ->and($store->background_color)->toBe('#654321')
-        ->and($store->wallet_card_style)->toBe(Store::WALLET_CARD_STYLE_ABSTRACT)
         ->and($store->logo_path)->not->toBeNull()
         ->and($store->pass_logo_path)->not->toBeNull()
         ->and($store->pass_hero_image_path)->not->toBeNull()
