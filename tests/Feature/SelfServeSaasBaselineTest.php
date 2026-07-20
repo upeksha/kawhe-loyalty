@@ -103,6 +103,39 @@ test('onboarding card design requires store logo and wallet assets', function ()
     $response->assertSessionHasErrors(['logo', 'pass_logo', 'pass_hero_image']);
 });
 
+test('abstract onboarding card design does not require a pass hero image', function () {
+    $user = User::factory()->create();
+
+    $this->actingAs($user)
+        ->post(route('merchant.onboarding.wizard.store-basics.store'), [
+            'name' => 'Abstract Test Cafe',
+            'reward_target' => 8,
+            'reward_title' => 'Free coffee',
+        ]);
+
+    $this->actingAs($user)
+        ->post(route('merchant.onboarding.wizard.card-design.store'), [
+            'brand_color' => '#D6A24A',
+            'background_color' => '#2B1E18',
+            'wallet_card_style' => Store::WALLET_CARD_STYLE_ABSTRACT,
+            'wallet_background_pattern' => Store::WALLET_BACKGROUND_PATTERN_DOTS,
+            'wallet_pattern_color' => '#A7C7A1',
+            'logo' => UploadedFile::fake()->image('logo.png', 200, 200),
+            'pass_logo' => UploadedFile::fake()->image('pass-logo.png', 160, 50),
+            'wallet_stamp_icon' => UploadedFile::fake()->image('stamp-icon.png', 64, 64),
+        ])
+        ->assertRedirect(route('merchant.onboarding.wizard.customer-form'))
+        ->assertSessionHasNoErrors();
+
+    $store = $user->stores()->firstOrFail()->fresh();
+
+    expect($store->wallet_card_style)->toBe(Store::WALLET_CARD_STYLE_ABSTRACT)
+        ->and($store->wallet_background_pattern)->toBe(Store::WALLET_BACKGROUND_PATTERN_DOTS)
+        ->and($store->wallet_pattern_color)->toBe('#A7C7A1')
+        ->and($store->pass_hero_image_path)->toBeNull()
+        ->and($store->wallet_stamp_icon_path)->not->toBeNull();
+});
+
 test('create store requires branding assets and saves them on the default card', function () {
     $user = User::factory()->create(['stripe_id' => 'sub_123']);
     Store::factory()->create(['user_id' => $user->id]);
@@ -157,6 +190,46 @@ test('create store requires branding assets and saves them on the default card',
         ->and($program->logo_path)->not->toBeNull()
         ->and($program->pass_logo_path)->not->toBeNull()
         ->and($program->pass_hero_image_path)->not->toBeNull();
+});
+
+test('create store allows abstract wallet card without pass hero image', function () {
+    $user = User::factory()->create(['stripe_id' => 'sub_abstract']);
+    Store::factory()->create(['user_id' => $user->id]);
+    Subscription::create([
+        'user_id' => $user->id,
+        'name' => 'default',
+        'stripe_id' => 'si_abstract',
+        'stripe_status' => 'active',
+        'quantity' => 1,
+    ]);
+
+    $this->actingAs($user)
+        ->post(route('merchant.stores.store'), [
+            'name' => 'Abstract Second Store',
+            'address' => '22 Market Street',
+            'reward_target' => 9,
+            'reward_title' => 'Free pastry',
+            'brand_color' => '#D6A24A',
+            'background_color' => '#2B1E18',
+            'wallet_card_style' => Store::WALLET_CARD_STYLE_ABSTRACT,
+            'wallet_background_pattern' => Store::WALLET_BACKGROUND_PATTERN_GRID,
+            'wallet_pattern_color' => '#A7C7A1',
+            'logo' => UploadedFile::fake()->image('logo.png', 200, 200),
+            'pass_logo' => UploadedFile::fake()->image('pass-logo.png', 160, 50),
+            'wallet_stamp_icon' => UploadedFile::fake()->image('stamp-icon.png', 64, 64),
+        ])
+        ->assertRedirect(route('merchant.stores.index'))
+        ->assertSessionHasNoErrors();
+
+    $store = Store::where('user_id', $user->id)
+        ->where('name', 'Abstract Second Store')
+        ->firstOrFail();
+
+    expect($store->wallet_card_style)->toBe(Store::WALLET_CARD_STYLE_ABSTRACT)
+        ->and($store->wallet_background_pattern)->toBe(Store::WALLET_BACKGROUND_PATTERN_GRID)
+        ->and($store->wallet_pattern_color)->toBe('#A7C7A1')
+        ->and($store->pass_hero_image_path)->toBeNull()
+        ->and($store->wallet_stamp_icon_path)->not->toBeNull();
 });
 
 test('customer can join and repeated join by same email returns existing card', function () {

@@ -73,9 +73,14 @@ class StoreController extends Controller
 
         $validated['logo_path'] = StoreAssets::storeUploaded($request->file('logo'), 'logos');
         $validated['pass_logo_path'] = StoreAssets::storeUploaded($request->file('pass_logo'), 'pass-logos');
-        $validated['pass_hero_image_path'] = StoreAssets::storeUploaded($request->file('pass_hero_image'), 'pass-heroes');
+        if ($request->hasFile('pass_hero_image')) {
+            $validated['pass_hero_image_path'] = StoreAssets::storeUploaded($request->file('pass_hero_image'), 'pass-heroes');
+        }
+        if ($request->hasFile('wallet_stamp_icon')) {
+            $validated['wallet_stamp_icon_path'] = StoreAssets::storeUploaded($request->file('wallet_stamp_icon'), 'wallet-stamp-icons');
+        }
 
-        unset($validated['logo'], $validated['pass_logo'], $validated['pass_hero_image']);
+        unset($validated['logo'], $validated['pass_logo'], $validated['pass_hero_image'], $validated['wallet_stamp_icon']);
 
         $store = Auth::user()->stores()->create($validated);
 
@@ -90,7 +95,7 @@ class StoreController extends Controller
             'background_color' => $validated['background_color'],
             'logo_path' => $validated['logo_path'],
             'pass_logo_path' => $validated['pass_logo_path'],
-            'pass_hero_image_path' => $validated['pass_hero_image_path'],
+            'pass_hero_image_path' => $validated['pass_hero_image_path'] ?? null,
             'require_verification_for_redemption' => true,
             'registration_form_config' => Store::defaultRegistrationFormConfig(),
             'is_default' => true,
@@ -120,6 +125,7 @@ class StoreController extends Controller
     public function update(Request $request, Store $store)
     {
         $store = Store::queryForUser(Auth::user(), includeArchived: true)->whereKey($store->id)->firstOrFail();
+        $selectedWalletStyle = $request->input('wallet_card_style', $store->wallet_card_style ?? Store::WALLET_CARD_STYLE_CLASSIC);
 
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
@@ -127,9 +133,18 @@ class StoreController extends Controller
             'brand_color' => ['nullable', 'string', 'regex:/^#[0-9A-Fa-f]{6}$/'],
             'background_color' => ['nullable', 'string', 'regex:/^#[0-9A-Fa-f]{6}$/'],
             'wallet_card_style' => ['nullable', 'string', \Illuminate\Validation\Rule::in(Store::WALLET_CARD_STYLES)],
+            'wallet_background_pattern' => ['nullable', 'string', \Illuminate\Validation\Rule::in(Store::WALLET_BACKGROUND_PATTERNS)],
+            'wallet_pattern_color' => ['nullable', 'string', 'regex:/^#[0-9A-Fa-f]{6}$/'],
             'logo' => ['nullable', 'image', 'mimes:png,jpg,jpeg,webp', 'max:2048'],
             'pass_logo' => ['nullable', 'image', 'mimes:png,jpg,jpeg,webp', 'max:2048'],
-            'pass_hero_image' => ['nullable', 'image', 'mimes:png,jpg,jpeg,webp', 'max:2048'],
+            'pass_hero_image' => [
+                \Illuminate\Validation\Rule::requiredIf(fn () => $request->has('wallet_card_style') && $selectedWalletStyle !== Store::WALLET_CARD_STYLE_ABSTRACT && blank($store->pass_hero_image_path)),
+                'nullable',
+                'image',
+                'mimes:png,jpg,jpeg,webp',
+                'max:2048',
+            ],
+            'wallet_stamp_icon' => ['nullable', 'file', 'mimes:png,jpg,jpeg,webp,svg', 'max:1024'],
         ]);
 
         // Handle logo upload
@@ -152,9 +167,14 @@ class StoreController extends Controller
             $passHeroPath = StoreAssets::storeUploaded($request->file('pass_hero_image'), 'pass-heroes');
             $validated['pass_hero_image_path'] = $passHeroPath;
         }
+        if ($request->hasFile('wallet_stamp_icon')) {
+            StoreAssets::delete($store->wallet_stamp_icon_path);
+            $stampIconPath = StoreAssets::storeUploaded($request->file('wallet_stamp_icon'), 'wallet-stamp-icons');
+            $validated['wallet_stamp_icon_path'] = $stampIconPath;
+        }
 
         // Remove file inputs from validated array
-        unset($validated['logo'], $validated['pass_logo'], $validated['pass_hero_image']);
+        unset($validated['logo'], $validated['pass_logo'], $validated['pass_hero_image'], $validated['wallet_stamp_icon']);
 
         // Remove paths from validated if not uploaded (to avoid overwriting with null)
         if (! isset($validated['logo_path'])) {
@@ -165,6 +185,9 @@ class StoreController extends Controller
         }
         if (! isset($validated['pass_hero_image_path'])) {
             unset($validated['pass_hero_image_path']);
+        }
+        if (! isset($validated['wallet_stamp_icon_path'])) {
+            unset($validated['wallet_stamp_icon_path']);
         }
 
         $store->update($validated);
