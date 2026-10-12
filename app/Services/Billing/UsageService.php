@@ -206,6 +206,14 @@ class UsageService
                 return false;
             }
 
+            if (config('cashier.price_id') && $subscription->stripe_price !== config('cashier.price_id')) {
+                return false;
+            }
+
+            if ($subscription->ends_at && $subscription->ends_at->isPast()) {
+                return false;
+            }
+
             return in_array($subscription->stripe_status, [
                 'active',
                 'trialing',
