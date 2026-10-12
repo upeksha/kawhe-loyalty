@@ -206,6 +206,15 @@ class UsageService
                 return false;
             }
 
+            $proPrices = array_filter(array_merge([config('cashier.price_id')], config('billing.legacy_pro_price_ids', [])));
+            if ($proPrices && ! in_array($subscription->stripe_price, $proPrices, true)) {
+                return false;
+            }
+
+            if ($subscription->ends_at && $subscription->ends_at->isPast()) {
+                return false;
+            }
+
             return in_array($subscription->stripe_status, [
                 'active',
                 'trialing',

@@ -201,7 +201,7 @@ Route::middleware('auth')->group(function () {
 });
 
 // Stripe webhook (must be outside auth middleware, handled by Cashier)
-Route::post('/stripe/webhook', [\Laravel\Cashier\Http\Controllers\WebhookController::class, 'handleWebhook'])->name('cashier.webhook');
+Route::post('/stripe/webhook', [\App\Http\Controllers\StripeWebhookController::class, 'handleWebhook'])->name('cashier.webhook');
 
 // Apple Wallet Pass Web Service endpoints
 // These routes are public but protected by ApplePassAuthMiddleware

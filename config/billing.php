@@ -12,6 +12,8 @@ return [
     |
     */
 
+    'legacy_pro_price_ids' => array_values(array_filter(explode(',', env('STRIPE_LEGACY_PRO_PRICE_IDS', '')))),
+
     'plans' => [
         'free' => [
             'label' => 'Free',

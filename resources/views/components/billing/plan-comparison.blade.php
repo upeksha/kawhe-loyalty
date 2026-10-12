@@ -4,6 +4,7 @@
 ])
 
 @php
+    $needsPaymentAttention = in_array(auth()->user()?->subscription('default')?->stripe_status, ['past_due', 'unpaid', 'incomplete', 'paused'], true);
     $plans = config('billing.plans', []);
     $formatLimit = fn ($value, string $suffix = '') => $value === null ? 'Unlimited' : $value.$suffix;
 
@@ -25,7 +26,7 @@
                 All plans use soft gates: existing stores, cards, and customers keep working. Limits only block new stores, cards, or customer joins.
             </p>
         </div>
-        @if(!($stats['is_subscribed'] ?? false))
+        @if(!$needsPaymentAttention && !($stats['is_subscribed'] ?? false))
             <form method="POST" action="{{ route('billing.checkout') }}">
                 @csrf
                 <x-ui.button type="submit" variant="primary" size="md">Upgrade to Pro</x-ui.button>
@@ -86,14 +87,14 @@
                         <x-ui.button type="button" variant="secondary" size="md" class="w-full" disabled>
                             Notify me
                         </x-ui.button>
-                    @elseif($planKey === 'pro' && !($stats['is_subscribed'] ?? false))
+                    @elseif($planKey === 'pro' && !$needsPaymentAttention && !($stats['is_subscribed'] ?? false))
                         <form method="POST" action="{{ route('billing.checkout') }}">
                             @csrf
                             <x-ui.button type="submit" variant="primary" size="md" class="w-full">
                                 Choose Pro
                             </x-ui.button>
                         </form>
-                    @elseif($planKey === 'pro' && ($stats['is_subscribed'] ?? false))
+                    @elseif($planKey === 'pro' && (($stats['is_subscribed'] ?? false) || $needsPaymentAttention))
                         <form method="POST" action="{{ route('billing.portal') }}">
                             @csrf
                             <x-ui.button type="submit" variant="secondary" size="md" class="w-full">

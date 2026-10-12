@@ -44,7 +44,14 @@
             $customersUsed = (int) ($stats['primary_program_customers_count'] ?? 0);
             $customersLimit = $stats['customers_per_program_limit'] ?? null;
 
-            if ($stats['is_subscribed']) {
+            if ($subscription && in_array($subscription->stripe_status, ['past_due', 'unpaid', 'incomplete', 'paused'], true)) {
+                $heroTone = 'border-red-200 bg-red-50';
+                $heroBadgeTone = 'bg-red-100 text-red-800';
+                $heroTitle = 'Payment needs attention';
+                $heroBody = 'Update your payment method or pay your outstanding invoice to restore Pro limits. Your existing customer cards keep working.';
+                $heroActionLabel = 'Manage Subscription';
+                $heroActionRoute = route('billing.portal');
+            } elseif ($stats['is_subscribed']) {
                 $heroTone = 'border-brand-200 bg-gradient-to-br from-brand-50 via-white to-emerald-50';
                 $heroBadgeTone = 'bg-brand-100 text-brand-800';
                 $heroTitle = 'Pro plan active';
@@ -107,7 +114,7 @@
                             </x-ui.button>
                         </form>
 
-                        @if($stats['is_subscribed'])
+                        @if($subscription)
                             <x-ui.button href="{{ route('billing.index', ['refresh' => 1]) }}" variant="ghost" size="sm" class="w-full sm:w-auto">
                                 Refresh Status
                             </x-ui.button>
