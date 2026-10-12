@@ -156,5 +156,12 @@ test('forged and wrong mode webhook events cannot change billing', function () {
 
 test('Stripe outage is not reported as successful sync', function () {
     $this->http->respond = fn () => [json_encode(['error' => ['type' => 'api_error', 'message' => 'Unavailable']]), 503, []];
-    syncBillingLifecycle($this)->assertStatus(503)->assertJsonPath('success',false);
+    syncBillingLifecycle($this)->assertStatus(503)->assertJsonPath('success', false);
+});
+
+test('explicitly configured legacy Pro prices retain paid access', function () {
+    config(['billing.legacy_pro_price_ids' => ['price_legacy']]);
+    $this->remote['items']['data'][0]['price']['id'] = 'price_legacy';
+    syncBillingLifecycle($this)->assertOk();
+    expect(app(UsageService::class)->planFor($this->owner->fresh()))->toBe('pro');
 });

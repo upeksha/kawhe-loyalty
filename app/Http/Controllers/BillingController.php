@@ -337,6 +337,7 @@ class BillingController extends Controller
                 'success_url' => $appUrl.'/billing/success?session_id={CHECKOUT_SESSION_ID}',
                 'cancel_url' => route('billing.cancel'),
                 'client_reference_id' => (string) $user->id,
+                'branding_settings' => ['display_name' => 'Kawhe'],
             ]);
     }
 

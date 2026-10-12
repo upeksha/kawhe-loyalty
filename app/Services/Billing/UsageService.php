@@ -206,7 +206,8 @@ class UsageService
                 return false;
             }
 
-            if (config('cashier.price_id') && $subscription->stripe_price !== config('cashier.price_id')) {
+            $proPrices = array_filter(array_merge([config('cashier.price_id')], config('billing.legacy_pro_price_ids', [])));
+            if ($proPrices && ! in_array($subscription->stripe_price, $proPrices, true)) {
                 return false;
             }
 
