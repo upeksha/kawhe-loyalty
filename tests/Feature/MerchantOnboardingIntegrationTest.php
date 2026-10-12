@@ -4,7 +4,7 @@ use App\Models\Store;
 use App\Models\User;
 use Illuminate\Http\UploadedFile;
 
-test('new merchant registration redirects to onboarding', function () {
+test('new merchant registration redirects to email verification', function () {
     $response = $this->post('/register', [
         'name' => 'New Merchant',
         'email' => 'merchant@test.com',
@@ -13,7 +13,7 @@ test('new merchant registration redirects to onboarding', function () {
         'password_confirmation' => 'password123',
     ]);
 
-    $response->assertRedirect(route('merchant.onboarding.wizard.store-basics'));
+    $response->assertRedirect(route('verification.notice'));
 
     $user = User::where('email', 'merchant@test.com')->first();
     expect($user)->not->toBeNull();

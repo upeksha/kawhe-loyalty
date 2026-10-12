@@ -23,7 +23,7 @@ Route::get('/', function () {
 });
 
 // Dashboard route - conditional redirect for merchants with stores
-Route::middleware(['auth'])->get('/dashboard', function (Request $request) {
+Route::middleware(['auth', 'verified'])->get('/dashboard', function (Request $request) {
     $user = $request->user();
 
     // Super admin goes to admin dashboard
@@ -51,7 +51,7 @@ Route::middleware(['auth'])->get('/dashboard', function (Request $request) {
 })->name('dashboard');
 
 // Legacy route redirects for merchant onboarding test
-Route::middleware(['auth'])->group(function () {
+Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/stores', function () {
         return redirect()->route('merchant.stores.index');
     });
@@ -92,7 +92,7 @@ Route::post('/c/{public_token}/verify-email/send', [App\Http\Controllers\Custome
 Route::get('/verify-email/{token}', [App\Http\Controllers\CustomerEmailVerificationController::class, 'verify'])->name('customer.email.verification.verify');
 
 // Merchant onboarding routes (no EnsureMerchantHasStore middleware)
-Route::middleware(['auth'])->prefix('merchant/onboarding')->name('merchant.onboarding.')->group(function () {
+Route::middleware(['auth', 'verified'])->prefix('merchant/onboarding')->name('merchant.onboarding.')->group(function () {
     // Legacy single-page onboarding: redirect to wizard
     Route::get('/store', fn () => redirect()->route('merchant.onboarding.wizard.store-basics'))->name('store');
     Route::post('/store', fn () => redirect()->route('merchant.onboarding.wizard.store-basics')
@@ -113,7 +113,7 @@ Route::middleware(['auth'])->prefix('merchant/onboarding')->name('merchant.onboa
 });
 
 // Merchant area routes (requires store)
-Route::middleware(['auth', App\Http\Middleware\EnsureMerchantHasStore::class])->prefix('merchant')->name('merchant.')->group(function () {
+Route::middleware(['auth', 'verified', App\Http\Middleware\EnsureMerchantHasStore::class])->prefix('merchant')->name('merchant.')->group(function () {
     Route::get('/dashboard', function (Request $request) {
         $usageService = app(\App\Services\Billing\UsageService::class);
         $stats = $usageService->getUsageStats($request->user());
@@ -174,7 +174,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 });
 
 // Admin area routes (super admin only)
-Route::middleware(['auth', App\Http\Middleware\SuperAdmin::class])->prefix('admin')->name('admin.')->group(function () {
+Route::middleware(['auth', 'verified', App\Http\Middleware\SuperAdmin::class])->prefix('admin')->name('admin.')->group(function () {
     Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
     Route::get('/support', [SupportLogController::class, 'adminIndex'])->name('support.index');
 });
@@ -182,14 +182,14 @@ Route::middleware(['auth', App\Http\Middleware\SuperAdmin::class])->prefix('admi
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
-    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+    Route::delete('/profile', [ProfileController::class, 'destroy'])->middleware(App\Http\Middleware\SerializeBillingChanges::class)->name('profile.destroy');
 
     // Billing routes
     Route::get('/billing', [App\Http\Controllers\BillingController::class, 'index'])->name('billing.index');
-    Route::post('/billing/checkout', [App\Http\Controllers\BillingController::class, 'checkout'])->name('billing.checkout');
-    Route::post('/billing/portal', [App\Http\Controllers\BillingController::class, 'portal'])->name('billing.portal');
-    Route::get('/billing/success', [App\Http\Controllers\BillingController::class, 'success'])->name('billing.success');
-    Route::post('/billing/sync', [App\Http\Controllers\BillingController::class, 'sync'])->name('billing.sync');
+    Route::post('/billing/checkout', [App\Http\Controllers\BillingController::class, 'checkout'])->middleware(App\Http\Middleware\SerializeBillingChanges::class)->middleware('verified')->name('billing.checkout');
+    Route::post('/billing/portal', [App\Http\Controllers\BillingController::class, 'portal'])->middleware(App\Http\Middleware\SerializeBillingChanges::class)->name('billing.portal');
+    Route::get('/billing/success', [App\Http\Controllers\BillingController::class, 'success'])->middleware(App\Http\Middleware\SerializeBillingChanges::class)->name('billing.success');
+    Route::post('/billing/sync', [App\Http\Controllers\BillingController::class, 'sync'])->middleware(App\Http\Middleware\SerializeBillingChanges::class)->name('billing.sync');
     Route::get('/billing/cancel', [App\Http\Controllers\BillingController::class, 'cancel'])->name('billing.cancel');
 });
 
