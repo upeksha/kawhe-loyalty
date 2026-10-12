@@ -30,6 +30,8 @@
             @endif
         </p>
 
+        <p class="customer-card-body text-center text-sm mb-6">We’ll email a private link to the address already on your card. No access to that inbox? Ask the store for help.</p>
+
         <form action="{{ route('join.lookup', ['slug' => $program->slug, 't' => $token]) }}" method="POST" class="space-y-4 sm:space-y-5" id="lookup-form">
             @csrf
             <x-form-error-summary form-id="lookup-form" />
@@ -67,8 +69,8 @@
             @endif
 
             <div class="pt-1">
-                <button type="submit" class="customer-btn customer-btn-primary" data-loading-text="Finding your card…">
-                    Find my card
+                <button type="submit" class="customer-btn customer-btn-primary" data-loading-text="Sending link…">
+                    Email my card link
                 </button>
             </div>
         </form>

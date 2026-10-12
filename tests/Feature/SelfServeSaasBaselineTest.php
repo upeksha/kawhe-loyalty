@@ -154,7 +154,7 @@ test('create store requires branding assets and saves them on the default card',
         ->and($program->pass_hero_image_path)->not->toBeNull();
 });
 
-test('customer can join and repeated join by same email returns existing card', function () {
+test('customer can join and repeated join requires email recovery', function () {
     $store = Store::factory()->create([
         'registration_form_config' => Store::defaultRegistrationFormConfig(),
     ]);
@@ -173,7 +173,7 @@ test('customer can join and repeated join by same email returns existing card', 
         ->and($account->store_id)->toBe($store->id);
 
     $secondResponse = $this->post(route('join.store', ['slug' => $store->slug, 't' => $store->join_token]), $joinPayload);
-    $secondResponse->assertRedirect(route('card.show', ['public_token' => $account->public_token]));
+    $secondResponse->assertOk()->assertViewIs('join.recovery-sent')->assertDontSee($account->public_token);
 
     expect(LoyaltyAccount::count())->toBe(1)
         ->and(Customer::count())->toBe(1);

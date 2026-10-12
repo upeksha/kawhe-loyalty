@@ -1,11 +1,11 @@
 <?php
 
+use App\Models\LoyaltyAccount;
 use App\Models\Store;
 use App\Models\User;
-use App\Models\Customer;
-use App\Models\LoyaltyAccount;
 
 test('customer can join two different stores and get distinct loyalty accounts', function () {
+    \Illuminate\Support\Facades\Mail::fake();
     $merchant = User::factory()->create();
     $storeA = Store::factory()->create(['user_id' => $merchant->id, 'name' => 'Store A']);
     $storeB = Store::factory()->create(['user_id' => $merchant->id, 'name' => 'Store B']);
@@ -19,17 +19,19 @@ test('customer can join two different stores and get distinct loyalty accounts',
     // Join Store A
     $responseA = $this->post(route('join.store', ['slug' => $storeA->slug, 't' => $storeA->join_token]), $customerData);
     $responseA->assertRedirect();
-    
+
     $accountA = LoyaltyAccount::where('store_id', $storeA->id)->first();
     expect($accountA)->not->toBeNull();
 
     // Join Store B
     $responseB = $this->post(route('join.store', ['slug' => $storeB->slug, 't' => $storeB->join_token]), $customerData);
-    $responseB->assertRedirect();
+    $responseB->assertOk()->assertViewIs('join.recovery-sent');
+    $mail = \Illuminate\Support\Facades\Mail::queued(\App\Mail\CustomerCardRecovery::class)->first();
+    $this->post($mail->recoveryUrl)->assertRedirect();
 
     $accountB = LoyaltyAccount::where('store_id', $storeB->id)->first();
     expect($accountB)->not->toBeNull();
-    
+
     // Assert loyalty_accounts count is 2
     expect(LoyaltyAccount::count())->toBe(2);
     expect($accountA->id)->not->toBe($accountB->id);
@@ -50,7 +52,7 @@ test('stamping works for the correct store and is blocked for mismatching store'
     $response = $this->postJson(route('stamp.store'), [
         'token' => "LA:{$accountB->public_token}",
         'store_id' => $storeB->id,
-        'count' => 1
+        'count' => 1,
     ]);
 
     $response->assertOk();
@@ -61,7 +63,7 @@ test('stamping works for the correct store and is blocked for mismatching store'
     $responseMismatch = $this->postJson(route('stamp.store'), [
         'token' => $accountA->public_token,
         'store_id' => $storeB->id,
-        'count' => 1
+        'count' => 1,
     ]);
 
     // With auto-detection, wrong store selected should auto-switch to correct store
@@ -85,7 +87,7 @@ test('token parsing handles prefix and whitespace', function () {
     $response = $this->postJson(route('stamp.store'), [
         'token' => "  LA:{$account->public_token}  ",
         'store_id' => $store->id,
-        'count' => 1
+        'count' => 1,
     ]);
 
     $response->assertOk();

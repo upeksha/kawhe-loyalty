@@ -66,7 +66,7 @@ Route::get('/j/{code}', [JoinController::class, 'shortRedirect'])->name('join.sh
 
 Route::get('/join/{slug}', [JoinController::class, 'index'])->name('join.index');
 Route::get('/join/{slug}/new', [JoinController::class, 'show'])->name('join.show');
-Route::post('/join/{slug}/new', [JoinController::class, 'store'])->name('join.store');
+Route::post('/join/{slug}/new', [JoinController::class, 'store'])->name('join.store')->middleware('throttle:10,1');
 Route::get('/join/{slug}/existing', [JoinController::class, 'existing'])->name('join.existing');
 Route::post('/join/{slug}/existing', [JoinController::class, 'lookup'])->name('join.lookup')->middleware('throttle:10,1');
 
@@ -221,3 +221,6 @@ Route::prefix('wallet/v1')->middleware([App\Http\Middleware\ApplePassAuthMiddlew
 });
 
 require __DIR__.'/auth.php';
+
+Route::match(['get', 'post'], '/recover-card/{token}', App\Http\Controllers\CustomerCardRecoveryController::class)
+    ->where('token', '[A-Za-z0-9]{64}')->middleware('throttle:20,1')->name('customer.card.recover');

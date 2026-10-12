@@ -51,7 +51,7 @@ test('new join flow still works and redirects to card', function () {
     expect($account->verified_at)->toBeNull();
 });
 
-test('returning lookup is store-scoped and redirects directly', function () {
+test('returning lookup is store-scoped and requires email recovery', function () {
     $merchant = User::factory()->create();
     $storeA = Store::factory()->create(['user_id' => $merchant->id, 'name' => 'Store A']);
     $storeB = Store::factory()->create(['user_id' => $merchant->id, 'name' => 'Store B']);
@@ -68,13 +68,13 @@ test('returning lookup is store-scoped and redirects directly', function () {
     $response = $this->post(route('join.lookup', ['slug' => $storeB->slug, 't' => $storeB->join_token]), [
         'email' => 'returning@example.com',
     ]);
-    $response->assertSessionHasErrors(['email']);
+    $response->assertOk()->assertViewIs('join.recovery-sent');
 
     // Successful lookup in Store A
     $response = $this->post(route('join.lookup', ['slug' => $storeA->slug, 't' => $storeA->join_token]), [
         'email' => 'returning@example.com',
     ]);
-    $response->assertRedirect(route('card.show', ['public_token' => 'token-a']));
+    $response->assertOk()->assertViewIs('join.recovery-sent')->assertDontSee('token-a');
 });
 
 test('returning lookup supports phone when phone field is enabled on the card', function () {
@@ -107,7 +107,7 @@ test('returning lookup supports phone when phone field is enabled on the card', 
         'phone' => '0412345678',
     ]);
 
-    $response->assertRedirect(route('card.show', ['public_token' => 'phone-token']));
+    $response->assertOk()->assertViewIs('join.recovery-sent')->assertDontSee('phone-token');
 });
 
 test('verification flow sends email and marks as verified', function () {
