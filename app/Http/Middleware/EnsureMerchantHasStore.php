@@ -37,6 +37,13 @@ class EnsureMerchantHasStore
             return $next($request);
         }
 
+        // Archiving the last store must not lock its owner out of restoring it.
+        // The controller still scopes the store to its owner and authorizes restoration.
+        if ($user && in_array($routeName, ['merchant.stores.index', 'merchant.stores.restore'], true)
+            && $user->stores()->onlyTrashed()->exists()) {
+            return $next($request);
+        }
+
         // If merchant has no stores, redirect to onboarding v2
         if ($user && $user->stores()->count() === 0) {
             return redirect()->route('merchant.onboarding.wizard.store-basics');

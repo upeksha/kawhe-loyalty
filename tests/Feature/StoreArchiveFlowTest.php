@@ -36,6 +36,8 @@ class StoreArchiveFlowTest extends TestCase
         $this->assertSoftDeleted('stores', ['id' => $store->id]);
         $this->assertDatabaseCount('loyalty_accounts', 1);
 
+        $this->get(route('merchant.stores.index'))->assertOk()->assertSee($store->name);
+
         $this->get(route('join.index', ['slug' => $store->slug, 't' => $store->join_token]))
             ->assertOk()
             ->assertSee('Store temporarily unavailable');
@@ -54,5 +56,22 @@ class StoreArchiveFlowTest extends TestCase
 
         $this->get(route('join.index', ['slug' => $store->slug, 't' => $store->join_token]))
             ->assertOk();
+    }
+
+    public function test_merchant_with_only_archived_stores_cannot_restore_another_merchants_store(): void
+    {
+        $merchant = User::factory()->create();
+        Store::factory()->for($merchant)->create(['deleted_at' => now()]);
+        $otherStore = Store::factory()->create(['deleted_at' => now()]);
+
+        $this->actingAs($merchant)->post(route('merchant.stores.restore', $otherStore))->assertNotFound();
+        $this->assertSoftDeleted($otherStore);
+    }
+
+    public function test_new_merchant_still_goes_to_onboarding(): void
+    {
+        $this->actingAs(User::factory()->create())
+            ->get(route('merchant.stores.index'))
+            ->assertRedirect(route('merchant.onboarding.wizard.store-basics'));
     }
 }
