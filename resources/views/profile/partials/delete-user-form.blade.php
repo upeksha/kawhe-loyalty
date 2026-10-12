@@ -9,6 +9,9 @@
         </p>
     </header>
 
+    <p class="text-sm text-stone-600">Cancel any paid subscription in Billing first and wait until it has ended. Pending payments, invoices, or checkout sessions must be resolved before deletion. Deletion does not issue a refund. Once billing is clear, deletion also closes your Stripe customer profile.</p>
+    <a href="{{ route('billing.index') }}" class="underline text-sm text-brand-600">Manage billing</a>
+
     <x-ui.button
         x-data=""
         x-on:click.prevent="$dispatch('open-modal', 'confirm-user-deletion')"
@@ -27,6 +30,8 @@
             <p class="mt-1 text-sm text-stone-600">
                 {{ __('Once your account is deleted, all of its resources and data will be permanently deleted. Please enter your password to confirm you would like to permanently delete your account.') }}
             </p>
+
+            <x-input-error :messages="$errors->userDeletion->get('billing')" class="mt-2" />
 
             <div class="mt-6">
                 <x-input-label for="password" value="{{ __('Password') }}" class="sr-only" />

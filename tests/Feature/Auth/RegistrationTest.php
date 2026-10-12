@@ -33,7 +33,7 @@ class RegistrationTest extends TestCase
         ]);
 
         $this->assertAuthenticated();
-        $response->assertRedirect(route('merchant.onboarding.wizard.store-basics', absolute: false));
+        $response->assertRedirect(route('verification.notice', absolute: false));
 
         $user = User::where('email', 'test@example.com')->first();
         $this->assertNotNull($user);

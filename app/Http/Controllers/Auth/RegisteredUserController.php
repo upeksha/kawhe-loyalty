@@ -62,7 +62,13 @@ class RegisteredUserController extends Controller
             return $user;
         });
 
-        event(new Registered($user));
+        $verificationQueued = true;
+        try {
+            event(new Registered($user));
+        } catch (\Throwable $e) {
+            $verificationQueued = false;
+            \Log::warning('New merchant verification could not be queued', ['user_id' => $user->id]);
+        }
 
         // Send welcome email to merchant (sync = immediate, else high-priority queue)
         $mailable = new MerchantWelcomeEmail($user);
@@ -91,6 +97,6 @@ class RegisteredUserController extends Controller
 
         Auth::login($user);
 
-        return redirect()->route('merchant.onboarding.wizard.store-basics');
+        return redirect()->route('verification.notice')->with('status', $verificationQueued ? 'verification-link-sent' : 'verification-link-failed');
     }
 }

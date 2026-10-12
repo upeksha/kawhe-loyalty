@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\ProfileUpdateRequest;
+use App\Services\Billing\AccountDeletionService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -28,11 +29,22 @@ class ProfileController extends Controller
     {
         $request->user()->fill($request->validated());
 
-        if ($request->user()->isDirty('email')) {
+        $emailChanged = $request->user()->isDirty('email');
+        if ($emailChanged) {
             $request->user()->email_verified_at = null;
         }
 
         $request->user()->save();
+
+        if ($emailChanged) {
+            try {
+                $request->user()->sendEmailVerificationNotification();
+            } catch (\Throwable $e) {
+                \Log::warning('Changed merchant email verification could not be queued', ['user_id' => $request->user()->id]);
+
+                return Redirect::route('profile.edit')->withErrors(['email' => 'Your email was updated, but we could not queue its verification email. Use the resend link to try again.']);
+            }
+        }
 
         return Redirect::route('profile.edit')->with('status', 'profile-updated');
     }
@@ -48,9 +60,9 @@ class ProfileController extends Controller
 
         $user = $request->user();
 
-        Auth::logout();
+        app(AccountDeletionService::class)->delete($user);
 
-        $user->delete();
+        Auth::logout();
 
         $request->session()->invalidate();
         $request->session()->regenerateToken();
