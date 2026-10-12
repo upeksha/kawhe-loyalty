@@ -21,7 +21,7 @@ class ScannerController extends Controller
 
     public function index()
     {
-        $stores = Auth::user()->stores()->get();
+        $stores = Auth::user()->scannerStores()->get();
 
         return view('scanner.index', compact('stores'));
     }
@@ -90,13 +90,14 @@ class ScannerController extends Controller
         // STEP 2: Determine the store from the account
         $actualStore = $account->store;
         $actualStoreId = $actualStore->id;
+        abort_unless(Auth::user()->canOperateStore($actualStore, 'stamp'), 403, 'You do not have permission to stamp cards at this store.');
 
         // STEP 3: Determine if store was switched (for response metadata)
         $storeSwitched = $requestedStoreId && $requestedStoreId != $actualStoreId;
 
         // STEP 4a: Idempotency pre-check (before any cooldown logic)
         if ($incomingIdempotencyKey) {
-            $existingEvent = \App\Models\StampEvent::where('idempotency_key', $incomingIdempotencyKey)->first();
+            $existingEvent = \App\Models\StampEvent::where('idempotency_key', $incomingIdempotencyKey)->where('loyalty_account_id', $account->id)->first();
             if ($existingEvent) {
                 return response()->json([
                     'status' => 'duplicate',
@@ -358,7 +359,7 @@ class ScannerController extends Controller
         // If store_id provided, verify ownership; otherwise verify the account's store belongs to user
         $userStore = null;
         if ($requestedStoreId) {
-            $userStore = Auth::user()->stores()->where('id', $requestedStoreId)->first();
+            $userStore = Auth::user()->scannerStores()->where('id', $requestedStoreId)->first();
             if (! $userStore) {
                 return response()->json([
                     'success' => false,
@@ -374,7 +375,7 @@ class ScannerController extends Controller
             }
         } else {
             // Auto-detect: verify the account's store belongs to the user
-            $userStore = Auth::user()->stores()->where('id', $store->id)->first();
+            $userStore = Auth::user()->scannerStores()->where('id', $store->id)->first();
             if (! $userStore) {
                 return response()->json([
                     'success' => false,
@@ -385,6 +386,8 @@ class ScannerController extends Controller
 
         return response()->json([
             'success' => true,
+            'can_stamp' => Auth::user()->canOperateStore($store, 'stamp'),
+            'can_redeem' => Auth::user()->canOperateStore($store, 'redeem'),
             'has_rewards' => $rewardBalance > 0,
             'reward_balance' => $rewardBalance,
             'reward_title' => $account->reward_title,
@@ -426,9 +429,9 @@ class ScannerController extends Controller
         $storeId = $request->store_id;
 
         // Verify user owns the store
-        $store = Auth::user()->stores()->where('id', $storeId)->first();
-        if (! $store) {
-            abort(403, 'You do not own this store.');
+        $store = Auth::user()->scannerStores()->where('id', $storeId)->first();
+        if (! $store || ! Auth::user()->canOperateStore($store, 'redeem')) {
+            abort(403, 'You do not have permission to redeem rewards at this store.');
         }
 
         // Find loyalty account by redeem_token
@@ -516,9 +519,9 @@ class ScannerController extends Controller
         $idempotencyKey = $request->input('idempotency_key', Str::uuid()->toString());
 
         // Verify user owns the store
-        $store = Auth::user()->stores()->where('id', $storeId)->first();
-        if (! $store) {
-            abort(403, 'You do not own this store.');
+        $store = Auth::user()->scannerStores()->where('id', $storeId)->first();
+        if (! $store || ! Auth::user()->canOperateStore($store, 'redeem')) {
+            abort(403, 'You do not have permission to redeem rewards at this store.');
         }
 
         // Early verification check before further processing
@@ -577,8 +580,10 @@ class ScannerController extends Controller
 
         // Use database transaction for atomicity
         return DB::transaction(function () use ($token, $storeId, $quantity, $idempotencyKey, $store, $userAgent, $ipAddress) {
+            abort_unless(Auth::user()->canOperateStore($store, 'redeem', lock: true), 403);
             // Check if this idempotency key was already processed
             $existingEvent = StampEvent::where('idempotency_key', $idempotencyKey)
+                ->where('store_id', $storeId)
                 ->where('type', 'redeem')
                 ->first();
             if ($existingEvent) {

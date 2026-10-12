@@ -9,7 +9,6 @@ use App\Models\PointsTransaction;
 use App\Models\StampEvent;
 use App\Models\Store;
 use App\Models\User;
-use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
@@ -20,13 +19,13 @@ class StampLoyaltyService
     /**
      * Stamp a loyalty account safely with full audit trail and wallet update.
      *
-     * @param LoyaltyAccount $account The loyalty account to stamp
-     * @param User $staff The merchant/staff user performing the stamp
-     * @param int $count Number of stamps to add (default 1)
-     * @param string|null $idempotencyKey Optional idempotency key (auto-generated if null)
-     * @param string|null $userAgent Optional user agent for audit
-     * @param string|null $ipAddress Optional IP address for audit
-     * @return StampResultDTO
+     * @param  LoyaltyAccount  $account  The loyalty account to stamp
+     * @param  User  $staff  The merchant/staff user performing the stamp
+     * @param  int  $count  Number of stamps to add (default 1)
+     * @param  string|null  $idempotencyKey  Optional idempotency key (auto-generated if null)
+     * @param  string|null  $userAgent  Optional user agent for audit
+     * @param  string|null  $ipAddress  Optional IP address for audit
+     *
      * @throws ValidationException
      */
     public function stamp(
@@ -38,7 +37,7 @@ class StampLoyaltyService
         ?string $ipAddress = null
     ): StampResultDTO {
         // Generate idempotency key if not provided
-        if (!$idempotencyKey) {
+        if (! $idempotencyKey) {
             $idempotencyKey = \Illuminate\Support\Str::uuid()->toString();
         }
 
@@ -60,13 +59,14 @@ class StampLoyaltyService
             $userAgent,
             $ipAddress
         ) {
+            abort_unless($staff->canOperateStore($store, 'stamp', lock: true), 403);
             // Check idempotency first (before locking)
-            $existingEvent = StampEvent::where('idempotency_key', $idempotencyKey)->first();
+            $existingEvent = StampEvent::where('idempotency_key', $idempotencyKey)->where('loyalty_account_id', $account->id)->first();
             if ($existingEvent) {
                 // Return existing result without modifying
                 $existingAccount = $existingEvent->loyaltyAccount;
                 $existingAccount->load(['store', 'customer']);
-                
+
                 return new StampResultDTO(
                     stampCount: $existingAccount->stamp_count,
                     rewardBalance: $existingAccount->reward_balance ?? 0,
@@ -142,13 +142,13 @@ class StampLoyaltyService
                 if ($e->getCode() === '23000' || str_contains($e->getMessage(), 'Duplicate entry') || str_contains($e->getMessage(), 'UNIQUE constraint')) {
                     // Rollback this transaction
                     DB::rollBack();
-                    
+
                     // Another request processed this key - return existing result
-                    $existingEvent = StampEvent::where('idempotency_key', $idempotencyKey)->first();
+                    $existingEvent = StampEvent::where('idempotency_key', $idempotencyKey)->where('loyalty_account_id', $account->id)->first();
                     if ($existingEvent) {
                         $existingAccount = $existingEvent->loyaltyAccount;
                         $existingAccount->load(['store', 'customer']);
-                        
+
                         return new StampResultDTO(
                             stampCount: $existingAccount->stamp_count,
                             rewardBalance: $existingAccount->reward_balance ?? 0,
@@ -260,9 +260,6 @@ class StampLoyaltyService
     /**
      * Validate that staff has access to the store that owns the loyalty account.
      *
-     * @param LoyaltyAccount $account
-     * @param User $staff
-     * @return void
      * @throws ValidationException
      */
     protected function validateStaffAccess(LoyaltyAccount $account, User $staff): void
@@ -270,18 +267,15 @@ class StampLoyaltyService
         $account->load('store');
         $store = $account->store;
 
-        if (!$store) {
+        if (! $store) {
             throw ValidationException::withMessages([
-                'account' => 'Loyalty account has no associated store.'
+                'account' => 'Loyalty account has no associated store.',
             ]);
         }
 
-        // Check if staff owns the store or is super admin
-        $staffOwnsStore = $staff->stores()->where('id', $store->id)->exists();
-        
-        if (!$staffOwnsStore && !$staff->isSuperAdmin()) {
+        if (! $staff->canOperateStore($store, 'stamp')) {
             throw ValidationException::withMessages([
-                'token' => 'This loyalty card belongs to a store you do not have access to. Please contact support if you believe this is an error.'
+                'token' => 'You do not have permission to stamp cards at this store.',
             ]);
         }
     }

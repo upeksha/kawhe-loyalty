@@ -25,6 +25,9 @@ Route::get('/', function () {
 // Dashboard route - conditional redirect for merchants with stores
 Route::middleware(['auth', 'verified'])->get('/dashboard', function (Request $request) {
     $user = $request->user();
+    if ($user->is_staff_account || (! $user->stores()->exists() && $user->scannerStores()->exists())) {
+        return redirect()->route('merchant.scanner');
+    }
 
     // Super admin goes to admin dashboard
     if ($user->is_super_admin) {
@@ -92,7 +95,7 @@ Route::post('/c/{public_token}/verify-email/send', [App\Http\Controllers\Custome
 Route::get('/verify-email/{token}', [App\Http\Controllers\CustomerEmailVerificationController::class, 'verify'])->name('customer.email.verification.verify');
 
 // Merchant onboarding routes (no EnsureMerchantHasStore middleware)
-Route::middleware(['auth', 'verified'])->prefix('merchant/onboarding')->name('merchant.onboarding.')->group(function () {
+Route::middleware(['auth', 'verified', App\Http\Middleware\OwnerAccount::class])->prefix('merchant/onboarding')->name('merchant.onboarding.')->group(function () {
     // Legacy single-page onboarding: redirect to wizard
     Route::get('/store', fn () => redirect()->route('merchant.onboarding.wizard.store-basics'))->name('store');
     Route::post('/store', fn () => redirect()->route('merchant.onboarding.wizard.store-basics')
@@ -113,7 +116,7 @@ Route::middleware(['auth', 'verified'])->prefix('merchant/onboarding')->name('me
 });
 
 // Merchant area routes (requires store)
-Route::middleware(['auth', 'verified', App\Http\Middleware\EnsureMerchantHasStore::class])->prefix('merchant')->name('merchant.')->group(function () {
+Route::middleware(['auth', 'verified', App\Http\Middleware\OwnerAccount::class, App\Http\Middleware\EnsureMerchantHasStore::class])->prefix('merchant')->name('merchant.')->group(function () {
     Route::get('/dashboard', function (Request $request) {
         $usageService = app(\App\Services\Billing\UsageService::class);
         $stats = $usageService->getUsageStats($request->user());
@@ -152,7 +155,11 @@ Route::middleware(['auth', 'verified', App\Http\Middleware\EnsureMerchantHasStor
     Route::get('/stores/{store}/programs/{program}/qr/pdf', [LoyaltyProgramController::class, 'qrPdf'])->withTrashed()->name('stores.programs.qr.pdf');
     Route::get('/stores/{store}/programs/{program}/qr/image', [LoyaltyProgramController::class, 'qrImage'])->withTrashed()->name('stores.programs.qr.image');
 
-    Route::get('/scanner', [ScannerController::class, 'index'])->name('scanner');
+    Route::get('/staff', [App\Http\Controllers\StoreStaffController::class, 'index'])->name('staff.index');
+    Route::post('/stores/{store}/staff/invitations', [App\Http\Controllers\StoreStaffController::class, 'invite'])->middleware('throttle:5,1')->name('staff.invite');
+    Route::patch('/stores/{store}/staff/{member}', [App\Http\Controllers\StoreStaffController::class, 'update'])->name('staff.update');
+    Route::delete('/stores/{store}/staff/{member}', [App\Http\Controllers\StoreStaffController::class, 'revoke'])->name('staff.revoke');
+    Route::delete('/stores/{store}/staff-invitations/{invitation}', [App\Http\Controllers\StoreStaffController::class, 'cancel'])->name('staff.cancel');
 
     Route::get('/customers', [MerchantCustomersController::class, 'index'])->name('customers.index');
     Route::get('/customers/export', [MerchantCustomersController::class, 'export'])->name('customers.export');
@@ -185,12 +192,12 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->middleware(App\Http\Middleware\SerializeBillingChanges::class)->name('profile.destroy');
 
     // Billing routes
-    Route::get('/billing', [App\Http\Controllers\BillingController::class, 'index'])->name('billing.index');
-    Route::post('/billing/checkout', [App\Http\Controllers\BillingController::class, 'checkout'])->middleware(App\Http\Middleware\SerializeBillingChanges::class)->middleware('verified')->name('billing.checkout');
-    Route::post('/billing/portal', [App\Http\Controllers\BillingController::class, 'portal'])->middleware(App\Http\Middleware\SerializeBillingChanges::class)->name('billing.portal');
-    Route::get('/billing/success', [App\Http\Controllers\BillingController::class, 'success'])->middleware(App\Http\Middleware\SerializeBillingChanges::class)->name('billing.success');
-    Route::post('/billing/sync', [App\Http\Controllers\BillingController::class, 'sync'])->middleware(App\Http\Middleware\SerializeBillingChanges::class)->name('billing.sync');
-    Route::get('/billing/cancel', [App\Http\Controllers\BillingController::class, 'cancel'])->name('billing.cancel');
+    Route::get('/billing', [App\Http\Controllers\BillingController::class, 'index'])->middleware(App\Http\Middleware\OwnerAccount::class)->name('billing.index');
+    Route::post('/billing/checkout', [App\Http\Controllers\BillingController::class, 'checkout'])->middleware(App\Http\Middleware\SerializeBillingChanges::class)->middleware('verified')->middleware(App\Http\Middleware\OwnerAccount::class)->name('billing.checkout');
+    Route::post('/billing/portal', [App\Http\Controllers\BillingController::class, 'portal'])->middleware(App\Http\Middleware\SerializeBillingChanges::class)->middleware(App\Http\Middleware\OwnerAccount::class)->name('billing.portal');
+    Route::get('/billing/success', [App\Http\Controllers\BillingController::class, 'success'])->middleware(App\Http\Middleware\SerializeBillingChanges::class)->middleware(App\Http\Middleware\OwnerAccount::class)->name('billing.success');
+    Route::post('/billing/sync', [App\Http\Controllers\BillingController::class, 'sync'])->middleware(App\Http\Middleware\SerializeBillingChanges::class)->middleware(App\Http\Middleware\OwnerAccount::class)->name('billing.sync');
+    Route::get('/billing/cancel', [App\Http\Controllers\BillingController::class, 'cancel'])->middleware(App\Http\Middleware\OwnerAccount::class)->name('billing.cancel');
 });
 
 // Stripe webhook (must be outside auth middleware, handled by Cashier)
@@ -224,3 +231,7 @@ require __DIR__.'/auth.php';
 
 Route::match(['get', 'post'], '/recover-card/{token}', App\Http\Controllers\CustomerCardRecoveryController::class)
     ->where('token', '[A-Za-z0-9]{64}')->middleware('throttle:20,1')->name('customer.card.recover');
+
+Route::get('/merchant/scanner', [ScannerController::class, 'index'])->middleware(['auth', 'verified', App\Http\Middleware\EnsureMerchantHasStore::class])->name('merchant.scanner');
+Route::get('/staff/invitations/{token}', [App\Http\Controllers\StaffInvitationController::class, 'show'])->where('token', '[A-Za-z0-9]{64}')->middleware('throttle:30,1')->name('staff.invitation');
+Route::post('/staff/invitations/{token}', [App\Http\Controllers\StaffInvitationController::class, 'accept'])->where('token', '[A-Za-z0-9]{64}')->middleware('throttle:10,1')->name('staff.accept');

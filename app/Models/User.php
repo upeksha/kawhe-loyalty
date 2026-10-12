@@ -49,6 +49,7 @@ class User extends Authenticatable implements MustVerifyEmail
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'is_super_admin' => 'boolean',
+            'is_staff_account' => 'boolean',
         ];
     }
 
@@ -63,6 +64,35 @@ class User extends Authenticatable implements MustVerifyEmail
     public function sendEmailVerificationNotification(): void
     {
         $this->notify(new MerchantVerifyEmail($this->email));
+    }
+
+    public function scannerStores()
+    {
+        return Store::query()->where(function ($query) {
+            $query->where('user_id', $this->id)->orWhereIn('id', StoreStaff::select('store_id')
+                ->where('user_id', $this->id)->where(fn ($q) => $q->where('can_stamp', true)->orWhere('can_redeem', true)));
+        });
+    }
+
+    public function canOperateStore(Store $store, ?string $permission = null, bool $lock = false): bool
+    {
+        if ($store->trashed()) {
+            return false;
+        }
+        if ($store->user_id === $this->id || $this->isSuperAdmin()) {
+            return true;
+        }
+        $query = StoreStaff::where('store_id', $store->id)->where('user_id', $this->id);
+        $member = ($lock ? $query->lockForUpdate() : $query)->first();
+        if (! $member) {
+            return false;
+        }
+
+        return match ($permission) {
+            'stamp' => $member->can_stamp,
+            'redeem' => $member->can_redeem,
+            default => $member->can_stamp || $member->can_redeem,
+        };
     }
 
     public function stores(): HasMany

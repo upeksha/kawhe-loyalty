@@ -17,7 +17,7 @@
     <p class="mb-4 text-sm text-gray-600">Verification email: {{ auth()->user()->email }}</p>
     <div class="mb-4 flex gap-4 text-sm">
         <a class="underline" href="{{ route('profile.edit') }}">Change email or manage account</a>
-        <a class="underline" href="{{ route('billing.index') }}">Manage billing</a>
+        @unless(auth()->user()->is_staff_account)<a class="underline" href="{{ route('billing.index') }}">Manage billing</a>@endunless
     </div>
 
     <div class="mt-4 flex items-center justify-between">
