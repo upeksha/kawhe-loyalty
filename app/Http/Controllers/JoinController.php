@@ -7,6 +7,7 @@ use App\Models\Customer;
 use App\Models\LoyaltyAccount;
 use App\Models\LoyaltyProgram;
 use App\Models\Store;
+use App\Services\Customers\CardRecoveryService;
 use App\Support\RegistrationFormConfig;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -124,7 +125,7 @@ class JoinController extends Controller
         $customer = null;
 
         if (! empty($validated['email'])) {
-            $customer = Customer::where('email', $validated['email'])->first();
+            $customer = Customer::whereRaw('LOWER(email) = ?', [Str::lower($validated['email'])])->first();
         }
 
         if (! $customer && ! empty($validated['phone'] ?? null)) {
@@ -137,19 +138,12 @@ class JoinController extends Controller
                 ->first();
 
             if ($loyaltyAccount) {
-                return redirect()->route('card.show', ['public_token' => $loyaltyAccount->public_token])
-                    ->with('show_wallet_nudge', true);
+                app(CardRecoveryService::class)->send($customer, $program);
             }
         }
 
-        $errorField = ! empty($validated['email']) ? 'email' : ($phoneLookupEnabled && ! empty($validated['phone'] ?? null) ? 'phone' : 'email');
-        $errorMessage = $phoneLookupEnabled
-            ? 'We could not find a card for that email or phone number in this loyalty card yet. Try a different detail, or create a new card if you have not joined yet.'
-            : 'We could not find a card for that email address in this loyalty card yet. Try a different email, or create a new card if you have not joined yet.';
-
-        return back()->withErrors([
-            $errorField => $errorMessage,
-        ])->withInput();
+        return response()->view('join.recovery-sent', compact('store', 'program', 'token'))
+            ->header('Cache-Control', 'no-store, private');
     }
 
     public function show(Request $request, string $slug)
@@ -227,29 +221,18 @@ class JoinController extends Controller
         $customer = null;
 
         if (! empty($customerData['email'])) {
-            $customer = Customer::where('email', $customerData['email'])->first();
+            $customer = Customer::whereRaw('LOWER(email) = ?', [Str::lower($customerData['email'])])->first();
         }
 
         if (! $customer && ! empty($customerData['phone'])) {
             $customer = Customer::where('phone', $customerData['phone'])->first();
         }
 
-        if (! $customer) {
-            $customer = Customer::create($customerData);
-        } else {
-            $customer->update(array_filter($customerData, fn ($v) => $v !== null));
-        }
+        if ($customer) {
+            app(CardRecoveryService::class)->send($customer, $program, allowEnrollment: true);
 
-        // Check if loyalty account already exists for this store and customer
-        $existingAccount = LoyaltyAccount::where('loyalty_program_id', $program->id)
-            ->where('customer_id', $customer->id)
-            ->first();
-
-        // If account exists, redirect to it (no limit check needed)
-        if ($existingAccount) {
-            return redirect()->route('card.show', ['public_token' => $existingAccount->public_token])
-                ->with('registered', true)
-                ->with('show_wallet_nudge', true);
+            return response()->view('join.recovery-sent', compact('store', 'program', 'token'))
+                ->header('Cache-Control', 'no-store, private');
         }
 
         $merchant = $store->user;
@@ -266,6 +249,8 @@ class JoinController extends Controller
         if (! $usageService->canAcceptNewCustomer($program)) {
             return view('join.limit-reached', compact('store', 'program', 'token'));
         }
+
+        $customer = Customer::create($customerData);
 
         // Create new loyalty account
         $loyaltyAccount = LoyaltyAccount::create([

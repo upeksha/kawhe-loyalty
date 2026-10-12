@@ -36,6 +36,7 @@ test('join is blocked when free plan customer cap is reached', function () {
 });
 
 test('existing customer can still access card when free plan customer cap is reached', function () {
+    \Illuminate\Support\Facades\Mail::fake();
     $user = User::factory()->create();
     $store = Store::factory()->for($user)->create();
     $program = $store->loyaltyPrograms()->first();
@@ -69,5 +70,7 @@ test('existing customer can still access card when free plan customer cap is rea
         'name' => 'Returning Customer',
     ]);
 
-    $response->assertRedirect(route('card.show', ['public_token' => $existing->public_token]));
+    $response->assertOk()->assertViewIs('join.recovery-sent');
+    $mail = \Illuminate\Support\Facades\Mail::queued(\App\Mail\CustomerCardRecovery::class)->first();
+    $this->post($mail->recoveryUrl)->assertRedirect(route('card.show', ['public_token' => $existing->public_token]));
 });

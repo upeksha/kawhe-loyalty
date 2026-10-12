@@ -51,12 +51,10 @@ test('enrollment reuses existing customer', function () {
 
     $this->assertEquals(1, Customer::count());
     $customer->refresh();
-    $this->assertEquals('New Name', $customer->name); // Name should update
+    $this->assertEquals('Existing User', $customer->name); // Public signup cannot overwrite an existing identity.
 
-    $this->assertDatabaseHas('loyalty_accounts', [
-        'store_id' => $store->id,
-        'customer_id' => $customer->id,
-    ]);
+    $response->assertOk()->assertViewIs('join.recovery-sent');
+    expect(LoyaltyAccount::count())->toBe(0);
 });
 
 test('enrollment reuses existing loyalty account', function () {
@@ -73,7 +71,7 @@ test('enrollment reuses existing loyalty account', function () {
     ]);
 
     $this->assertEquals(1, LoyaltyAccount::count());
-    $response->assertRedirect(route('card.show', ['public_token' => $account->public_token]));
+    $response->assertOk()->assertViewIs('join.recovery-sent')->assertDontSee($account->public_token);
 });
 
 test('card page displays correct info', function () {
