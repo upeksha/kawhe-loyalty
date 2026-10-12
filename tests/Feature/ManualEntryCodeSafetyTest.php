@@ -115,9 +115,7 @@ test('stamp with 4-char code and other merchant store_id is denied by validateSt
         'token' => $code,
     ]);
 
-    $response->assertStatus(422);
-    $response->assertJsonValidationErrors(['token']);
-    $this->assertStringContainsString('do not have access', $response->json('errors.token.0'));
+    $response->assertForbidden();
     $accountAtA->refresh();
     $this->assertEquals(0, $accountAtA->stamp_count);
 });
@@ -217,8 +215,7 @@ test('full token stamp still enforced by store access (no regression)', function
         'token' => $account->public_token,
     ]);
 
-    $response->assertStatus(422);
-    $response->assertJsonValidationErrors(['token']);
+    $response->assertForbidden();
     $account->refresh();
     $this->assertEquals(0, $account->stamp_count);
 });

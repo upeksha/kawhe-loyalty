@@ -19,6 +19,10 @@ class EnsureMerchantHasStore
 
         $routeName = $request->route()?->getName();
 
+        if ($routeName === 'merchant.scanner' && ($user?->is_staff_account || (! $user?->stores()->exists() && $user?->scannerStores()->exists()))) {
+            return $next($request);
+        }
+
         // Exempt onboarding v2 wizard routes
         if ($routeName && str_starts_with($routeName, 'merchant.onboarding.wizard.')) {
             return $next($request);

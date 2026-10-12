@@ -9,8 +9,10 @@
         </p>
     </header>
 
+    @unless(auth()->user()->is_staff_account)
     <p class="text-sm text-stone-600">Cancel any paid subscription in Billing first and wait until it has ended. Pending payments, invoices, or checkout sessions must be resolved before deletion. Deletion does not issue a refund. Once billing is clear, deletion also closes your Stripe customer profile.</p>
     <a href="{{ route('billing.index') }}" class="underline text-sm text-brand-600">Manage billing</a>
+    @endunless
 
     <x-ui.button
         x-data=""

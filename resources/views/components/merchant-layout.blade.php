@@ -61,7 +61,7 @@
                 <div class="flex h-full min-h-0 flex-col overflow-visible">
                     <!-- Logo -->
                     <div class="flex items-center justify-between h-16 px-6 border-b border-stone-200">
-                        <a href="{{ route('merchant.dashboard') }}" class="flex items-center">
+                        <a href="{{ route('dashboard') }}" class="flex items-center">
                             <x-application-logo class="block h-8 w-auto fill-current text-brand-600" />
                         </a>
                         <button 
@@ -78,6 +78,7 @@
 
                     <!-- Navigation -->
                     <nav class="flex-1 min-h-0 overflow-y-auto px-4 py-6 space-y-1">
+                        @unless(auth()->user()->is_staff_account)
                         <a 
                             href="{{ route('merchant.dashboard') }}" 
                             class="flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors {{ request()->routeIs('merchant.dashboard') ? 'bg-brand-50 text-brand-700' : 'text-stone-700 hover:bg-stone-100' }}"
@@ -160,6 +161,8 @@
                             Activity
                         </a>
                         
+                        <a href="{{ route('merchant.staff.index') }}" class="flex items-center px-3 py-2 text-sm font-medium rounded-lg text-stone-700 hover:bg-stone-100">Staff access</a>
+                        @endunless
                         <a 
                             href="{{ route('merchant.scanner') }}" 
                             class="flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors {{ request()->routeIs('merchant.scanner') ? 'bg-brand-50 text-brand-700' : 'text-stone-700 hover:bg-stone-100' }}"
@@ -170,7 +173,7 @@
                             Scanner
                         </a>
                         
-                        @if(Route::has('billing.index'))
+                        @if(!auth()->user()->is_staff_account && Route::has('billing.index'))
                         <a 
                             href="{{ route('billing.index') }}" 
                             class="flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors {{ request()->routeIs('billing.*') ? 'bg-brand-50 text-brand-700' : 'text-stone-700 hover:bg-stone-100' }}"

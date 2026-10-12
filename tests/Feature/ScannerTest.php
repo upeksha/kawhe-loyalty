@@ -93,10 +93,8 @@ test('merchant cannot stamp loyalty account from another store', function () {
         'token' => $account->public_token,
     ]);
 
-    // Now returns 422 validation error instead of 403, which is correct
-    $response->assertStatus(422);
-    $response->assertJsonValidationErrors(['token']);
-    $this->assertStringContainsString('do not have access', $response->json('errors.token.0'));
+    // Authorization is checked before idempotency or card mutation.
+    $response->assertForbidden();
 });
 
 test('duplicate window prevents double stamping within 5 seconds', function () {
@@ -211,10 +209,10 @@ test('override cooldown allows stamping within cooldown period', function () {
     $response->assertOk();
     $response->assertJson(['success' => true]);
     $response->assertJsonStructure(['status']); // Should have status field
-    
+
     $account->refresh();
     $this->assertEquals(2, $account->stamp_count);
-    
+
     // Should have created event/transaction
     $this->assertDatabaseHas('stamp_events', [
         'loyalty_account_id' => $account->id,
@@ -244,10 +242,10 @@ test('server-side idempotency window prevents duplicate stamps within 5 seconds'
     $account->refresh();
     $stampCountAfterFirst = $account->stamp_count;
     $this->assertEquals(1, $stampCountAfterFirst);
-    
+
     // Wait a moment but still within 5 seconds
     usleep(100000); // 0.1 seconds
-    
+
     // Second stamp with different idempotency key (simulating page reload)
     $response2 = $this->actingAs($user)->postJson('/stamp', [
         'store_id' => $store->id,
@@ -289,10 +287,10 @@ test('override request within 5 seconds still treated as duplicate', function ()
     $response1->assertOk();
     $account->refresh();
     $stampCountAfterFirst = $account->stamp_count;
-    
+
     // Wait a moment but still within 5 seconds
     usleep(100000); // 0.1 seconds
-    
+
     // Override request within 5 seconds should still be blocked by idempotency window
     $response2 = $this->actingAs($user)->postJson('/stamp', [
         'store_id' => $store->id,
@@ -305,7 +303,7 @@ test('override request within 5 seconds still treated as duplicate', function ()
         'status' => 'duplicate',
         'success' => false,
     ]);
-    
+
     $account->refresh();
     $this->assertEquals($stampCountAfterFirst, $account->stamp_count); // Should not have incremented
 });
@@ -327,10 +325,10 @@ test('normal stamp increments stamps and logs events', function () {
 
     $response->assertOk();
     $response->assertJson(['status' => 'success', 'success' => true]);
-    
+
     $account->refresh();
     $this->assertEquals(1, $account->stamp_count);
-    
+
     // Should have created event
     $this->assertDatabaseHas('stamp_events', [
         'loyalty_account_id' => $account->id,
@@ -338,7 +336,7 @@ test('normal stamp increments stamps and logs events', function () {
         'type' => 'stamp',
         'count' => 1,
     ]);
-    
+
     // Should have created transaction
     $this->assertDatabaseHas('points_transactions', [
         'loyalty_account_id' => $account->id,
@@ -352,7 +350,7 @@ test('auto-detects store from token when wrong store selected', function () {
     $merchant = User::factory()->create();
     $storeA = Store::factory()->create(['user_id' => $merchant->id, 'name' => 'Store A']);
     $storeB = Store::factory()->create(['user_id' => $merchant->id, 'name' => 'Store B']);
-    
+
     $customer = Customer::factory()->create();
     $account = LoyaltyAccount::create([
         'store_id' => $storeB->id, // Card belongs to Store B
@@ -372,7 +370,7 @@ test('auto-detects store from token when wrong store selected', function () {
         'store_id_used' => $storeB->id,
         'store_name_used' => 'Store B',
     ]);
-    
+
     $account->refresh();
     $this->assertEquals(1, $account->stamp_count);
 });
@@ -380,7 +378,7 @@ test('auto-detects store from token when wrong store selected', function () {
 test('auto-detects store from token when no store selected', function () {
     $merchant = User::factory()->create();
     $store = Store::factory()->create(['user_id' => $merchant->id]);
-    
+
     $customer = Customer::factory()->create();
     $account = LoyaltyAccount::create([
         'store_id' => $store->id,
@@ -398,7 +396,7 @@ test('auto-detects store from token when no store selected', function () {
         'store_id_used' => $store->id,
         'store_switched' => false,
     ]);
-    
+
     $account->refresh();
     $this->assertEquals(1, $account->stamp_count);
 });
@@ -406,10 +404,10 @@ test('auto-detects store from token when no store selected', function () {
 test('blocks stamping when card belongs to another merchants store', function () {
     $merchantA = User::factory()->create();
     $merchantB = User::factory()->create();
-    
+
     $storeA = Store::factory()->create(['user_id' => $merchantA->id, 'name' => 'Store A']);
     $storeB = Store::factory()->create(['user_id' => $merchantB->id, 'name' => 'Store B']);
-    
+
     $customer = Customer::factory()->create();
     $account = LoyaltyAccount::create([
         'store_id' => $storeB->id, // Card belongs to Merchant B's store
@@ -422,10 +420,8 @@ test('blocks stamping when card belongs to another merchants store', function ()
         'token' => $account->public_token,
     ]);
 
-    $response->assertStatus(422);
-    $response->assertJsonValidationErrors(['token']);
-    $this->assertStringContainsString('do not have access', $response->json('errors.token.0'));
-    
+    $response->assertForbidden();
+
     $account->refresh();
     $this->assertEquals(0, $account->stamp_count); // Should not be stamped
 });
@@ -450,7 +446,7 @@ test('backwards compatibility - correct store selected works as before', functio
         'store_switched' => false,
         'store_id_used' => $store->id,
     ]);
-    
+
     $account->refresh();
     $this->assertEquals(1, $account->stamp_count);
 });
@@ -461,7 +457,7 @@ test('cooldown still works with auto-detected store', function () {
     $merchant = User::factory()->create();
     $storeA = Store::factory()->create(['user_id' => $merchant->id]);
     $storeB = Store::factory()->create(['user_id' => $merchant->id]);
-    
+
     $customer = Customer::factory()->create();
     $account = LoyaltyAccount::create([
         'store_id' => $storeB->id,
@@ -476,7 +472,7 @@ test('cooldown still works with auto-detected store', function () {
 
     // Wait for idempotency window to pass but still within cooldown
     sleep(6); // Wait 6 seconds (past 5s idempotency, but within 30s cooldown)
-    
+
     // Second stamp should return cooldown response
     $response = $this->actingAs($merchant)->postJson('/stamp', [
         'store_id' => $storeA->id,
@@ -485,7 +481,7 @@ test('cooldown still works with auto-detected store', function () {
 
     $response->assertStatus(409); // HTTP 409 Conflict
     $response->assertJson(['status' => 'cooldown']);
-    
+
     $account->refresh();
     $this->assertEquals(1, $account->stamp_count); // Should still be 1
 });
@@ -494,7 +490,7 @@ test('idempotency still works with auto-detected store', function () {
     $merchant = User::factory()->create();
     $storeA = Store::factory()->create(['user_id' => $merchant->id]);
     $storeB = Store::factory()->create(['user_id' => $merchant->id]);
-    
+
     $customer = Customer::factory()->create();
     $account = LoyaltyAccount::create([
         'store_id' => $storeB->id,
@@ -523,7 +519,7 @@ test('idempotency still works with auto-detected store', function () {
 
     $response2->assertOk();
     $response2->assertJson(['message' => 'Already processed']);
-    
+
     $account->refresh();
     $this->assertEquals(1, $account->stamp_count); // Should still be 1, not 2
 });

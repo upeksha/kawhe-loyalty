@@ -4,14 +4,16 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+
 class StoreController extends Controller
 {
     public function index(Request $request)
     {
         $stores = $request->user()
-            ->stores()
+            ->scannerStores()
             ->select([
                 'id',
+                'user_id',
                 'name',
                 'reward_target',
                 'reward_title',
@@ -24,8 +26,13 @@ class StoreController extends Controller
             ->orderBy('name')
             ->get();
 
-        $stores->transform(function ($store) {
+        $stores->transform(function ($store) use ($request) {
             $store->logo_url = $store->logo_url ?: $store->pass_logo_url;
+
+            $store->can_stamp = $request->user()->canOperateStore($store, 'stamp');
+            $store->can_redeem = $request->user()->canOperateStore($store, 'redeem');
+
+            $store->makeHidden('user_id');
 
             return $store;
         });

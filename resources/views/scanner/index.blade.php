@@ -17,7 +17,10 @@
             />
         @endif
 
-        @if($stores->isEmpty())
+        @if(session('status'))<p role="status" class="rounded-lg bg-green-50 p-4 text-green-800">{{ session('status') }}</p>@endif
+        @if($stores->isEmpty() && auth()->user()->is_staff_account)
+            <x-ui.empty-state heading="No active staff access" description="Ask your cafe owner to invite you or restore your store permissions." />
+        @elseif($stores->isEmpty())
             <x-ui.empty-state
                 heading="Finish setup to start scanning"
                 description="You need to finish setting up your first store before you can scan cards."
@@ -313,6 +316,7 @@
                                     <button
                                         type="button"
                                         @click="chooseStamp()"
+                                        :disabled="previewData && !previewData.can_stamp"
                                         class="px-3 py-2 text-xs font-semibold rounded-md transition"
                                         :class="!isRedeem ? 'bg-white text-brand-700 shadow-sm' : 'text-stone-600 hover:text-stone-900'"
                                     >
@@ -321,6 +325,7 @@
                                     <button
                                         type="button"
                                         @click="chooseRedeem()"
+                                        :disabled="previewData && !previewData.can_redeem"
                                         class="px-3 py-2 text-xs font-semibold rounded-md transition"
                                         :class="isRedeem ? 'bg-white text-accent-700 shadow-sm' : 'text-stone-600 hover:text-stone-900'"
                                     >
@@ -1179,8 +1184,12 @@
                         
                         // If customer has rewards, open the action modal directly and allow mode switching
                         if (previewResult.has_rewards && previewResult.reward_balance > 0) {
-                            this.showModeToggle = true;
-                            this.chooseStamp();
+                            this.showModeToggle = previewResult.can_stamp && previewResult.can_redeem;
+                            if (previewResult.can_stamp) this.chooseStamp();
+                            else this.chooseRedeem();
+                        } else if (!previewResult.can_stamp) {
+                            this.success = false;
+                            this.message = 'No rewards are available. Your role allows redemption only.';
                         } else {
                             // No rewards available, go straight to stamp modal
                             this.showModeToggle = false;
@@ -1218,6 +1227,10 @@
                 },
                 
                 chooseRedeem() {
+                    if (this.previewData && !this.previewData.can_redeem) {
+                        this.message = 'You do not have permission to redeem at this store.';
+                        return;
+                    }
                     if (!this.previewData) {
                         this.success = false;
                         this.message = 'Scan a customer card first.';
@@ -1294,6 +1307,10 @@
                 },
                 
                 chooseStamp() {
+                    if (this.previewData && !this.previewData.can_stamp) {
+                        this.message = 'You do not have permission to stamp at this store.';
+                        return;
+                    }
                     if (!this.pendingToken) {
                         this.success = false;
                         this.message = 'Scan a customer card first.';
