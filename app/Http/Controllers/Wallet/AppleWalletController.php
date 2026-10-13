@@ -119,6 +119,10 @@ class AppleWalletController extends Controller
             'ip_address' => $request->ip(),
         ]);
 
+        if (\App\Services\Wallet\Apple\AppleWalletSerial::parse($serialNumber) === null) {
+            return response('Pass not found', 404);
+        }
+
         $deleted = AppleWalletRegistration::where('device_library_identifier', $deviceLibraryIdentifier)
             ->where('pass_type_identifier', $passTypeIdentifier)
             ->where('serial_number', $serialNumber)
@@ -263,7 +267,8 @@ class AppleWalletController extends Controller
                 ->where('pass_type_identifier', $passTypeIdentifier)
                 ->where('active', true)
                 ->with('loyaltyAccount.loyaltyProgram')
-                ->get();
+                ->get()
+                ->filter(fn ($registration) => \App\Services\Wallet\Apple\AppleWalletSerial::parse($registration->serial_number) !== null);
 
             $serialNumbers = [];
             $updatedTimestamps = [];

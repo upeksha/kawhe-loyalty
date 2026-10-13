@@ -23,7 +23,7 @@ class AppleWalletSerial
      */
     public static function fromAccount(LoyaltyAccount $account): string
     {
-        return sprintf('kawhe-%d', $account->id);
+        return \App\Services\Wallet\WalletIdentity::prefix(sprintf('kawhe-%d', $account->id));
     }
 
     /**
@@ -33,6 +33,19 @@ class AppleWalletSerial
      */
     public static function parse(string $serialNumber): ?array
     {
+        $namespace = \App\Services\Wallet\WalletIdentity::namespace();
+        if ($namespace !== '') {
+            $prefix = $namespace.'_';
+            if (! str_starts_with($serialNumber, $prefix)) {
+                return null;
+            }
+            $serialNumber = substr($serialNumber, strlen($prefix));
+            // Only new account-based passes are issued in isolated environments.
+            if (! preg_match('/^kawhe-\d+$/', $serialNumber)) {
+                return null;
+            }
+        }
+
         if (preg_match('/^kawhe-(\d+)-(\d+)$/', $serialNumber, $matches)) {
             return [
                 'type' => 'legacy',
