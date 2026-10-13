@@ -5,6 +5,7 @@ namespace App\Services\Wallet\Apple;
 use App\Models\AppleWalletRegistration;
 use App\Services\Wallet\WalletPlatformException;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * Service to send Apple Push Notifications for Wallet pass updates.
@@ -34,8 +35,8 @@ class ApplePushService
         $this->apnsKeyId = config('wallet.apple.apns_key_id');
         $this->apnsTeamId = config('wallet.apple.apns_team_id');
         $this->apnsAuthKeyPath = config('wallet.apple.apns_auth_key_path');
-        $this->apnsTopic = config('wallet.apple.apns_topic');
-        $this->apnsProduction = config('wallet.apple.apns_production', true);
+        $this->apnsTopic = config('passgenerator.pass_type_identifier');
+        $this->apnsProduction = true; // Wallet pass pushes use Apple's production service.
     }
 
     /**
@@ -157,91 +158,9 @@ class ApplePushService
      */
     protected function sendPushNotification(AppleWalletRegistration $registration): void
     {
-        if (! $this->apnsKeyId || ! $this->apnsTeamId || ! $this->apnsAuthKeyPath || ! $this->apnsTopic) {
-            Log::warning('Apple Wallet APNs not fully configured, skipping push', [
-                'registration_id' => $registration->id,
-            ]);
-            throw new WalletPlatformException('Apple Wallet APNs configuration is incomplete.', 'configuration');
-        }
-
-        // Validate auth key file exists
-        $authKeyFullPath = $this->apnsAuthKeyPath;
-        if (! str_starts_with($authKeyFullPath, '/')) {
-            // Relative path - resolve from storage or base path
-            $authKeyFullPath = storage_path('app/private/'.$this->apnsAuthKeyPath);
-        }
-
-        if (! file_exists($authKeyFullPath)) {
-            Log::error('Apple Wallet APNs auth key file not found', [
-                'registration_id' => $registration->id,
-            ]);
-            throw new WalletPlatformException('Apple Wallet APNs authentication key was not found.', 'credentials');
-        }
-
-        // Generate JWT token for APNs authentication
-        // Rebuild JWT if older than 50 minutes (JWT expires after 1 hour)
-        $now = time();
-        if (! $this->cachedJWT || ! $this->jwtGeneratedAt || ($now - $this->jwtGeneratedAt) > 3000) {
-            try {
-                $this->cachedJWT = $this->generateJWT();
-                $this->jwtGeneratedAt = $now;
-                Log::info('Apple Wallet APNs JWT regenerated', [
-                    'jwt_age_seconds' => $this->jwtGeneratedAt ? ($now - $this->jwtGeneratedAt) : 0,
-                    'key_id' => $this->apnsKeyId,
-                    'team_id' => $this->apnsTeamId,
-                ]);
-            } catch (\Exception $e) {
-                Log::error('Apple Wallet APNs JWT generation failed', [
-                    'registration_id' => $registration->id,
-                    'error' => $e->getMessage(),
-                    'trace' => $e->getTraceAsString(),
-                ]);
-                throw $e;
-            }
-        }
-        $jwt = $this->cachedJWT;
-
-        // APNs endpoint - use sandbox if APPLE_APNS_USE_SANDBOX=true, otherwise production
-        // Note: apns_production is inverted from APPLE_APNS_USE_SANDBOX in config
-        $useSandbox = ! $this->apnsProduction;
-        $apnsUrl = $useSandbox
-            ? 'https://api.sandbox.push.apple.com'
-            : 'https://api.push.apple.com';
-
-        $deviceToken = $registration->push_token;
-        $url = "{$apnsUrl}/3/device/{$deviceToken}";
-
-        // Payload for Wallet pass update (must be valid JSON with aps key)
-        $payload = json_encode(['aps' => []]);
-
-        // Headers
-        $headers = [
-            'Authorization: Bearer '.$jwt,
-            'apns-topic: '.$this->apnsTopic,
-            'apns-push-type: background',
-            'apns-priority: 5', // Recommended priority for Wallet updates
-            'Content-Type: application/json',
-            'Content-Length: '.strlen($payload),
-        ];
-
-        Log::debug('Apple Wallet APNs request prepared', [
-            'registration_id' => $registration->id,
-            'topic' => $this->apnsTopic,
-            'production' => $this->apnsProduction,
-        ]);
-
-        // Send HTTP/2 request using cURL
+        $options = $this->pushOptions($registration);
         $ch = curl_init();
-        curl_setopt_array($ch, [
-            CURLOPT_URL => $url,
-            CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_2_0,
-            CURLOPT_POST => true,
-            CURLOPT_POSTFIELDS => $payload,
-            CURLOPT_HTTPHEADER => $headers,
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_HEADER => true,
-            CURLOPT_SSL_VERIFYPEER => true,
-        ]);
+        curl_setopt_array($ch, $options);
 
         $response = curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
@@ -337,6 +256,45 @@ class ApplePushService
     }
 
     /**
+     * Wallet pushes use the pass signing identity, not an app's APNs JWT key.
+     * Keep the decrypted certificate and key in memory only.
+     */
+    protected function pushOptions(AppleWalletRegistration $registration): array
+    {
+        $disk = Storage::disk(config('passgenerator.config_disk') ?? config('passgenerator.storage_disk'));
+        $path = config('passgenerator.certificate_store_path');
+        if (! $path || ! $disk->exists($path)) {
+            throw new WalletPlatformException('Apple Wallet signing certificate is missing.', 'configuration');
+        }
+
+        $credentials = [];
+        if (! @openssl_pkcs12_read($disk->get($path), $credentials, (string) config('passgenerator.certificate_store_password'))
+            || empty($credentials['cert']) || empty($credentials['pkey'])) {
+            throw new WalletPlatformException('Apple Wallet signing certificate could not be opened.', 'credentials');
+        }
+
+        return [
+            CURLOPT_URL => 'https://api.push.apple.com/3/device/'.$registration->push_token,
+            CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_2_0,
+            CURLOPT_POST => true,
+            CURLOPT_POSTFIELDS => '{}',
+            CURLOPT_HTTPHEADER => [
+                'apns-topic: '.config('passgenerator.pass_type_identifier'),
+                'apns-priority: 5',
+                'Content-Type: application/json',
+            ],
+            CURLOPT_SSLCERT_BLOB => $credentials['cert'],
+            CURLOPT_SSLKEY_BLOB => $credentials['pkey'],
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_HEADER => true,
+            CURLOPT_SSL_VERIFYPEER => true,
+            CURLOPT_SSL_VERIFYHOST => 2,
+            CURLOPT_CONNECTTIMEOUT => 10,
+            CURLOPT_TIMEOUT => 20,
+        ];
+    }
+
+    /**
      * Generate JWT token for APNs authentication.
      *
      * @throws \Exception
@@ -377,7 +335,7 @@ class ApplePushService
         Log::debug('Apple Wallet APNs key file loaded', [
             'path' => $authKeyFullPath,
             'size' => strlen($keyContent),
-            'starts_with' => substr($keyContent, 0, 30).'...',
+            // Do not log private key contents.
         ]);
 
         // JWT header
