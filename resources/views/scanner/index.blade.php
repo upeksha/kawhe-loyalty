@@ -1448,6 +1448,7 @@
                                 },
 
                 confirmAction() {
+                    if (this.actionProcessing) return;
                     this.showModal = false;
                     if (this.isRedeem) {
                         this.lastRedeemQuantity = Math.max(1, this.redeemQuantity);
