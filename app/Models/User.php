@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Notifications\MerchantResetPassword;
 use App\Notifications\MerchantVerifyEmail;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -64,6 +65,11 @@ class User extends Authenticatable implements MustVerifyEmail
     public function sendEmailVerificationNotification(): void
     {
         $this->notify(new MerchantVerifyEmail($this->email));
+    }
+
+    public function sendPasswordResetNotification($token): void
+    {
+        $this->notify(new MerchantResetPassword($token, $this->getEmailForPasswordReset()));
     }
 
     public function scannerStores()

@@ -88,7 +88,7 @@ Route::get('/wallet/google/{public_token}/save', [App\Http\Controllers\WalletCon
     ->name('wallet.google.save')
     ->middleware('signed');
 
-Route::post('/c/{public_token}/verify/send', [App\Http\Controllers\VerificationController::class, 'send'])->name('card.verification.send');
+Route::post('/c/{public_token}/verify/send', [App\Http\Controllers\VerificationController::class, 'send'])->name('card.verification.send')->middleware('throttle:3,10');
 Route::get('/c/{public_token}/verify/{id}/{hash}', [App\Http\Controllers\VerificationController::class, 'verify'])->name('card.verification.verify')->middleware('signed');
 
 Route::post('/c/{public_token}/verify-email/send', [App\Http\Controllers\CustomerEmailVerificationController::class, 'send'])->name('customer.email.verification.send')->middleware('throttle:3,10');

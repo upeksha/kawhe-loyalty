@@ -7,11 +7,17 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
-class VerifyLoyaltyAccount extends Notification
+class VerifyLoyaltyAccount extends Notification implements ShouldQueue
 {
     use Queueable;
 
     protected $account;
+
+    public $tries = 3;
+
+    public $backoff = [30, 60, 120];
+
+    protected ?string $email;
 
     /**
      * Create a new notification instance.
@@ -19,6 +25,9 @@ class VerifyLoyaltyAccount extends Notification
     public function __construct($account)
     {
         $this->account = $account;
+        $this->email = $account->customer->email;
+        $this->onQueue('emails');
+        $this->afterCommit();
     }
 
     /**
@@ -26,6 +35,11 @@ class VerifyLoyaltyAccount extends Notification
      *
      * @return array<int, string>
      */
+    public function shouldSend(object $notifiable, string $channel): bool
+    {
+        return ! $notifiable->verified_at && $notifiable->customer->email === $this->email;
+    }
+
     public function via(object $notifiable): array
     {
         return ['mail'];
@@ -36,10 +50,13 @@ class VerifyLoyaltyAccount extends Notification
      */
     public function toMail(object $notifiable): MailMessage
     {
-        $url = \Illuminate\Support\Facades\URL::signedRoute('card.verification.verify', [
+        $urls = clone app('url');
+        $urls->forceRootUrl(config('app.url'));
+        $urls->forceScheme(parse_url(config('app.url'), PHP_URL_SCHEME));
+        $url = $urls->temporarySignedRoute('card.verification.verify', now()->addHour(), [
             'public_token' => $this->account->public_token,
             'id' => $this->account->id,
-            'hash' => sha1($this->account->customer->email),
+            'hash' => sha1($this->email),
         ]);
 
         return (new MailMessage)
