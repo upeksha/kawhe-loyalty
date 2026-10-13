@@ -1448,13 +1448,16 @@
                                 },
 
                 confirmAction() {
+                    if (this.actionProcessing) return;
                     this.showModal = false;
                     if (this.isRedeem) {
                         this.lastRedeemQuantity = Math.max(1, this.redeemQuantity);
+                        this.actionRequest = null;
                         this.lastAction = { mode: 'redeem', token: this.pendingToken, quantity: this.redeemQuantity };
                         this.redeem(this.pendingToken, this.redeemQuantity);
                     } else {
                         this.lastStampCount = Math.max(1, this.stampCount);
+                        this.actionRequest = null;
                         this.lastAction = { mode: 'stamp', token: this.pendingToken, quantity: this.stampCount };
                         this.stamp(this.pendingToken, this.stampCount);
                     }
@@ -1467,6 +1470,15 @@
                     this.previewData = null;
                     
                     // Note: Scanner will resume automatically after cooldown via startCooldown()
+                },
+
+                actionRequest: null,
+                requestKey(mode, token, quantity) {
+                    const signature = JSON.stringify([mode, token, quantity, this.activeStoreId]);
+                    if (!this.actionRequest || this.actionRequest.signature !== signature) {
+                        this.actionRequest = { signature, key: crypto.randomUUID() };
+                    }
+                    return this.actionRequest.key;
                 },
 
                 async redeem(token, quantity = 1) {
@@ -1487,7 +1499,8 @@
                             body: JSON.stringify({
                                 token: token,
                                 store_id: Number(this.activeStoreId),
-                                quantity: quantity
+                                quantity: quantity,
+                                idempotency_key: this.requestKey('redeem', token, quantity)
                             })
                         });
 
@@ -1500,7 +1513,7 @@
                             throw new Error('Server returned invalid response');
                         }
 
-                        if (response.ok) {
+                        if (response.ok && data.success !== false) {
                             this.success = true;
                             this.message = `${this.scannedCustomerName || data.customerLabel || 'Customer'} used ${quantity} ${quantity === 1 ? 'reward' : 'rewards'}.`;
                             this.clearFailureContext();
@@ -1548,7 +1561,8 @@
                         const requestBody = {
                             token: token,
                             count: count,
-                            override_cooldown: overrideCooldown
+                            override_cooldown: overrideCooldown,
+                            idempotency_key: this.requestKey('stamp', token, count)
                         };
                         
                         // Include store_id if available (for backwards compatibility)
