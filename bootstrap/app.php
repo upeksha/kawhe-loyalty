@@ -25,7 +25,8 @@ return Application::configure(basePath: dirname(__DIR__))
             'merchant.has.store' => \App\Http\Middleware\EnsureMerchantHasStore::class,
         ]);
         $middleware->redirectGuestsTo('/login');
-        
+        $middleware->web(append: [\Illuminate\Session\Middleware\AuthenticateSession::class]);
+
         // Exclude Stripe webhook and Apple Wallet web service from CSRF verification
         $middleware->validateCsrfTokens(except: [
             'stripe/webhook',
