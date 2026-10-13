@@ -44,6 +44,10 @@ class ApplePassService
             return $account;
         }
 
+        if (\App\Services\Wallet\WalletIdentity::namespace() !== '') {
+            return null;
+        }
+
         // Fallback: try public_token
         $account = \App\Models\LoyaltyAccount::where('public_token', $serialNumber)->first();
         if ($account) {

@@ -781,7 +781,7 @@ class GoogleWalletPassService
      */
     protected function getClassIdForProgram($program): string
     {
-        return sprintf('loyalty_program_class_%d', $program->id);
+        return WalletIdentity::prefix(sprintf('loyalty_program_class_%d', $program->id));
     }
 
     /**
@@ -789,7 +789,7 @@ class GoogleWalletPassService
      */
     protected function getObjectIdForAccount(LoyaltyAccount $account): string
     {
-        return sprintf('%s.%s', $this->issuerId, sprintf('loyalty_object_%d', $account->id));
+        return sprintf('%s.%s', $this->issuerId, WalletIdentity::prefix(sprintf('loyalty_object_%d', $account->id)));
     }
 
     /**
@@ -797,7 +797,7 @@ class GoogleWalletPassService
      */
     protected function getGenericClassIdForProgram($program): string
     {
-        return sprintf('generic_program_class_%d', $program->id);
+        return WalletIdentity::prefix(sprintf('generic_program_class_%d', $program->id));
     }
 
     /**
@@ -805,7 +805,7 @@ class GoogleWalletPassService
      */
     protected function getGenericObjectIdForAccount(LoyaltyAccount $account): string
     {
-        return sprintf('%s.generic_object_%d', $this->issuerId, $account->id);
+        return sprintf('%s.%s', $this->issuerId, WalletIdentity::prefix(sprintf('generic_object_%d', $account->id)));
     }
 
     /**

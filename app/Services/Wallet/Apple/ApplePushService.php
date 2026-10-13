@@ -45,6 +45,10 @@ class ApplePushService
      */
     public function sendPassUpdatePushes(string $passTypeIdentifier, string $serialNumber): array
     {
+        if ($passTypeIdentifier !== config('passgenerator.pass_type_identifier') || AppleWalletSerial::parse($serialNumber) === null) {
+            return ['status' => 'environment_mismatch', 'registrations' => 0, 'sent' => 0];
+        }
+
         Log::info('Apple Wallet push notification request received', [
             'pass_type_identifier' => $passTypeIdentifier,
             'serial_number' => $serialNumber,
