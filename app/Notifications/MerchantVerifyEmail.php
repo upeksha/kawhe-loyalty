@@ -26,6 +26,11 @@ class MerchantVerifyEmail extends VerifyEmail implements ShouldQueue
         return $notifiable->email === $this->email && ! $notifiable->hasVerifiedEmail();
     }
 
+    public function toMail($notifiable)
+    {
+        return parent::toMail($notifiable)->subject('Verify your email address')->view('emails.notification');
+    }
+
     protected function verificationUrl($notifiable)
     {
         // Bind the email at dispatch time so delayed jobs never verify a replacement address.

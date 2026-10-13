@@ -50,7 +50,8 @@ class VerifyLoyaltyAccount extends Notification implements ShouldQueue
      */
     public function toMail(object $notifiable): MailMessage
     {
-        $urls = clone app('url');
+        $urls = new \Illuminate\Routing\UrlGenerator(app('router')->getRoutes(), request());
+        $urls->setKeyResolver(fn () => config('app.key'));
         $urls->forceRootUrl(config('app.url'));
         $urls->forceScheme(parse_url(config('app.url'), PHP_URL_SCHEME));
         $url = $urls->temporarySignedRoute('card.verification.verify', now()->addHour(), [
@@ -60,6 +61,7 @@ class VerifyLoyaltyAccount extends Notification implements ShouldQueue
         ]);
 
         return (new MailMessage)
+            ->view('emails.notification')
             ->subject('Verify your Kawhe Loyalty Card')
             ->line('Click the button below to verify your email address and protect your loyalty card.')
             ->action('Verify Email', $url)

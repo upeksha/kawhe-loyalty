@@ -28,6 +28,11 @@ class MerchantResetPassword extends ResetPassword implements ShouldQueue
             && Password::broker()->tokenExists($notifiable, $this->token);
     }
 
+    public function toMail($notifiable)
+    {
+        return parent::toMail($notifiable)->subject('Reset your password')->view('emails.notification');
+    }
+
     protected function resetUrl($notifiable)
     {
         return rtrim(config('app.url'), '/').route('password.reset', [
