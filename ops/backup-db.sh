@@ -5,6 +5,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck disable=SC1091
 source "$SCRIPT_DIR/lib.sh"
+trap backup_failed ERR
 
 BACKUP_DIR="${OPS_BACKUP_DIR:-$APP_DIR/storage/backups}"
 DB_BACKUP_DIR="$BACKUP_DIR/db"
@@ -30,6 +31,7 @@ mysqldump \
   --user="${DB_USERNAME}" \
   --single-transaction \
   --quick \
+  --no-tablespaces \
   --routines \
   --triggers \
   --set-gtid-purged=OFF \
@@ -38,7 +40,6 @@ mysqldump \
 gzip -f "$TMP_FILE"
 mv "${TMP_FILE}.gz" "$OUT_FILE"
 
-find "$DB_BACKUP_DIR" -type f -name '*.sql.gz' -mtime +"$RETENTION_DAYS" -delete
 
 SIZE="$(du -h "$OUT_FILE" | awk '{print $1}')"
 REMOTE_KEY=""
@@ -52,3 +53,5 @@ if [[ -n "$REMOTE_KEY" ]]; then
 else
   alert "INFO" "DB backup completed" "File: $OUT_FILE"$'\n'"Size: $SIZE"
 fi
+
+find "$DB_BACKUP_DIR" -type f -name '*.sql.gz' -mtime +"$RETENTION_DAYS" -delete
