@@ -67,7 +67,9 @@ test('queued verification link uses configured origin and works only for the dis
     $notification = new MerchantVerifyEmail($this->merchant->email);
     $url = $notification->toMail($this->merchant)->actionUrl;
     expect($url)->toStartWith('https://testing.kawhe.shop/verify-email/');
-    $this->actingAs($this->merchant)->get($url)->assertRedirect();
+    $this->actingAs($this->merchant)->get($url)->assertOk();
+    expect($this->merchant->fresh()->hasVerifiedEmail())->toBeFalse();
+    $this->post($url)->assertRedirect();
     expect($this->merchant->fresh()->hasVerifiedEmail())->toBeTrue();
     $this->merchant->refresh();
     expect($notification->shouldSend($this->merchant, 'mail'))->toBeFalse();

@@ -127,7 +127,9 @@ test('verification flow sends email and marks as verified', function () {
         'hash' => sha1($account->customer->email),
     ]);
 
-    $response = $this->get($url);
+    $this->get($url)->assertOk()->assertSee('Verify my email');
+    expect($account->fresh()->verified_at)->toBeNull();
+    $response = $this->post($url);
     $response->assertRedirect(route('card.show', ['public_token' => $account->public_token]));
     $response->assertSessionHas('verified_success');
 
