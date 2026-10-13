@@ -34,7 +34,9 @@ class EmailVerificationTest extends TestCase
             ['id' => $user->id, 'hash' => sha1($user->email)], absolute: false
         );
 
-        $response = $this->actingAs($user)->get($verificationUrl);
+        $this->actingAs($user)->get($verificationUrl)->assertOk()->assertSee('Verify my email');
+        $this->assertFalse($user->fresh()->hasVerifiedEmail());
+        $response = $this->post($verificationUrl);
 
         Event::assertDispatched(Verified::class);
         $this->assertTrue($user->fresh()->hasVerifiedEmail());

@@ -49,7 +49,7 @@ test('verify endpoint sets verified_at and clears token', function () {
         'email_verification_expires_at' => now()->addDay(),
     ]);
 
-    $response = $this->get(route('customer.email.verification.verify', ['token' => $rawToken]) . '?card=' . $account->public_token);
+    $response = $this->post(route('customer.email.verification.verify', ['token' => $rawToken]).'?card='.$account->public_token);
 
     $response->assertRedirect(route('card.show', ['public_token' => $account->public_token]));
     $response->assertSessionHas('message');
@@ -91,7 +91,7 @@ test('expired token fails gracefully', function () {
         'email_verification_expires_at' => now()->subMinutes(1), // Expired
     ]);
 
-    $response = $this->get(route('customer.email.verification.verify', ['token' => $rawToken]));
+    $response = $this->post(route('customer.email.verification.verify', ['token' => $rawToken]));
 
     $response->assertRedirect('/');
     $response->assertSessionHasErrors('email');
@@ -151,7 +151,7 @@ test('verify redirects to card when card query param provided', function () {
         'email_verification_expires_at' => now()->addDay(),
     ]);
 
-    $response = $this->get(route('customer.email.verification.verify', ['token' => $rawToken]) . '?card=' . $account->public_token);
+    $response = $this->post(route('customer.email.verification.verify', ['token' => $rawToken]).'?card='.$account->public_token);
 
     $response->assertRedirect(route('card.show', ['public_token' => $account->public_token]));
 });
@@ -172,7 +172,7 @@ test('verify redirects to card when token is valid but no query param', function
         'email_verification_expires_at' => now()->addDay(),
     ]);
 
-    $response = $this->get(route('customer.email.verification.verify', ['token' => $rawToken]));
+    $response = $this->post(route('customer.email.verification.verify', ['token' => $rawToken]));
 
     $response->assertRedirect(route('card.show', ['public_token' => $account->public_token]));
     $response->assertSessionHas('message');

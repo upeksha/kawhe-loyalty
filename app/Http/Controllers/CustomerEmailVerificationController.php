@@ -197,6 +197,11 @@ class CustomerEmailVerificationController extends Controller
             return redirect('/')->withErrors(['email' => $errorMessage]);
         }
 
+        if (! $request->isMethod('post')) {
+            return response()->view('auth.confirm-email', ['action' => $request->fullUrl()])
+                ->header('Cache-Control', 'no-store')->header('Referrer-Policy', 'no-referrer');
+        }
+
         // Verify the email for this specific loyalty account (store-specific)
         $account->update([
             'verified_at' => now(),
