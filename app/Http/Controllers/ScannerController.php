@@ -60,7 +60,7 @@ class ScannerController extends Controller
         }
 
         $requestedStoreId = $request->store_id; // Store from dropdown (may be wrong)
-        $count = $request->input('count', 1);
+        $count = (int) ($request->input('count') ?? 1);
         $incomingIdempotencyKey = $request->input('idempotency_key');
         $idempotencyKey = $incomingIdempotencyKey ?: Str::uuid()->toString();
         $overrideCooldown = $request->boolean('override_cooldown', false);
@@ -99,6 +99,10 @@ class ScannerController extends Controller
         if ($incomingIdempotencyKey) {
             $existingEvent = \App\Models\StampEvent::where('idempotency_key', $incomingIdempotencyKey)->where('loyalty_account_id', $account->id)->first();
             if ($existingEvent) {
+                if ($existingEvent->type !== 'stamp' || $existingEvent->count !== $count) {
+                    throw ValidationException::withMessages(['idempotency_key' => 'This request key was already used for another action.']);
+                }
+
                 return response()->json([
                     'status' => 'duplicate',
                     'success' => false,
@@ -515,8 +519,8 @@ class ScannerController extends Controller
             }
         }
 
-        $quantity = $request->input('quantity', 1); // Default to 1 for backward compatibility
-        $idempotencyKey = $request->input('idempotency_key', Str::uuid()->toString());
+        $quantity = (int) ($request->input('quantity') ?? 1); // Default to 1 for backward compatibility
+        $idempotencyKey = $request->input('idempotency_key') ?: Str::uuid()->toString();
 
         // Verify user owns the store
         $store = Auth::user()->scannerStores()->where('id', $storeId)->first();
@@ -587,12 +591,18 @@ class ScannerController extends Controller
                 ->where('type', 'redeem')
                 ->first();
             if ($existingEvent) {
+                $receipt = PointsTransaction::where('idempotency_key', $idempotencyKey)->first();
+                if (($receipt?->metadata['request_token_hash'] ?? null) !== hash('sha256', $token)
+                    || ($receipt?->metadata['rewards_redeemed'] ?? null) !== $quantity) {
+                    throw ValidationException::withMessages(['idempotency_key' => 'This request key was already used for another action.']);
+                }
                 // Return the existing result (idempotent)
                 $account = $existingEvent->loyaltyAccount;
                 $account->load(['store', 'customer']);
 
                 return response()->json([
-                    'success' => true,
+                    'status' => 'duplicate',
+                    'success' => false,
                     'message' => 'Reward already redeemed',
                     'customerLabel' => $account->customer->name ?? 'Customer',
                 ]);
@@ -606,19 +616,12 @@ class ScannerController extends Controller
                 ->first();
 
             if (! $account) {
-                // Log debug information to help diagnose the issue
-                \Log::warning('Redeem token lookup failed', [
-                    'token' => $token,
-                    'token_length' => strlen($token),
-                    'store_id' => $storeId,
-                    'user_id' => Auth::id(),
-                    'accounts_with_reward_balance' => LoyaltyAccount::where('store_id', $storeId)
-                        ->where('reward_balance', '>', 0)
-                        ->pluck('id', 'redeem_token')
-                        ->toArray(),
-                ]);
-
                 return $this->cardNotActiveResponse();
+            }
+
+            // Manual codes are stable: also reject rapid repeats after token rotation.
+            if ($account->reward_redeemed_at && $account->reward_redeemed_at->diffInSeconds(now()) < 5) {
+                return response()->json(['status' => 'duplicate', 'success' => false, 'message' => 'Reward already redeemed. Wait before redeeming another reward.']);
             }
 
             // Check if rewards are available
@@ -694,6 +697,7 @@ class ScannerController extends Controller
                     'reward_balance_before' => $rewardBalanceBefore,
                     'reward_balance_after' => $account->reward_balance,
                     'rewards_redeemed' => $quantity,
+                    'request_token_hash' => hash('sha256', $token),
                     'stamp_count' => $account->stamp_count, // Unchanged
                     'version_before' => $originalVersion,
                     'version_after' => $account->version,

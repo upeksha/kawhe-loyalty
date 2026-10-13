@@ -36,6 +36,10 @@ class StampLoyaltyService
         ?string $userAgent = null,
         ?string $ipAddress = null
     ): StampResultDTO {
+        if ($count < 1 || $count > 100) {
+            throw ValidationException::withMessages(['count' => 'Choose between 1 and 100 stamps.']);
+        }
+
         // Generate idempotency key if not provided
         if (! $idempotencyKey) {
             $idempotencyKey = \Illuminate\Support\Str::uuid()->toString();
@@ -60,28 +64,24 @@ class StampLoyaltyService
             $ipAddress
         ) {
             abort_unless($staff->canOperateStore($store, 'stamp', lock: true), 403);
-            // Check idempotency first (before locking)
-            $existingEvent = StampEvent::where('idempotency_key', $idempotencyKey)->where('loyalty_account_id', $account->id)->first();
-            if ($existingEvent) {
-                // Return existing result without modifying
-                $existingAccount = $existingEvent->loyaltyAccount;
-                $existingAccount->load(['store', 'customer']);
-
+            // Serialize every decision using the current committed account state.
+            $account = LoyaltyAccount::whereKey($account->id)->lockForUpdate()
+                ->with(['store', 'customer'])->firstOrFail();
+            $existingEvent = StampEvent::where('idempotency_key', $idempotencyKey)
+                ->lockForUpdate()->first();
+            if ($existingEvent && ($existingEvent->loyalty_account_id !== $account->id || $existingEvent->type !== 'stamp' || $existingEvent->count !== $count)) {
+                throw ValidationException::withMessages(['idempotency_key' => 'This request key was already used for another action.']);
+            }
+            if ($existingEvent || ($account->last_stamped_at && $account->last_stamped_at->diffInSeconds(now()) < 5)) {
                 return new StampResultDTO(
-                    stampCount: $existingAccount->stamp_count,
-                    rewardBalance: $existingAccount->reward_balance ?? 0,
-                    rewardTarget: $existingAccount->reward_target ?? $rewardTarget,
-                    lastStampedAt: $existingAccount->last_stamped_at,
+                    stampCount: $account->stamp_count,
+                    rewardBalance: $account->reward_balance ?? 0,
+                    rewardTarget: $rewardTarget,
+                    lastStampedAt: $account->last_stamped_at,
                     rewardEarned: false,
                     isDuplicate: true
                 );
             }
-
-            // Lock the account row for update (prevents concurrent modifications)
-            $account = LoyaltyAccount::whereKey($account->id)
-                ->lockForUpdate()
-                ->with(['store', 'customer'])
-                ->firstOrFail();
 
             // Store original values for audit
             $stampCountBefore = $account->stamp_count;
@@ -124,73 +124,38 @@ class StampLoyaltyService
             $rewardEarned = $newlyEarned > 0;
 
             // Create stamp event
-            try {
-                $stampEvent = StampEvent::create([
+            $stampEvent = StampEvent::create([
+                'loyalty_account_id' => $account->id,
+                'store_id' => $store->id,
+                'loyalty_program_id' => $account->loyalty_program_id,
+                'user_id' => $staff->id,
+                'type' => 'stamp', // Use lowercase to match existing convention
+                'count' => $count,
+                'idempotency_key' => $idempotencyKey,
+                'user_agent' => $userAgent,
+                'ip_address' => $ipAddress,
+            ]);
+            // Create points transaction (if table exists)
+            if (Schema::hasTable('points_transactions')) {
+                PointsTransaction::create([
                     'loyalty_account_id' => $account->id,
                     'store_id' => $store->id,
-                    'loyalty_program_id' => $account->loyalty_program_id,
                     'user_id' => $staff->id,
-                    'type' => 'stamp', // Use lowercase to match existing convention
-                    'count' => $count,
+                    'type' => 'earn',
+                    'points' => $count,
                     'idempotency_key' => $idempotencyKey,
+                    'metadata' => [
+                        'stamp_count_before' => $stampCountBefore,
+                        'stamp_count_after' => $account->stamp_count,
+                        'reward_balance_before' => $rewardBalanceBefore,
+                        'reward_balance_after' => $account->reward_balance ?? 0,
+                        'newly_earned_rewards' => $newlyEarned,
+                        'version_before' => $versionBefore,
+                        'version_after' => $account->version,
+                    ],
                     'user_agent' => $userAgent,
                     'ip_address' => $ipAddress,
                 ]);
-            } catch (\Illuminate\Database\QueryException $e) {
-                // Handle unique constraint violation (duplicate idempotency key)
-                // Check if it's a duplicate entry error
-                if ($e->getCode() === '23000' || str_contains($e->getMessage(), 'Duplicate entry') || str_contains($e->getMessage(), 'UNIQUE constraint')) {
-                    // Rollback this transaction
-                    DB::rollBack();
-
-                    // Another request processed this key - return existing result
-                    $existingEvent = StampEvent::where('idempotency_key', $idempotencyKey)->where('loyalty_account_id', $account->id)->first();
-                    if ($existingEvent) {
-                        $existingAccount = $existingEvent->loyaltyAccount;
-                        $existingAccount->load(['store', 'customer']);
-
-                        return new StampResultDTO(
-                            stampCount: $existingAccount->stamp_count,
-                            rewardBalance: $existingAccount->reward_balance ?? 0,
-                            rewardTarget: $existingAccount->reward_target ?? $rewardTarget,
-                            lastStampedAt: $existingAccount->last_stamped_at,
-                            rewardEarned: false,
-                            isDuplicate: true
-                        );
-                    }
-                }
-                throw $e;
-            }
-
-            // Create points transaction (if table exists)
-            if (Schema::hasTable('points_transactions')) {
-                try {
-                    PointsTransaction::create([
-                        'loyalty_account_id' => $account->id,
-                        'store_id' => $store->id,
-                        'user_id' => $staff->id,
-                        'type' => 'earn',
-                        'points' => $count,
-                        'idempotency_key' => $idempotencyKey,
-                        'metadata' => [
-                            'stamp_count_before' => $stampCountBefore,
-                            'stamp_count_after' => $account->stamp_count,
-                            'reward_balance_before' => $rewardBalanceBefore,
-                            'reward_balance_after' => $account->reward_balance ?? 0,
-                            'newly_earned_rewards' => $newlyEarned,
-                            'version_before' => $versionBefore,
-                            'version_after' => $account->version,
-                        ],
-                        'user_agent' => $userAgent,
-                        'ip_address' => $ipAddress,
-                    ]);
-                } catch (\Exception $e) {
-                    // Log but don't fail if points_transactions table doesn't exist or has issues
-                    Log::warning('Failed to create points transaction', [
-                        'error' => $e->getMessage(),
-                        'loyalty_account_id' => $account->id,
-                    ]);
-                }
             }
 
             // Refresh account to get latest state
