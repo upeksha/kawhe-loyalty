@@ -51,6 +51,7 @@ test('new staff accepts invitation without store setup and cannot forge their ro
     createStaffInvite($this);
     $url = staffInvitationLink();
     auth()->logout();
+    session()->invalidate();
     $this->get($url)->assertOk()->assertSee('Accept invitation');
     $this->post($url, ['name' => 'Barista', 'password' => 'test-password-123', 'password_confirmation' => 'test-password-123', 'email' => 'attacker@example.com', 'is_super_admin' => 1])
         ->assertRedirect(route('merchant.scanner'));
@@ -67,6 +68,7 @@ test('existing account must sign in with the invited verified email', function (
     createStaffInvite($this, $existing->email);
     $url = staffInvitationLink();
     auth()->logout();
+    session()->invalidate();
     $this->get($url)->assertOk()->assertSee('Sign in');
     $this->post($url, ['name' => 'Overwrite', 'password' => 'password', 'password_confirmation' => 'password'])->assertForbidden();
     $this->actingAs($this->staff)->post($url)->assertForbidden();
@@ -87,6 +89,7 @@ test('expired cancelled archived and forged invitations cannot be accepted', fun
     createStaffInvite($this);
     $url = staffInvitationLink();
     auth()->logout();
+    session()->invalidate();
     $invite = StoreStaffInvitation::firstOrFail();
     $invite->update(['expires_at' => now()->subSecond()]);
     $this->get($url)->assertStatus(410);
@@ -172,9 +175,10 @@ test('revocation takes effect for existing sessions and API tokens', function ()
     $token = $this->staff->createToken('staff-phone')->plainTextToken;
     $this->actingAs($this->owner)->delete(route('merchant.staff.revoke', [$this->store, $this->member]))->assertRedirect();
     auth()->logout();
+    session()->invalidate();
     $this->withToken($token)->getJson('/api/v1/stores')->assertOk()->assertJsonCount(0, 'stores');
     $this->withToken($token)->postJson('/api/v1/stamp', ['token' => $this->account->public_token, 'store_id' => $this->store->id])->assertForbidden();
-    $this->actingAs($this->staff)->get(route('merchant.scanner'))->assertOk()->assertSee('No active staff access');
+    $this->actingAs($this->staff, 'web')->get(route('merchant.scanner'))->assertOk()->assertSee('No active staff access');
     $this->get('/dashboard')->assertRedirect(route('merchant.scanner'));
 });
 
@@ -182,6 +186,7 @@ test('permission edits apply to API calls without signing in again', function ()
     $token = $this->staff->createToken('staff-phone')->plainTextToken;
     $this->actingAs($this->owner)->patch(route('merchant.staff.update', [$this->store, $this->member]), ['can_redeem' => 1])->assertRedirect();
     auth()->logout();
+    session()->invalidate();
     $this->withToken($token)->getJson('/api/v1/stores')->assertOk()->assertJsonCount(1, 'stores')->assertJsonPath('stores.0.can_stamp', false)->assertJsonPath('stores.0.can_redeem', true);
     $this->withToken($token)->postJson('/api/v1/stamp', ['token' => $this->account->public_token, 'store_id' => $this->store->id])->assertForbidden();
     $this->withToken($token)->postJson('/api/v1/redeem', ['token' => 'REWARD123', 'store_id' => $this->store->id])->assertOk();
@@ -198,7 +203,7 @@ test('staff scanner navigation hides owner controls and keeps profile available'
 
 test('archived stores remove staff scanner and action access', function () {
     $this->store->delete();
-    $this->actingAs($this->staff)->get(route('merchant.scanner'))->assertOk()->assertSee('No active staff access');
+    $this->actingAs($this->staff, 'web')->get(route('merchant.scanner'))->assertOk()->assertSee('No active staff access');
     $this->postJson(route('stamp.store'), ['token' => $this->account->public_token])->assertForbidden();
     $this->postJson(route('redeem.store'), ['token' => 'REWARD123', 'store_id' => $this->store->id])->assertForbidden();
 });

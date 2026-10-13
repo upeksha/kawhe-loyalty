@@ -125,11 +125,13 @@ class JoinController extends Controller
         $customer = null;
 
         if (! empty($validated['email'])) {
-            $customer = Customer::whereRaw('LOWER(email) = ?', [Str::lower($validated['email'])])->first();
+            $customer = Customer::whereHas('loyaltyAccounts', fn ($q) => $q->where('loyalty_program_id', $program->id))
+                ->whereRaw('LOWER(email) = ?', [Str::lower($validated['email'])])->first();
         }
 
         if (! $customer && ! empty($validated['phone'] ?? null)) {
-            $customer = Customer::where('phone', $validated['phone'])->first();
+            $customer = Customer::whereHas('loyaltyAccounts', fn ($q) => $q->where('loyalty_program_id', $program->id))
+                ->where('phone', $validated['phone'])->first();
         }
 
         if ($customer) {
@@ -221,11 +223,15 @@ class JoinController extends Controller
         $customer = null;
 
         if (! empty($customerData['email'])) {
-            $customer = Customer::whereRaw('LOWER(email) = ?', [Str::lower($customerData['email'])])->first();
+            $customer = Customer::whereRaw('LOWER(email) = ?', [Str::lower($customerData['email'])])
+                ->withExists(['loyaltyAccounts as joined_program' => fn ($q) => $q->where('loyalty_program_id', $program->id)])
+                ->orderByDesc('joined_program')->first();
         }
 
         if (! $customer && ! empty($customerData['phone'])) {
-            $customer = Customer::where('phone', $customerData['phone'])->first();
+            $customer = Customer::where('phone', $customerData['phone'])
+                ->withExists(['loyaltyAccounts as joined_program' => fn ($q) => $q->where('loyalty_program_id', $program->id)])
+                ->orderByDesc('joined_program')->first();
         }
 
         if ($customer) {

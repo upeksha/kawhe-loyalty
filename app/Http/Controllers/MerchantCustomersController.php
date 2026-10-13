@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Jobs\UpdateWalletPassJob;
 use App\Models\AppleWalletRegistration;
+use App\Models\Customer;
 use App\Models\LoyaltyAccount;
 use App\Models\StampEvent;
 use App\Models\SupportAuditLog;
@@ -13,6 +14,7 @@ use App\Services\Support\MerchantRecoveryService;
 use App\Services\Support\SupportAuditService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class MerchantCustomersController extends Controller
 {
@@ -266,8 +268,35 @@ class MerchantCustomersController extends Controller
         $lastName = trim($validated['last_name'] ?? $customer->last_name ?? '');
         $validated['name'] = trim("$firstName $lastName") ?: $customer->name;
 
-        // Update customer data
-        $customer->update($validated);
+        DB::transaction(function () use ($loyaltyAccount, $validated) {
+            $account = LoyaltyAccount::whereKey($loyaltyAccount->id)->lockForUpdate()->firstOrFail();
+            $customer = Customer::whereKey($account->customer_id)->lockForUpdate()->firstOrFail();
+            $emailChanged = array_key_exists('email', $validated) && $validated['email'] !== $customer->email;
+
+            // Customer identities can be shared across cafes. Edits belong to this card only.
+            if ($customer->loyaltyAccounts()->whereKeyNot($account->id)->exists()) {
+                $customer = $customer->replicate();
+                $customer->save();
+                $account->customer_id = $customer->id;
+            }
+            $customer->fill($validated);
+            if ($emailChanged) {
+                $customer->forceFill([
+                    'email_verified_at' => null,
+                    'email_verification_token_hash' => null,
+                    'email_verification_expires_at' => null,
+                    'email_verification_sent_at' => null,
+                ]);
+                $account->forceFill([
+                    'verified_at' => null,
+                    'email_verification_token_hash' => null,
+                    'email_verification_expires_at' => null,
+                    'email_verification_sent_at' => null,
+                ]);
+            }
+            $customer->save();
+            $account->save();
+        }, 3);
 
         return redirect()
             ->route('merchant.customers.show', $loyaltyAccount)
