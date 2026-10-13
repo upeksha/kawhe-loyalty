@@ -508,6 +508,7 @@ class ScannerController extends Controller
         $token = str_replace(['-', ' '], '', $token);
 
         $storeId = $request->store_id;
+        $requestTokenHash = hash('sha256', $token);
 
         // 4-char manual entry code: resolve to account's redeem_token
         if (strlen($token) === 4) {
@@ -583,7 +584,7 @@ class ScannerController extends Controller
         $ipAddress = $request->ip();
 
         // Use database transaction for atomicity
-        return DB::transaction(function () use ($token, $storeId, $quantity, $idempotencyKey, $store, $userAgent, $ipAddress) {
+        return DB::transaction(function () use ($token, $requestTokenHash, $storeId, $quantity, $idempotencyKey, $store, $userAgent, $ipAddress) {
             abort_unless(Auth::user()->canOperateStore($store, 'redeem', lock: true), 403);
             // Check if this idempotency key was already processed
             $existingEvent = StampEvent::where('idempotency_key', $idempotencyKey)
@@ -592,7 +593,7 @@ class ScannerController extends Controller
                 ->first();
             if ($existingEvent) {
                 $receipt = PointsTransaction::where('idempotency_key', $idempotencyKey)->first();
-                if (($receipt?->metadata['request_token_hash'] ?? null) !== hash('sha256', $token)
+                if (($receipt?->metadata['request_token_hash'] ?? null) !== $requestTokenHash
                     || ($receipt?->metadata['rewards_redeemed'] ?? null) !== $quantity) {
                     throw ValidationException::withMessages(['idempotency_key' => 'This request key was already used for another action.']);
                 }
@@ -697,7 +698,7 @@ class ScannerController extends Controller
                     'reward_balance_before' => $rewardBalanceBefore,
                     'reward_balance_after' => $account->reward_balance,
                     'rewards_redeemed' => $quantity,
-                    'request_token_hash' => hash('sha256', $token),
+                    'request_token_hash' => $requestTokenHash,
                     'stamp_count' => $account->stamp_count, // Unchanged
                     'version_before' => $originalVersion,
                     'version_after' => $account->version,

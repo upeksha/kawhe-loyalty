@@ -75,3 +75,12 @@ test('a redemption request key cannot be reused for another card', function () {
     $this->postJson('/redeem', $body)->assertOk();
     $this->postJson('/redeem', array_merge($body, ['token' => 'another-card-token']))->assertUnprocessable();
 });
+
+test('manual-code retries keep their identity after the reward token rotates', function () {
+    $this->account->update(['manual_entry_code' => 'SAFE']);
+    $body = ['store_id' => $this->store->id, 'token' => 'SAFE', 'idempotency_key' => 'manual-retry'];
+    $this->postJson('/redeem', $body)->assertOk()->assertJson(['success' => true]);
+    $this->travel(6)->seconds();
+    $this->postJson('/redeem', $body)->assertOk()->assertJson(['status' => 'duplicate']);
+    expect($this->account->fresh()->reward_balance)->toBe(1);
+});
