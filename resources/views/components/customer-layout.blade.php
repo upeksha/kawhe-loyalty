@@ -12,6 +12,7 @@
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+        <meta name="referrer" content="no-referrer">
         <meta name="csrf-token" content="{{ csrf_token() }}">
         <meta name="theme-color" content="{{ $theme->bg }}">
         <meta name="apple-mobile-web-app-capable" content="yes">
@@ -47,6 +48,19 @@
 
             {{ $slot }}
         </div>
+
+        @php
+            $helpProgram = $program ?? $account?->loyaltyProgram;
+        @endphp
+        <footer class="customer-muted px-4 pb-6 text-center text-sm">
+            <nav aria-label="Customer help" class="flex flex-wrap justify-center gap-x-6 gap-y-3">
+                <a href="https://kawhe.shop/privacy-policy" rel="noreferrer" class="underline">Privacy</a>
+                <a href="mailto:support@kawhe.shop?subject=Kawhe%20customer%20card%20support" class="underline">Support</a>
+                @if($helpProgram && $helpProgram->join_token)
+                    <a href="{{ route('join.existing', ['slug' => $helpProgram->slug, 't' => $helpProgram->join_token]) }}" class="underline">Recover my card</a>
+                @endif
+            </nav>
+        </footer>
 
         @stack('overlays')
         @stack('scripts')

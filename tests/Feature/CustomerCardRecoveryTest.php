@@ -173,3 +173,14 @@ test('email casing does not bypass existing customer ownership checks', function
     expect(LoyaltyAccount::count())->toBe(1);
     Mail::assertQueuedCount(2);
 });
+
+
+test('customer card and signup offer program scoped recovery and privacy safe help links', function () {
+    $url = route('join.existing', ['slug' => $this->program->slug, 't' => $this->program->join_token]);
+    foreach ([route('card.show', ['public_token' => $this->account->public_token]), route('join.show', ['slug' => $this->program->slug, 't' => $this->program->join_token])] as $page) {
+        $this->get($page)->assertOk()->assertSee('Recover my card')->assertSee($url)
+            ->assertSee('https://kawhe.shop/privacy-policy')->assertSee('mailto:support@kawhe.shop')
+            ->assertSee('<meta name="referrer" content="no-referrer">', false);
+    }
+    $this->get($url)->assertOk()->assertDontSee($this->account->public_token);
+});
