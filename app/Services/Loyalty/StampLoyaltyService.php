@@ -200,16 +200,17 @@ class StampLoyaltyService
                 ]);
             }
 
-            // Dispatch real-time event (wrap in try-catch to prevent errors from breaking the response)
-            try {
-                StampUpdated::dispatch($account);
-            } catch (\Exception $e) {
-                // Log but don't fail if event dispatch fails
-                Log::error('Failed to dispatch StampUpdated event (stamp)', [
-                    'loyalty_account_id' => $account->id,
-                    'error' => $e->getMessage(),
-                ]);
-            }
+            // Publish only committed state, including after a deadlock retry.
+            DB::afterCommit(function () use ($account) {
+                try {
+                    StampUpdated::dispatch($account);
+                } catch (\Exception $e) {
+                    Log::error('Failed to dispatch StampUpdated event (stamp)', [
+                        'loyalty_account_id' => $account->id,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            });
 
             return new StampResultDTO(
                 stampCount: $account->stamp_count,
@@ -219,7 +220,7 @@ class StampLoyaltyService
                 rewardEarned: $rewardEarned,
                 isDuplicate: false
             );
-        });
+        }, 5);
     }
 
     /**
