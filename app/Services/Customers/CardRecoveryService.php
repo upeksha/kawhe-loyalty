@@ -45,6 +45,7 @@ class CardRecoveryService
             Mail::to($customer->email)->queue(new CustomerCardRecovery($url, $program->store->name));
         } catch (\Throwable $e) {
             DB::table('customer_card_recoveries')->where('token_hash', $hash)->delete();
+            RateLimiter::decrement($key);
             Log::error('Customer card recovery could not be queued', ['customer_id' => $customer->id]);
         }
     }

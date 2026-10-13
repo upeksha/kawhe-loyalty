@@ -30,27 +30,13 @@ class PasswordResetLinkController extends Controller
             'email' => ['required', 'email'],
         ]);
 
-        // We will send the password reset link to this user. Once we have attempted
-        // to send the link, we will examine the response then see the message we
-        // need to show to the user. Finally, we'll send out a proper response.
-        $status = Password::sendResetLink(
-            $request->only('email')
-        );
+        try {
+            $status = Password::sendResetLink($request->only('email'));
+        } catch (\Throwable $e) {
+            Log::warning('Password reset email could not be queued');
 
-        // Log the password reset attempt for debugging
-        if ($status == Password::RESET_LINK_SENT) {
-            Log::info('Password reset link sent', [
-                'email' => $request->email,
-                'mailer' => config('mail.default'),
-                'mail_host' => config('mail.mailers.smtp.host'),
-            ]);
-        } else {
-            Log::warning('Password reset link failed to send', [
-                'email' => $request->email,
-                'status' => $status,
-                'mailer' => config('mail.default'),
-                'mail_host' => config('mail.mailers.smtp.host'),
-            ]);
+            return back()->withInput($request->only('email'))
+                ->withErrors(['email' => 'We could not queue the reset email. Please try again shortly.']);
         }
 
         return $status == Password::RESET_LINK_SENT

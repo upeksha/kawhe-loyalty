@@ -14,8 +14,7 @@ class CustomerEmailVerificationController extends Controller
 {
     public function __construct(
         protected SupportAuditService $supportAuditService
-    ) {
-    }
+    ) {}
 
     public function send(Request $request, string $public_token)
     {
@@ -26,7 +25,7 @@ class CustomerEmailVerificationController extends Controller
         $customer = $account->customer;
 
         // Check if customer has email
-        if (!$customer->email) {
+        if (! $customer->email) {
             $this->supportAuditService->log(
                 eventType: 'verification_send',
                 status: 'failed',
@@ -39,6 +38,7 @@ class CustomerEmailVerificationController extends Controller
             if ($request->expectsJson() || $request->wantsJson()) {
                 return response()->json(['message' => 'This card does not have an email address yet. Ask the store to update your details first.'], 422);
             }
+
             return back()->withErrors(['email' => 'This card does not have an email address yet. Ask the store to update your details first.']);
         }
 
@@ -56,12 +56,13 @@ class CustomerEmailVerificationController extends Controller
             if ($request->expectsJson() || $request->wantsJson()) {
                 return response()->json(['message' => 'Email already verified for this store.']);
             }
+
             return back()->with('message', 'Email already verified for this store.');
         }
 
         // Check if this is a merchant-initiated request (bypass cooldown for merchants)
         $isMerchantRequest = $request->user() && $request->user()->stores()->where('id', $account->store_id)->exists();
-        
+
         // Enforce resend cooldown (60 seconds for customers, 10 seconds for merchants)
         $cooldownSeconds = $isMerchantRequest ? 10 : 60;
         if ($account->email_verification_sent_at && $account->email_verification_sent_at->diffInSeconds(now()) < $cooldownSeconds) {
@@ -79,6 +80,7 @@ class CustomerEmailVerificationController extends Controller
             if ($request->expectsJson() || $request->wantsJson()) {
                 return response()->json(['message' => $errorMessage, 'errors' => ['email' => [$errorMessage]]], 422);
             }
+
             return back()->withErrors(['email' => $errorMessage]);
         }
 
@@ -92,30 +94,10 @@ class CustomerEmailVerificationController extends Controller
             'email_verification_sent_at' => now(),
         ]);
 
-        // Send verification email (sync = immediate, else high-priority queue)
         $mailable = new VerifyCustomerEmail($rawToken, $public_token);
 
         try {
-            if (config('mail.welcome_sync', false)) {
-                Mail::to($customer->email)->send($mailable);
-                \Log::info('Verification email sent synchronously', [
-                    'loyalty_account_id' => $account->id,
-                    'customer_id' => $customer->id,
-                    'store_id' => $account->store_id,
-                    'public_token' => $public_token,
-                    'email' => $customer->email,
-                ]);
-            } else {
-                Mail::to($customer->email)->queue($mailable);
-                \Log::info('Verification email queued successfully', [
-                    'loyalty_account_id' => $account->id,
-                    'customer_id' => $customer->id,
-                    'store_id' => $account->store_id,
-                    'public_token' => $public_token,
-                    'email' => $customer->email,
-                    'initiated_by' => $isMerchantRequest ? 'merchant' : 'customer',
-                ]);
-            }
+            Mail::to($customer->email)->queue($mailable);
             $this->supportAuditService->log(
                 eventType: 'verification_send',
                 status: 'success',
@@ -130,15 +112,11 @@ class CustomerEmailVerificationController extends Controller
                 ]
             );
         } catch (\Exception $e) {
-            // Log the error but don't fail the request
-            \Log::error('Failed to queue verification email', [
-                'customer_id' => $customer->id,
-                'store_id' => $account->store_id,
-                'public_token' => $public_token,
-                'email' => $customer->email,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
+            // A failed queue write cannot be retried by a worker. Release this attempt's cooldown.
+            LoyaltyAccount::whereKey($account->id)
+                ->where('email_verification_token_hash', hash('sha256', $rawToken))
+                ->update(['email_verification_token_hash' => null, 'email_verification_expires_at' => null, 'email_verification_sent_at' => null]);
+            \Log::error('Verification email could not be queued', ['loyalty_account_id' => $account->id]);
             $this->supportAuditService->log(
                 eventType: 'verification_send',
                 status: 'failed',
@@ -147,20 +125,23 @@ class CustomerEmailVerificationController extends Controller
                 actorUserId: $request->user()?->id,
                 source: $request->user() ? 'merchant' : 'customer',
                 message: 'Verification email queue failed.',
-                metadata: [
-                    'error' => $e->getMessage(),
-                ]
+                metadata: []
             );
-            
-            // Still return success - email will be retried via queue worker
-            // User can request another email if needed
+
+            $message = 'We could not queue the verification email. Please try again shortly.';
+            if ($request->expectsJson()) {
+                return response()->json(['success' => false, 'message' => $message], 503);
+            }
+
+            return back()->withErrors(['email' => $message]);
         }
 
-        // Always return success - email is queued and will be processed
-        $successMessage = 'Verification email sent. Please check your inbox.';
+        // Queue acceptance is not confirmation of inbox delivery.
+        $successMessage = 'Verification email queued. Please check your inbox shortly.';
         if ($request->expectsJson() || $request->wantsJson()) {
             return response()->json(['message' => $successMessage]);
         }
+
         return back()->with('message', $successMessage);
     }
 
@@ -183,16 +164,18 @@ class CustomerEmailVerificationController extends Controller
                 return redirect()->route('card.show', ['public_token' => $publicToken])
                     ->withErrors(['email' => $errorMessage]);
             }
+
             return redirect('/')->withErrors(['email' => $errorMessage]);
         }
 
         // Check if account is already verified
         if ($accountWithToken && $accountWithToken->verified_at) {
-            $successMessage = 'Your email is already verified for ' . $accountWithToken->store->name . '.';
+            $successMessage = 'Your email is already verified for '.$accountWithToken->store->name.'.';
             if ($publicToken) {
                 return redirect()->route('card.show', ['public_token' => $publicToken])
                     ->with('message', $successMessage);
             }
+
             return redirect('/')->with('message', $successMessage);
         }
 
@@ -203,13 +186,14 @@ class CustomerEmailVerificationController extends Controller
             ->with(['customer', 'store'])
             ->first();
 
-        if (!$account) {
+        if (! $account) {
             // Token doesn't exist or is invalid
             $errorMessage = 'Invalid verification token. Please check the link or request a new verification email.';
             if ($publicToken) {
                 return redirect()->route('card.show', ['public_token' => $publicToken])
                     ->withErrors(['email' => $errorMessage]);
             }
+
             return redirect('/')->withErrors(['email' => $errorMessage]);
         }
 
@@ -222,7 +206,7 @@ class CustomerEmailVerificationController extends Controller
 
         // Reload the account with store relationship to ensure we have the store name
         $account->load('store');
-        
+
         // Log successful verification
         \Log::info('Email verified successfully', [
             'loyalty_account_id' => $account->id,
@@ -233,6 +217,6 @@ class CustomerEmailVerificationController extends Controller
 
         // Redirect to the specific card with success message
         return redirect()->route('card.show', ['public_token' => $account->public_token])
-            ->with('message', '✅ Email verified successfully for ' . $account->store->name . '! You can now redeem rewards.');
+            ->with('message', '✅ Email verified successfully for '.$account->store->name.'! You can now redeem rewards.');
     }
 }
