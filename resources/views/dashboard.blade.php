@@ -250,7 +250,6 @@
             ],
         ];
 
-        $miniActivity = $trendPoints->take(-5);
     @endphp
 
 
@@ -399,23 +398,6 @@
                 <x-ui.button href="{{ route('merchant.stores.index') }}" variant="secondary" class="dashboard-button mt-6 w-full">Review store settings</x-ui.button>
             </x-ui.card>
         </section>
-        <x-ui.card id="recent-activity" class="dashboard-panel scroll-mt-6 p-6">
-            <h2 class="text-xl font-semibold text-stone-900">Recent Activity</h2>
-            <div class="mt-4 overflow-x-auto">
-                <table class="w-full text-left text-sm sm:text-base">
-                    <caption class="sr-only">Recent daily customer activity across your stores</caption>
-                    <thead class="text-sm text-stone-600"><tr>@foreach(['Date', 'New cards', 'Stamps', 'Redeems', 'Total events'] as $label)<th scope="col" class="whitespace-nowrap px-3 py-3 font-semibold first:pl-0">{{ $label }}</th>@endforeach</tr></thead>
-                    <tbody>@forelse($miniActivity->reverse() as $day)
-                        <tr class="text-stone-900"><th scope="row" class="whitespace-nowrap py-3 pr-3 font-normal">{{ $day['label'] }}</th>@foreach(['joins', 'stamps', 'redeems', 'total'] as $key)<td class="px-3 py-3">{{ number_format($day[$key]) }}</td>@endforeach</tr>
-                    @empty<tr><td colspan="5" class="py-4 text-stone-600">No recent activity yet.</td></tr>@endforelse</tbody>
-                </table>
-            </div>
-        </x-ui.card>
-        <div class="grid max-w-[400px] gap-6">
-            <x-ui.button href="{{ route('merchant.scanner') }}" class="dashboard-button">Open scanner</x-ui.button>
-            <x-ui.button href="{{ route('merchant.stores.index') }}" variant="secondary" class="dashboard-button">Store QR</x-ui.button>
-            <x-ui.button href="{{ route('merchant.customers.index') }}" variant="secondary" class="dashboard-button">Customers</x-ui.button>
-        </div>
         @if(isset($usageStats) && !$usageStats['is_subscribed'])
             @if(($usageStats['primary_program_customers_count'] ?? 0) >= ($usageStats['customers_per_program_limit'] ?? PHP_INT_MAX))
                 <x-ui.alert variant="warning">
