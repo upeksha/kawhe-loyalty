@@ -169,6 +169,7 @@ Route::middleware(['auth', 'verified', App\Http\Middleware\OwnerAccount::class, 
     Route::post('/customers/{loyaltyAccount}/resend-verification', [MerchantCustomersController::class, 'resendVerification'])->name('customers.resend-verification');
     Route::post('/customers/{loyaltyAccount}/resend-welcome', [MerchantCustomersController::class, 'resendWelcomeEmail'])->name('customers.resend-welcome');
     Route::post('/customers/{loyaltyAccount}/sync-wallet', [MerchantCustomersController::class, 'syncWallet'])->middleware('throttle:5,1')->name('customers.sync-wallet');
+    Route::get('/activity', [App\Http\Controllers\MerchantActivityController::class, 'index'])->name('activity.index');
     Route::get('/support', [SupportLogController::class, 'merchantIndex'])->name('support.index');
 });
 

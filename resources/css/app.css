@@ -65,3 +65,8 @@
 .account-settings .settings-disclosure::-webkit-details-marker { display: none; }
 .account-settings .settings-disclosure:focus-visible { outline: 2px solid #2d5d47; outline-offset: 3px; }
 .account-settings details[open] > .settings-disclosure { margin-bottom: 1.5rem; }
+
+/* Support filters and event tables use the merchant Figma field and table styles. */
+.support-filters :is(input, select) { border-color: transparent; border-radius: .5rem; background-color: white; box-shadow: none; padding-left: 0; font-size: 1rem; }
+.support-event-table :is(th, td) { white-space: normal; overflow-wrap: anywhere; padding: .75rem 1rem .75rem 0; vertical-align: top; }
+.support-event-table td { font-size: 1rem; }

@@ -7,11 +7,11 @@
                 ['Cards', route('merchant.programs.index'), request()->routeIs('merchant.programs.*', 'merchant.stores.programs.*')],
                 ['Customers', route('merchant.customers.index'), request()->routeIs('merchant.customers.*')],
                 ['Team', route('merchant.staff.index'), request()->routeIs('merchant.staff.*')],
-                ['Activity', route('merchant.support.index'), false],
+                ['Activity', route('merchant.activity.index'), request()->routeIs('merchant.activity.*')],
                 ['Billing', route('billing.index'), request()->routeIs('billing.*')],
                 ['Settings', route('profile.edit'), request()->routeIs('profile.*')],
                 ['Stores', route('merchant.stores.index'), request()->routeIs('merchant.stores.*') && !request()->routeIs('merchant.stores.programs.*')],
-                ['Support', route('merchant.support.index'), false],
+                ['Support', route('merchant.support.index'), request()->routeIs('merchant.support.*')],
             ] as [$label, $url, $active])
                 <a href="{{ $url }}" @if($active) aria-current="page" @endif class="dashboard-button flex items-center justify-center rounded-lg border border-stone-200 px-3 text-sm font-semibold text-brand-700 {{ $active ? 'bg-brand-50' : 'bg-white hover:bg-brand-50' }}">{{ $label }}</a>
             @endforeach
