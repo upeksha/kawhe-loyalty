@@ -2,8 +2,8 @@
             @foreach([
                 ['Overview', route('merchant.dashboard'), request()->routeIs('merchant.dashboard')],
                 ['Cards', route('merchant.programs.index'), request()->routeIs('merchant.programs.*', 'merchant.stores.programs.*')],
-                ['Customers', route('merchant.customers.index'), false],
-                ['Team', route('merchant.staff.index'), false],
+                ['Customers', route('merchant.customers.index'), request()->routeIs('merchant.customers.*')],
+                ['Team', route('merchant.staff.index'), request()->routeIs('merchant.staff.*')],
                 ['Activity', route('merchant.support.index'), false],
                 ['Billing', route('billing.index'), false],
                 ['Settings', route('profile.edit'), false],

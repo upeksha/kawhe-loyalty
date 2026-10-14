@@ -34,7 +34,7 @@ class MerchantCustomersController extends Controller
         }
 
         $accounts = $this->buildAccountsQuery($request, Auth::user())
-            ->with(['customer', 'store'])
+            ->with(['customer', 'store', 'loyaltyProgram'])
             ->latest('id')
             ->paginate(25)
             ->withQueryString();
@@ -127,7 +127,7 @@ class MerchantCustomersController extends Controller
         }
 
         // Load relationships
-        $account = $loyaltyAccount->load(['customer', 'store']);
+        $account = $loyaltyAccount->load(['customer', 'store', 'loyaltyProgram']);
 
         // Load recent events
         $events = StampEvent::where('loyalty_account_id', $account->id)
@@ -234,7 +234,7 @@ class MerchantCustomersController extends Controller
         }
 
         // Load relationships
-        $account = $loyaltyAccount->load(['customer', 'store']);
+        $account = $loyaltyAccount->load(['customer', 'store', 'loyaltyProgram']);
 
         return view('merchant.customers.edit', [
             'account' => $account,

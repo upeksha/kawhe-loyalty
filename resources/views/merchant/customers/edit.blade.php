@@ -1,15 +1,6 @@
-<x-merchant-layout>
-    <x-slot name="header">
-        <div class="flex justify-between items-center">
-            <span>{{ __('Edit Customer Information') }}</span>
-            <x-ui.button href="{{ route('merchant.customers.show', $account) }}" variant="ghost" size="sm">
-                ← Back to Customer Details
-            </x-ui.button>
-        </div>
-    </x-slot>
-
-    <div class="max-w-2xl mx-auto">
-        <x-ui.card class="p-6">
+<x-merchant-design-layout title="Edit customer" :subtitle="$account->customer->name . ' · ' . $account->program_name">
+    <div class="max-w-[660px]">
+        <x-ui.card class="space-y-6 border-0 bg-transparent p-0">
                     <form method="POST" action="{{ route('merchant.customers.update', $account) }}" id="customer-edit-form">
                         @csrf
                         @method('PUT')
@@ -27,7 +18,7 @@
                         <h3 class="text-lg font-bold mb-4 text-stone-900">Customer Information</h3>
 
                         <!-- First Name & Last Name -->
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                        <div class="grid grid-cols-1 gap-6 mb-6">
                             <div>
                                 <label for="first_name" class="block text-sm font-medium text-stone-700 mb-2">First Name</label>
                                 <x-ui.input
@@ -128,7 +119,7 @@
                     </div>
 
                     <!-- Form Actions -->
-                    <div class="flex items-center justify-end gap-4">
+                    <div class="grid max-w-[400px] gap-4">
                         <x-ui.button href="{{ route('merchant.customers.show', $account) }}" variant="secondary">
                             Cancel
                         </x-ui.button>
@@ -139,4 +130,4 @@
                 </form>
             </x-ui.card>
     </div>
-</x-merchant-layout>
+</x-merchant-design-layout>

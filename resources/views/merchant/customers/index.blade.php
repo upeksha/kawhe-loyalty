@@ -1,94 +1,16 @@
-<x-merchant-layout>
-    <x-slot name="header">
-        {{ __('Customers') }}
-    </x-slot>
-
-    <div class="space-y-6">
-        <x-ui.section-panel class="p-5">
-            <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                <div>
-                    <h3 class="text-base font-bold text-stone-900">Customer support lookup</h3>
-                    <p class="mt-1 text-sm text-stone-600">Search by customer name, email, phone, manual code, or public token when you need to help someone quickly.</p>
-                </div>
-                <x-ui.alert variant="info" class="max-w-sm">
-                    Fastest support path: ask the customer for their <strong>manual code</strong> or email.
-                </x-ui.alert>
-            </div>
-        </x-ui.section-panel>
-
-        <!-- Controls Row -->
-        <x-ui.section-panel class="p-6" x-data="{ searching: false, filtering: false }">
-            <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-            <div class="flex flex-col sm:flex-row gap-4 flex-1">
-                <!-- Search Input -->
-                <div class="flex-1">
-                    <form method="GET" action="{{ route('merchant.customers.index') }}" class="flex gap-2" @submit="searching = true">
-                        <x-ui.input 
-                            type="text" 
-                            name="q" 
-                            value="{{ $q }}" 
-                            placeholder="Search by name, email, phone, manual code, or public token..."
-                            class="flex-1"
-                            :error="$errors->has('q')"
-                        />
-                        @if($activeStoreId)
-                            <input type="hidden" name="store_id" value="{{ $activeStoreId }}">
-                        @endif
-                        <x-ui.button type="submit" variant="primary" size="md" x-bind:disabled="searching">
-                            <span x-show="!searching">Search</span>
-                            <span x-show="searching">Searching...</span>
-                        </x-ui.button>
-                        @if($q)
-                            <x-ui.button href="{{ route('merchant.customers.index', ['store_id' => $activeStoreId]) }}" variant="secondary" size="md">
-                                Clear
-                            </x-ui.button>
-                        @endif
-                    </form>
-                </div>
-                
-                <!-- Store Dropdown -->
-                <div class="w-full sm:w-auto">
-                    <form method="GET" action="{{ route('merchant.customers.index') }}" @submit="filtering = true">
-                        @if($q)
-                            <input type="hidden" name="q" value="{{ $q }}">
-                        @endif
-                        <x-ui.select
-                            name="store_id"
-                            @change="$el.form.requestSubmit()"
-                            x-bind:disabled="filtering"
-                        >
-                            <option value="">All Stores</option>
-                            @foreach($stores as $store)
-                                <option value="{{ $store->id }}" {{ $activeStoreId == $store->id ? 'selected' : '' }}>
-                                    {{ $store->name }}
-                                </option>
-                            @endforeach
-                        </x-ui.select>
-                    </form>
-                </div>
-            </div>
-
-            <div class="flex shrink-0 flex-wrap items-center gap-2">
-                @if($canExportCustomers)
-                    <x-ui.button
-                        href="{{ route('merchant.customers.export', request()->only(['store_id', 'q'])) }}"
-                        variant="secondary"
-                        size="md"
-                    >
-                        Export CSV
-                    </x-ui.button>
-                @else
-                    <x-ui.button href="{{ route('billing.index') }}" variant="secondary" size="md">
-                        Export CSV (Pro)
-                    </x-ui.button>
-                    <p class="w-full text-xs text-stone-500 lg:w-auto">Upgrade to Pro to export customer details.</p>
-                @endif
-            </div>
-            </div>
-        </x-ui.section-panel>
-
-        <!-- Table -->
-        @if($accounts->isEmpty())
+<x-merchant-design-layout title="Your regulars" subtitle="Find a customer and open their loyalty card.">
+    <form method="GET" action="{{ route('merchant.customers.index') }}" class="max-w-[620px] space-y-3">
+        <div>
+            <label for="customer-search" class="block text-sm font-semibold">Search customers</label>
+            <x-ui.input id="customer-search" name="q" value="{{ $q }}" placeholder="Name, email, phone, manual code or public token" class="mt-2" />
+        </div>
+        @if($activeStoreId)<input type="hidden" name="store_id" value="{{ $activeStoreId }}">@endif
+        <div class="flex flex-wrap gap-3">
+            <x-ui.button type="submit" data-loading-text="Searching…">Search</x-ui.button>
+            @if($q)<x-ui.button href="{{ route('merchant.customers.index', ['store_id' => $activeStoreId]) }}" variant="secondary">Clear</x-ui.button>@endif
+        </div>
+    </form>
+    @if($accounts->isEmpty())
             <x-ui.empty-state
                 :heading="$q || $activeStoreId ? 'No matching customers' : 'No customers yet'"
                 :description="$q || $activeStoreId ? 'Try a different search term or clear your filters.' : 'Share your store join link or QR code and customers will appear here automatically.'"
@@ -113,112 +35,60 @@
                     </div>
                 @endif
             </x-ui.empty-state>
-        @else
-            <div class="grid grid-cols-1 gap-4 md:hidden">
+    @else
+        <x-ui.card class="dashboard-panel p-6">
+            <div class="hidden grid-cols-4 gap-4 pb-4 text-sm font-semibold text-stone-600 md:grid" aria-hidden="true">
+                <span>Customer</span><span>Card</span><span>Progress</span><span>Rewards</span>
+            </div>
+            <ul class="divide-y divide-stone-200">
                 @foreach($accounts as $account)
-                    <x-ui.card class="p-5">
-                        <div class="flex items-start justify-between gap-3">
-                            <div>
-                                <p class="text-xs text-stone-500">{{ $account->store->name }}</p>
-                                <h3 class="font-semibold text-stone-900 mt-1">{{ $account->customer->name ?? '(No name)' }}</h3>
-                                <p class="text-sm text-stone-600 mt-1">{{ $account->customer->email ?? '-' }}</p>
-                                <p class="text-sm text-stone-500">{{ $account->customer->phone ?? '-' }}</p>
+                    <li class="space-y-4 py-4 first:pt-0">
+                        <div class="grid gap-4 md:grid-cols-4">
+                            <div class="min-w-0">
+                                <a href="{{ route('merchant.customers.show', [$account, ...request()->only(['q', 'store_id'])]) }}" class="font-semibold text-brand-700 underline underline-offset-4">{{ $account->customer->name ?? '(No name)' }}</a>
+                                <p class="mt-1 break-words text-sm text-stone-600">{{ $account->customer->email ?? '-' }}</p>
                             </div>
-                            <div>
-                                @if($account->reward_redeemed_at)
-                                    <x-ui.badge variant="default">Redeemed</x-ui.badge>
-                                @elseif($account->reward_available_at)
-                                    <x-ui.badge variant="success">Available</x-ui.badge>
-                                @else
-                                    <x-ui.badge variant="default">Not yet</x-ui.badge>
-                                @endif
+                            <div><span class="text-sm text-stone-500 md:hidden">Card: </span>{{ $account->program_name }}<p class="mt-1 text-sm text-stone-600">{{ $account->store->name }}</p></div>
+                            <p><span class="text-sm text-stone-500 md:hidden">Progress: </span>{{ $account->stamp_count }} / {{ $account->reward_target }}</p>
+                            <div><p>{{ $account->reward_balance }} available</p>
+                                @if($account->reward_redeemed_at)<p class="mt-1 text-xs text-stone-500">Last redeemed {{ $account->reward_redeemed_at->format('M d, Y') }}</p>@endif
                             </div>
                         </div>
-                        <div class="mt-3 text-sm text-stone-600 space-y-1">
-                            <p>Manual code: <span class="font-mono font-semibold tracking-wider">{{ $account->manual_entry_code ?? '-' }}</span></p>
-                            <p>Stamps: {{ $account->stamp_count }} / {{ $account->reward_target }}</p>
-                            <p>Joined: {{ $account->created_at->format('M d, Y') }}</p>
-                            <p>Last stamped: {{ $account->last_stamped_at ? $account->last_stamped_at->format('M d, Y') : '-' }}</p>
-                        </div>
-                        <div class="mt-4">
-                            <a href="{{ route('merchant.customers.show', $account) }}" class="text-brand-600 hover:text-brand-700 font-medium text-sm">View details</a>
-                        </div>
-                    </x-ui.card>
+                        <details class="text-sm">
+                            <summary class="cursor-pointer py-2 font-medium text-brand-700">Contact and card details</summary>
+                            <dl class="mt-2 grid gap-3 rounded-lg bg-stone-50 p-4 sm:grid-cols-2 lg:grid-cols-3">
+                                <div><dt class="text-stone-500">Phone</dt><dd>{{ $account->customer->phone ?? '-' }}</dd></div>
+                                <div><dt class="text-stone-500">Birthday</dt><dd>{{ $account->customer->birthday ? \Carbon\Carbon::parse($account->customer->birthday)->format('M d, Y') : '-' }}</dd></div>
+                                <div><dt class="text-stone-500">Manual code</dt><dd class="font-mono">{{ $account->manual_entry_code ?? '-' }}</dd></div>
+                                <div><dt class="text-stone-500">Joined</dt><dd>{{ $account->created_at->format('M d, Y') }}</dd></div>
+                                <div><dt class="text-stone-500">Last stamped</dt><dd>{{ $account->last_stamped_at?->format('M d, Y') ?? '-' }}</dd></div>
+                                <div><dt class="text-stone-500">Full name</dt><dd>{{ trim(($account->customer->first_name ?? '') . ' ' . ($account->customer->last_name ?? '')) ?: ($account->customer->name ?? '-') }}</dd></div>
+                            </dl>
+                        </details>
+                        <x-ui.button href="{{ route('merchant.customers.show', [$account, ...request()->only(['q', 'store_id'])]) }}" variant="secondary" class="w-full max-w-[300px]">View details</x-ui.button>
+                    </li>
                 @endforeach
-            </div>
-
-            <x-ui.card class="p-0 overflow-hidden hidden md:block">
-                <x-ui.table>
-                    <x-ui.table-head>
-                        <tr>
-                            <x-ui.table-header-cell>Store</x-ui.table-header-cell>
-                            <x-ui.table-header-cell>Customer</x-ui.table-header-cell>
-                            <x-ui.table-header-cell>Email</x-ui.table-header-cell>
-                            <x-ui.table-header-cell>Phone</x-ui.table-header-cell>
-                            <x-ui.table-header-cell>Birthday</x-ui.table-header-cell>
-                            <x-ui.table-header-cell>Manual Code</x-ui.table-header-cell>
-                            <x-ui.table-header-cell>Stamps</x-ui.table-header-cell>
-                            <x-ui.table-header-cell>Reward</x-ui.table-header-cell>
-                            <x-ui.table-header-cell>Last Stamped</x-ui.table-header-cell>
-                            <x-ui.table-header-cell>Joined</x-ui.table-header-cell>
-                            <x-ui.table-header-cell class="text-right">Action</x-ui.table-header-cell>
-                        </tr>
-                    </x-ui.table-head>
-                    <x-ui.table-body>
-                        @foreach($accounts as $account)
-                            <tr class="hover:bg-stone-50 transition-colors">
-                                <x-ui.table-cell class="font-medium text-stone-900">
-                                    {{ $account->store->name }}
-                                </x-ui.table-cell>
-                                <x-ui.table-cell>
-                                    <div class="font-medium text-stone-900">{{ $account->customer->name ?? '(No name)' }}</div>
-                                    @if($account->customer->first_name || $account->customer->last_name)
-                                        <div class="text-xs text-stone-400">{{ trim(($account->customer->first_name ?? '') . ' ' . ($account->customer->last_name ?? '')) }}</div>
-                                    @endif
-                                </x-ui.table-cell>
-                                <x-ui.table-cell>
-                                    {{ $account->customer->email ?? '-' }}
-                                </x-ui.table-cell>
-                                <x-ui.table-cell>
-                                    {{ $account->customer->phone ?? '-' }}
-                                </x-ui.table-cell>
-                                <x-ui.table-cell>
-                                    {{ $account->customer->birthday ? \Carbon\Carbon::parse($account->customer->birthday)->format('M d, Y') : '-' }}
-                                </x-ui.table-cell>
-                                <x-ui.table-cell>
-                                    <span class="font-mono text-xs tracking-wider text-stone-700">{{ $account->manual_entry_code ?? '-' }}</span>
-                                </x-ui.table-cell>
-                                <x-ui.table-cell>
-                                    {{ $account->stamp_count }} / {{ $account->reward_target }}
-                                </x-ui.table-cell>
-                                <x-ui.table-cell>
-                                    @if($account->reward_redeemed_at)
-                                        <x-ui.badge variant="default">Redeemed</x-ui.badge>
-                                    @elseif($account->reward_available_at)
-                                        <x-ui.badge variant="success">Available</x-ui.badge>
-                                    @else
-                                        <x-ui.badge variant="default">Not yet</x-ui.badge>
-                                    @endif
-                                </x-ui.table-cell>
-                                <x-ui.table-cell>
-                                    {{ $account->last_stamped_at ? $account->last_stamped_at->format('M d, Y') : '-' }}
-                                </x-ui.table-cell>
-                                <x-ui.table-cell>
-                                    {{ $account->created_at->format('M d, Y') }}
-                                </x-ui.table-cell>
-                                <x-ui.table-cell class="text-right">
-                                    <a href="{{ route('merchant.customers.show', $account) }}" class="text-brand-600 hover:text-brand-700 font-medium text-sm">View</a>
-                                </x-ui.table-cell>
-                            </tr>
-                        @endforeach
-                    </x-ui.table-body>
-                </x-ui.table>
-            </x-ui.card>
-            
-            <!-- Pagination -->
-            <div class="flex justify-center">
-                {{ $accounts->links() }}
-            </div>
+            </ul>
+        </x-ui.card>
+        {{ $accounts->links() }}
+    @endif
+    <form method="GET" action="{{ route('merchant.customers.index') }}" class="max-w-[620px] space-y-3">
+        @if($q)<input type="hidden" name="q" value="{{ $q }}">@endif
+        <div class="rounded-lg border border-stone-200 bg-white px-4 py-2">
+            <label for="customer-store" class="block text-sm font-semibold">Store filter</label>
+            <x-ui.select id="customer-store" name="store_id" x-data @change="$el.form.requestSubmit()" class="mt-2 w-full"><option value="">All Stores</option>
+                @foreach($stores as $store)<option value="{{ $store->id }}" @selected($activeStoreId == $store->id)>{{ $store->name }}</option>@endforeach
+            </x-ui.select>
+        </div>
+        <x-ui.button type="submit" variant="secondary">Apply store filter</x-ui.button>
+    </form>
+    <div class="max-w-[400px] space-y-3">
+        @if($canExportCustomers)
+            <x-ui.button href="{{ route('merchant.customers.export', request()->only(['store_id', 'q'])) }}" variant="secondary" class="w-full">Export CSV</x-ui.button>
+        @else
+            <x-ui.button href="{{ route('billing.index') }}" variant="secondary" class="w-full">Export CSV (Pro)</x-ui.button>
+            <p class="text-sm text-stone-500">Upgrade to Pro to export customer details.</p>
         @endif
     </div>
-</x-merchant-layout>
+    <p class="text-sm text-stone-600">For customer support lookup, ask for the manual code or email to find the right card quickly.</p>
+</x-merchant-design-layout>
