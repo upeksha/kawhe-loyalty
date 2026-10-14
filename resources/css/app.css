@@ -128,3 +128,9 @@
 }
 
 .workspace-shell .merchant-design .workspace-filterbar div:has(> label):has(> input:not([type=checkbox]):not([type=color])) { border: 0; border-radius: 0; padding: 0; }
+
+/* Store sharing workspace: keep the join QR readable on narrow screens. */
+.qr-section-icon { display: inline-flex; flex-shrink: 0; padding: .7rem; border-radius: .75rem; color: #2d5d47; background: #edf3ec; }
+.store-qr-display { padding: 1.5rem 1rem; border: 1px solid #dce5d9; border-radius: 1rem; background: #f3f6ef; text-align: center; }
+.store-qr-code { width: fit-content; max-width: 100%; margin: 1.25rem auto; padding: .75rem; border: 1px solid #e7e5e4; border-radius: .75rem; background: white; }
+.store-qr-code svg { display: block; width: 240px; max-width: 100%; height: auto; }

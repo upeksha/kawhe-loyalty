@@ -1,6 +1,9 @@
-<x-merchant-design-layout title="Store QR code" :subtitle="$store->name . ' · Share your store join link and check launch readiness.'">
+<x-merchant-design-layout title="QR & poster" :subtitle="$store->name . ' · Help customers discover and join your loyalty card.'">
+    <x-slot:actions>
+        <x-ui.button href="{{ route('merchant.stores.index') }}" variant="ghost">← Back to stores</x-ui.button>
+        <x-ui.button href="{{ route('merchant.stores.edit', $store) }}" variant="secondary">Edit store</x-ui.button>
+    </x-slot:actions>
     @php
-        $usageStats = app(\App\Services\Billing\UsageService::class)->getUsageStats(request()->user());
         $walletReady = !empty($store->reward_title)
             && (int) ($store->reward_target ?? 0) > 0
             && !empty($store->background_color)
@@ -37,89 +40,86 @@
             : ($launchScore >= 3 ? 'bg-amber-100 text-amber-700' : 'bg-accent-100 text-accent-700');
     @endphp
 
-    <div class="mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <div class="min-w-0">
-        <x-ui.card class="p-6 flex flex-col items-center justify-center space-y-6">
-            <div class="p-4 bg-white rounded-lg shadow-sm border border-stone-200">
-                {!! SimpleSoftwareIO\QrCode\Facades\QrCode::size(240)->generate($joinUrl) !!}
+
+    <div class="grid gap-6 xl:grid-cols-2">
+        <x-ui.card class="p-5 sm:p-6">
+            <div class="flex items-center gap-3">
+                <span class="qr-section-icon"><x-merchant-icon name="scan" /></span>
+                <div><h2 class="text-lg font-semibold text-stone-900">Print a poster</h2>
+                <p class="mt-1 text-sm text-stone-500">Place it at your counter so customers can scan and join.</p></div>
             </div>
+            <div class="store-qr-display mt-6">
+                <p class="text-xs font-semibold uppercase tracking-widest text-brand-700">Your store join QR</p>
+                <h3 class="mt-2 text-xl font-semibold text-stone-900">{{ $store->name }}</h3>
+                <div class="store-qr-code" role="img" aria-label="QR code to join {{ $store->name }}">
+                    {!! SimpleSoftwareIO\QrCode\Facades\QrCode::size(240)->margin(2)->generate($joinUrl) !!}
+                </div>
+                <p class="text-sm font-medium text-stone-700">Scan to join our loyalty card</p>
+                <p class="mt-1 text-xs text-stone-500">Open the poster preview to see the full print design.</p>
+            </div>
+            <div class="mt-5 flex flex-wrap gap-2">
+                <x-ui.button onclick="downloadStorePoster('{{ route('merchant.stores.qr.pdf', $store) }}', '{{ \Illuminate\Support\Str::slug($store->name) }}-join-poster.pdf')">Download A4 poster</x-ui.button>
+                <x-ui.button href="{{ route('merchant.stores.qr.pdf', ['store' => $store, 'preview' => 1]) }}" variant="secondary" target="_blank" rel="noopener">Preview poster ↗</x-ui.button>
+            </div>
+            <p class="mt-3 text-xs leading-relaxed text-stone-500">PDF · A4 portrait · Uses your current store branding.</p>
+        </x-ui.card>
 
-            <p class="text-sm text-stone-600">Scan to join {{ $store->name }}</p>
-
-            <div class="flex flex-col items-center gap-2 w-full">
-                <div class="flex flex-wrap items-center justify-center gap-2">
-                    <button type="button" onclick="downloadStorePoster('{{ route('merchant.stores.qr.pdf', $store) }}', '{{ \Illuminate\Support\Str::slug($store->name) }}-join-poster.pdf')" class="inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg bg-brand-600 text-white hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-500">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                        </svg>
-                        Download PDF (A4 poster)
-                    </button>
-                    <form method="GET" data-disable-submit-loading="false" action="{{ route('merchant.stores.qr.image', $store) }}">
-                        <button type="submit" class="inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg bg-stone-100 text-stone-800 hover:bg-stone-200 border border-stone-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-stone-500">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h2m4 0h-2m-4 4h6m-6-2h2m2 0h2m-4-4h2m2 0h2" />
-                            </svg>
-                            Download QR (SVG)
-                        </button>
+        <div class="space-y-6 min-w-0">
+            <x-ui.card class="p-5 sm:p-6">
+                <h2 class="text-lg font-semibold text-stone-900">Share your join link</h2>
+                <p class="mt-2 text-sm leading-relaxed text-stone-500">Add this link to your website, social profile or messages. It opens the same join page as your QR code.</p>
+                <div class="mt-5">
+                    <label for="join-link" class="block text-sm font-medium text-stone-700">Customer join link</label>
+                    <div class="mt-2 flex gap-2">
+                        <x-ui.input type="text" id="join-link" value="{{ $joinUrl }}" readonly class="min-w-0 flex-1" aria-describedby="join-link-status" />
+                        <x-ui.button onclick="copyToClipboard()" variant="secondary" type="button">Copy link</x-ui.button>
+                    </div>
+                    <p id="join-link-status" role="status" aria-live="polite" class="mt-2 min-h-5 text-xs text-stone-600"></p>
+                </div>
+                <x-ui.button href="{{ $joinUrl }}" variant="secondary" target="_blank" rel="noopener">Open join page ↗</x-ui.button>
+                <div class="mt-6 border-t border-stone-200 pt-5">
+                    <h3 class="text-sm font-semibold text-stone-900">Making your own signage?</h3>
+                    <p class="mt-2 text-sm leading-relaxed text-stone-500">Download the QR image for menus, table signs or other printed material.</p>
+                    <form class="mt-3" method="GET" data-disable-submit-loading="false" action="{{ route('merchant.stores.qr.image', $store) }}">
+                        <x-ui.button type="submit" variant="secondary">Download QR (SVG)</x-ui.button>
                     </form>
                 </div>
-                <p class="text-xs text-stone-500">Print or email this poster for your customers to scan and join.</p>
-            </div>
-
-            <div class="w-full max-w-md">
-                <label for="join-link" class="mb-2 text-sm font-medium text-stone-700 sr-only">Join Link</label>
-                <div class="flex gap-2">
-                    <x-ui.input type="text" id="join-link" value="{{ $joinUrl }}" readonly class="flex-1" />
-                    <x-ui.button onclick="copyToClipboard()" variant="primary" size="md" type="button">
-                        Copy
-                    </x-ui.button>
-                </div>
-            </div>
-
-            <x-ui.button href="{{ route('merchant.stores.index') }}" variant="ghost" size="sm">
-                ← Back to Stores
-            </x-ui.button>
-        </x-ui.card>
+            </x-ui.card>
+            <x-ui.card class="p-5 sm:p-6">
+                <h2 class="text-base font-semibold text-stone-900">Before you print or share</h2>
+                <ol class="mt-4 space-y-3 text-sm leading-relaxed text-stone-600 list-decimal pl-5">
+                    <li>Open your join page and check the logo, colours and default card reward.</li>
+                    <li>Join as a test customer and save the card to Wallet if you plan to offer it.</li>
+                    <li>Print one poster and scan it with your phone before printing more.</li>
+                </ol>
+            </x-ui.card>
         </div>
+    </div>
 
-        <div class="lg:col-span-1 space-y-4">
-            <x-ui.card class="p-5">
-                <div class="flex items-start justify-between gap-3">
-                    <div>
-                        <h3 class="text-base font-bold text-stone-900">Store Launch Checklist</h3>
-                        <p class="mt-1 text-sm text-stone-600">Review these before you print or publish this QR code.</p>
-                    </div>
-                    <x-ui.status-icon-badge
-                        :icon="$launchIcon"
-                        :label="$launchLabel"
-                        :tone="$launchTone"
-                    />
-                </div>
-                <p class="mt-3 text-sm text-stone-600">{{ $launchScore }}/{{ count($launchChecks) }} launch checks are in a strong place.</p>
+    <x-ui.card class="p-5 sm:p-6">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+            <div><h2 class="text-lg font-semibold text-stone-900">Store launch checklist</h2>
+            <p class="mt-1 text-sm text-stone-500">{{ $launchScore }} of {{ count($launchChecks) }} setup checks ready. Review any gaps before sharing.</p></div>
+            <x-ui.status-icon-badge :icon="$launchIcon" :label="$launchLabel" :tone="$launchTone" />
+        </div>
+        <ul class="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            @foreach($launchChecks as $check)
+                <li class="rounded-xl border border-stone-200 p-4">
+                    <span class="text-xs font-semibold {{ $check['ready'] ? 'text-emerald-700' : 'text-amber-700' }}">{{ $check['ready'] ? 'Ready' : 'Review' }}</span>
+                    <h3 class="mt-2 text-sm font-semibold text-stone-900">{{ $check['label'] }}</h3>
+                    <p class="mt-2 text-xs leading-relaxed text-stone-500">{{ $check['hint'] }}</p>
+                </li>
+            @endforeach
+        </ul>
+        <div class="mt-5 flex flex-wrap gap-2">
+            <x-ui.button href="{{ route('merchant.stores.edit', $store) }}" variant="secondary">Review store setup</x-ui.button>
+            <x-ui.button href="{{ route('billing.index') }}" variant="ghost">Review billing</x-ui.button>
+        </div>
+    </x-ui.card>
 
-                <ul class="mt-4 space-y-3 text-sm">
-                    @foreach($launchChecks as $check)
-                        <li class="rounded-xl border border-stone-200 bg-stone-50/80 px-4 py-3">
-                            <div class="flex items-center justify-between gap-3">
-                                <span class="font-medium text-stone-800">{{ $check['label'] }}</span>
-                                <span class="font-medium {{ $check['ready'] ? 'text-emerald-700' : 'text-amber-700' }}">
-                                    {{ $check['ready'] ? 'Ready' : 'Review' }}
-                                </span>
-                            </div>
-                            <p class="mt-1 text-xs leading-relaxed text-stone-500">{{ $check['hint'] }}</p>
-                        </li>
-                    @endforeach
-                </ul>
-
-                <div class="mt-4 rounded-xl border border-stone-200 bg-white p-4">
-                    <p class="text-sm font-semibold text-stone-800">Before you print or share</p>
-                    <ol class="mt-2 space-y-2 text-sm leading-relaxed text-stone-600 list-decimal list-inside">
-                        <li>Open the join page once yourself and check the logo, colors, and reward copy.</li>
-                        <li>Save one test card to Apple Wallet or Google Wallet to confirm the brand feels right.</li>
-                        <li>Confirm the default card reward and branding look right before you print posters.</li>
-                    </ol>
-                </div>
-
+    <details class="rounded-2xl border border-stone-200 bg-white p-5 sm:p-6">
+        <summary class="cursor-pointer rounded-lg text-base font-semibold text-stone-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-600">Wallet health & recovery tools</summary>
+        <p class="mt-2 text-sm text-stone-500">Check saved-card updates or refresh cards after a branding change.</p>
                 <div class="mt-4 rounded-xl border border-stone-200 bg-stone-50/80 p-4">
                     <div class="flex items-start justify-between gap-3">
                         <div>
@@ -162,39 +162,16 @@
                     </div>
                 </div>
 
-                <div class="mt-4 rounded-xl border border-stone-200 bg-stone-50/80 p-4">
-                    <p class="text-sm font-semibold text-stone-800">Recovery Tools</p>
-                    <p class="mt-2 text-sm leading-relaxed text-stone-600">
-                        Poster and join page previews are always generated from your current branding, so there is no manual rebuild step. If cards already in customer wallets look stale, you can queue a refresh for every card in this store.
-                    </p>
-                <div class="mt-4 flex flex-wrap gap-2">
-                        <x-ui.button href="{{ route('merchant.stores.qr.pdf', ['store' => $store, 'preview' => 1]) }}" variant="ghost" size="sm" target="_blank">
-                            Open Poster Preview
-                        </x-ui.button>
-                        <form method="POST" action="{{ route('merchant.stores.refresh-wallets', $store) }}">
-                            @csrf
-                            <x-ui.button type="submit" variant="secondary" size="sm">
-                                Queue Wallet Refresh for All Cards
-                            </x-ui.button>
-                        </form>
-                    </div>
-                </div>
 
-                <div class="mt-4 flex flex-wrap gap-2">
-                    <x-ui.button href="{{ route('merchant.stores.edit', $store) }}" variant="secondary" size="sm">
-                        Review Store Setup
-                    </x-ui.button>
-                    <x-ui.button href="{{ route('billing.index') }}" variant="ghost" size="sm">
-                        Review Billing
-                    </x-ui.button>
-                    <x-ui.button href="{{ $joinUrl }}" variant="ghost" size="sm" target="_blank">
-                        Open Join Page
-                    </x-ui.button>
-                </div>
-            </x-ui.card>
+        <div class="mt-5">
+            <h3 class="text-sm font-semibold text-stone-900">Refresh saved cards</h3>
+            <p class="mt-2 max-w-3xl text-sm leading-relaxed text-stone-600">Poster and join page previews use your current branding automatically. If cards already in customer wallets look stale, queue a refresh for every card in this store.</p>
+            <form class="mt-4" method="POST" action="{{ route('merchant.stores.refresh-wallets', $store) }}">
+                @csrf
+                <x-ui.button type="submit" variant="secondary">Queue Wallet Refresh for All Cards</x-ui.button>
+            </form>
         </div>
-    </div>
-
+    </details>
     <script>
         async function downloadStorePoster(url, filename) {
             try {
@@ -229,15 +206,18 @@
             }
         }
 
-        function copyToClipboard() {
-            var copyText = document.getElementById("join-link");
-            copyText.select();
-            copyText.setSelectionRange(0, 99999); // For mobile devices
-            navigator.clipboard.writeText(copyText.value).then(function() {
-                alert("Copied the link: " + copyText.value);
-            }, function(err) {
-                console.error('Async: Could not copy text: ', err);
-            });
+        async function copyToClipboard() {
+            const input = document.getElementById('join-link');
+            const status = document.getElementById('join-link-status');
+            try {
+                await navigator.clipboard.writeText(input.value);
+                status.textContent = 'Link copied. Ready to share.';
+            } catch (error) {
+                input.focus();
+                input.select();
+                input.setSelectionRange(0, input.value.length);
+                status.textContent = 'Could not copy automatically. Copy the selected link to share it.';
+            }
         }
     </script>
 </x-merchant-design-layout>
