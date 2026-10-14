@@ -287,10 +287,11 @@ class StoreController extends Controller
             ->where('created_at', '>=', now()->subDays(7))
             ->count();
 
-        $walletReady = ! empty($store->reward_title)
-            && (int) ($store->reward_target ?? 0) > 0
-            && ! empty($store->background_color)
-            && (! empty($store->logo_path) || ! empty($store->pass_logo_path));
+        $program = $store->resolvedDefaultProgram();
+        $walletReady = filled($program?->reward_title ?? $store->reward_title)
+            && (int) ($program?->reward_target ?? $store->reward_target ?? 0) > 0
+            && filled($program?->background_color ?? $store->background_color)
+            && (filled($program?->logo_path ?? $store->logo_path) || filled($program?->pass_logo_path ?? $store->pass_logo_path));
 
         if (! $walletReady) {
             $statusLabel = 'Needs setup';
@@ -364,6 +365,7 @@ class StoreController extends Controller
             ]);
         }
 
+        $program = $store->resolvedDefaultProgram();
         $joinUrl = $store->join_url;
 
         $qrCodeDataUrl = null;
@@ -377,7 +379,7 @@ class StoreController extends Controller
 
         $logoDataUrl = null;
         $logoPath = null;
-        foreach ([$store->pass_logo_path, $store->logo_path] as $candidatePath) {
+        foreach ([$program?->pass_logo_path, $program?->logo_path, $store->pass_logo_path, $store->logo_path] as $candidatePath) {
             if (! empty($candidatePath) && StoreAssets::exists($candidatePath)) {
                 $logoPath = $candidatePath;
                 break;
@@ -388,25 +390,25 @@ class StoreController extends Controller
         }
 
         $heroImageDataUrl = null;
-        if (! empty($store->pass_hero_image_path) && StoreAssets::exists($store->pass_hero_image_path)) {
-            $heroImageDataUrl = $this->binaryToDataUri(StoreAssets::get($store->pass_hero_image_path), $store->pass_hero_image_path);
+        foreach ([$program?->pass_hero_image_path, $store->pass_hero_image_path] as $candidatePath) {
+            if (! empty($candidatePath) && StoreAssets::exists($candidatePath)) {
+                $heroImageDataUrl = $this->binaryToDataUri(StoreAssets::get($candidatePath), $candidatePath);
+                break;
+            }
         }
 
         $appleWalletBadgeDataUrl = $this->fileToDataUri(public_path('wallet-badges/add-to-apple-wallet.svg'));
         $googleWalletBadgeDataUrl = $this->fileToDataUri(public_path('wallet-badges/add-to-google-wallet.svg'));
 
-        $rewardWord = $store->reward_title ?: 'stamp';
-        $promoHtml = 'Get 1 free <u>'.e($rewardWord).'</u> instantly when you join!';
-
         $viewData = [
             'store' => $store,
+            'program' => $program,
             'joinUrl' => $joinUrl,
             'qrCodeDataUrl' => $qrCodeDataUrl,
             'logoDataUrl' => $logoDataUrl,
             'heroImageDataUrl' => $heroImageDataUrl,
             'appleWalletBadgeDataUrl' => $appleWalletBadgeDataUrl,
             'googleWalletBadgeDataUrl' => $googleWalletBadgeDataUrl,
-            'promoHtml' => $promoHtml,
         ];
 
         if (request()->boolean('preview')) {

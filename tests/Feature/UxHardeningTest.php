@@ -28,7 +28,7 @@ test('store edit keeps card configuration on the loyalty card screen', function 
         ->assertSee('Store information')
         ->assertSee('Loyalty cards')
         ->assertSee('Edit loyalty card')
-        ->assertSee('Legacy fallback settings')
+        ->assertDontSee('Legacy fallback settings')
         ->assertDontSee('name="brand_color"', false)
         ->assertDontSee('name="pass_logo"', false)
         ->assertSee(route('merchant.stores.programs.edit', [$store, $program]), false);

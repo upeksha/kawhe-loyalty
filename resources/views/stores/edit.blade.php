@@ -1,12 +1,14 @@
 <x-merchant-design-layout title="Store settings" :subtitle="$store->name">
 
-
-    <div class="max-w-[660px] space-y-6">
-        <nav aria-label="Breadcrumb" class="flex flex-wrap items-center gap-2 text-sm text-stone-500">
-            <a href="{{ route('merchant.stores.index') }}" class="font-medium hover:text-brand-700">Stores</a>
-            <span aria-hidden="true">/</span>
-            <span class="text-stone-800" aria-current="page">{{ $store->name }}</span>
-        </nav>
+    <x-slot:actions>
+        <x-ui.button href="{{ route('merchant.stores.index') }}" variant="ghost">← Back to stores</x-ui.button>
+        @if(!$store->trashed())<x-ui.button href="{{ route('merchant.stores.qr', $store) }}" variant="secondary">QR & poster</x-ui.button>@endif
+    </x-slot:actions>
+    <div class="max-w-4xl space-y-6">
+        <div class="flex flex-wrap items-center gap-3 text-sm text-stone-500">
+            <x-ui.badge :variant="$store->trashed() ? 'warning' : 'success'">{{ $store->trashed() ? 'Archived' : 'Active' }}</x-ui.badge>
+            <span>{{ $store->trashed() ? 'Store activity is paused.' : 'Manage loyalty cards and customer activity for this location.' }}</span>
+        </div>
 
         @if($errors->any())
             <x-form-error-summary form-id="store-edit-form" />
@@ -24,7 +26,7 @@
                 <section class="rounded-2xl border border-stone-200 bg-white p-5 shadow-sm sm:p-6" aria-labelledby="store-information-title">
                     <div class="border-b border-stone-100 pb-4">
                         <h2 id="store-information-title" class="text-lg font-semibold text-stone-900">Store information</h2>
-                        <p class="mt-1 text-sm text-stone-600">This identifies the physical location or merchant workspace.</p>
+                        <p class="mt-1 text-sm text-stone-600">Your café’s name and location.</p>
                     </div>
 
                     <form id="store-edit-form" method="POST" action="{{ route('merchant.stores.update', $store) }}" class="mt-5 space-y-5">
@@ -34,7 +36,7 @@
                         <div>
                             <label for="name" class="mb-1.5 block text-sm font-medium text-stone-800">Store name <span class="text-red-600" aria-hidden="true">*</span></label>
                             <x-ui.input id="name" name="name" type="text" value="{{ old('name', $store->name) }}" autocomplete="organization" required aria-describedby="name-help name-error" />
-                            <p id="name-help" class="mt-1.5 text-xs text-stone-500">The location name merchants use to recognise this workspace.</p>
+                            <p id="name-help" class="mt-1.5 text-xs text-stone-500">The store name shown to your customers.</p>
                             <x-input-error id="name-error" :messages="$errors->get('name')" class="mt-2" />
                         </div>
 
@@ -45,7 +47,7 @@
                             <x-input-error id="address-error" :messages="$errors->get('address')" class="mt-2" />
                         </div>
 
-                        <div class="grid max-w-[400px]">
+                        <div class="flex justify-end">
                             <x-ui.button type="submit" variant="primary" loading-text="Saving…">Save changes</x-ui.button>
                         </div>
                     </form>
@@ -71,8 +73,8 @@
                                     @endif
                                 </div>
                                 <dl class="mt-3 grid grid-cols-2 gap-x-6 gap-y-2 text-sm sm:grid-cols-3">
-                                    <div><dt class="text-stone-500">Reward</dt><dd class="font-medium text-stone-900">{{ $defaultProgram->reward_target }} stamps</dd></div>
-                                    <div><dt class="text-stone-500">Benefit</dt><dd class="font-medium text-stone-900">{{ $defaultProgram->reward_title }}</dd></div>
+                                    <div><dt class="text-stone-500">Stamps needed</dt><dd class="font-medium text-stone-900">{{ $defaultProgram->reward_target }}</dd></div>
+                                    <div><dt class="text-stone-500">Reward</dt><dd class="font-medium text-stone-900">{{ $defaultProgram->reward_title }}</dd></div>
                                     <div><dt class="text-stone-500">Customers</dt><dd class="font-medium text-stone-900">{{ number_format($defaultProgram->loyalty_accounts_count ?? 0) }}</dd></div>
                                 </dl>
                             </div>
@@ -86,16 +88,32 @@
                     @endif
                 </section>
 
-                <details class="rounded-2xl border border-stone-200 bg-white p-5 shadow-sm sm:p-6">
-                    <summary class="cursor-pointer font-semibold text-stone-900 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2">Legacy fallback settings</summary>
-                    <p class="mt-3 text-sm leading-6 text-stone-600">These stored values support legacy Store join links and onboarding compatibility. Card settings remain the customer-facing source of truth and should be edited from the loyalty card.</p>
-                    <dl class="mt-4 grid gap-3 text-sm sm:grid-cols-2">
-                        <div><dt class="text-stone-500">Fallback reward</dt><dd class="font-medium text-stone-900">{{ $store->reward_target }} stamps for {{ $store->reward_title }}</dd></div>
-                        <div><dt class="text-stone-500">Fallback colours</dt><dd class="mt-1 flex items-center gap-2 font-medium text-stone-900"><span class="h-5 w-5 rounded-full border border-stone-300" style="background: {{ $store->brand_color }}"></span><span class="h-5 w-5 rounded-full border border-stone-300" style="background: {{ $store->background_color }}"></span></dd></div>
-                    </dl>
-                </details>
 
-                <section class="rounded-2xl border border-red-200 bg-red-50 p-5 sm:p-6" aria-labelledby="archive-store-title">
+            </div>
+
+            <details class="rounded-2xl border border-stone-200 bg-white p-5 sm:p-6">
+                <summary class="cursor-pointer rounded font-semibold text-stone-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-600">Wallet help</summary>
+                <div class="mt-5 space-y-4">
+                    <h2 class="font-semibold text-stone-900">Saved card updates</h2>
+                    <x-ui.status-icon-badge :icon="$walletHealth['status_icon']" :label="$walletHealth['status_label']" :tone="$walletHealth['status_tone']" />
+                    <p class="text-sm leading-6 text-stone-600">{{ $walletHealth['recommended_action'] }}</p>
+                    <dl class="grid grid-cols-2 gap-3 border-t border-stone-100 pt-4 text-sm">
+                        <div><dt class="text-stone-500">Customer cards</dt><dd class="mt-1 font-semibold text-stone-900">{{ number_format($walletHealth['active_cards']) }}</dd></div>
+                        <div><dt class="text-stone-500">Apple Wallet registrations</dt><dd class="mt-1 font-semibold text-stone-900">{{ number_format($walletHealth['active_apple_registrations']) }}</dd></div>
+                    </dl>
+                    <p class="text-xs text-stone-500">Customers can use their browser card without adding it to Apple Wallet.</p>
+                    @if(!$store->trashed())
+                        <form method="POST" action="{{ route('merchant.stores.refresh-wallets', $store) }}">
+                            @csrf
+                            <x-ui.button type="submit" variant="secondary" loading-text="Queueing…">Refresh store Wallets</x-ui.button>
+                        </form>
+                        <p class="text-xs text-stone-500">Queues an update for all customer cards at this store.</p>
+                    @endif
+                </div>
+            </details>
+                <details class="rounded-2xl border border-stone-200 bg-white p-5 sm:p-6" @if($store->trashed()) open @endif>
+                    <summary class="cursor-pointer rounded font-semibold text-stone-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-600">Store management</summary>
+                    <div class="mt-4 rounded-xl border border-red-200 bg-red-50 p-4">
                     <h2 id="archive-store-title" class="font-semibold text-red-900">{{ $store->trashed() ? 'Restore store' : 'Archive store' }}</h2>
                     <p class="mt-2 text-sm leading-6 text-red-800">{{ $store->trashed() ? 'Restoring re-enables join links, QR sharing, stamping, and redemption.' : 'Archiving pauses new joins and store activity. Existing customers, passes, and history remain preserved.' }}</p>
                     <form method="POST" action="{{ $store->trashed() ? route('merchant.stores.restore', $store) : route('merchant.stores.destroy', $store) }}" class="mt-4" @unless($store->trashed()) onsubmit="return confirm('Archive this store? New joins, stamping, and redemption will pause. Customer history will remain preserved.');" @endunless>
@@ -103,36 +121,7 @@
                         @unless($store->trashed()) @method('DELETE') @endunless
                         <x-ui.button type="submit" :variant="$store->trashed() ? 'secondary' : 'danger'" :loading-text="$store->trashed() ? 'Restoring…' : 'Archiving…'">{{ $store->trashed() ? 'Restore store' : 'Archive store' }}</x-ui.button>
                     </form>
-                </section>
-            </div>
-
-            <aside class="space-y-4" aria-label="Store status">
-                <section class="rounded-2xl border border-stone-200 bg-white p-5 shadow-sm">
-                    <div class="flex items-start justify-between gap-3">
-                        <div><h2 class="font-semibold text-stone-900">Store readiness</h2><p class="mt-1 text-xs text-stone-500">Operational status for this location.</p></div>
-                        <x-ui.status-icon-badge :icon="$walletHealth['status_icon']" :label="$walletHealth['status_label']" :tone="$walletHealth['status_tone']" />
-                    </div>
-                    <p class="mt-4 text-sm leading-6 text-stone-600">{{ $walletHealth['recommended_action'] }}</p>
-                    <dl class="mt-4 grid grid-cols-2 gap-3 border-t border-stone-100 pt-4 text-sm">
-                        <div><dt class="text-stone-500">Customer cards</dt><dd class="mt-1 font-semibold text-stone-900">{{ number_format($walletHealth['active_cards']) }}</dd></div>
-                        <div><dt class="text-stone-500">Apple installs</dt><dd class="mt-1 font-semibold text-stone-900">{{ number_format($walletHealth['active_apple_registrations']) }}</dd></div>
-                    </dl>
-                </section>
-
-                @if(!$store->trashed())
-                    <section class="rounded-2xl border border-stone-200 bg-stone-50 p-5">
-                        <h2 class="font-semibold text-stone-900">Store links</h2>
-                        <div class="mt-3 grid gap-2">
-                            <a href="{{ route('merchant.stores.qr', $store) }}" class="inline-flex min-h-11 items-center text-sm font-semibold text-brand-700 hover:text-brand-800">Open store QR</a>
-                            <a href="{{ route('merchant.stores.programs.index', $store) }}" class="inline-flex min-h-11 items-center text-sm font-semibold text-brand-700 hover:text-brand-800">Manage loyalty cards</a>
-                        </div>
-                        <form method="POST" action="{{ route('merchant.stores.refresh-wallets', $store) }}" class="mt-4">
-                            @csrf
-                            <x-ui.button type="submit" variant="secondary" loading-text="Queueing…">Refresh store Wallets</x-ui.button>
-                        </form>
-                    </section>
-                @endif
-            </aside>
+                </div></details>
         </div>
     </div>
 </x-merchant-design-layout>

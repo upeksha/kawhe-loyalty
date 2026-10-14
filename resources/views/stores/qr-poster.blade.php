@@ -1,6 +1,5 @@
 @php
-    $candidateBg = $store->brand_color ?? $store->background_color ?? '#7B3F1E';
-    $brand = $store->brand_color ?? '#7B3F1E';
+    $candidateBg = $program?->brand_color ?? $program?->background_color ?? $store->brand_color ?? $store->background_color ?? '#7B3F1E';
 
     $hex = ltrim($candidateBg, '#');
     if (strlen($hex) === 6) {
@@ -8,7 +7,7 @@
         $g = hexdec(substr($hex, 2, 2));
         $b = hexdec(substr($hex, 4, 2));
         $lum = (0.299 * $r + 0.587 * $g + 0.114 * $b) / 255;
-        $bg = $lum > 0.78 ? ($store->background_color ?? '#7B3F1E') : $candidateBg;
+        $bg = $lum > 0.78 ? ($program?->background_color ?? $store->background_color ?? '#7B3F1E') : $candidateBg;
     } else {
         $bg = '#7B3F1E';
     }
@@ -146,7 +145,7 @@
                 <img src="{{ $heroImageDataUrl }}" alt="{{ $store->name }} artwork" class="hero-image">
             @endif
 
-            <div class="reward-title">{{ $store->reward_title ?: 'Loyalty Rewards' }}</div>
+            <div class="reward-title">{{ ($program?->reward_title ?? $store->reward_title) ?: 'Loyalty Rewards' }}</div>
             <div class="store-name">{{ $store->name }}</div>
             <div class="tagline">Scan the QR code to join our loyalty program</div>
 
