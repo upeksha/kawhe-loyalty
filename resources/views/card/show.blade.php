@@ -7,6 +7,7 @@
     x-data="cardApp()"
     x-init="init()"
 >
+    <x-slot name="brand"></x-slot>
     <header class="mb-6">
         <h1 class="customer-page-heading" x-text="rewardBalance > 0 ? 'Your reward is ready' : 'Your loyalty card'">Your loyalty card</h1>
         <p class="customer-page-description">{{ $account->store->name }}</p>
