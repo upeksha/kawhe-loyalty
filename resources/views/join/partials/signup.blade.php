@@ -1,8 +1,6 @@
 @php
     $cardTitle = \App\Support\ProgramBranding::cardTitle($program, $store);
     $formConfig = \App\Support\RegistrationFormConfig::normalize($program->registration_form_config ?? []);
-    $optionalFields = collect(\App\Support\RegistrationFormConfig::OPTIONAL_FIELDS)
-        ->filter(fn ($field) => $formConfig[$field]['enabled'] && !$formConfig[$field]['required']);
 @endphp
 
 <header class="mb-5">
@@ -36,16 +34,7 @@
         <x-input-error :messages="$errors->get('email')" class="mt-1.5 text-sm" />
     </div>
 
-    @include('join.partials.fields', ['requiredGroup' => true])
-
-    @if($optionalFields->isNotEmpty())
-        <details class="rounded-xl border border-stone-200 bg-white p-4" @if($optionalFields->contains(fn ($field) => $errors->has($field) || filled(old($field)))) open @endif>
-            <summary class="cursor-pointer text-sm font-semibold customer-card-title">Add optional details <span class="block mt-1 font-normal customer-muted">You can skip these and get your card.</span></summary>
-            <div class="mt-4 space-y-4">
-                @include('join.partials.fields', ['requiredGroup' => false])
-            </div>
-        </details>
-    @endif
+    @include('join.partials.fields')
 
     <div>
         <button type="submit" class="customer-btn customer-btn-primary" data-loading-text="Creating your card…">Create my card</button>
@@ -61,10 +50,6 @@
 
     @push('scripts')
         <script>
-            document.getElementById('join-form')?.addEventListener('invalid', function (event) {
-                const section = event.target.closest('details');
-                if (section) section.open = true;
-            }, true);
             function prefillEmail() {
                 try {
                     var savedEmail = localStorage.getItem('kawhe_last_email_{{ $program->id }}')@if($program->is_default ?? false)

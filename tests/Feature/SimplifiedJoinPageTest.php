@@ -10,7 +10,7 @@ function joinPageDocument($response): DOMXPath
     return new DOMXPath($document);
 }
 
-test('both join entry pages expose the same signup and keep required fields outside optional details', function () {
+test('both join entry pages expose the same signup and show all enabled fields in one form', function () {
     $store = Store::factory()->create();
     $program = $store->resolvedDefaultProgram();
     $program->update(['registration_form_config' => [
@@ -26,8 +26,8 @@ test('both join entry pages expose the same signup and keep required fields outs
         expect($xpath->query('//form[@id="join-form"]')->item(0)->getAttribute('action'))->toBe(route('join.store', ['slug' => $program->slug, 't' => $program->join_token]));
         expect($xpath->query('//input[@name="_token"]')->length)->toBe(1);
         expect($xpath->query('//input[@id="first_name" and @required and not(ancestor::details)]')->length)->toBe(1);
-        expect($xpath->query('//input[@id="phone" and not(@required) and ancestor::details]')->length)->toBe(1);
-        expect($xpath->query('//input[@id="birthday" and not(@required) and ancestor::details]')->length)->toBe(1);
+        expect($xpath->query('//input[@id="phone" and not(@required) and not(ancestor::details)]')->length)->toBe(1);
+        expect($xpath->query('//input[@id="birthday" and not(@required) and not(ancestor::details)]')->length)->toBe(1);
         expect($xpath->query('//input[@id="last_name"]')->length)->toBe(0);
         $response->assertSee('Recover an existing card')->assertSee('Privacy')->assertSee('Support');
     }
@@ -46,7 +46,7 @@ test('invalid optional input stays visible with customer entries preserved', fun
     ])->assertSessionHasErrors(['email', 'birthday']);
     $response = $this->get($url)->assertOk();
     $xpath = joinPageDocument($response);
-    expect($xpath->query('//input[@id="birthday"]/ancestor::details[@open]')->length)->toBe(1);
+    expect($xpath->query('//input[@id="birthday" and not(ancestor::details)]')->length)->toBe(1);
     expect($xpath->query('//input[@id="first_name"]')->item(0)->getAttribute('value'))->toBe('Alex');
     expect($xpath->query('//input[@id="email"]')->item(0)->getAttribute('value'))->toBe('invalid');
 });
