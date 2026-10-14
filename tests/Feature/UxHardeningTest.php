@@ -58,8 +58,8 @@ test('join flow uses a primary join action and preserves invalid form input', fu
 
     $this->get(route('join.index', ['slug' => $program->slug, 't' => $program->join_token]))
         ->assertOk()
-        ->assertSee('Join loyalty card')
-        ->assertSee('Find my card')
+        ->assertSee('Get my card')
+        ->assertSee('Recover an existing card')
         ->assertSee('No customer app required');
 
     $response = $this->from(route('join.show', ['slug' => $program->slug, 't' => $program->join_token]))
@@ -91,7 +91,7 @@ test('customer card leads with progress qr guidance manual code and verification
         ->assertSee('5 of 8 stamps')
         ->assertSee('3 more until free coffee')
         ->assertSee('Show this code when you buy a coffee')
-        ->assertSee('Tell the barista this code')
+        ->assertSee('Manual code ·')
         ->assertSee('Your card is active')
         ->assertSee('Recent activity');
 });

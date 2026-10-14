@@ -198,7 +198,7 @@ class CustomerEmailVerificationController extends Controller
         }
 
         if (! $request->isMethod('post')) {
-            return response()->view('auth.confirm-email', ['action' => $request->fullUrl()])
+            return response()->view('card.confirm-email', ['action' => $request->fullUrl(), 'account' => $account])
                 ->header('Cache-Control', 'no-store')->header('Referrer-Policy', 'no-referrer');
         }
 

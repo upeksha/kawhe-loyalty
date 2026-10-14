@@ -29,35 +29,39 @@
         <style>{!! $theme->cssVariableBlock('.customer-page') !!}</style>
         @stack('head')
     </head>
-    <body {{ $attributes->merge(['class' => 'overflow-x-hidden font-sans antialiased customer-page min-h-screen min-h-[100dvh] flex flex-col']) }}>
-        <div @class([
-            'customer-shell flex-1',
+    <body {{ $attributes->merge(['class' => 'overflow-x-hidden font-sans antialiased customer-page customer-redesign min-h-screen min-h-[100dvh] flex flex-col']) }}>
+        <main id="main-content" @class([
+            'customer-shell',
             'customer-shell--centered py-8 sm:py-10 lg:py-12' => $centered,
             'customer-shell--card py-6 sm:py-8' => $shell === 'card',
             'py-6 sm:py-8 lg:py-10' => ! $centered && $shell !== 'card',
         ])>
-            @isset($back)
-                <div class="text-center mb-4 sm:mb-6">
-                    {{ $back }}
-                </div>
-            @endisset
-
+            <div class="customer-brand" aria-label="Kawhe">
+                <img src="{{ asset('images/logo.svg') }}" width="28" height="37" alt="">
+                <span>kawhe</span>
+            </div>
             @isset($hero)
                 {{ $hero }}
             @endisset
 
             {{ $slot }}
-        </div>
+
+            @isset($back)
+                <div class="customer-back">
+                    {{ $back }}
+                </div>
+            @endisset
+        </main>
 
         @php
             $helpProgram = $program ?? $account?->loyaltyProgram;
         @endphp
-        <footer class="customer-muted px-4 pb-6 text-center text-sm">
-            <nav aria-label="Customer help" class="flex flex-wrap justify-center gap-x-6 gap-y-3">
-                <a href="https://kawhe.shop/privacy-policy" rel="noreferrer" class="underline">Privacy</a>
-                <a href="mailto:support@kawhe.shop?subject=Kawhe%20customer%20card%20support" class="underline">Support</a>
+        <footer class="customer-footer customer-shell">
+            <nav aria-label="Customer help" class="customer-footer-links">
+                <a href="https://kawhe.shop/privacy-policy" rel="noreferrer" class="customer-help-link">Privacy</a>
+                <a href="mailto:support@kawhe.shop?subject=Kawhe%20customer%20card%20support" class="customer-help-link">Support</a>
                 @if($helpProgram && $helpProgram->join_token)
-                    <a href="{{ route('join.existing', ['slug' => $helpProgram->slug, 't' => $helpProgram->join_token]) }}" class="underline">Recover my card</a>
+                    <a href="{{ route('join.existing', ['slug' => $helpProgram->slug, 't' => $helpProgram->join_token]) }}" class="customer-help-link">Recover my card</a>
                 @endif
             </nav>
         </footer>

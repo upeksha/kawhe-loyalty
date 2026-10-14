@@ -13,16 +13,16 @@
         </a>
     </x-slot>
 
-    <div class="customer-card customer-card--gradient p-6 sm:p-8 w-full">
+    <div class="customer-form-page">
         @if($program->logo_path)
-            <img src="{{ $program->logo_url }}" alt="{{ $program->name }}" class="mx-auto mb-4 h-12 w-auto object-contain sm:h-14">
+            <img src="{{ $program->logo_url }}" alt="{{ $program->name }}" class="mb-4 h-12 max-w-full object-contain">
         @endif
 
-        <h2 class="customer-card-title text-center text-xl sm:text-2xl font-bold mb-1">Find my card</h2>
-        @if($cardSubtitle)
-            <p class="customer-card-body text-center text-sm mb-2">{{ $cardSubtitle }}</p>
+        <h1 class="customer-page-heading">Find my card</h1>
+        @if($cardSubtitle && $cardSubtitle !== $store->name && $cardSubtitle !== $cardTitle)
+            <p class="customer-page-description">{{ $cardSubtitle }}</p>
         @endif
-        <p class="customer-card-body text-center text-sm sm:text-base mb-6">
+        <p class="customer-page-description mb-6">
             @if($phoneLookupEnabled ?? false)
                 Enter the email or phone number you used to join <strong class="customer-card-title">{{ $cardTitle }}</strong>.
             @else
@@ -30,12 +30,12 @@
             @endif
         </p>
 
-        <p class="customer-card-body text-center text-sm mb-6">We’ll email a private link to the address already on your card. No access to that inbox? Ask the store for help.</p>
+        <p class="customer-card-body text-sm mb-6">We’ll email a private link to the address already on your card. No access to that inbox? Ask the store for help.</p>
 
-        <form action="{{ route('join.lookup', ['slug' => $program->slug, 't' => $token]) }}" method="POST" class="space-y-4 sm:space-y-5" id="lookup-form">
+        <form action="{{ route('join.lookup', ['slug' => $program->slug, 't' => $token]) }}" method="POST" class="customer-form" id="lookup-form">
             @csrf
             <x-form-error-summary form-id="lookup-form" />
-            <div>
+            <div class="customer-field">
                 <label for="email" class="customer-card-label mb-1.5 block text-sm font-medium">
                     Email address
                     @if($phoneLookupEnabled ?? false)
@@ -53,7 +53,7 @@
             </div>
 
             @if($phoneLookupEnabled ?? false)
-            <div>
+            <div class="customer-field">
                 <label for="phone" class="customer-card-label mb-1.5 block text-sm font-medium">
                     Phone number
                     <span class="font-normal opacity-70">(optional if you use email)</span>
@@ -70,7 +70,7 @@
 
             <div class="pt-1">
                 <button type="submit" class="customer-btn customer-btn-primary" data-loading-text="Sending link…">
-                    Email my card link
+                    Send recovery email
                 </button>
             </div>
         </form>

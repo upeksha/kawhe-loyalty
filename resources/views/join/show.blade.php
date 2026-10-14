@@ -14,30 +14,31 @@
         </a>
     </x-slot>
 
-    <div class="customer-card customer-card--gradient p-6 sm:p-8 w-full">
+    <div class="customer-form-page">
         @if($program->logo_path)
-            <img src="{{ $program->logo_url }}" alt="{{ $program->name }}" class="mx-auto mb-4 h-12 w-auto object-contain sm:h-14">
+            <img src="{{ $program->logo_url }}" alt="{{ $program->name }}" class="mb-4 h-12 max-w-full object-contain">
         @endif
-        <h2 class="customer-card-title text-center text-xl sm:text-2xl font-bold mb-1">{{ $cardTitle }}</h2>
-        @if($cardSubtitle)
-            <p class="customer-card-body text-center text-sm mb-2">{{ $cardSubtitle }}</p>
+        <h1 class="customer-page-heading">Start collecting</h1>
+        <p class="customer-page-description">{{ $store->name }} · {{ $cardTitle }}</p>
+        @if($cardSubtitle && $cardSubtitle !== $store->name && $cardSubtitle !== $cardTitle)
+            <p class="customer-page-description">{{ $cardSubtitle }}</p>
         @endif
-        <p class="customer-card-body text-center text-sm sm:text-base mb-6">
+        <p class="customer-page-description mb-6">
             Collect {{ $program->reward_target }} stamps to earn {{ $program->reward_title }}.
         </p>
 
-        <form method="POST" action="{{ route('join.store', ['slug' => $program->slug, 't' => $token]) }}" class="space-y-4 sm:space-y-5" id="join-form">
+        <form method="POST" action="{{ route('join.store', ['slug' => $program->slug, 't' => $token]) }}" class="customer-form" id="join-form">
             @csrf
             <x-form-error-summary form-id="join-form" />
 
-            <div>
+            <div class="customer-field">
                 <label for="email" class="customer-card-label mb-1.5 block text-sm font-medium">Email Address</label>
                 <input type="email" id="email" name="email" value="{{ old('email') }}" class="customer-input" placeholder="you@example.com" autocomplete="email" inputmode="email" required>
                 <x-input-error :messages="$errors->get('email')" class="mt-1.5 text-sm" />
             </div>
 
             @if(!empty($formConfig['first_name']['enabled']))
-            <div>
+            <div class="customer-field">
                 <label for="first_name" class="customer-card-label mb-1.5 block text-sm font-medium">First name{{ !empty($formConfig['first_name']['required']) ? '' : ' (optional)' }}</label>
                 <input type="text" id="first_name" name="first_name" value="{{ old('first_name') }}" class="customer-input" placeholder="First name" autocomplete="given-name" {{ !empty($formConfig['first_name']['required']) ? 'required' : '' }}>
                 <x-input-error :messages="$errors->get('first_name')" class="mt-1.5 text-sm" />
@@ -45,7 +46,7 @@
             @endif
 
             @if(!empty($formConfig['last_name']['enabled']))
-            <div>
+            <div class="customer-field">
                 <label for="last_name" class="customer-card-label mb-1.5 block text-sm font-medium">Last name{{ !empty($formConfig['last_name']['required']) ? '' : ' (optional)' }}</label>
                 <input type="text" id="last_name" name="last_name" value="{{ old('last_name') }}" class="customer-input" placeholder="Last name" autocomplete="family-name" {{ !empty($formConfig['last_name']['required']) ? 'required' : '' }}>
                 <x-input-error :messages="$errors->get('last_name')" class="mt-1.5 text-sm" />
@@ -53,7 +54,7 @@
             @endif
 
             @if(!empty($formConfig['phone']['enabled']))
-            <div>
+            <div class="customer-field">
                 <label for="phone" class="customer-card-label mb-1.5 block text-sm font-medium">Phone{{ !empty($formConfig['phone']['required']) ? '' : ' (optional)' }}</label>
                 <input type="tel" id="phone" name="phone" value="{{ old('phone') }}" class="customer-input" placeholder="Phone number" autocomplete="tel" inputmode="tel" {{ !empty($formConfig['phone']['required']) ? 'required' : '' }}>
                 <x-input-error :messages="$errors->get('phone')" class="mt-1.5 text-sm" />
@@ -61,16 +62,17 @@
             @endif
 
             @if(!empty($formConfig['birthday']['enabled']))
-            <div>
+            <div class="customer-field">
                 <label for="birthday" class="customer-card-label mb-1.5 block text-sm font-medium">Birthday{{ !empty($formConfig['birthday']['required']) ? '' : ' (optional)' }}</label>
                 <input type="date" id="birthday" name="birthday" value="{{ old('birthday') }}" class="customer-input" autocomplete="bday" {{ !empty($formConfig['birthday']['required']) ? 'required' : '' }}>
                 <x-input-error :messages="$errors->get('birthday')" class="mt-1.5 text-sm" />
             </div>
             @endif
 
+            <p class="customer-muted text-xs leading-relaxed">We use your email to recover your card and confirm rewards.</p>
             <div class="pt-1">
                 <button type="submit" class="customer-btn customer-btn-primary" data-loading-text="Creating your card…">
-                    Join loyalty card
+                    Create my card
                 </button>
             </div>
         </form>

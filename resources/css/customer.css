@@ -389,3 +389,95 @@
 .limit-body { @apply customer-status-body; }
 .limit-soft { @apply customer-status-soft; }
 .limit-btn { @apply customer-btn customer-btn-status; }
+
+/* Figma customer journey. Merchant colours remain scoped to the loyalty card. */
+.customer-page.customer-redesign {
+    background: #fafaf9;
+    color: #1c1917;
+}
+.customer-redesign .customer-shell {
+    max-width: 28rem;
+    padding: 24px max(24px, env(safe-area-inset-left, 0px)) 0 max(24px, env(safe-area-inset-right, 0px));
+}
+.customer-redesign .customer-shell--centered { justify-content: flex-start; flex: none; }
+.customer-brand { display: flex; align-items: center; gap: 12px; margin-bottom: 24px; color: #254b3a; font-size: 20px; font-weight: 600; }
+.customer-brand img { width: 28px; height: 37px; }
+.customer-back { margin-top: 24px; }
+.customer-back a { display: flex; justify-content: center; min-height: 48px; border-radius: 8px; background: white; color: #254b3a; font-weight: 600; }
+.customer-page-heading { font-size: 26px; line-height: 1.4; font-weight: 600; overflow-wrap: anywhere; }
+.customer-page-description { margin-top: 8px; color: #57534e; font-size: 16px; line-height: 1.4; overflow-wrap: anywhere; }
+.customer-redesign .customer-muted,
+.customer-redesign .customer-card-body,
+.customer-redesign .customer-status-body,
+.customer-redesign .customer-status-soft,
+.customer-redesign .card-muted,
+.customer-redesign .tx-history-date { color: #57534e; }
+.customer-redesign .customer-card-title,
+.customer-redesign .customer-card-label,
+.customer-redesign .card-text,
+.customer-redesign .tx-history-title { color: #1c1917; }
+.customer-redesign .customer-card,
+.customer-redesign .card-surface {
+    background: #fff;
+    color: #1c1917;
+    border: 1px solid #e7e5e4;
+    border-radius: 16px;
+    box-shadow: none;
+}
+.customer-redesign .customer-card h2 { font-size: 26px; line-height: 1.4; font-weight: 600; }
+.customer-redesign .customer-btn,
+.customer-redesign .card-btn { min-height: 48px; border-radius: 8px; font-size: 14px; font-weight: 600; line-height: 1.4; }
+.customer-redesign .customer-btn-primary,
+.customer-redesign .card-btn { background: #2d5d47; color: #fff; }
+.customer-redesign .customer-btn-secondary,
+.customer-redesign .customer-btn-outline,
+.customer-redesign .customer-btn-status { background: #fff; border: 1px solid #e7e5e4; color: #254b3a; }
+.customer-redesign .customer-btn:hover { filter: brightness(.96); }
+.customer-redesign .customer-btn:focus-visible,
+.customer-redesign .card-btn:focus-visible,
+.customer-redesign .customer-help-link:focus-visible { outline: 2px solid #2d5d47; outline-offset: 3px; box-shadow: none; }
+.customer-actions, .customer-form { display: flex; flex-direction: column; gap: 24px; }
+.customer-field { --program-input-bg: #fff; --program-input-text: #1c1917; --program-input-placeholder: #78716c; border: 1px solid #e7e5e4; border-radius: 8px; padding: 12px 16px; background: #fff; }
+.customer-field:focus-within { outline: 2px solid #2d5d47; outline-offset: 2px; }
+.customer-redesign .customer-field label { margin: 0 0 8px; font-weight: 600; font-size: 14px; }
+.customer-redesign .customer-field input.customer-input {
+    padding: 4px 0;
+    min-height: 36px;
+    border: 0;
+    border-radius: 0;
+    background: #fff;
+    color: #1c1917;
+    -webkit-text-fill-color: #1c1917;
+    caret-color: #1c1917;
+    box-shadow: none;
+}
+.customer-redesign .customer-field input.customer-input::placeholder { color: #78716c; }
+.customer-redesign .customer-field input.customer-input:-webkit-autofill { -webkit-box-shadow: 0 0 0 1000px #fff inset; -webkit-text-fill-color: #1c1917; }
+.customer-redesign .customer-divider { border-color: #e7e5e4; }
+.customer-redesign .loyalty-card { background: var(--program-bg); border: none; border-radius: 16px; box-shadow: none; }
+.customer-redesign .loyalty-card::before { content: none; }
+.customer-redesign .loyalty-card .card-text { color: var(--program-text-on-bg); }
+.customer-redesign .loyalty-card .card-muted { color: var(--program-muted-on-bg); }
+.customer-redesign .loyalty-card .card-reward-copy { color: var(--program-text-on-bg); }
+.customer-redesign .stamp-circle--filled { background: var(--program-brand); color: var(--program-text-on-brand); }
+.customer-redesign .stamp-circle--empty { background: var(--program-loyalty-surface); color: var(--program-text-on-bg); border: 1px solid var(--program-loyalty-divider); }
+.customer-redesign .stamp-circle { width: 36px; height: 36px; }
+.customer-redesign .customer-qr,
+.customer-redesign .customer-qr svg { width: 164px; max-width: 100%; height: auto; }
+.customer-qr-panel { display: flex; justify-content: center; width: 100%; }
+.customer-redesign #redeem-qr-container,
+.customer-redesign #redeem-qr-container svg { width: 100%; max-width: 250px; height: auto; }
+.customer-redesign .card-inner,
+.customer-redesign .tx-history-item { background: #fafaf9; }
+.customer-redesign .card-reward-copy,
+.customer-redesign .card-accent,
+.customer-redesign .tx-history-points { color: #254b3a; }
+.customer-redesign .wallet-sheet { background: #fafaf9; }
+.customer-redesign .wallet-sheet-handle { background: #57534e; }
+.customer-redesign .wallet-benefit-pill { background: #f0f7f3; }
+.customer-redesign .customer-welcome-banner { background: #f0f7f3; color: #254b3a; border: 1px solid #d8e5dd; box-shadow: none; }
+.customer-redesign .customer-footer { padding-top: 24px; padding-bottom: max(24px, env(safe-area-inset-bottom, 0px)); }
+.customer-footer-links { display: flex; flex-wrap: wrap; gap: 6px; }
+.customer-help-link { display: flex; flex: 1 1 auto; align-items: center; justify-content: center; min-height: 48px; padding: 8px; border-radius: 8px; background: #fff; color: #254b3a; font-size: 14px; font-weight: 600; }
+.customer-help-link:hover { background: #f0f7f3; }
+@media (prefers-reduced-motion: reduce) { .customer-redesign * { scroll-behavior: auto; animation: none; transition: none; } }
