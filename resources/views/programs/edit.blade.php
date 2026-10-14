@@ -1,4 +1,4 @@
-<x-merchant-layout>
+<x-merchant-design-layout title="Edit loyalty card" subtitle="Each card has its own reward, branding, signup form and join QR.">
     @include('programs.partials.form', [
         'title' => 'Edit loyalty card',
         'subtitle' => 'Update reward settings, join form, and branding for this loyalty card.',
@@ -8,4 +8,4 @@
         'method' => 'PUT',
         'hasIssuedCards' => $hasIssuedCards,
     ])
-</x-merchant-layout>
+</x-merchant-design-layout>

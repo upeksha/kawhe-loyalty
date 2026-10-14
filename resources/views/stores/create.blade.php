@@ -7,24 +7,13 @@
     $storeName = old('name', '');
 @endphp
 
-<x-merchant-layout>
-    <x-slot name="header">Add Another Store</x-slot>
+<x-merchant-design-layout title="Add a store" subtitle="Create another location within your plan limits.">
 
-    <div class="min-h-[calc(100vh-4rem)] bg-gradient-to-b from-stone-100 to-stone-50/80 -mx-4 sm:-mx-6 lg:-mx-8 -mb-6 px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
-        <div class="max-w-5xl mx-auto">
-            <div class="bg-white rounded-2xl shadow-xl shadow-stone-200/50 border border-stone-200/80 overflow-hidden">
-                <div class="p-6 sm:p-8 lg:p-10">
-                    <header class="mb-8">
-                        <div class="mb-4">
-                            <a href="{{ route('merchant.stores.index') }}" class="inline-flex items-center gap-2 text-sm font-medium text-stone-600 hover:text-stone-900 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 rounded-lg px-2 py-1 -ml-2">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
-                                Back to stores
-                            </a>
-                        </div>
-                        <h2 class="text-2xl sm:text-3xl font-bold text-stone-900 tracking-tight">Add another store</h2>
-                        <p class="mt-3 text-base text-stone-600 leading-relaxed">Use this after your first setup is complete when you need a separate location. Each additional store starts with its own default loyalty card, and you can add more cards later if your plan allows it.</p>
-                    </header>
 
+    <div class="max-w-[660px]">
+        <div>
+            <div class="dashboard-panel rounded-2xl border border-stone-200 bg-white">
+                <div class="p-6">
                     <form method="POST" action="{{ route('merchant.stores.store') }}" enctype="multipart/form-data" id="store-create-form"
                         x-data="{
                             storeName: @js($storeName),
@@ -109,8 +98,8 @@
                         @csrf
                         <x-form-error-summary form-id="store-create-form" />
 
-                        <div class="grid grid-cols-1 sm:grid-cols-5 gap-6">
-                            <div class="sm:col-span-3 space-y-8">
+                        <div class="grid grid-cols-1 gap-6">
+                            <div class="space-y-6">
                                 <x-onboarding-form-section title="Store details">
                                     <div class="space-y-5">
                                         <div>
@@ -245,7 +234,7 @@
                                 </x-onboarding-form-section>
                             </div>
 
-                            <div class="sm:col-span-2">
+                            <div class="min-w-0">
                                 <div class="sticky top-8 space-y-4">
                                     <x-wallet-pass-preview />
                                     <div class="rounded-xl border border-stone-200 bg-stone-50/80 p-5 shadow-sm">
@@ -305,10 +294,7 @@
                                 </div>
                             </div>
                         </div>
-                    </form>
-                </div>
-
-                <div class="px-6 sm:px-8 lg:px-10 py-5 bg-stone-50/90 border-t border-stone-200">
+                <div class="mt-6 border-t border-stone-200 pt-6">
                     <div class="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-3">
                         <a href="{{ route('merchant.stores.index') }}" class="w-full sm:w-auto inline-flex items-center justify-center gap-2 text-sm font-medium text-stone-600 hover:text-stone-900 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 rounded-lg py-2 px-3">
                             Cancel
@@ -316,7 +302,11 @@
                         <x-ui.button type="submit" form="store-create-form" variant="primary" size="lg" class="w-full sm:w-auto rounded-xl min-w-[160px]" x-bind:disabled="hasBlockedContrast || !hasRequiredAssets" x-bind:aria-disabled="(hasBlockedContrast || !hasRequiredAssets) ? 'true' : 'false'">Create store</x-ui.button>
                     </div>
                 </div>
+                    </form>
+                </div>
+
+
             </div>
         </div>
     </div>
-</x-merchant-layout>
+</x-merchant-design-layout>

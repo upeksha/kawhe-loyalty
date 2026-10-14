@@ -5,7 +5,7 @@
 @endphp
 
 <div
-    class="mx-auto max-w-7xl px-1 py-4 sm:px-2 sm:py-6"
+    class="space-y-6"
     x-data="{
         brandColor: @js(old('brand_color', $program?->brand_color ?? $store->brand_color ?? '#0EA5E9')),
         bgColor: @js(old('background_color', $program?->background_color ?? $store->background_color ?? '#1F2937')),
@@ -57,7 +57,7 @@
 
     <div class="mb-6">
         <div class="flex flex-wrap items-center gap-2">
-            <h1 class="text-2xl font-bold text-stone-900">{{ $title }}</h1>
+            <h2 class="text-xl font-semibold text-stone-900">{{ $program?->name ?? $store->name }}</h2>
             @if($isEdit && $program->is_default)
                 <x-ui.badge variant="success">Default card</x-ui.badge>
             @endif
@@ -84,13 +84,10 @@
         </div>
     @endif
 
-    <form id="loyalty-card-form" method="POST" action="{{ $action }}" enctype="multipart/form-data" class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
-        @csrf
-        @if($method !== 'POST')
-            @method($method)
-        @endif
-
-        <div class="space-y-6 rounded-2xl border border-stone-200 bg-white p-5 shadow-sm sm:p-6">
+    <div class="grid items-start gap-8 lg:grid-cols-[minmax(0,760fr)_minmax(0,568fr)]">
+        <form id="loyalty-card-form" method="POST" action="{{ $action }}" enctype="multipart/form-data" class="min-w-0 space-y-6 rounded-2xl border border-stone-200 bg-white p-6">
+            @csrf
+            @if($method !== 'POST') @method($method) @endif
             <x-form-error-summary form-id="loyalty-card-form" />
 
             <div>
@@ -107,7 +104,7 @@
                 <h2 class="text-lg font-semibold text-stone-900">Reward</h2>
                 <p class="mt-1 text-sm text-stone-600">Set how customers earn and understand their reward.</p>
             </div>
-            <div class="grid gap-4 md:grid-cols-2">
+            <div class="grid gap-4">
                 <div>
                     <label for="reward_target" class="block text-sm font-medium text-stone-700 mb-1.5">Stamps needed for reward</label>
                     @if($hasIssuedCards)
@@ -132,7 +129,7 @@
                 <p class="mt-1 text-sm text-stone-600">These colours and images appear on the customer card and saved Wallet pass.</p>
             </div>
 
-            <div class="grid gap-4 md:grid-cols-2">
+            <div class="grid gap-4">
                 <div>
                     <label for="brand_color" class="block text-sm font-medium text-stone-700 mb-1.5">Brand color</label>
                     <input type="color" id="brand_color" name="brand_color" x-model="brandColor" value="{{ old('brand_color', $program?->brand_color ?? $store->brand_color ?? '#0EA5E9') }}" class="color-swatch-input h-11 w-11 rounded-full border-2 cursor-pointer flex-shrink-0 overflow-hidden p-0 bg-transparent appearance-none" x-bind:class="hasBlockedContrast ? 'border-red-300' : 'border-stone-300'">
@@ -164,7 +161,7 @@
                 <p class="mt-1 text-sm text-stone-600">Upload clear artwork. Platform-specific previews appear beside this form.</p>
             </div>
 
-            <div class="grid grid-cols-1 items-stretch gap-4 sm:grid-cols-3">
+            <div class="grid grid-cols-1 items-stretch gap-4">
                 @php
                     $logoPreviewUrl = $isEdit ? $program?->logo_url : $store->logo_url;
                     $passLogoPreviewUrl = $isEdit ? $program?->pass_logo_url : $store->pass_logo_url;
@@ -211,7 +208,7 @@
             @php
                 $registrationFormConfig = \App\Support\RegistrationFormConfig::normalize($formConfig);
             @endphp
-            <div class="border-t border-stone-100 pt-5">
+            <div id="signup-fields" class="border-t border-stone-100 pt-5">
                 <h2 class="text-lg font-semibold text-stone-900">Customer sign-up form</h2>
                 <p class="mt-1 text-sm text-stone-600">Email is always required. Choose only the additional details you need.</p>
             </div>
@@ -234,9 +231,10 @@
                     <x-ui.button href="{{ route('merchant.stores.programs.qr', [$store, $program]) }}" variant="ghost">View QR</x-ui.button>
                 @endif
             </div>
-        </div>
+        </form>
 
-        <div class="space-y-5 h-fit">
+        <div class="min-w-0 space-y-5 h-fit">
+            <h2 class="text-xl font-semibold text-stone-900">Wallet preview &amp; health</h2>
             <x-wallet-pass-preview :preview-data="$walletPreview ?? []" />
 
             @if($isEdit && isset($walletHealth))
@@ -273,6 +271,17 @@
                 </section>
             @endif
 
+            @if($isEdit && !$program->is_default && !$program->trashed())
+                <form method="POST" action="{{ route('merchant.stores.programs.destroy', [$store, $program]) }}" onsubmit="return confirm('Archive this card? New joins and scanning will pause. Customer history will remain preserved.');">
+                    @csrf @method('DELETE')
+                    <x-ui.button type="submit" variant="danger">Archive card</x-ui.button>
+                </form>
+            @elseif($isEdit && $program->trashed())
+                <form method="POST" action="{{ route('merchant.stores.programs.restore', [$store, $program->id]) }}">
+                    @csrf
+                    <x-ui.button type="submit" variant="secondary">Restore Card</x-ui.button>
+                </form>
+            @endif
             <p class="px-1 text-xs leading-5 text-stone-500">Apple and Google control the final Wallet layout. Your branding and content will remain consistent, but spacing and typography may vary by device.</p>
 
             <div class="rounded-2xl border border-stone-200 bg-stone-50 p-5">
@@ -299,5 +308,5 @@
                 </div>
             @endif
         </div>
-    </form>
+    </div>
 </div>

@@ -35,7 +35,7 @@ class StoreController extends Controller
      */
     public function index()
     {
-        $allStores = Store::queryForUser(Auth::user(), includeArchived: true)->latest()->get();
+        $allStores = Store::queryForUser(Auth::user(), includeArchived: true)->withCount('loyaltyPrograms')->latest()->get();
         $stores = $allStores->whereNull('deleted_at')->values();
         $archivedStores = $allStores->whereNotNull('deleted_at')->values();
         $usageStats = app(UsageService::class)->getUsageStats(Auth::user());

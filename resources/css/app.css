@@ -46,3 +46,14 @@
 .dashboard-page a.dashboard-button:not(.bg-brand-600) { background-color: white; color: #254b3a; }
 .dashboard-page a.dashboard-button[aria-current="page"] { background-color: #f0f7f4; }
 .dashboard-page :is(a, button):focus-visible { outline: 2px solid #2d5d47; outline-offset: 3px; }
+
+/* Figma merchant management screens; existing form behavior stays unchanged. */
+.merchant-design { overflow-wrap: anywhere; }
+.merchant-design :is(.shadow-sm, .shadow-xl) { box-shadow: none; }
+.merchant-design :is(a,button).inline-flex { min-height: 3rem; border-radius: .5rem; }
+.merchant-design :is(a,button).bg-stone-100 { background: white; color: #254b3a; }
+.merchant-design :is(h2,h3).text-lg { font-size: 1.25rem; }
+.merchant-design form div:has(> label):has(> input:not([type=checkbox]):not([type=color])) { border: 1px solid #e7e5e4; border-radius: .5rem; padding: .5rem 1rem; }
+.merchant-design form div:has(> label) > input:not([type=checkbox]):not([type=color]) { border-radius: .5rem; font-size: 1rem; }
+.merchant-design table thead { background: white; }
+.merchant-design table th { text-transform: none; letter-spacing: normal; color: #57534e; }

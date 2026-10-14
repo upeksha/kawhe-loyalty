@@ -259,22 +259,7 @@
             <h1 class="text-3xl font-semibold leading-snug text-stone-900 sm:text-4xl">Welcome back, {{ request()->user()->name ?? 'Merchant' }}</h1>
             <p class="text-base text-stone-600">Here is how your loyalty programme is doing across your stores.</p>
         </header>
-        <nav aria-label="Merchant navigation" class="grid grid-cols-2 gap-2 sm:grid-cols-5 xl:grid-cols-10">
-            @foreach([
-                ['Overview', route('merchant.dashboard'), true],
-                ['Cards', route('merchant.programs.index'), false],
-                ['Customers', route('merchant.customers.index'), false],
-                ['Team', route('merchant.staff.index'), false],
-                ['Activity', route('merchant.support.index'), false],
-                ['Billing', route('billing.index'), false],
-                ['Settings', route('profile.edit'), false],
-                ['Stores', route('merchant.stores.index'), false],
-                ['Support', route('merchant.support.index'), false],
-            ] as [$label, $url, $active])
-                <a href="{{ $url }}" @if($active) aria-current="page" @endif class="dashboard-button flex items-center justify-center rounded-lg border border-stone-200 px-3 text-sm font-semibold text-brand-700 {{ $active ? 'bg-brand-50' : 'bg-white hover:bg-brand-50' }}">{{ $label }}</a>
-            @endforeach
-            <form method="POST" action="{{ route('logout') }}">@csrf<button type="submit" class="dashboard-button w-full rounded-lg bg-white px-3 text-sm font-semibold text-brand-700 hover:bg-brand-50">Sign out</button></form>
-        </nav>
+        <x-merchant-navigation />
         <section aria-label="Loyalty summary" class="grid gap-6 lg:grid-cols-3">
             @foreach($summaryCards as $card)
                 <x-ui.card class="dashboard-panel min-w-0 space-y-4 p-6">

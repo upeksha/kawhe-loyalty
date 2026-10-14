@@ -1,8 +1,4 @@
-<x-merchant-layout>
-    <x-slot name="header">
-        {{ __('Store QR Code') }} - {{ $store->name }}
-    </x-slot>
-
+<x-merchant-design-layout title="Store QR code" :subtitle="$store->name . ' · Share your store join link and check launch readiness.'">
     @php
         $usageStats = app(\App\Services\Billing\UsageService::class)->getUsageStats(request()->user());
         $walletReady = !empty($store->reward_title)
@@ -41,11 +37,11 @@
             : ($launchScore >= 3 ? 'bg-amber-100 text-amber-700' : 'bg-accent-100 text-accent-700');
     @endphp
 
-    <div class="mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div class="lg:col-span-2">
-        <x-ui.card class="p-8 flex flex-col items-center justify-center space-y-6">
+    <div class="mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div class="min-w-0">
+        <x-ui.card class="p-6 flex flex-col items-center justify-center space-y-6">
             <div class="p-4 bg-white rounded-lg shadow-sm border border-stone-200">
-                {!! SimpleSoftwareIO\QrCode\Facades\QrCode::size(256)->generate($joinUrl) !!}
+                {!! SimpleSoftwareIO\QrCode\Facades\QrCode::size(240)->generate($joinUrl) !!}
             </div>
 
             <p class="text-sm text-stone-600">Scan to join {{ $store->name }}</p>
@@ -244,4 +240,4 @@
             });
         }
     </script>
-</x-merchant-layout>
+</x-merchant-design-layout>

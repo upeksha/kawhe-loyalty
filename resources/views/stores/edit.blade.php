@@ -1,25 +1,12 @@
-<x-merchant-layout>
-    <x-slot name="header">Store settings</x-slot>
+<x-merchant-design-layout title="Store settings" :subtitle="$store->name">
 
-    <div class="mx-auto max-w-7xl space-y-6">
+
+    <div class="max-w-[660px] space-y-6">
         <nav aria-label="Breadcrumb" class="flex flex-wrap items-center gap-2 text-sm text-stone-500">
             <a href="{{ route('merchant.stores.index') }}" class="font-medium hover:text-brand-700">Stores</a>
             <span aria-hidden="true">/</span>
             <span class="text-stone-800" aria-current="page">{{ $store->name }}</span>
         </nav>
-
-        <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-            <div>
-                <p class="text-sm font-semibold uppercase tracking-[0.18em] text-brand-700">Store</p>
-                <h1 class="mt-1 text-2xl font-semibold tracking-tight text-stone-900 sm:text-3xl">{{ $store->name }}</h1>
-                <p class="mt-2 max-w-2xl text-sm leading-6 text-stone-600">Manage this location and move to its loyalty cards when you need to change rewards, customer fields, colours, or Wallet images.</p>
-            </div>
-            @if(!$store->trashed() && $defaultProgram)
-                <x-ui.button href="{{ route('merchant.stores.programs.edit', [$store, $defaultProgram]) }}" variant="primary">
-                    Edit loyalty card
-                </x-ui.button>
-            @endif
-        </div>
 
         @if($errors->any())
             <x-form-error-summary form-id="store-edit-form" />
@@ -32,7 +19,7 @@
             </x-ui.alert>
         @endif
 
-        <div class="grid gap-6 xl:grid-cols-[minmax(0,1fr)_22rem]">
+        <div class="grid gap-6">
             <div class="space-y-6">
                 <section class="rounded-2xl border border-stone-200 bg-white p-5 shadow-sm sm:p-6" aria-labelledby="store-information-title">
                     <div class="border-b border-stone-100 pb-4">
@@ -58,8 +45,8 @@
                             <x-input-error id="address-error" :messages="$errors->get('address')" class="mt-2" />
                         </div>
 
-                        <div class="flex justify-end">
-                            <x-ui.button type="submit" variant="primary" loading-text="Saving…">Save store</x-ui.button>
+                        <div class="grid max-w-[400px]">
+                            <x-ui.button type="submit" variant="primary" loading-text="Saving…">Save changes</x-ui.button>
                         </div>
                     </form>
                 </section>
@@ -139,9 +126,13 @@
                             <a href="{{ route('merchant.stores.qr', $store) }}" class="inline-flex min-h-11 items-center text-sm font-semibold text-brand-700 hover:text-brand-800">Open store QR</a>
                             <a href="{{ route('merchant.stores.programs.index', $store) }}" class="inline-flex min-h-11 items-center text-sm font-semibold text-brand-700 hover:text-brand-800">Manage loyalty cards</a>
                         </div>
+                        <form method="POST" action="{{ route('merchant.stores.refresh-wallets', $store) }}" class="mt-4">
+                            @csrf
+                            <x-ui.button type="submit" variant="secondary" loading-text="Queueing…">Refresh store Wallets</x-ui.button>
+                        </form>
                     </section>
                 @endif
             </aside>
         </div>
     </div>
-</x-merchant-layout>
+</x-merchant-design-layout>

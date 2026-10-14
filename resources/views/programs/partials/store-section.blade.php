@@ -31,7 +31,7 @@
     </div>
 
     @if($activePrograms->isEmpty() && $archivedPrograms->isEmpty())
-        <x-ui.card class="p-5">
+        <x-ui.card class="dashboard-panel p-6">
             <p class="text-sm text-stone-600">
                 No loyalty cards for this store yet.
                 @if($canCreateProgram && ! $store->trashed())
@@ -47,86 +47,40 @@
                     <span class="text-xs text-stone-500">{{ $activePrograms->count() }} active</span>
                 </div>
 
-                <div class="grid grid-cols-1 gap-4 md:hidden">
+                <div class="space-y-6">
                     @foreach($activePrograms as $program)
-                        <x-ui.card class="p-5">
-                            <div class="flex items-start justify-between gap-3">
-                                <div>
-                                    <div class="flex items-center gap-2">
-                                        <h4 class="font-semibold text-stone-900">{{ $program->name }}</h4>
-                                        @if($program->is_default)
-                                            <span class="inline-flex rounded-full bg-brand-50 px-2.5 py-1 text-xs font-semibold text-brand-700">Default</span>
-                                        @endif
-                                    </div>
-                                    <p class="mt-2 text-sm text-stone-600">{{ $program->reward_target }} stamps for {{ $program->reward_title }}</p>
-                                    <p class="mt-1 text-sm text-stone-500">{{ $program->loyalty_accounts_count }} customer cards joined</p>
+                        <div class="grid items-start gap-6 lg:grid-cols-[320px_minmax(0,1fr)] lg:gap-8">
+                            <x-loyalty-design-preview :store="$store" :program="$program" />
+                            <x-ui.card class="dashboard-panel min-w-0 space-y-4 p-6">
+                                <div class="flex flex-wrap items-center gap-3">
+                                    <h4 class="break-words text-xl font-semibold">{{ $program->name }}</h4>
+                                    @if($program->is_default)<x-ui.badge variant="success">Default</x-ui.badge>@endif
+                                    <x-ui.badge :variant="$store->trashed() ? 'warning' : 'success'">{{ $store->trashed() ? 'Store paused' : 'Active card' }}</x-ui.badge>
                                 </div>
-                            </div>
-                            <div class="mt-4 flex items-center gap-3">
-                                <a href="{{ route('merchant.stores.programs.qr', [$store, $program]) }}" class="text-sm font-medium text-brand-600 hover:text-brand-700">QR Code</a>
-                                <a href="{{ route('merchant.stores.programs.edit', [$store, $program]) }}" class="text-sm font-medium text-brand-600 hover:text-brand-700">Edit</a>
-                                @if(! $program->is_default)
-                                    <form method="POST" action="{{ route('merchant.stores.programs.destroy', [$store, $program]) }}">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" class="text-sm font-medium text-brand-600 hover:text-brand-700">Archive</button>
-                                    </form>
-                                @endif
-                            </div>
-                        </x-ui.card>
+                                <dl class="space-y-4 text-base">
+                                    <div class="grid gap-1 sm:grid-cols-2"><dt class="text-stone-600">Reward</dt><dd class="break-words font-semibold">{{ $program->reward_title }}</dd></div>
+                                    <div class="grid gap-1 sm:grid-cols-2"><dt class="text-stone-600">Target</dt><dd class="font-semibold">{{ $program->reward_target }} stamps</dd></div>
+                                    <div class="grid gap-1 sm:grid-cols-2"><dt class="text-stone-600">Customer cards joined</dt><dd class="font-semibold">{{ number_format($program->loyalty_accounts_count) }}</dd></div>
+                                </dl>
+                                <div class="grid max-w-[400px] gap-4">
+                                    <x-ui.button href="{{ route('merchant.stores.programs.edit', [$store, $program]) }}" class="dashboard-button">Edit card appearance</x-ui.button>
+                                    <x-ui.button href="{{ route('merchant.stores.programs.qr', [$store, $program]) }}" variant="secondary" class="dashboard-button">Share join QR</x-ui.button>
+                                    @if(! $program->is_default)
+                                        <form method="POST" action="{{ route('merchant.stores.programs.destroy', [$store, $program]) }}" onsubmit="return confirm('Archive this card? New joins and scanning will pause. Customer history will remain preserved.');">
+                                            @csrf @method('DELETE')
+                                            <x-ui.button type="submit" variant="danger" class="dashboard-button w-full">Archive</x-ui.button>
+                                        </form>
+                                    @endif
+                                </div>
+                            </x-ui.card>
+                        </div>
                     @endforeach
                 </div>
-
-                <x-ui.card class="hidden overflow-hidden p-0 md:block">
-                    <x-ui.table>
-                        <x-ui.table-head>
-                            <tr>
-                                <x-ui.table-header-cell>Card Name</x-ui.table-header-cell>
-                                <x-ui.table-header-cell>Reward</x-ui.table-header-cell>
-                                <x-ui.table-header-cell>Customer Cards</x-ui.table-header-cell>
-                                <x-ui.table-header-cell class="text-right">Actions</x-ui.table-header-cell>
-                            </tr>
-                        </x-ui.table-head>
-                        <x-ui.table-body>
-                            @foreach($activePrograms as $program)
-                                <tr class="transition-colors hover:bg-stone-50">
-                                    <x-ui.table-cell class="font-medium text-stone-900">
-                                        <div class="flex items-center gap-2">
-                                            <span>{{ $program->name }}</span>
-                                            @if($program->is_default)
-                                                <span class="inline-flex rounded-full bg-brand-50 px-2.5 py-1 text-xs font-semibold text-brand-700">Default</span>
-                                            @endif
-                                        </div>
-                                    </x-ui.table-cell>
-                                    <x-ui.table-cell>
-                                        {{ $program->reward_target }} stamps for {{ $program->reward_title }}
-                                    </x-ui.table-cell>
-                                    <x-ui.table-cell>
-                                        {{ $program->loyalty_accounts_count }}
-                                    </x-ui.table-cell>
-                                    <x-ui.table-cell class="text-right">
-                                        <div class="flex justify-end gap-3">
-                                            <a href="{{ route('merchant.stores.programs.qr', [$store, $program]) }}" class="text-sm font-medium text-brand-600 hover:text-brand-700">QR Code</a>
-                                            <a href="{{ route('merchant.stores.programs.edit', [$store, $program]) }}" class="text-sm font-medium text-brand-600 hover:text-brand-700">Edit</a>
-                                            @if(! $program->is_default)
-                                                <form method="POST" action="{{ route('merchant.stores.programs.destroy', [$store, $program]) }}">
-                                                    @csrf
-                                                    @method('DELETE')
-                                                    <button type="submit" class="text-sm font-medium text-brand-600 hover:text-brand-700">Archive</button>
-                                                </form>
-                                            @endif
-                                        </div>
-                                    </x-ui.table-cell>
-                                </tr>
-                            @endforeach
-                        </x-ui.table-body>
-                    </x-ui.table>
-                </x-ui.card>
             </div>
         @endif
 
         @if($archivedPrograms->isNotEmpty())
-            <x-ui.card class="p-5">
+            <x-ui.card class="dashboard-panel p-6">
                 <div class="flex items-start justify-between gap-3">
                     <div>
                         <h3 class="text-base font-bold text-stone-900">Archived Cards</h3>

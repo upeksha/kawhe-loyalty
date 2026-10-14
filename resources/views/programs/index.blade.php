@@ -1,8 +1,4 @@
-<x-merchant-layout>
-    <x-slot name="header">
-        <x-ui.page-header title="{{ __('Loyalty Cards') }}" />
-    </x-slot>
-
+<x-merchant-design-layout title="Your loyalty cards" subtitle="Design, preview and share each card.">
     @php
         $totalPrograms = $storesWithPrograms->sum(fn ($store) => $store->loyaltyPrograms->count());
         $showAllStores = $storesWithPrograms->count() > 1;
@@ -41,4 +37,4 @@
             @endforeach
         @endif
     </div>
-</x-merchant-layout>
+</x-merchant-design-layout>
