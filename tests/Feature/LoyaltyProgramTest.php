@@ -331,3 +331,24 @@ test('free merchant at card limit is redirected from create loyalty card form', 
 
     $response->assertRedirect(route('merchant.stores.programs.index', $store));
 });
+
+test('program sharing page keeps every action scoped to the selected card', function () {
+    $owner = User::factory()->create();
+    $store = Store::factory()->create(['user_id' => $owner->id]);
+    $store->resolvedDefaultProgram();
+    $program = LoyaltyProgram::create(['store_id' => $store->id, 'name' => 'Second card', 'reward_title' => 'Free tea', 'reward_target' => 6, 'is_default' => false]);
+    $response = $this->actingAs($owner)->get(route('merchant.stores.programs.qr', [$store, $program]))->assertOk();
+    $document = new DOMDocument;
+    $previous = libxml_use_internal_errors(true);
+    $document->loadHTML($response->getContent());
+    libxml_clear_errors();
+    libxml_use_internal_errors($previous);
+    $dom = new DOMXPath($document);
+
+    expect($dom->query('//input[@id="join-link"]')->item(0)->getAttribute('value'))->toBe($program->join_url);
+    foreach ([$program->join_url, route('merchant.stores.programs.edit', [$store, $program]), route('merchant.stores.programs.qr.pdf', [$store, $program, 'preview' => 1])] as $url) {
+        expect($dom->query('//a[@href="'.$url.'"]')->length)->toBe(1);
+    }
+    expect($dom->query('//form[@method="GET" and @action="'.route('merchant.stores.programs.qr.image', [$store, $program]).'"]')->length)->toBe(1);
+    $response->assertSee(route('merchant.stores.programs.qr.pdf', [$store, $program]), false);
+});
