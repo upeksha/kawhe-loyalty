@@ -39,7 +39,7 @@ class MerchantCustomersSupportTest extends TestCase
         $response->assertSee($account->manual_entry_code);
     }
 
-    public function test_customer_support_snapshot_is_visible_on_customer_details(): void
+    public function test_customer_support_tools_remain_available_on_customer_details(): void
     {
         $merchant = User::factory()->create();
         $store = Store::factory()->for($merchant)->create();
@@ -56,10 +56,10 @@ class MerchantCustomersSupportTest extends TestCase
             ->get(route('merchant.customers.show', $account));
 
         $response->assertOk();
-        $response->assertSee('Support Snapshot');
+        $response->assertSee('Help with this card');
         $response->assertSee('Z9KP');
         $response->assertSee($account->public_token);
-        $response->assertSee('Recent Support Timeline');
+        $response->assertSee('Support history');
     }
 
     public function test_merchant_can_queue_wallet_refresh_from_customer_details(): void

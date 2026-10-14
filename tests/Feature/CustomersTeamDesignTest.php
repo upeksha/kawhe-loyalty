@@ -40,5 +40,5 @@ test('customer list preserves lookup fields and uses actual available reward bal
     expect($links->length)->toBeGreaterThan(0);
     parse_str(parse_url($links->item(0)->getAttribute('href'), PHP_URL_QUERY), $query);
     expect($query['q'])->toBe('Alex')->and($query['store_id'])->toBe((string) $store->id);
-    $this->get(route('merchant.customers.show', $account))->assertOk()->assertSee('2 rewards available')->assertSee('Support Snapshot');
+    $this->get(route('merchant.customers.show', $account))->assertOk()->assertSee('2 rewards available')->assertSee('Help with this card');
 });

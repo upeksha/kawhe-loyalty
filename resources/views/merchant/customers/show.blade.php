@@ -1,235 +1,133 @@
-<x-merchant-design-layout :title="$account->customer->name ?? 'Customer details'" :subtitle="$account->program_name . ' · ' . $account->store->name">
+@php
+    $customerName = trim($account->customer->name ?? '') ?: trim(($account->customer->first_name ?? '').' '.($account->customer->last_name ?? ''));
+    $customerTitle = $customerName ?: ($account->customer->email ?: 'Customer details');
+@endphp
+<x-merchant-design-layout :title="$customerTitle" :subtitle="$account->program_name . ' · ' . $account->store->name">
+    <x-slot:actions>
+        <x-ui.button href="{{ route('merchant.customers.index', request()->only(['q', 'store_id'])) }}" variant="ghost">← Back to customers</x-ui.button>
+        <x-ui.button href="{{ route('merchant.customers.edit', $account) }}" variant="secondary">Edit details</x-ui.button>
+    </x-slot:actions>
     @if($errors->any())<div role="alert" class="rounded-lg bg-red-50 p-4 text-red-800">@foreach($errors->all() as $error)<p>{{ $error }}</p>@endforeach</div>@endif
-    <div class="grid items-start gap-8 lg:grid-cols-[320px_minmax(0,1fr)]">
-        <x-customer-design-preview :account="$account" />
-        <div class="min-w-0 space-y-6 rounded-2xl border border-stone-200 bg-white p-6">
-            <x-ui.badge :variant="$account->verified_at ? 'success' : 'warning'">{{ $account->verified_at ? 'Email verified' : 'Email not verified' }}</x-ui.badge>
-        <!-- Card Status Card -->
-        <section>
-            <h3 class="text-base sm:text-lg font-bold mb-3 sm:mb-4 text-stone-900">Card Status</h3>
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
-                <div>
-                    <p class="text-sm text-stone-500 mb-1">Stamps</p>
-                    <p class="text-2xl font-bold text-stone-900">{{ $account->stamp_count }} / {{ $account->reward_target }}</p>
-                </div>
-                <div>
-                    <p class="text-sm text-stone-500 mb-1">Reward Status</p><p class="text-lg font-semibold text-stone-900">{{ $account->reward_balance }} available</p>
-                    @if($account->reward_redeemed_at)
-                        <p class="text-xs text-stone-500">Last redeemed {{ $account->reward_redeemed_at->format('M d, Y g:i A') }}</p>
-                    @endif
-                    @if($account->reward_balance > 0 && $account->reward_available_at)
-                        <p class="text-xs text-stone-500">Available since {{ $account->reward_available_at->format('M d, Y') }}</p>
-                    @elseif($account->reward_balance === 0)
-                        <p class="text-xs text-stone-500">{{ max(0, $account->reward_target - $account->stamp_count) }} more needed</p>
-                    @endif
-                </div>
-                <div>
-                    <p class="text-sm text-stone-500 mb-1">Last Stamped</p>
-                    @if($account->last_stamped_at)
-                        <p class="text-lg font-semibold text-stone-900">{{ $account->last_stamped_at->format('M d, Y') }}</p>
-                        <p class="text-xs text-stone-400">{{ $account->last_stamped_at->format('g:i A') }}</p>
-                    @else
-                        <p class="text-lg font-semibold text-stone-400">Never</p>
-                    @endif
-                </div>
-            </div>
-        </section>
 
-        <!-- Activity Table -->
-        <section>
-            <h3 class="text-base sm:text-lg font-bold mb-3 sm:mb-4 text-stone-900">Recent Activity</h3>
-            @if($events->isEmpty())
-                <p class="text-stone-500 text-center py-4">No activity recorded yet.</p>
-            @else
-                <div class="grid grid-cols-1 gap-3 md:hidden">
-                    @foreach($events as $event)
-                        <div class="rounded-xl border border-stone-200 bg-stone-50/60 p-4">
-                            <div class="flex items-center justify-between gap-2">
-                                <x-ui.badge variant="{{ $event->type === 'stamp' ? 'info' : 'success' }}">
-                                    {{ ucfirst($event->type) }}
-                                </x-ui.badge>
-                                <p class="text-xs text-stone-500">{{ $event->created_at->format('M d, Y g:i A') }}</p>
-                            </div>
-                            <div class="mt-2 text-sm text-stone-700 space-y-1">
-                                <p><strong>Count:</strong> {{ $event->count ?? '-' }}</p>
-                                <p><strong>By:</strong> {{ $event->user->name ?? 'System' }}</p>
-                            </div>
-                        </div>
-                    @endforeach
-                </div>
-                <x-ui.table class="hidden md:table">
-                    <x-ui.table-head>
-                        <tr>
-                            <x-ui.table-header-cell>Type</x-ui.table-header-cell>
-                            <x-ui.table-header-cell>Count</x-ui.table-header-cell>
-                            <x-ui.table-header-cell>By</x-ui.table-header-cell>
-                            <x-ui.table-header-cell>Date</x-ui.table-header-cell>
-                        </tr>
-                    </x-ui.table-head>
-                    <x-ui.table-body>
-                        @foreach($events as $event)
-                            <tr class="hover:bg-stone-50 transition-colors">
-                                <x-ui.table-cell>
-                                    <x-ui.badge variant="{{ $event->type === 'stamp' ? 'info' : 'success' }}">
-                                        {{ ucfirst($event->type) }}
-                                    </x-ui.badge>
-                                </x-ui.table-cell>
-                                <x-ui.table-cell>
-                                    {{ $event->count ?? '-' }}
-                                </x-ui.table-cell>
-                                <x-ui.table-cell>
-                                    {{ $event->user->name ?? 'System' }}
-                                </x-ui.table-cell>
-                                <x-ui.table-cell>
-                                    {{ $event->created_at->format('M d, Y g:i A') }}
-                                </x-ui.table-cell>
-                            </tr>
-                        @endforeach
-                    </x-ui.table-body>
-                </x-ui.table>
-            @endif
-        </section>
-            <x-ui.button href="{{ route('merchant.customers.index', request()->only(['q', 'store_id'])) }}" variant="secondary" class="w-full max-w-[350px]">Back to Customers</x-ui.button>
-        </div>
+    <div class="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-stone-600">
+        @if($customerName && $account->customer->email)<span>{{ $account->customer->email }}</span>@endif
+        @if($account->customer->phone)<span>Phone: {{ $account->customer->phone }}</span>@endif
+        <span>Joined {{ $account->created_at->format('M d, Y') }}</span>
+        <details class="relative">
+            <summary class="cursor-pointer rounded text-sm font-semibold text-brand-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-600">More customer details</summary>
+            <dl class="mt-3 space-y-2 rounded-xl border border-stone-200 bg-white p-4">
+                @if($account->customer->first_name)<div><dt class="inline font-medium">First name:</dt> <dd class="inline">{{ $account->customer->first_name }}</dd></div>@endif
+                @if($account->customer->last_name)<div><dt class="inline font-medium">Last name:</dt> <dd class="inline">{{ $account->customer->last_name }}</dd></div>@endif
+                @if($account->customer->birthday)<div><dt class="inline font-medium">Birthday:</dt> <dd class="inline">{{ \Carbon\Carbon::parse($account->customer->birthday)->format('M d, Y') }}</dd></div>@endif
+                @if($account->store->address)<div><dt class="inline font-medium">Store address:</dt> <dd class="inline">{{ $account->store->address }}</dd></div>@endif
+                <div><dt class="inline font-medium">Joined:</dt> <dd class="inline">{{ $account->created_at->format('M d, Y g:i A') }}</dd></div>
+                @if($account->verified_at)<div><dt class="inline font-medium">Email verified:</dt> <dd class="inline">{{ $account->verified_at->format('M d, Y g:i A') }}</dd></div>@endif
+            </dl>
+        </details>
     </div>
-    <div class="grid items-start gap-6 lg:grid-cols-2">
-            <!-- Customer Info Card -->
-            <x-ui.card class="dashboard-panel min-w-0 p-6">
-                <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-3 sm:mb-4">
-                    <h3 class="text-base sm:text-lg font-bold text-stone-900">Customer Information</h3>
-                    <x-ui.button href="{{ route('merchant.customers.edit', $account) }}" variant="primary" size="sm" class="w-full sm:w-auto">
-                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
-                        </svg>
-                        Edit
-                    </x-ui.button>
-                </div>
-                <div class="space-y-2 text-sm">
-                    <p><strong class="text-stone-700">Store:</strong> {{ $account->store->name }}</p>
-                    @if($account->store->address)<p><strong class="text-stone-700">Address:</strong> {{ $account->store->address }}</p>@endif
-                    @if($account->customer->first_name || $account->customer->last_name)
-                        <p><strong class="text-stone-700">First Name:</strong> <span class="text-stone-600">{{ $account->customer->first_name ?? '-' }}</span></p>
-                        <p><strong class="text-stone-700">Last Name:</strong> <span class="text-stone-600">{{ $account->customer->last_name ?? '-' }}</span></p>
-                    @else
-                        <p><strong class="text-stone-700">Name:</strong> <span class="text-stone-600">{{ $account->customer->name ?? '(No name)' }}</span></p>
-                    @endif
-                    <p><strong class="text-stone-700">Email:</strong> <span class="text-stone-600">{{ $account->customer->email ?? '-' }}</span></p>
-                    <p><strong class="text-stone-700">Phone:</strong> <span class="text-stone-600">{{ $account->customer->phone ?? '-' }}</span></p>
-                    @if($account->customer->birthday)
-                        <p><strong class="text-stone-700">Birthday:</strong> <span class="text-stone-600">{{ \Carbon\Carbon::parse($account->customer->birthday)->format('M d, Y') }}</span></p>
-                    @endif
-                    <p><strong class="text-stone-700">Joined:</strong> <span class="text-stone-600">{{ $account->created_at->format('M d, Y g:i A') }}</span></p>
-                    @if($account->verified_at)
-                        <p><strong class="text-stone-700">Verified:</strong> <span class="text-brand-600">{{ $account->verified_at->format('M d, Y') }}</span></p>
-                    @endif
-                </div>
-            </x-ui.card>
 
-            <x-ui.card class="dashboard-panel min-w-0 p-6">
-                <h3 class="text-base sm:text-lg font-bold mb-3 sm:mb-4 text-stone-900">Support Snapshot</h3>
-                <div class="space-y-2 text-sm">
-                    <p><strong class="text-stone-700">Manual Code:</strong> <span class="font-mono font-semibold tracking-widest text-stone-900">{{ $account->manual_entry_code ?? '-' }}</span></p>
-                    <p><strong class="text-stone-700">Public Token:</strong> <span class="font-mono text-xs text-stone-600 break-all">{{ $account->public_token }}</span></p>
-                    <p><strong class="text-stone-700">Verification:</strong>
-                        <span class="{{ $account->verified_at ? 'text-emerald-700' : 'text-amber-700' }}">
-                            {{ $account->verified_at ? 'Verified' : 'Not verified' }}
-                        </span>
-                    </p>
-                    <p><strong class="text-stone-700">Card URL:</strong>
-                        <a href="{{ route('card.show', $account->public_token) }}" target="_blank" rel="noopener" class="text-brand-600 hover:text-brand-700 underline">Open card</a>
-                    </p>
-                </div>
-                <div class="mt-4 rounded-xl border border-stone-200 bg-stone-50/70 p-4">
-                    <p class="text-xs font-semibold uppercase tracking-wider text-stone-500">Support tip</p>
-                    <p class="mt-2 text-sm leading-relaxed text-stone-600">
-                        If a customer is standing at the counter, the manual code is the fastest fallback. If they are remote, ask for the email address used to join.
-                    </p>
-                </div>
-                <div class="mt-4 flex flex-wrap gap-2">
-                    @if($account->customer->email)
-                        <form method="POST" action="{{ route('merchant.customers.resend-welcome', $account) }}">
-                            @csrf
-                            <x-ui.button type="submit" variant="ghost" size="sm">
-                                Resend Welcome Email
-                            </x-ui.button>
-                        </form>
-                    @endif
-                    @if(!$account->verified_at && $account->customer->email)
-                        <form method="POST" action="{{ route('merchant.customers.resend-verification', $account) }}">
-                            @csrf
-                            <x-ui.button type="submit" variant="secondary" size="sm">
-                                Resend Verification Email
-                            </x-ui.button>
-                        </form>
-                    @endif
-                    <form method="POST" action="{{ route('merchant.customers.sync-wallet', $account) }}">
-                        @csrf
-                        <x-ui.button type="submit" variant="ghost" size="sm">
-                            Queue Wallet Refresh
-                        </x-ui.button>
-                    </form>
-                </div>
-            </x-ui.card>
-    </div>
-        <x-ui.card class="dashboard-panel min-w-0 p-6">
-            <h3 class="text-base sm:text-lg font-bold mb-3 sm:mb-4 text-stone-900">Wallet Status</h3>
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
-                <div>
-                    <p class="text-sm text-stone-500 mb-1">Apple registrations</p>
-                    <p class="text-2xl font-bold text-stone-900">{{ $walletStatus['active_apple_registrations'] }}</p>
-                    <p class="text-xs text-stone-400 mt-1">{{ $walletStatus['total_apple_registrations'] }} total device registration{{ $walletStatus['total_apple_registrations'] === 1 ? '' : 's' }}</p>
-                </div>
-                <div>
-                    <p class="text-sm text-stone-500 mb-1">Last Apple registration</p>
-                    @if($walletStatus['last_registered_at'])
-                        <p class="text-lg font-semibold text-stone-900">{{ \Carbon\Carbon::parse($walletStatus['last_registered_at'])->format('M d, Y') }}</p>
-                        <p class="text-xs text-stone-400">{{ \Carbon\Carbon::parse($walletStatus['last_registered_at'])->format('g:i A') }}</p>
-                    @else
-                        <p class="text-lg font-semibold text-stone-400">None yet</p>
-                    @endif
-                </div>
-                <div>
-                    <p class="text-sm text-stone-500 mb-1">Latest card change</p>
-                    <p class="text-lg font-semibold text-stone-900">{{ $walletStatus['latest_card_change_at']->format('M d, Y') }}</p>
-                    <p class="text-xs text-stone-400">{{ $walletStatus['latest_card_change_at']->format('g:i A') }}</p>
-                </div>
-                <div>
-                    <p class="text-sm text-stone-500 mb-1">Support guidance</p>
-                    <p class="text-sm text-stone-600 leading-relaxed">{{ $walletStatus['next_action'] }}</p>
-                </div>
+    <x-ui.card class="p-5 sm:p-6">
+        <h2 class="text-lg font-semibold text-stone-900">Loyalty progress</h2>
+        <dl class="mt-5 grid gap-5 sm:grid-cols-3">
+            <div><dt class="text-sm text-stone-500">Stamps</dt><dd class="mt-1 text-3xl font-semibold text-stone-900">{{ $account->stamp_count }} <span class="text-lg font-normal text-stone-500">/ {{ $account->reward_target }}</span></dd><p class="mt-2 text-xs text-stone-500">{{ max(0, $account->reward_target - $account->stamp_count) }} more stamps to the next reward</p></div>
+            <div><dt class="text-sm text-stone-500">Rewards available</dt><dd class="mt-1 text-3xl font-semibold text-stone-900">{{ $account->reward_balance }}</dd>
+                @if($account->reward_balance > 0 && $account->reward_available_at)<p class="mt-2 text-xs text-stone-500">Available since {{ $account->reward_available_at->format('M d, Y') }}</p>@endif
+                @if($account->reward_redeemed_at)<p class="mt-2 text-xs text-stone-500">Last redeemed {{ $account->reward_redeemed_at->format('M d, Y g:i A') }}</p>@endif
             </div>
-        </x-ui.card>
-
-        <x-ui.card class="dashboard-panel min-w-0 p-6">
-            <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-                <div>
-                    <h3 class="text-base sm:text-lg font-bold text-stone-900">Recent Support Timeline</h3>
-                    <p class="mt-1 text-sm text-stone-600">A combined view of card activity, verification, and Apple Wallet registration signals.</p>
-                </div>
-                @if($account->email_verification_sent_at)
-                    <span class="inline-flex items-center rounded-full bg-stone-100 px-3 py-1 text-xs font-semibold text-stone-700">
-                        Verification sent {{ $account->email_verification_sent_at->diffForHumans() }}
-                    </span>
+            <div><dt class="text-sm text-stone-500">Last stamped</dt><dd class="mt-2 text-lg font-semibold text-stone-900">{{ $account->last_stamped_at?->format('M d, Y') ?? 'Not recorded' }}</dd>
+                @if($account->last_stamped_at)<p class="mt-2 text-xs text-stone-500">{{ $account->last_stamped_at->format('g:i A') }}</p>@endif
+            </div>
+        </dl>
+        <div class="mt-5 flex flex-wrap items-center justify-between gap-4 border-t border-stone-200 pt-4">
+            <div>
+                <x-ui.badge :variant="$account->verified_at ? 'success' : 'warning'">{{ $account->verified_at ? 'Email verified' : 'Email not verified' }}</x-ui.badge>
+                @if(!$account->verified_at)
+                    <p class="mt-2 text-sm text-stone-600">{{ $account->requires_verification_for_redemption ? 'This customer needs to verify their email before redeeming rewards.' : 'Email verification is optional for redeeming rewards on this card.' }}</p>
                 @endif
             </div>
+            @if(!$account->verified_at && $account->customer->email)
+                <form method="POST" action="{{ route('merchant.customers.resend-verification', $account) }}">
+                    @csrf
+                    <x-ui.button type="submit" variant="secondary" size="sm">Resend verification email</x-ui.button>
+                </form>
+            @endif
+        </div>
+    </x-ui.card>
 
-            @if($supportTimeline->isEmpty())
-                <p class="mt-4 text-sm text-stone-500">No support events recorded yet.</p>
+    <div class="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
+        <x-ui.card class="min-w-0 p-5 sm:p-6">
+            <h2 class="text-lg font-semibold text-stone-900">Recent activity</h2>
+            <p class="mt-1 text-sm text-stone-500">Stamps and rewards recorded for this card.</p>
+            @if($events->isEmpty())
+                <p class="mt-5 rounded-xl bg-stone-50 p-4 text-sm text-stone-600">No activity recorded yet. Stamps and redemptions will appear here.</p>
             @else
-                <div class="mt-4 space-y-3">
-                    @foreach($supportTimeline as $item)
-                        <div class="rounded-xl border border-stone-200 bg-stone-50/60 px-4 py-3">
-                            <div class="flex flex-col justify-between gap-3 sm:flex-row">
-                                <div>
-                                    <p class="text-sm font-semibold {{ $item['tone'] }}">{{ $item['title'] }}</p>
-                                    <p class="mt-1 text-sm text-stone-600">{{ $item['detail'] }}</p>
-                                </div>
-                                <p class="text-xs text-stone-500 whitespace-nowrap">{{ $item['at']?->format('M d, Y g:i A') }}</p>
-                            </div>
-                        </div>
-                    @endforeach
-                </div>
+                @include('merchant.customers.partials.activity-list', ['activityEvents' => $events->take(5)])
+                @if($events->count() > 5)
+                    <details class="mt-4 border-t border-stone-200 pt-4">
+                        <summary class="cursor-pointer rounded text-sm font-semibold text-brand-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-600">Show {{ $events->count() - 5 }} more activities</summary>
+                        @include('merchant.customers.partials.activity-list', ['activityEvents' => $events->slice(5)])
+                    </details>
+                @endif
             @endif
         </x-ui.card>
+        <x-ui.card class="min-w-0 p-5 sm:p-6">
+            <h2 class="text-lg font-semibold text-stone-900">Customer card</h2>
+            <p class="mt-2 text-sm leading-relaxed text-stone-500">Open the card or use its manual code if scanning is unavailable.</p>
+            <div class="mt-4 flex flex-wrap items-center justify-between gap-3">
+                <div><p class="text-xs text-stone-500">Manual code</p><p class="mt-1 font-mono text-xl font-semibold tracking-widest text-stone-900">{{ $account->manual_entry_code ?? 'Not available' }}</p></div>
+                <x-ui.button href="{{ route('card.show', $account->public_token) }}" variant="secondary" target="_blank" rel="noopener">Open card ↗</x-ui.button>
+            </div>
+            <details class="mt-5 border-t border-stone-200 pt-4">
+                <summary class="cursor-pointer rounded text-sm font-semibold text-brand-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-600">Show card QR</summary>
+                <div class="mt-4"><x-customer-design-preview :account="$account" /></div>
+            </details>
+        </x-ui.card>
+    </div>
 
+    <details class="rounded-2xl border border-stone-200 bg-white p-5 sm:p-6" id="customer-help">
+        <summary class="cursor-pointer rounded text-base font-semibold text-stone-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-600">Help with this card</summary>
+        <div class="mt-5 space-y-6">
+            @if($account->customer->email)
+                <section>
+                    <h2 class="text-base font-semibold text-stone-900">Send the card again</h2>
+                    <p class="mt-2 text-sm text-stone-600">Resend the welcome email with a link to this customer's card.</p>
+                    <form class="mt-3" method="POST" action="{{ route('merchant.customers.resend-welcome', $account) }}">
+                        @csrf
+                        <x-ui.button type="submit" variant="secondary" size="sm">Resend welcome email</x-ui.button>
+                    </form>
+                </section>
+            @endif
+            <section class="border-t border-stone-200 pt-5">
+                <h2 class="text-base font-semibold text-stone-900">Wallet updates</h2>
+                <p class="mt-2 text-sm text-stone-600">{{ $walletStatus['active_apple_registrations'] === 0 ? 'No active Apple Wallet registration is recorded. The customer can still use their browser card. If they need help with Apple Wallet, ask them to open or add the pass.' : $walletStatus['next_action'] }}</p>
+                <form class="mt-3" method="POST" action="{{ route('merchant.customers.sync-wallet', $account) }}">
+                    @csrf
+                    <x-ui.button type="submit" variant="secondary" size="sm">Refresh Wallet card</x-ui.button>
+                </form>
+                <p class="mt-2 text-xs text-stone-500">Queues an update for this card. It may take a little time to appear in Wallet.</p>
+                <dl class="mt-5 grid gap-4 text-sm sm:grid-cols-3">
+                    <div><dt class="text-stone-500">Apple registrations</dt><dd class="mt-1 font-medium">{{ $walletStatus['active_apple_registrations'] }} active · {{ $walletStatus['total_apple_registrations'] }} total</dd></div>
+                    <div><dt class="text-stone-500">Last Apple registration</dt><dd class="mt-1 font-medium">{{ $walletStatus['last_registered_at'] ? \Carbon\Carbon::parse($walletStatus['last_registered_at'])->format('M d, Y g:i A') : 'None yet' }}</dd></div>
+                    <div><dt class="text-stone-500">Latest card change</dt><dd class="mt-1 font-medium">{{ $walletStatus['latest_card_change_at']->format('M d, Y g:i A') }}</dd></div>
+                </dl>
+            </section>
+            <section class="border-t border-stone-200 pt-5">
+                <h2 class="text-base font-semibold text-stone-900">Support history</h2>
+                <p class="mt-1 text-sm text-stone-500">Email requests, Wallet updates and recent card activity.</p>
+                @if($account->email_verification_sent_at)<p class="mt-2 text-xs text-stone-500">Verification sent {{ $account->email_verification_sent_at->diffForHumans() }}</p>@endif
+                @if($supportTimeline->isEmpty())
+                    <p class="mt-4 text-sm text-stone-500">No support events recorded yet.</p>
+                @else
+                    <ul class="mt-4 divide-y divide-stone-100">
+                        @foreach($supportTimeline as $item)
+                            <li class="flex flex-col justify-between gap-2 py-3 sm:flex-row">
+                                <div><p class="text-sm font-semibold {{ $item['tone'] }}">{{ $item['title'] }}</p><p class="mt-1 text-sm text-stone-600">{{ $item['detail'] }}</p></div>
+                                <p class="shrink-0 text-xs text-stone-500">{{ $item['at']?->format('M d, Y g:i A') }}</p>
+                            </li>
+                        @endforeach
+                    </ul>
+                @endif
+            </section>
+        </div>
+    </details>
 </x-merchant-design-layout>
