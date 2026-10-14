@@ -1,6 +1,13 @@
 @php
     $customerName = trim($account->customer->name ?? '') ?: trim(($account->customer->first_name ?? '').' '.($account->customer->last_name ?? ''));
     $customerTitle = $customerName ?: ($account->customer->email ?: 'Customer details');
+    $extraCustomerDetails = array_filter([
+        'First name' => $account->customer->first_name,
+        'Last name' => $account->customer->last_name,
+        'Birthday' => $account->customer->birthday ? \Carbon\Carbon::parse($account->customer->birthday)->format('M d, Y') : null,
+        'Store address' => $account->store->address,
+        'Email verified' => $account->verified_at?->format('M d, Y g:i A'),
+    ], fn ($value) => filled($value));
 @endphp
 <x-merchant-design-layout :title="$customerTitle" :subtitle="$account->program_name . ' · ' . $account->store->name">
     <x-slot:actions>
@@ -13,17 +20,16 @@
         @if($customerName && $account->customer->email)<span>{{ $account->customer->email }}</span>@endif
         @if($account->customer->phone)<span>Phone: {{ $account->customer->phone }}</span>@endif
         <span>Joined {{ $account->created_at->format('M d, Y') }}</span>
-        <details class="relative">
-            <summary class="cursor-pointer rounded text-sm font-semibold text-brand-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-600">More customer details</summary>
-            <dl class="mt-3 space-y-2 rounded-xl border border-stone-200 bg-white p-4">
-                @if($account->customer->first_name)<div><dt class="inline font-medium">First name:</dt> <dd class="inline">{{ $account->customer->first_name }}</dd></div>@endif
-                @if($account->customer->last_name)<div><dt class="inline font-medium">Last name:</dt> <dd class="inline">{{ $account->customer->last_name }}</dd></div>@endif
-                @if($account->customer->birthday)<div><dt class="inline font-medium">Birthday:</dt> <dd class="inline">{{ \Carbon\Carbon::parse($account->customer->birthday)->format('M d, Y') }}</dd></div>@endif
-                @if($account->store->address)<div><dt class="inline font-medium">Store address:</dt> <dd class="inline">{{ $account->store->address }}</dd></div>@endif
-                <div><dt class="inline font-medium">Joined:</dt> <dd class="inline">{{ $account->created_at->format('M d, Y g:i A') }}</dd></div>
-                @if($account->verified_at)<div><dt class="inline font-medium">Email verified:</dt> <dd class="inline">{{ $account->verified_at->format('M d, Y g:i A') }}</dd></div>@endif
-            </dl>
-        </details>
+        @if($extraCustomerDetails)
+            <details class="relative">
+                <summary class="cursor-pointer rounded text-sm font-semibold text-brand-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-600">More customer details</summary>
+                <dl class="mt-3 space-y-2 rounded-xl border border-stone-200 bg-white p-4">
+                    @foreach($extraCustomerDetails as $label => $value)
+                        <div><dt class="inline font-medium">{{ $label }}:</dt> <dd class="inline">{{ $value }}</dd></div>
+                    @endforeach
+                </dl>
+            </details>
+        @endif
     </div>
 
     <x-ui.card class="p-5 sm:p-6">
