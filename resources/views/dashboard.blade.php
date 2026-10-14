@@ -2,9 +2,6 @@
     @php
         $merchantStores = request()->user()?->stores()->get() ?? collect();
         $storesCount = $merchantStores->count();
-        $storesWithLogo = $merchantStores->filter(fn ($store) => !empty($store->logo_path))->count();
-        $storesWithWalletAssets = $merchantStores->filter(fn ($store) => !empty($store->pass_logo_path) || !empty($store->pass_hero_image_path))->count();
-        $storesWithRewardRules = $merchantStores->filter(fn ($store) => !empty($store->reward_title) && (int) ($store->reward_target ?? 0) > 0)->count();
         $walletReadyCount = $merchantStores->filter(function ($store) {
             return !empty($store->reward_title)
                 && (int) ($store->reward_target ?? 0) > 0
@@ -319,34 +316,21 @@
             </x-ui.card>
 
             <x-ui.card class="dashboard-panel p-5 sm:p-6">
-                <div class="flex items-start justify-between gap-3">
-                    <div>
-                        <h3 class="text-xl font-semibold text-stone-900">Wallet Readiness</h3>
-                        <p class="mt-1 text-sm text-stone-600">How ready your stores are for Apple Wallet and Google Wallet presentation.</p>
-                    </div>
-                    <span class="inline-flex items-center rounded-full bg-stone-100 px-3 py-1 text-xs font-semibold text-stone-700">
-                        {{ $walletReadyCount }}/{{ max(1, $storesCount) }} ready
-                    </span>
+                <h3 class="text-xl font-semibold text-stone-900">Wallet cards</h3>
+                <p class="mt-2 text-sm text-stone-600">Let customers keep their loyalty card in Apple Wallet or Google Wallet.</p>
+                <div class="mt-5">
+                    @if($storesCount > 0 && $walletReadyCount === $storesCount)
+                        <p class="text-base font-semibold text-brand-700">Branding ready</p>
+                        <p class="mt-2 text-sm leading-relaxed text-stone-600">Your store logo, colours and reward details are set up.</p>
+                    @elseif($storesCount > 0)
+                        <p class="text-base font-semibold text-stone-900">Finish your card setup</p>
+                        <p class="mt-2 text-sm leading-relaxed text-stone-600">{{ $storesCount - $walletReadyCount === 1 ? 'One store needs' : ($storesCount - $walletReadyCount).' stores need' }} a logo, colours or reward details before sharing Wallet cards.</p>
+                    @else
+                        <p class="text-base font-semibold text-stone-900">Set up your first store</p>
+                        <p class="mt-2 text-sm leading-relaxed text-stone-600">Add your store and loyalty card details to get started.</p>
+                    @endif
                 </div>
-
-                <div class="mt-5 space-y-3 text-sm">
-                    <x-ui.readiness-row
-                        label="Store branding added"
-                        :value="$storesWithLogo.'/'.$storesCount"
-                        :state="$storesWithLogo === $storesCount && $storesCount > 0 ? 'ready' : 'attention'"
-                    />
-                    <x-ui.readiness-row
-                        label="Wallet assets added"
-                        :value="$storesWithWalletAssets.'/'.$storesCount"
-                        :state="$storesWithWalletAssets === $storesCount && $storesCount > 0 ? 'ready' : 'attention'"
-                    />
-                    <x-ui.readiness-row
-                        label="Reward setup complete"
-                        :value="$storesWithRewardRules.'/'.$storesCount"
-                        :state="$storesWithRewardRules === $storesCount && $storesCount > 0 ? 'ready' : 'attention'"
-                    />
-                </div>
-                <x-ui.button href="{{ route('merchant.stores.index') }}" variant="secondary" class="dashboard-button mt-6 w-full">Review store settings</x-ui.button>
+                <x-ui.button href="{{ route('merchant.stores.index') }}" variant="secondary" class="mt-5 w-full">{{ $storesCount > 0 && $walletReadyCount === $storesCount ? 'Review card setup' : 'Complete card setup' }}</x-ui.button>
             </x-ui.card>
         </section>
         @if(isset($usageStats) && !$usageStats['is_subscribed'])
