@@ -1,19 +1,7 @@
-@php
-    use App\Support\ProgramBranding;
-
-    $cardTitle = ProgramBranding::cardTitle($program, $store);
-    $cardSubtitle = ProgramBranding::cardSubtitle($program, $store);
-@endphp
-
-<x-customer-layout :program="$program" :store="$store" :title="$cardTitle" centered x-data="joinLanding()">
-    <x-slot name="hero">
-        <header class="mb-6">
-            <h1 class="customer-page-heading">{{ $cardTitle }}</h1>
-            <p class="customer-page-description">{{ $store->name }} · Collect {{ $program->reward_target }} stamps for {{ strtolower($program->reward_title ?: 'a reward') }}.</p>
-            @if($cardSubtitle && $cardSubtitle !== $store->name && $cardSubtitle !== $cardTitle)<p class="customer-page-description">{{ $cardSubtitle }}</p>@endif
-        </header>
-    </x-slot>
-
+<x-customer-layout :program="$program" :store="$store" title="Get your card" x-data="joinLanding()">
+    @include('join.partials.signup', ['showSavedCard' => true])
+    <details class="mt-4">
+        <summary class="min-h-11 cursor-pointer text-sm font-semibold customer-card-title">Preview this loyalty card</summary>
     <div class="loyalty-card customer-preview mb-6 p-6" aria-label="Loyalty card preview">
         <div class="flex items-center gap-3">
             @if($program->logo_path)<img src="{{ $program->logo_url }}" alt="{{ $store->name }} logo" class="h-12 w-12 rounded-lg object-contain">@endif
@@ -25,41 +13,28 @@
         <div class="mt-6 flex flex-wrap gap-2" aria-hidden="true">
             @for($i = 0; $i < $program->reward_target; $i++)<span class="stamp-circle--empty h-9 w-9 rounded-full"></span>@endfor
         </div>
-        <div class="customer-preview-qr mt-5 rounded-xl bg-white p-4 text-center">
-            <img src="{{ asset('images/loyalty-card-demo-qr.svg') }}" width="164" height="164" class="mx-auto" alt="Example QR code, not a customer card">
-            <p class="mt-3 text-xs text-stone-600">Card preview · Join to get your own QR code</p>
-        </div>
     </div>
-
-    <div class="customer-actions">
-        <template x-if="lastToken">
-            <div>
-                <a :href="'/c/' + lastToken" class="customer-btn customer-btn-primary">Open my card</a>
-                <p class="customer-card-body mt-2 text-center text-xs">We found a card saved on this device.</p>
-            </div>
-        </template>
-        <div>
-            <a href="{{ route('join.show', ['slug' => $program->slug, 't' => $token]) }}" class="customer-btn customer-btn-primary">Get my card</a>
-            <p class="customer-card-body mt-2 text-center text-xs">Takes under a minute. No customer app required.</p>
-        </div>
-        <a href="{{ route('join.existing', ['slug' => $program->slug, 't' => $token]) }}" class="customer-btn customer-btn-secondary">Recover an existing card</a>
-        <template x-if="lastToken">
-            <button type="button" @click="clearLastCard()" class="customer-btn customer-btn-secondary">Use a different card or email</button>
-        </template>
-    </div>
-
+    </details>
     @push('scripts')
         <script>
             document.addEventListener('alpine:init', () => {
                 Alpine.data('joinLanding', () => ({
-                    lastToken: localStorage.getItem('kawhe_last_card_{{ $program->id }}')@if($program->is_default ?? false)
-                        || localStorage.getItem('kawhe_last_card_{{ $store->id }}')@endif,
+                    lastToken: null,
+                    init() {
+                        try { this.lastToken = localStorage.getItem('kawhe_last_card_{{ $program->id }}')@if($program->is_default ?? false)
+                        || localStorage.getItem('kawhe_last_card_{{ $store->id }}')@endif; } catch (e) {}
+                    },
                     clearLastCard() {
-                        localStorage.removeItem('kawhe_last_card_{{ $program->id }}');
+                        try { localStorage.removeItem('kawhe_last_card_{{ $program->id }}');
+                        localStorage.removeItem('kawhe_last_email_{{ $program->id }}');
                         @if($program->is_default ?? false)
                         localStorage.removeItem('kawhe_last_card_{{ $store->id }}');
+                        localStorage.removeItem('kawhe_last_email_{{ $store->id }}');
                         @endif
+                        } catch (e) {}
                         this.lastToken = null;
+                        const email = document.getElementById('email');
+                        if (email) { email.value = ''; email.focus(); }
                     }
                 }));
             });
