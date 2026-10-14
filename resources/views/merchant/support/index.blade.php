@@ -1,4 +1,10 @@
-<x-merchant-design-layout title="Support logs" subtitle="Trace Wallet, verification, welcome email, billing and support events.">
+<x-merchant-design-layout title="Help & support" subtitle="Find your next step, get help, or check a delivery issue.">
+    <x-slot:actions><x-ui.button href="mailto:support@kawhe.shop" variant="secondary">Contact support</x-ui.button></x-slot:actions>
+    <section aria-label="Common tasks" class="grid gap-4 sm:grid-cols-3">
+        <a href="{{ route('merchant.programs.index') }}" class="rounded-xl border border-stone-200 bg-white p-5 hover:bg-brand-50"><p class="font-semibold text-brand-700">Share your loyalty card →</p><p class="mt-2 text-sm text-stone-500">Find the join link and QR code for each card.</p></a>
+        <a href="{{ route('merchant.staff.index') }}" class="rounded-xl border border-stone-200 bg-white p-5 hover:bg-brand-50"><p class="font-semibold text-brand-700">Give your team access →</p><p class="mt-2 text-sm text-stone-500">Invite staff with their own login and permissions.</p></a>
+        <a href="{{ route('billing.index') }}" class="rounded-xl border border-stone-200 bg-white p-5 hover:bg-brand-50"><p class="font-semibold text-brand-700">Manage your plan →</p><p class="mt-2 text-sm text-stone-500">Review limits, update payment details or cancel.</p></a>
+    </section>
     @php
         $summaryCards = [
             ['label' => 'Matching events', 'value' => number_format($summary['total'] ?? 0)],
@@ -15,7 +21,7 @@
                     <p class="sr-only">Support activity across your stores</p>
                     <p class="mt-1 text-sm text-stone-600">Use this to trace wallet syncs, verification sends, billing issues, and manual support actions without leaving the app.</p>
                 </div>
-                <form method="GET" action="{{ route('merchant.support.index') }}" class="support-filters grid w-full max-w-[720px] gap-4">
+                <form method="GET" action="{{ route('merchant.support.index') }}" class="workspace-filterbar workspace-support-filters">
                     <div class="rounded-lg border border-stone-200 px-4 py-2">
                         <x-input-label for="support-store_id" value="Store" />
                         <x-ui.select id="support-store_id" name="store_id">
@@ -52,7 +58,7 @@
                         <x-ui.input id="support-search" type="text" name="q" value="{{ $search }}" placeholder="Customer email, token, manual code" class="w-full" />
                     </div>
                     <div class="flex flex-wrap gap-3">
-                        <x-ui.button type="submit" variant="secondary" class="w-full sm:w-[260px]">Apply filters</x-ui.button>
+                        <x-ui.button type="submit" variant="primary" >Apply filters</x-ui.button>
                         <x-ui.button href="{{ route('merchant.support.index') }}" variant="ghost" class="w-full sm:w-auto">Clear filters</x-ui.button>
                     </div>
                 </form>

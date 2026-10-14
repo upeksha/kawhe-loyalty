@@ -1,7 +1,5 @@
-<x-merchant-layout>
-    <x-slot name="header">
-        {{ __('Scanner') }}
-    </x-slot>
+<x-dashboard-layout title="Scanner" :workspace="true">
+    <h1 class="mb-6 text-3xl font-semibold text-stone-900">Scanner</h1>
 
     @php
         $appleStoreUrl = config('services.merchant_app.apple_store_url');
@@ -1708,4 +1706,4 @@
         });
     </script>
     @endpush
-</x-merchant-layout>
+</x-dashboard-layout>

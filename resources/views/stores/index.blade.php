@@ -1,4 +1,11 @@
 <x-merchant-design-layout title="Stores" subtitle="Manage your locations and their loyalty cards.">
+    <x-slot:actions>
+        @if($usageStats['can_create_store'] ?? false)
+            <x-ui.button href="{{ route('merchant.stores.create') }}">Add store</x-ui.button>
+        @else
+            <x-ui.button href="{{ route('billing.index') }}" variant="secondary">View plans</x-ui.button>
+        @endif
+    </x-slot:actions>
     <div class="space-y-6">
         @if($stores->isEmpty() && ($archivedStores ?? collect())->isEmpty())
             <x-ui.empty-state
@@ -78,12 +85,6 @@
                         </x-ui.table>
                     </div>
                     <div class="mt-6 grid max-w-[400px] gap-4">
-                        @if($usageStats['can_create_store'] ?? false)
-                            <x-ui.button href="{{ route('merchant.stores.create') }}" class="dashboard-button">Add Another Store</x-ui.button>
-                        @else
-                            <p class="text-sm text-stone-600">Store limit reached. Your existing stores remain available.</p>
-                            <x-ui.button href="{{ route('billing.index') }}" variant="secondary" class="dashboard-button">View plans</x-ui.button>
-                        @endif
                         @if(($archivedStores ?? collect())->isNotEmpty())
                             <x-ui.button href="#archived-stores" variant="ghost" class="dashboard-button">View archived stores</x-ui.button>
                         @endif

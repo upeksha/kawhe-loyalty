@@ -1,4 +1,4 @@
-<x-dashboard-layout>
+<x-dashboard-layout :workspace="true">
     @php
         $merchantStores = request()->user()?->stores()->get() ?? collect();
         $storesCount = $merchantStores->count();
@@ -259,7 +259,6 @@
             <h1 class="text-3xl font-semibold leading-snug text-stone-900 sm:text-4xl">Welcome back, {{ request()->user()->name ?? 'Merchant' }}</h1>
             <p class="text-base text-stone-600">Here is how your loyalty programme is doing across your stores.</p>
         </header>
-        <x-merchant-navigation />
         <section aria-label="Loyalty summary" class="grid gap-6 lg:grid-cols-3">
             @foreach($summaryCards as $card)
                 <x-ui.card class="dashboard-panel min-w-0 space-y-4 p-6">

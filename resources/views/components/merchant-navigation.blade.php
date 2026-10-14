@@ -1,19 +1,31 @@
-        <nav aria-label="Merchant navigation" class="grid grid-cols-2 gap-2 sm:grid-cols-5 xl:grid-cols-10">
-            @foreach(auth()->user()->is_staff_account ? [
-                ['Scanner', route('merchant.scanner'), request()->routeIs('merchant.scanner')],
-                ['Settings', route('profile.edit'), request()->routeIs('profile.*')],
-            ] : [
-                ['Overview', route('merchant.dashboard'), request()->routeIs('merchant.dashboard')],
-                ['Cards', route('merchant.programs.index'), request()->routeIs('merchant.programs.*', 'merchant.stores.programs.*')],
-                ['Customers', route('merchant.customers.index'), request()->routeIs('merchant.customers.*')],
-                ['Team', route('merchant.staff.index'), request()->routeIs('merchant.staff.*')],
-                ['Activity', route('merchant.activity.index'), request()->routeIs('merchant.activity.*')],
-                ['Billing', route('billing.index'), request()->routeIs('billing.*')],
-                ['Settings', route('profile.edit'), request()->routeIs('profile.*')],
-                ['Stores', route('merchant.stores.index'), request()->routeIs('merchant.stores.*') && !request()->routeIs('merchant.stores.programs.*')],
-                ['Support', route('merchant.support.index'), request()->routeIs('merchant.support.*')],
-            ] as [$label, $url, $active])
-                <a href="{{ $url }}" @if($active) aria-current="page" @endif class="dashboard-button flex items-center justify-center rounded-lg border border-stone-200 px-3 text-sm font-semibold text-brand-700 {{ $active ? 'bg-brand-50' : 'bg-white hover:bg-brand-50' }}">{{ $label }}</a>
+@php
+    $staff = auth()->user()->is_staff_account;
+    $groups = $staff ? ['Workspace' => [
+        ['Scanner', 'merchant.scanner', request()->routeIs('merchant.scanner'), 'scan'],
+        ['Account settings', 'profile.edit', request()->routeIs('profile.*'), 'settings'],
+    ]] : [
+        'Workspace' => [
+            ['Overview', 'merchant.dashboard', request()->routeIs('merchant.dashboard'), 'overview'],
+            ['Loyalty cards', 'merchant.programs.index', request()->routeIs('merchant.programs.*', 'merchant.stores.programs.*'), 'cards'],
+            ['Customers', 'merchant.customers.index', request()->routeIs('merchant.customers.*'), 'customers'],
+            ['Activity', 'merchant.activity.index', request()->routeIs('merchant.activity.*'), 'activity'],
+        ],
+        'Manage' => [
+            ['Stores', 'merchant.stores.index', request()->routeIs('merchant.stores.*') && !request()->routeIs('merchant.stores.programs.*'), 'stores'],
+            ['Team', 'merchant.staff.index', request()->routeIs('merchant.staff.*'), 'team'],
+            ['Billing', 'billing.index', request()->routeIs('billing.*'), 'billing'],
+            ['Settings', 'profile.edit', request()->routeIs('profile.*'), 'settings'],
+        ],
+        'Help' => [['Support', 'merchant.support.index', request()->routeIs('merchant.support.*'), 'support']],
+    ];
+@endphp
+<nav aria-label="Merchant navigation" class="workspace-nav">
+    @foreach($groups as $group => $items)
+        <div class="workspace-nav-group">
+            <p class="workspace-nav-label">{{ $group }}</p>
+            @foreach($items as [$label, $route, $active, $icon])
+                <a href="{{ route($route) }}" @if($active) aria-current="page" @endif class="workspace-nav-link"><x-merchant-icon :name="$icon" /><span>{{ $label }}</span></a>
             @endforeach
-            <form method="POST" action="{{ route('logout') }}">@csrf<button type="submit" class="dashboard-button w-full rounded-lg bg-white px-3 text-sm font-semibold text-brand-700 hover:bg-brand-50">Sign out</button></form>
-        </nav>
+        </div>
+    @endforeach
+</nav>
