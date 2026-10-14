@@ -39,3 +39,10 @@
     border-color: var(--program-input-border);
     border-radius: 0.75rem;
 }
+
+/* Figma merchant dashboard; scoped to avoid changing other merchant pages. */
+.dashboard-page .dashboard-panel { border-radius: 1rem; border-color: #e7e5e4; box-shadow: none; }
+.dashboard-page .dashboard-button { min-height: 3rem; border-radius: .5rem; box-shadow: none; }
+.dashboard-page a.dashboard-button:not(.bg-brand-600) { background-color: white; color: #254b3a; }
+.dashboard-page a.dashboard-button[aria-current="page"] { background-color: #f0f7f4; }
+.dashboard-page :is(a, button):focus-visible { outline: 2px solid #2d5d47; outline-offset: 3px; }

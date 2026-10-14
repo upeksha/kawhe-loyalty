@@ -1,8 +1,4 @@
-<x-merchant-layout>
-    <x-slot name="header">
-        {{ __('Dashboard') }}
-    </x-slot>
-
+<x-dashboard-layout>
     @php
         $merchantStores = request()->user()?->stores()->get() ?? collect();
         $storesCount = $merchantStores->count();
@@ -46,7 +42,7 @@
                             'borderWidth' => 1.8,
                             'pointRadius' => 0,
                             'tension' => 0.5,
-                            'borderColor' => 'rgba(58, 42, 34, 0.82)',
+                            'borderColor' => '#2d5d47',
                         ]],
                     ],
                     'options' => [
@@ -78,7 +74,7 @@
                             'borderWidth' => 1.8,
                             'pointRadius' => 0,
                             'tension' => 0.5,
-                            'borderColor' => 'rgba(31, 59, 44, 0.82)',
+                            'borderColor' => '#2d5d47',
                         ]],
                     ],
                     'options' => [
@@ -110,7 +106,7 @@
                             'borderWidth' => 1.8,
                             'pointRadius' => 0,
                             'tension' => 0.5,
-                            'borderColor' => 'rgba(201, 106, 59, 0.82)',
+                            'borderColor' => '#f1a94f',
                         ]],
                     ],
                     'options' => [
@@ -142,7 +138,7 @@
                         'tension' => 0.42,
                         'fill' => true,
                         'backgroundColor' => 'rgba(58, 42, 34, 0.12)',
-                        'borderColor' => '#3a2a22',
+                        'borderColor' => '#57534e',
                     ],
                     [
                         'label' => 'Stamps',
@@ -152,7 +148,7 @@
                         'tension' => 0.42,
                         'fill' => true,
                         'backgroundColor' => 'rgba(79, 125, 84, 0.12)',
-                        'borderColor' => '#4f7d54',
+                        'borderColor' => '#2d5d47',
                     ],
                     [
                         'label' => 'Redeems',
@@ -161,7 +157,7 @@
                         'pointRadius' => 0,
                         'tension' => 0.42,
                         'fill' => false,
-                        'borderColor' => '#d6a24a',
+                        'borderColor' => '#f1a94f',
                     ],
                 ],
             ],
@@ -214,7 +210,7 @@
                     'tension' => 0.44,
                     'fill' => true,
                     'backgroundColor' => 'rgba(167, 199, 161, 0.18)',
-                    'borderColor' => '#4f7d54',
+                    'borderColor' => '#2d5d47',
                 ]],
             ],
             'options' => [
@@ -257,106 +253,64 @@
         $miniActivity = $trendPoints->take(-5);
     @endphp
 
-    <div class="space-y-6 sm:space-y-8">
-        <x-ui.page-hero
-            eyebrow="Dashboard"
-            title="Welcome back, {{ request()->user()->name ?? 'Merchant' }}."
-            description="Here’s the clearest read on customer growth, reward usage, and store readiness across your loyalty program."
-            class="rounded-[28px] border-stone-200/70 p-4 shadow-stone-200/50 sm:p-6"
-        >
-            <x-slot name="actions">
-                <div class="w-full max-w-[34rem]">
-                    <p class="text-xs font-semibold uppercase tracking-[0.18em] text-stone-400">Quick Actions</p>
-                    <div class="mt-2 flex flex-nowrap gap-2">
-                        <x-ui.action-tile href="{{ route('merchant.scanner') }}" label="Scanner" icon="scanner" tone="sand" />
-                        <x-ui.action-tile href="{{ route('merchant.stores.index') }}" label="Store QR" icon="qr" tone="sage" />
-                        <x-ui.action-tile href="{{ route('merchant.customers.index') }}" label="Customers" icon="customers" tone="peach" />
-                    </div>
-                </div>
-            </x-slot>
-        </x-ui.page-hero>
 
-        <section class="grid gap-4 lg:grid-cols-3">
+    <div class="space-y-6" data-dashboard-design="figma-v1">
+        <header class="space-y-2">
+            <h1 class="text-3xl font-semibold leading-snug text-stone-900 sm:text-4xl">Welcome back, {{ request()->user()->name ?? 'Merchant' }}</h1>
+            <p class="text-base text-stone-600">Here is how your loyalty programme is doing across your stores.</p>
+        </header>
+        <nav aria-label="Merchant navigation" class="grid grid-cols-2 gap-2 sm:grid-cols-5 xl:grid-cols-10">
+            @foreach([
+                ['Overview', route('merchant.dashboard'), true],
+                ['Cards', route('merchant.programs.index'), false],
+                ['Customers', route('merchant.customers.index'), false],
+                ['Team', route('merchant.staff.index'), false],
+                ['Activity', route('merchant.support.index'), false],
+                ['Billing', route('billing.index'), false],
+                ['Settings', route('profile.edit'), false],
+                ['Stores', route('merchant.stores.index'), false],
+                ['Support', route('merchant.support.index'), false],
+            ] as [$label, $url, $active])
+                <a href="{{ $url }}" @if($active) aria-current="page" @endif class="dashboard-button flex items-center justify-center rounded-lg border border-stone-200 px-3 text-sm font-semibold text-brand-700 {{ $active ? 'bg-brand-50' : 'bg-white hover:bg-brand-50' }}">{{ $label }}</a>
+            @endforeach
+            <form method="POST" action="{{ route('logout') }}">@csrf<button type="submit" class="dashboard-button w-full rounded-lg bg-white px-3 text-sm font-semibold text-brand-700 hover:bg-brand-50">Sign out</button></form>
+        </nav>
+        <section aria-label="Loyalty summary" class="grid gap-6 lg:grid-cols-3">
             @foreach($summaryCards as $card)
-                <x-ui.stat-card
-                    layout="horizontal"
-                    :label="$card['label']"
-                    :value="$card['value']"
-                    :tone="$card['tone']"
-                    :accent="$card['accent']"
-                    size="lg"
-                    class="rounded-[26px] border border-stone-200/60 shadow-sm shadow-stone-200/40"
-                >
-                    <x-slot name="chart">
-                        <canvas class="h-full w-full" data-chart='@json($card["chart"])' aria-hidden="true"></canvas>
-                    </x-slot>
-                </x-ui.stat-card>
+                <x-ui.card class="dashboard-panel min-w-0 space-y-4 p-6">
+                    <h2 class="text-xl font-semibold text-stone-900">{{ $card['label'] }}</h2>
+                    <p class="text-4xl font-semibold text-brand-600">{{ $card['value'] }}</p>
+                    <div class="relative h-[52px]"><canvas data-chart='@json($card["chart"])' aria-hidden="true"></canvas></div>
+                    <p class="text-xs text-stone-600">{{ $loop->first ? 'Active in last 30 days' : 'Last 14 days' }}</p>
+                </x-ui.card>
             @endforeach
         </section>
-
-        <section class="grid gap-6 md:grid-cols-2">
-            <x-ui.section-panel class="rounded-[30px] border-stone-200/70 p-5 shadow-stone-200/50 sm:p-6">
-                <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                    <div>
-                        <h3 class="text-xl font-semibold text-stone-900">Loyalty Activity</h3>
-                        <p class="mt-2 text-sm leading-6 text-stone-600">Daily joins, stamps, and redeems across the last 14 days.</p>
-                    </div>
-                    <x-ui.badge variant="default">Last 14 days</x-ui.badge>
-                </div>
-
-                <div class="mt-6 grid gap-3 md:grid-cols-3">
-                    <x-ui.admin-metric label="New cards" :value="number_format($analytics['joins_last_window'])" tone="bg-[#f3efe7] text-[#3a2a22]" />
-                    <x-ui.admin-metric label="Stamp activity" :value="number_format($trendPoints->sum('stamps'))" tone="bg-[#edf4eb] text-[#1f3b2c]" />
-                    <x-ui.admin-metric label="Avg per day" :value="number_format($trendPoints->sum('total') / max(1, $trendPoints->count()), 1)" tone="bg-[#fff5df] text-[#d6a24a]" />
-                </div>
-
+        <section aria-label="Loyalty charts" class="grid gap-6 lg:grid-cols-[3fr_2fr]">
+            <x-ui.card class="dashboard-panel min-w-0 space-y-4 p-6">
+                <h2 class="text-xl font-semibold text-stone-900">Loyalty Activity</h2>
+                <p class="text-sm font-semibold leading-relaxed text-stone-600">New cards {{ number_format($analytics['joins_last_window']) }} · Stamp activity {{ number_format($trendPoints->sum('stamps')) }} · Avg per day {{ number_format($trendPoints->sum('total') / max(1, $trendPoints->count()), 1) }}</p>
                 @if($trendPoints->every(fn ($day) => ($day['total'] ?? 0) === 0))
-                    <div class="mt-6 rounded-2xl border border-dashed border-stone-200 bg-stone-50/70 p-5 text-sm text-stone-600">
-                        No recent join or card activity yet. As customers join and start collecting stamps, your activity graph will appear here.
-                    </div>
+                    <div class="rounded-xl border border-dashed border-stone-200 p-6 text-sm text-stone-600">No recent join or card activity yet. As customers join and start collecting stamps, your activity graph will appear here.</div>
                 @else
-                    <div class="mt-6 rounded-[24px] border border-stone-200/70 bg-stone-50/70 p-4 sm:p-5">
-                        <div class="h-[20rem] w-full">
-                            <canvas class="h-full w-full" data-chart='@json($loyaltyActivityChart)' aria-label="Loyalty activity chart"></canvas>
-                        </div>
-                    </div>
+                    <div class="relative h-64"><canvas data-chart='@json($loyaltyActivityChart)' role="img" aria-label="Loyalty activity chart: daily joins, stamps and redeems over the last 14 days"></canvas></div>
                 @endif
-            </x-ui.section-panel>
-
-            <x-ui.section-panel class="rounded-[30px] border-stone-200/70 p-5 shadow-stone-200/50 sm:p-6">
-                <div class="flex items-start justify-between gap-4">
-                    <div>
-                        <h3 class="text-xl font-semibold text-stone-900">Card Growth</h3>
-                        <p class="mt-2 text-sm leading-6 text-stone-600">New customer cards added over the last two weeks.</p>
-                    </div>
-                    <x-ui.badge variant="success">Live</x-ui.badge>
-                </div>
-
-                <div class="mt-5 grid gap-3 sm:grid-cols-2">
-                    <x-ui.admin-metric label="Cards added" :value="number_format($analytics['joins_last_window'])" tone="bg-[#f3efe7] text-[#3a2a22]" />
-                    <x-ui.admin-metric label="Daily average" :value="number_format($analytics['joins_last_window'] / max(1, $trendPoints->count()), 1)" tone="bg-stone-100 text-stone-700" />
-                </div>
-
+            </x-ui.card>
+            <x-ui.card class="dashboard-panel min-w-0 space-y-4 p-6">
+                <h2 class="text-xl font-semibold text-stone-900">Card Growth</h2>
+                <p class="text-sm font-semibold leading-relaxed text-stone-600">Cards added {{ number_format($analytics['joins_last_window']) }} · Daily average {{ number_format($analytics['joins_last_window'] / max(1, $trendPoints->count()), 1) }}</p>
                 @if($trendPoints->every(fn ($day) => ($day['joins'] ?? 0) === 0))
-                    <div class="mt-6 rounded-2xl border border-dashed border-stone-200 bg-stone-50/70 p-5 text-sm text-stone-600">
-                        No new customer cards in the last 14 days yet.
-                    </div>
+                    <div class="rounded-xl border border-dashed border-stone-200 p-6 text-sm text-stone-600">No new customer cards in the last 14 days yet.</div>
                 @else
-                    <div class="mt-6 rounded-[24px] border border-stone-200 bg-stone-50/70 p-4">
-                        <div class="h-64 w-full">
-                            <canvas class="h-full w-full" data-chart='@json($cardGrowthChart)' aria-label="Card growth chart"></canvas>
-                        </div>
-                    </div>
+                    <div class="relative h-64"><canvas data-chart='@json($cardGrowthChart)' role="img" aria-label="Card growth chart: new customer cards over the last 14 days"></canvas></div>
                 @endif
-            </x-ui.section-panel>
+            </x-ui.card>
         </section>
-
-        <section class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <section aria-label="Plan and Wallet readiness" class="grid items-start gap-6 lg:grid-cols-2">
             @if(isset($usageStats))
-                <x-ui.card class="!rounded-[30px] !border-stone-200/70 p-5 sm:p-6">
+                <x-ui.card class="dashboard-panel p-5 sm:p-6">
                     <div class="flex items-start justify-between gap-3">
                         <div>
-                            <h3 class="text-base sm:text-lg font-bold text-stone-900">Plan Health</h3>
+                            <h3 class="text-xl font-semibold text-stone-900">Plan Health</h3>
                             <p class="mt-1 text-xs text-stone-600">
                                 @if($usageStats['is_subscribed'])
                                     Pro plan active
@@ -379,7 +333,7 @@
                         $customersLimit = $usageStats['customers_per_program_limit'] ?? null;
                     @endphp
                     <div class="mt-4 space-y-3">
-                        <div class="rounded-xl border border-stone-200 bg-stone-50/80 p-4">
+                        <div class="rounded-xl border border-stone-200 bg-white p-4">
                             <p class="text-xs font-semibold uppercase tracking-[0.18em] text-stone-500">Stores</p>
                             <p class="mt-2 text-lg font-semibold text-stone-900">
                                 {{ $storesUsed }}@if($storesLimit)<span class="text-sm font-medium text-stone-500"> / {{ $storesLimit }}</span>@endif
@@ -388,7 +342,7 @@
                             <x-ui.usage-meter class="mt-3" :used="$storesUsed" :limit="$storesLimit" />
                         </div>
 
-                        <div class="rounded-xl border border-stone-200 bg-stone-50/80 p-4">
+                        <div class="rounded-xl border border-stone-200 bg-white p-4">
                             <x-ui.store-cards-usage
                                 :stores="$usageStats['stores_card_usage'] ?? []"
                                 :limit="$cardsLimit"
@@ -398,7 +352,7 @@
                             />
                         </div>
 
-                        <div class="rounded-xl border border-stone-200 bg-stone-50/80 p-4">
+                        <div class="rounded-xl border border-stone-200 bg-white p-4">
                             <p class="text-xs font-semibold uppercase tracking-[0.18em] text-stone-500">Customers (primary card)</p>
                             <p class="mt-2 text-lg font-semibold text-stone-900">
                                 {{ $customersUsed }}@if($customersLimit)<span class="text-sm font-medium text-stone-500"> / {{ $customersLimit }}</span>@else<span class="text-sm font-medium text-stone-500"> unlimited</span>@endif
@@ -418,7 +372,7 @@
                 </x-ui.card>
             @else
                 <x-ui.card class="p-5 sm:p-6">
-                    <h3 class="text-base sm:text-lg font-bold text-stone-900">Plan Health</h3>
+                    <h3 class="text-xl font-semibold text-stone-900">Plan Health</h3>
                     <p class="mt-1 text-xs text-stone-600">Usage metrics are temporarily unavailable.</p>
                     <div class="mt-4 space-y-3" aria-hidden="true">
                         <div class="h-3 rounded bg-stone-200 animate-pulse"></div>
@@ -430,10 +384,10 @@
                 </x-ui.card>
             @endif
 
-            <x-ui.card class="!rounded-[30px] !border-stone-200/70 p-5 sm:p-6">
+            <x-ui.card class="dashboard-panel p-5 sm:p-6">
                 <div class="flex items-start justify-between gap-3">
                     <div>
-                        <h3 class="text-base sm:text-lg font-bold text-stone-900">Wallet Readiness</h3>
+                        <h3 class="text-xl font-semibold text-stone-900">Wallet Readiness</h3>
                         <p class="mt-1 text-sm text-stone-600">How ready your stores are for Apple Wallet and Google Wallet presentation.</p>
                     </div>
                     <span class="inline-flex items-center rounded-full bg-stone-100 px-3 py-1 text-xs font-semibold text-stone-700">
@@ -458,35 +412,26 @@
                         :state="$storesWithRewardRules === $storesCount && $storesCount > 0 ? 'ready' : 'attention'"
                     />
                 </div>
-            </x-ui.card>
-
-            <x-ui.card class="!rounded-[30px] !border-stone-200/70 p-5 sm:p-6">
-                <div class="flex items-start justify-between gap-3">
-                    <div>
-                        <h3 class="text-base sm:text-lg font-bold text-stone-900">Recent Activity</h3>
-                        <p class="mt-1 text-sm text-stone-600">A compact summary of your latest customer activity.</p>
-                    </div>
-                </div>
-
-                <div class="mt-5 space-y-3">
-                    @forelse($miniActivity as $day)
-                        <div class="flex items-center justify-between gap-3 rounded-2xl border border-stone-200/70 bg-stone-50/70 px-3 py-3">
-                            <div>
-                                <p class="text-sm font-semibold text-stone-900">{{ $day['label'] }}</p>
-                                <p class="text-xs text-stone-500">{{ $day['joins'] }} joins, {{ $day['stamps'] }} stamps, {{ $day['redeems'] }} redeems</p>
-                            </div>
-                            <div class="text-right">
-                                <p class="text-sm font-semibold text-stone-900">{{ $day['total'] }}</p>
-                                <p class="text-[11px] text-stone-400">events</p>
-                            </div>
-                        </div>
-                    @empty
-                        <div class="rounded-2xl border border-dashed border-stone-200 bg-stone-50/70 p-4 text-sm text-stone-500">No recent activity yet.</div>
-                    @endforelse
-                </div>
+                <x-ui.button href="{{ route('merchant.stores.index') }}" variant="secondary" class="dashboard-button mt-6 w-full">Review store settings</x-ui.button>
             </x-ui.card>
         </section>
-
+        <x-ui.card id="recent-activity" class="dashboard-panel scroll-mt-6 p-6">
+            <h2 class="text-xl font-semibold text-stone-900">Recent Activity</h2>
+            <div class="mt-4 overflow-x-auto">
+                <table class="w-full text-left text-sm sm:text-base">
+                    <caption class="sr-only">Recent daily customer activity across your stores</caption>
+                    <thead class="text-sm text-stone-600"><tr>@foreach(['Date', 'New cards', 'Stamps', 'Redeems', 'Total events'] as $label)<th scope="col" class="whitespace-nowrap px-3 py-3 font-semibold first:pl-0">{{ $label }}</th>@endforeach</tr></thead>
+                    <tbody>@forelse($miniActivity->reverse() as $day)
+                        <tr class="text-stone-900"><th scope="row" class="whitespace-nowrap py-3 pr-3 font-normal">{{ $day['label'] }}</th>@foreach(['joins', 'stamps', 'redeems', 'total'] as $key)<td class="px-3 py-3">{{ number_format($day[$key]) }}</td>@endforeach</tr>
+                    @empty<tr><td colspan="5" class="py-4 text-stone-600">No recent activity yet.</td></tr>@endforelse</tbody>
+                </table>
+            </div>
+        </x-ui.card>
+        <div class="grid max-w-[400px] gap-6">
+            <x-ui.button href="{{ route('merchant.scanner') }}" class="dashboard-button">Open scanner</x-ui.button>
+            <x-ui.button href="{{ route('merchant.stores.index') }}" variant="secondary" class="dashboard-button">Store QR</x-ui.button>
+            <x-ui.button href="{{ route('merchant.customers.index') }}" variant="secondary" class="dashboard-button">Customers</x-ui.button>
+        </div>
         @if(isset($usageStats) && !$usageStats['is_subscribed'])
             @if(($usageStats['primary_program_customers_count'] ?? 0) >= ($usageStats['customers_per_program_limit'] ?? PHP_INT_MAX))
                 <x-ui.alert variant="warning">
@@ -502,5 +447,6 @@
                 </x-ui.alert>
             @endif
         @endif
+
     </div>
-</x-merchant-layout>
+</x-dashboard-layout>
