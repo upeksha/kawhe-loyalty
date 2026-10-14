@@ -1,25 +1,15 @@
-<x-merchant-layout>
-    <x-slot name="header">
-        {{ __('Profile') }}
-    </x-slot>
+<x-merchant-design-layout title="Account settings" subtitle="Manage your profile, password and account.">
+    <div class="account-settings w-full max-w-[620px] space-y-6">
+        @include('profile.partials.update-profile-information-form')
 
-    <div class="max-w-2xl mx-auto space-y-6">
-        <x-ui.card class="p-6">
-            <div class="max-w-xl">
-                @include('profile.partials.update-profile-information-form')
-            </div>
-        </x-ui.card>
+        <details id="change-password" class="space-y-6" @if($errors->updatePassword->isNotEmpty() || session('status') === 'password-updated') open @endif>
+            <summary class="settings-disclosure border border-stone-200 bg-white text-brand-700">Change password</summary>
+            @include('profile.partials.update-password-form')
+        </details>
 
-        <x-ui.card class="p-6">
-            <div class="max-w-xl">
-                @include('profile.partials.update-password-form')
-            </div>
-        </x-ui.card>
-
-        <x-ui.card class="p-6">
-            <div class="max-w-xl">
-                @include('profile.partials.delete-user-form')
-            </div>
-        </x-ui.card>
+        <details id="delete-account" class="space-y-6" @if($errors->userDeletion->isNotEmpty()) open @endif>
+            <summary class="settings-disclosure bg-red-700 text-white">Review account deletion</summary>
+            @include('profile.partials.delete-user-form')
+        </details>
     </div>
-</x-merchant-layout>
+</x-merchant-design-layout>

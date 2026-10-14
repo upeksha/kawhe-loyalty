@@ -57,3 +57,11 @@
 .merchant-design form div:has(> label) > input:not([type=checkbox]):not([type=color]) { border-radius: .5rem; font-size: 1rem; }
 .merchant-design table thead { background: white; }
 .merchant-design table th { text-transform: none; letter-spacing: normal; color: #57534e; }
+
+/* Account fields and disclosure actions follow the editable Figma settings screens. */
+.account-settings form div:has(> label):has(> input) { background: white; }
+.account-settings form div:has(> label) > input { border-color: transparent; padding-left: 0; padding-right: 0; box-shadow: none; }
+.account-settings .settings-disclosure { display: flex; min-height: 3rem; align-items: center; justify-content: center; padding: .75rem 1rem; border-radius: .5rem; font-size: .875rem; font-weight: 600; cursor: pointer; list-style: none; }
+.account-settings .settings-disclosure::-webkit-details-marker { display: none; }
+.account-settings .settings-disclosure:focus-visible { outline: 2px solid #2d5d47; outline-offset: 3px; }
+.account-settings details[open] > .settings-disclosure { margin-bottom: 1.5rem; }

@@ -1,5 +1,5 @@
 <section>
-    <header>
+    <header class="sr-only">
         <h2 class="text-lg font-medium text-stone-900">
             {{ __('Profile Information') }}
         </h2>
@@ -13,7 +13,7 @@
         @csrf
     </form>
 
-    <form method="post" action="{{ route('profile.update') }}" class="mt-6 space-y-6">
+    <form method="post" action="{{ route('profile.update') }}" class="space-y-6">
         @csrf
         @method('patch')
 
@@ -25,16 +25,16 @@
 
         <div>
             <x-input-label for="email" :value="__('Email')" />
-            <x-text-input id="email" name="email" type="email" class="mt-1 block w-full" :value="old('email', $user->email)" required autocomplete="username" />
+            <x-text-input id="email" name="email" type="email" aria-describedby="email-verification-status" class="mt-1 block w-full" :value="old('email', $user->email)" required autocomplete="username" />
             <x-input-error class="mt-2" :messages="$errors->get('email')" />
 
             @if ($user instanceof \Illuminate\Contracts\Auth\MustVerifyEmail && ! $user->hasVerifiedEmail())
-                <div>
+                <div id="email-verification-status">
                     <p class="text-sm mt-2 text-stone-800">
                         {{ __('Your email address is unverified.') }}
 
-                        <button form="send-verification" class="underline text-sm text-brand-600 hover:text-brand-700 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-500">
-                            {{ __('Click here to re-send the verification email.') }}
+                        <button form="send-verification" type="submit" class="mt-3 flex min-h-12 w-full items-center justify-center rounded-lg bg-brand-600 px-4 text-sm font-semibold text-white hover:bg-brand-700">
+                            {{ __('Resend verification email') }}
                         </button>
                     </p>
 
@@ -44,12 +44,14 @@
                         </p>
                     @endif
                 </div>
+            @else
+                <p id="email-verification-status" class="mt-2 text-sm text-brand-700">Email verified</p>
             @endif
         </div>
 
-        <div class="flex items-center gap-4">
-            <x-ui.button type="submit" variant="primary">
-                {{ __('Save') }}
+        <div class="space-y-3">
+            <x-ui.button type="submit" variant="primary" class="w-full">
+                {{ __('Save profile') }}
             </x-ui.button>
 
             @if (session('status') === 'profile-updated')

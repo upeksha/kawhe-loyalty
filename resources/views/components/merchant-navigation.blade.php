@@ -1,12 +1,15 @@
         <nav aria-label="Merchant navigation" class="grid grid-cols-2 gap-2 sm:grid-cols-5 xl:grid-cols-10">
-            @foreach([
+            @foreach(auth()->user()->is_staff_account ? [
+                ['Scanner', route('merchant.scanner'), request()->routeIs('merchant.scanner')],
+                ['Settings', route('profile.edit'), request()->routeIs('profile.*')],
+            ] : [
                 ['Overview', route('merchant.dashboard'), request()->routeIs('merchant.dashboard')],
                 ['Cards', route('merchant.programs.index'), request()->routeIs('merchant.programs.*', 'merchant.stores.programs.*')],
                 ['Customers', route('merchant.customers.index'), request()->routeIs('merchant.customers.*')],
                 ['Team', route('merchant.staff.index'), request()->routeIs('merchant.staff.*')],
                 ['Activity', route('merchant.support.index'), false],
-                ['Billing', route('billing.index'), false],
-                ['Settings', route('profile.edit'), false],
+                ['Billing', route('billing.index'), request()->routeIs('billing.*')],
+                ['Settings', route('profile.edit'), request()->routeIs('profile.*')],
                 ['Stores', route('merchant.stores.index'), request()->routeIs('merchant.stores.*') && !request()->routeIs('merchant.stores.programs.*')],
                 ['Support', route('merchant.support.index'), false],
             ] as [$label, $url, $active])

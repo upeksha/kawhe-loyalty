@@ -1,27 +1,14 @@
-<x-merchant-layout>
-    <x-slot name="header">
-        {{ __('Subscription Status') }}
-    </x-slot>
+<x-merchant-design-layout title="Subscription status" subtitle="The app checks Stripe before applying your subscription state.">
 
-    <div class="max-w-2xl mx-auto">
-        <x-ui.card class="p-6 text-center">
+    <div class="w-full max-w-[720px]">
+        <section class="space-y-4 rounded-2xl border border-stone-200 bg-white p-6">
                     @if(isset($error))
                         <!-- Error State -->
-                        <div class="mb-4">
-                            <svg class="mx-auto h-16 w-16 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                            </svg>
-                        </div>
-                        <h2 class="text-2xl font-bold text-stone-900 mb-2">Issue Detected</h2>
+                        <h2 class="text-xl font-semibold text-stone-900 mb-2">Issue Detected</h2>
                         <p class="text-stone-600 mb-6">{{ $error }}</p>
                     @elseif(isset($message))
                         <!-- Processing/Async Payment State -->
-                        <div class="mb-4">
-                            <svg class="mx-auto h-16 w-16 text-accent-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                            </svg>
-                        </div>
-                        <h2 class="text-2xl font-bold text-stone-900 mb-2">
+                        <h2 class="text-xl font-semibold text-stone-900 mb-2">
                             @if(isset($isAsyncPayment) && $isAsyncPayment)
                                 Payment Processing
                             @else
@@ -38,8 +25,8 @@
                                     <form method="POST" action="{{ route('billing.sync') }}" class="inline">
                                         @csrf
                                         <input type="hidden" name="session_id" value="{{ $sessionId }}">
-                                        <x-ui.button type="submit" variant="primary">
-                                            🔄 Sync Subscription Now
+                                        <x-ui.button type="submit" variant="primary" class="w-full max-w-[400px]">
+                                            Sync Subscription Now
                                         </x-ui.button>
                                     </form>
                                 @endif
@@ -47,19 +34,14 @@
                         @endif
                     @else
                         <!-- Success State (should redirect, but fallback) -->
-                        <div class="mb-4">
-                            <svg class="mx-auto h-16 w-16 text-brand-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                            </svg>
-                        </div>
-                        <h2 class="text-2xl font-bold text-stone-900 mb-2">Subscription Activated!</h2>
+                        <h2 class="text-xl font-semibold text-stone-900 mb-2">Subscription Activated!</h2>
                         <p class="text-stone-600 mb-6">
-                            Your Pro plan subscription has been successfully activated. You can now create up to 3 loyalty cards.
+                            Your Pro plan subscription has been successfully activated. You can now create up to {{ config('billing.plans.pro.stores') }} stores and {{ config('billing.plans.pro.programs_per_store') }} loyalty cards per store.
                         </p>
                     @endif
 
                     @if(!empty($nextSteps))
-                        <div class="mt-6 rounded-xl border border-stone-200 bg-stone-50/70 p-4 text-left">
+                        <div class="mt-6 rounded-lg border border-stone-200 bg-white p-4 text-left">
                             <p class="text-sm font-semibold text-stone-800">What to do next</p>
                             <ul class="mt-2 space-y-2 text-sm leading-relaxed text-stone-600 list-disc list-inside">
                                 @foreach($nextSteps as $step)
@@ -70,13 +52,13 @@
                     @endif
                     
                     <div class="space-y-3">
-                        <x-ui.button href="{{ route('billing.index', ['refresh' => 1]) }}" variant="primary">
+                        <x-ui.button href="{{ route('billing.index', ['refresh' => 1]) }}" variant="primary" class="w-full max-w-[400px]">
                             Check Subscription Status
                         </x-ui.button>
-                        <x-ui.button href="{{ route('merchant.dashboard') }}" variant="primary">
+                        <x-ui.button href="{{ route('merchant.dashboard') }}" variant="secondary" class="w-full max-w-[400px]">
                             Go to Dashboard
                         </x-ui.button>
                     </div>
-        </x-ui.card>
+        </section>
     </div>
-</x-merchant-layout>
+</x-merchant-design-layout>

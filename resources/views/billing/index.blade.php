@@ -1,15 +1,5 @@
-<x-merchant-layout>
-    <x-slot name="header">
-        {{ __('Billing & Subscription') }}
-    </x-slot>
-
-    <div class="mx-auto space-y-4 sm:space-y-6">
-        @if (session('success'))
-            <x-ui.card class="border border-emerald-200 bg-emerald-50 p-4">
-                <p class="text-sm font-medium text-emerald-800">{{ session('success') }}</p>
-            </x-ui.card>
-        @endif
-
+<x-merchant-design-layout title="Your plan" subtitle="Manage your subscription securely through the billing portal.">
+    <div class="space-y-6">
         @if (session('info'))
             <x-ui.card class="border border-brand-200 bg-brand-50 p-4">
                 <p class="text-sm font-medium text-brand-800">{{ session('info') }}</p>
@@ -45,29 +35,25 @@
             $customersLimit = $stats['customers_per_program_limit'] ?? null;
 
             if ($subscription && in_array($subscription->stripe_status, ['past_due', 'unpaid', 'incomplete', 'paused'], true)) {
-                $heroTone = 'border-red-200 bg-red-50';
                 $heroBadgeTone = 'bg-red-100 text-red-800';
                 $heroTitle = 'Payment needs attention';
                 $heroBody = 'Update your payment method or pay your outstanding invoice to restore Pro limits. Your existing customer cards keep working.';
                 $heroActionLabel = 'Manage Subscription';
                 $heroActionRoute = route('billing.portal');
             } elseif ($stats['is_subscribed']) {
-                $heroTone = 'border-brand-200 bg-gradient-to-br from-brand-50 via-white to-emerald-50';
                 $heroBadgeTone = 'bg-brand-100 text-brand-800';
                 $heroTitle = 'Pro plan active';
                 $heroBody = "Pro includes up to {$proStores} stores, {$proCards} loyalty cards per store, and unlimited customers per card.";
                 $heroActionLabel = 'Manage Subscription';
                 $heroActionRoute = route('billing.portal');
             } elseif ($billingBlocked) {
-                $heroTone = 'border-red-200 bg-gradient-to-br from-red-50 via-white to-orange-50';
                 $heroBadgeTone = 'bg-red-100 text-red-800';
                 $heroTitle = 'You have reached the free customer limit';
                 $heroBody = 'Free includes 1 store, 1 loyalty card, and up to 100 customers on that card. Existing customers keep working — upgrade to accept new joins.';
                 $heroActionLabel = 'Upgrade to Pro';
                 $heroActionRoute = route('billing.checkout');
             } else {
-                $heroTone = 'border-stone-200 bg-gradient-to-br from-stone-50 via-white to-brand-50';
-                $heroBadgeTone = 'bg-stone-200 text-stone-700';
+                $heroBadgeTone = 'bg-brand-50 text-brand-700';
                 $heroTitle = 'You are on the free plan';
                 $heroBody = 'Free includes 1 store, 1 loyalty card, and up to 100 customers on that card.';
                 $heroActionLabel = 'Upgrade to Pro';
@@ -75,67 +61,35 @@
             }
         @endphp
 
-        <x-ui.card class="border {{ $heroTone }} p-5 sm:p-6">
-            <div class="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
-                <div class="max-w-2xl">
-                    <p class="text-xs font-semibold uppercase tracking-[0.18em] text-stone-500">Plan State</p>
-                    <span class="inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold {{ $heroBadgeTone }}">
-                        {{ $planState['label'] ?? ($stats['is_subscribed'] ? 'Pro' : 'Free') }}
-                    </span>
-                    <h2 class="mt-3 text-2xl font-semibold tracking-tight text-stone-900 sm:text-3xl">{{ $heroTitle }}</h2>
-                    <p class="mt-3 text-sm leading-6 text-stone-600 sm:text-base">
-                        {{ $heroBody }}
-                    </p>
-                    @if(isset($planState))
-                        <div class="mt-4 rounded-2xl border border-stone-200/80 bg-white/80 p-4">
-                            <p class="text-xs font-semibold uppercase tracking-[0.18em] text-stone-500">What changes next</p>
-                            <p class="mt-2 text-sm leading-6 text-stone-700">{{ $planState['transition'] }}</p>
-                        </div>
+        <section aria-label="Current plan" class="w-full max-w-[720px] space-y-4 rounded-2xl border border-stone-200 bg-white p-6">
+            <p class="sr-only">Plan State</p>
+            <span class="inline-flex min-h-8 items-center rounded-lg px-3 text-xs {{ $heroBadgeTone }}">
+                {{ $planState['label'] ?? ($stats['is_subscribed'] ? 'Pro' : 'Free') }}
+            </span>
+            <h2 class="text-xl font-semibold text-stone-900">{{ $heroTitle }}</h2>
+            <p class="text-base text-stone-600">{{ $heroBody }}</p>
+            @if(isset($planState))
+                <div class="rounded-lg border border-stone-200 p-4">
+                    <h3 class="text-sm font-semibold">What changes next</h3>
+                    @if($subscription?->ends_at && ($stats['is_subscribed'] ?? false))
+                        <p class="mt-2 text-base text-stone-600">{{ $planState['summary'] }}</p>
                     @endif
+                    <p class="mt-2 text-base text-stone-600">{{ $planState['transition'] }}</p>
                 </div>
-
-                <div class="w-full max-w-md rounded-[28px] border border-stone-200/80 bg-white/90 p-4 sm:p-5">
-                    <p class="text-xs font-semibold uppercase tracking-[0.18em] text-stone-500">Main action</p>
-                    <p class="mt-2 text-sm leading-6 text-stone-600">
-                        @if($stats['is_subscribed'])
-                            Manage your subscription, payment method, and invoices in the billing portal.
-                        @elseif($billingBlocked)
-                            Upgrade to Pro to accept new customer joins and unlock higher store and card limits.
-                        @else
-                            Upgrade when you need more stores, loyalty cards per store, or unlimited customers.
-                        @endif
-                    </p>
-
-                    <div class="mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-                        <form method="POST" action="{{ $heroActionRoute }}">
-                            @csrf
-                            <x-ui.button type="submit" variant="primary" size="sm" class="w-full sm:w-auto">
-                                {{ $heroActionLabel }}
-                            </x-ui.button>
-                        </form>
-
-                        @if($subscription)
-                            <x-ui.button href="{{ route('billing.index', ['refresh' => 1]) }}" variant="ghost" size="sm" class="w-full sm:w-auto">
-                                Refresh Status
-                            </x-ui.button>
-                        @endif
-                    </div>
-
-                    <div class="mt-4 rounded-2xl border border-stone-200 bg-stone-50/80 p-4">
-                        <p class="text-xs font-semibold uppercase tracking-[0.18em] text-stone-500">Quick answer</p>
-                        <ul class="mt-2 space-y-2 text-sm text-stone-700">
-                            <li>Existing customer cards keep working.</li>
-                            <li>{{ $stats['is_subscribed'] ? "Up to {$proStores} stores and {$proCards} cards per store." : ($billingBlocked ? 'New customer joins are paused until you upgrade or free up capacity.' : 'You still have room to grow customers on the free plan.') }}</li>
-                            <li>{{ $stats['is_subscribed'] ? 'You can change or cancel later from the billing portal.' : 'Upgrading does not reset or remove any customer data.' }}</li>
-                        </ul>
-                    </div>
-                </div>
-            </div>
-        </x-ui.card>
+            @endif
+            <p class="text-base text-stone-600">Review the current price and billing terms before confirming a change. Existing customer cards keep working.</p>
+            <form method="POST" action="{{ $heroActionRoute }}">
+                @csrf
+                <x-ui.button type="submit" class="w-full">{{ $heroActionLabel }}</x-ui.button>
+            </form>
+            @if($subscription)
+                <x-ui.button href="{{ route('billing.index', ['refresh' => 1]) }}" variant="secondary" class="w-full">Refresh Status</x-ui.button>
+            @endif
+        </section>
 
         <x-billing.plan-comparison :stats="$stats" :current-plan="$stats['plan'] ?? 'free'" />
 
-        <x-ui.card class="p-5 sm:p-6">
+        <section class="rounded-2xl border border-stone-200 bg-white p-6">
             <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                 <div>
                     <h3 class="text-lg font-semibold text-stone-900">Usage right now</h3>
@@ -152,7 +106,7 @@
             </div>
 
             <div class="mt-5 grid gap-4 lg:grid-cols-3">
-                <div class="rounded-2xl border border-stone-200 bg-stone-50/80 p-4">
+                <div class="rounded-lg border border-stone-200 bg-white p-4">
                     <p class="text-xs font-semibold uppercase tracking-[0.18em] text-stone-500">Stores</p>
                     <p class="mt-2 text-xl font-semibold text-stone-900">
                         {{ $storesUsed }}
@@ -164,7 +118,7 @@
                     <x-ui.usage-meter class="mt-3" :used="$storesUsed" :limit="$storesLimit" />
                 </div>
 
-                <div class="rounded-2xl border border-stone-200 bg-stone-50/80 p-4 lg:row-span-1">
+                <div class="rounded-lg border border-stone-200 bg-white p-4 lg:row-span-1">
                     <x-ui.store-cards-usage
                         :stores="$stats['stores_card_usage'] ?? []"
                         :limit="$cardsLimit"
@@ -173,7 +127,7 @@
                     />
                 </div>
 
-                <div class="rounded-2xl border border-stone-200 bg-stone-50/80 p-4">
+                <div class="rounded-lg border border-stone-200 bg-white p-4">
                     <p class="text-xs font-semibold uppercase tracking-[0.18em] text-stone-500">Customers (primary card)</p>
                     <p class="mt-2 text-xl font-semibold text-stone-900">
                         {{ $customersUsed }}
@@ -193,6 +147,6 @@
                     Pro unlocks {{ $proStores }} stores, {{ $proCards }} cards per store, and unlimited customers. Existing customers and cards are never removed.
                 </p>
             @endif
-        </x-ui.card>
+        </section>
     </div>
-</x-merchant-layout>
+</x-merchant-design-layout>

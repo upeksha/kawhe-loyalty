@@ -17,13 +17,12 @@
     $planOrder = ['free', 'pro', 'business'];
 @endphp
 
-<x-ui.section-panel class="p-5 sm:p-6 lg:p-8">
+<section aria-labelledby="compare-plans-heading" class="space-y-4">
     <div class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
-            <p class="text-xs font-semibold uppercase tracking-[0.22em] text-brand-600">Plans</p>
-            <h2 class="mt-2 text-2xl font-semibold tracking-tight text-stone-900">Compare plans</h2>
+            <h2 id="compare-plans-heading" class="text-xl font-semibold text-stone-900">Compare plans</h2>
             <p class="mt-2 max-w-2xl text-sm leading-6 text-stone-600">
-                All plans use soft gates: existing stores, cards, and customers keep working. Limits only block new stores, cards, or customer joins.
+                Existing stores, cards, and customers keep working. Limits only block new stores, cards, or customer joins.
             </p>
         </div>
         @if(!$needsPaymentAttention && !($stats['is_subscribed'] ?? false))
@@ -43,8 +42,8 @@
                 $label = $plan['label'] ?? ucfirst($planKey);
             @endphp
             <div @class([
-                'relative flex flex-col rounded-[24px] border p-5 sm:p-6',
-                'border-brand-300 bg-gradient-to-b from-brand-50/80 to-white shadow-md shadow-brand-100/40 ring-1 ring-brand-200' => $isCurrent && !$isComingSoon,
+                'relative flex flex-col rounded-2xl border p-5 sm:p-6',
+                'border-brand-300 bg-white' => $isCurrent && !$isComingSoon,
                 'border-stone-200 bg-white' => !$isCurrent || $isComingSoon,
                 'opacity-90' => $isComingSoon,
             ])>
@@ -70,13 +69,13 @@
 
                 <ul class="mt-5 flex-1 space-y-3 text-sm text-stone-700">
                     @foreach($rows as $row)
-                        <li class="flex items-start justify-between gap-3 rounded-xl border border-stone-200/80 bg-stone-50/60 px-3 py-2.5">
+                        <li class="flex items-start justify-between gap-3 py-1">
                             <span class="text-stone-600">{{ $row['label'] }}</span>
                             <span class="font-semibold text-stone-900 text-right">{{ $formatLimit($plan[$row['key']] ?? null, $row['suffix']) }}</span>
                         </li>
                     @endforeach
                     @if($planKey === 'business')
-                        <li class="rounded-xl border border-dashed border-stone-300 bg-stone-50/40 px-3 py-2.5 text-stone-600">
+                        <li class="text-sm text-stone-600">
                             Advanced options and more than 3 stores — details at launch.
                         </li>
                     @endif
@@ -108,4 +107,4 @@
             </div>
         @endforeach
     </div>
-</x-ui.section-panel>
+</section>

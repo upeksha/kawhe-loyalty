@@ -1,7 +1,7 @@
 <section>
     <header>
         <h2 class="text-lg font-medium text-stone-900">
-            {{ __('Update Password') }}
+            {{ __('Change password') }}
         </h2>
 
         <p class="mt-1 text-sm text-stone-600">
@@ -31,9 +31,9 @@
             <x-input-error :messages="$errors->updatePassword->get('password_confirmation')" class="mt-2" />
         </div>
 
-        <div class="flex items-center gap-4">
-            <x-ui.button type="submit" variant="primary">
-                {{ __('Save') }}
+        <div class="space-y-3">
+            <x-ui.button type="submit" variant="primary" class="w-full">
+                {{ __('Save password') }}
             </x-ui.button>
 
             @if (session('status') === 'password-updated')
