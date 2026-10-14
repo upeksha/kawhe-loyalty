@@ -289,83 +289,34 @@
             </x-ui.card>
         </section>
         <section aria-label="Plan and Wallet readiness" class="grid items-start gap-6 lg:grid-cols-2">
-            @if(isset($usageStats))
-                <x-ui.card class="dashboard-panel p-5 sm:p-6">
-                    <div class="flex items-start justify-between gap-3">
-                        <div>
-                            <h3 class="text-xl font-semibold text-stone-900">Plan Health</h3>
-                            <p class="mt-1 text-xs text-stone-600">
-                                @if($usageStats['is_subscribed'])
-                                    Pro plan active
-                                @else
-                                    Free plan usage
-                                @endif
-                            </p>
-                        </div>
-                        @if(!$usageStats['is_subscribed'])
-                            <x-ui.button href="{{ route('billing.index') }}" variant="primary" size="sm">
-                                Upgrade
-                            </x-ui.button>
-                        @endif
-                    </div>
+            <x-ui.card class="dashboard-panel p-5 sm:p-6">
+                <h3 class="text-xl font-semibold text-stone-900">Your plan</h3>
+                @if(isset($usageStats))
                     @php
-                        $storesUsed = (int) ($usageStats['stores_count'] ?? 0);
-                        $storesLimit = $usageStats['stores_limit'] ?? null;
-                        $cardsLimit = $usageStats['programs_per_store_limit'] ?? null;
                         $customersUsed = (int) ($usageStats['primary_program_customers_count'] ?? 0);
                         $customersLimit = $usageStats['customers_per_program_limit'] ?? null;
+                        $customersRemaining = $customersLimit ? max(0, $customersLimit - $customersUsed) : null;
                     @endphp
-                    <div class="mt-4 space-y-3">
-                        <div class="rounded-xl border border-stone-200 bg-white p-4">
-                            <p class="text-xs font-semibold uppercase tracking-[0.18em] text-stone-500">Stores</p>
-                            <p class="mt-2 text-lg font-semibold text-stone-900">
-                                {{ $storesUsed }}@if($storesLimit)<span class="text-sm font-medium text-stone-500"> / {{ $storesLimit }}</span>@endif
-                            </p>
-                            <p class="mt-1 text-xs text-stone-600">{{ ($usageStats['can_create_store'] ?? false) ? 'Room for another store' : 'Store limit reached' }}</p>
-                            <x-ui.usage-meter class="mt-3" :used="$storesUsed" :limit="$storesLimit" />
-                        </div>
-
-                        <div class="rounded-xl border border-stone-200 bg-white p-4">
-                            <x-ui.store-cards-usage
-                                :stores="$usageStats['stores_card_usage'] ?? []"
-                                :limit="$cardsLimit"
-                                :is-subscribed="(bool) ($usageStats['is_subscribed'] ?? false)"
-                                :can-create-program="(bool) ($usageStats['can_create_program'] ?? false)"
-                                compact
-                            />
-                        </div>
-
-                        <div class="rounded-xl border border-stone-200 bg-white p-4">
-                            <p class="text-xs font-semibold uppercase tracking-[0.18em] text-stone-500">Customers (primary card)</p>
-                            <p class="mt-2 text-lg font-semibold text-stone-900">
-                                {{ $customersUsed }}@if($customersLimit)<span class="text-sm font-medium text-stone-500"> / {{ $customersLimit }}</span>@else<span class="text-sm font-medium text-stone-500"> unlimited</span>@endif
-                            </p>
-                            <p class="mt-1 text-xs text-stone-600">{{ $usageStats['is_subscribed'] ? 'Unlimited new joins on Pro' : 'New joins blocked at 100 on Free' }}</p>
-                            <x-ui.usage-meter class="mt-3" :used="$customersUsed" :limit="$customersLimit" />
-                        </div>
-
-                        @if($usageStats['grandfathered_programs_count'] > 0)
-                            <p class="px-1 text-xs text-stone-500">{{ $usageStats['grandfathered_programs_count'] }} grandfathered card(s) active</p>
+                    <p class="mt-2 text-sm font-medium text-brand-700">{{ $usageStats['is_subscribed'] ? 'Pro plan' : 'Free plan' }}</p>
+                    <div class="mt-5">
+                        <p class="text-sm text-stone-600">Customers on your primary loyalty card</p>
+                        <p class="mt-2 text-2xl font-semibold text-stone-900">
+                            {{ number_format($customersUsed) }}
+                            <span class="text-sm font-normal text-stone-500">{{ $customersLimit ? 'of '.number_format($customersLimit) : '· no customer limit' }}</span>
+                        </p>
+                        @if($customersLimit)
+                            <progress class="mt-3 h-2 w-full overflow-hidden rounded-full [&::-webkit-progress-bar]:bg-stone-100 [&::-webkit-progress-value]:bg-brand-600 [&::-moz-progress-bar]:bg-brand-600" value="{{ min($customersUsed, $customersLimit) }}" max="{{ $customersLimit }}" aria-label="Customers on your primary loyalty card"></progress>
+                            <p class="mt-2 text-sm text-stone-600">{{ $customersRemaining > 0 ? number_format($customersRemaining).' more customers can join this card.' : 'This card is full. Upgrade to welcome more customers.' }}</p>
+                        @else
+                            <p class="mt-2 text-sm text-stone-600">Keep welcoming new customers with no customer limit.</p>
                         @endif
-
-                        <x-ui.button href="{{ route('billing.index') }}" variant="ghost" size="sm" class="w-full">
-                            View billing details
-                        </x-ui.button>
                     </div>
-                </x-ui.card>
-            @else
-                <x-ui.card class="p-5 sm:p-6">
-                    <h3 class="text-xl font-semibold text-stone-900">Plan Health</h3>
-                    <p class="mt-1 text-xs text-stone-600">Usage metrics are temporarily unavailable.</p>
-                    <div class="mt-4 space-y-3" aria-hidden="true">
-                        <div class="h-3 rounded bg-stone-200 animate-pulse"></div>
-                        <div class="h-3 w-2/3 rounded bg-stone-200 animate-pulse"></div>
-                    </div>
-                    <x-ui.button href="{{ route('merchant.dashboard') }}" variant="secondary" size="sm" class="mt-4">
-                        Refresh
-                    </x-ui.button>
-                </x-ui.card>
-            @endif
+                    <x-ui.button href="{{ route('billing.index') }}" variant="secondary" class="mt-5 w-full">{{ $usageStats['is_subscribed'] ? 'Manage plan' : 'View plans & billing' }}</x-ui.button>
+                @else
+                    <p class="mt-2 text-sm text-stone-600">Plan details are temporarily unavailable.</p>
+                    <x-ui.button href="{{ route('billing.index') }}" variant="secondary" class="mt-5 w-full">View plans & billing</x-ui.button>
+                @endif
+            </x-ui.card>
 
             <x-ui.card class="dashboard-panel p-5 sm:p-6">
                 <div class="flex items-start justify-between gap-3">
