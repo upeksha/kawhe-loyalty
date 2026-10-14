@@ -6,6 +6,7 @@
 @endphp
 
 <x-customer-layout :program="$program" :store="$store" title="Find my card">
+    <x-slot name="brand"><x-customer-store-brand :store="$store ?? null" :program="$program ?? null" /></x-slot>
     <x-slot name="back">
         <a href="{{ route('join.index', ['slug' => $program->slug, 't' => $token]) }}" class="inline-flex items-center text-sm customer-muted hover:opacity-90">
             <svg class="mr-1 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
@@ -14,10 +15,6 @@
     </x-slot>
 
     <div class="customer-form-page">
-        @if($program->logo_path)
-            <img src="{{ $program->logo_url }}" alt="{{ $program->name }}" class="mb-4 h-12 max-w-full object-contain">
-        @endif
-
         <h1 class="customer-page-heading">Find my card</h1>
         @if($cardSubtitle && $cardSubtitle !== $store->name && $cardSubtitle !== $cardTitle)
             <p class="customer-page-description">{{ $cardSubtitle }}</p>

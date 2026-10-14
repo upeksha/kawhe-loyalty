@@ -1,4 +1,5 @@
 <x-customer-layout :account="$account" title="Confirm your email">
+    <x-slot name="brand"><x-customer-store-brand :store="$account->store" :program="$account->loyaltyProgram" /></x-slot>
     <h1 class="customer-page-heading">Confirm your email</h1>
     <p class="customer-page-description mb-6">Confirm your email address for your loyalty card at {{ $account->store->name }}.</p>
     <section class="customer-card p-6 mb-6">

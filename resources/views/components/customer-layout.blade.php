@@ -36,10 +36,14 @@
             'customer-shell--card py-6 sm:py-8' => $shell === 'card',
             'py-6 sm:py-8 lg:py-10' => ! $centered && $shell !== 'card',
         ])>
+            @isset($brand)
+                {{ $brand }}
+            @else
             <div class="customer-brand" aria-label="Kawhe">
                 <img src="{{ asset('images/logo.svg') }}" width="28" height="37" alt="">
                 <span>kawhe</span>
             </div>
+            @endisset
             @isset($hero)
                 {{ $hero }}
             @endisset

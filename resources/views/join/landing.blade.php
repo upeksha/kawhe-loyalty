@@ -1,4 +1,5 @@
 <x-customer-layout :program="$program" :store="$store" title="Get your card" x-data="joinLanding()">
+    <x-slot name="brand"><x-customer-store-brand :store="$store ?? null" :program="$program ?? null" /></x-slot>
     @include('join.partials.signup', ['showSavedCard' => true])
     @push('scripts')
         <script>

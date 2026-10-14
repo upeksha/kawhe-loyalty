@@ -4,10 +4,6 @@
 @endphp
 
 <header class="mb-5">
-    <div class="mb-3 flex items-center gap-3">
-        @if($program->logo_path)<img src="{{ $program->logo_url }}" alt="" class="h-12 w-12 rounded-lg object-contain">@endif
-        <p class="customer-card-title font-semibold">{{ $store->name }}</p>
-    </div>
     <h1 class="customer-page-heading">Get my card</h1>
     @if($cardTitle !== $program->reward_title && $cardTitle !== $store->name)<p class="customer-page-description">{{ $cardTitle }}</p>@endif
     <p class="customer-page-description">Collect {{ $program->reward_target }} stamps to earn {{ $program->reward_title }}.</p>

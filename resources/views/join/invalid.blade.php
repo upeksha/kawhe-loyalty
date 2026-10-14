@@ -5,13 +5,8 @@
 @endphp
 
 <x-customer-layout :program="$program" :store="$store" title="Link not valid" centered>
-    <x-slot name="hero">
-        <div class="mb-6 text-center">
-            @if($program?->logo_path)
-                <img src="{{ $program->logo_url }}" alt="{{ $cardTitle }}" class="mx-auto mb-4 h-14 w-auto object-contain">
-            @endif
-        </div>
-    </x-slot>
+    <x-slot name="brand"><x-customer-store-brand :store="$store ?? null" :program="$program ?? null" /></x-slot>
+
 
     <div class="customer-card customer-card--plain p-6 sm:p-8 w-full text-center">
         <div class="customer-icon-badge mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full">

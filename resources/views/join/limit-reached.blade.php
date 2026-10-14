@@ -1,4 +1,5 @@
 <x-customer-layout :program="$program" :store="$store" title="Limit Reached" centered>
+    <x-slot name="brand"><x-customer-store-brand :store="$store ?? null" :program="$program ?? null" /></x-slot>
     <div class="customer-card customer-card--status px-6 py-8 sm:px-8">
         <div class="text-center">
             <div class="mb-4">
