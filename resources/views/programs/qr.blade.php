@@ -9,7 +9,7 @@
             </div>
             <div class="grid max-w-[400px] gap-4">
                 <x-ui.button type="button" onclick="copyToClipboard()" class="dashboard-button">Copy join link</x-ui.button>
-                <form method="GET" action="{{ route('merchant.stores.programs.qr.image', [$store, $program]) }}">
+                <form method="GET" data-disable-submit-loading="false" action="{{ route('merchant.stores.programs.qr.image', [$store, $program]) }}">
                     <x-ui.button type="submit" variant="secondary" class="dashboard-button w-full">Download QR image</x-ui.button>
                 </form>
                 <x-ui.button type="button" variant="secondary" class="dashboard-button" onclick="downloadProgramPoster('{{ route('merchant.stores.programs.qr.pdf', [$store, $program]) }}', '{{ \Illuminate\Support\Str::slug($store->name . ' ' . $program->name) }}-join-poster.pdf')">Download PDF poster</x-ui.button>

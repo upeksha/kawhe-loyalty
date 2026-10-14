@@ -54,7 +54,7 @@
                         </svg>
                         Download PDF (A4 poster)
                     </button>
-                    <form method="GET" action="{{ route('merchant.stores.qr.image', $store) }}">
+                    <form method="GET" data-disable-submit-loading="false" action="{{ route('merchant.stores.qr.image', $store) }}">
                         <button type="submit" class="inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg bg-stone-100 text-stone-800 hover:bg-stone-200 border border-stone-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-stone-500">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h2m4 0h-2m-4 4h6m-6-2h2m2 0h2m-4-4h2m2 0h2" />
