@@ -131,6 +131,29 @@
 
                 <div class="customer-actions mb-6">
                     <button type="button" @click="showWalletNudge = true" class="customer-btn customer-btn-primary">Save to Wallet</button>
+                    <div x-data="cardInstall" data-card-install x-show="visible || message" x-cloak>
+                        <button type="button" x-show="visible" x-cloak @click="install()" :disabled="installing"
+                            :aria-expanded="showHelp.toString()" aria-controls="card-install-help"
+                            class="customer-btn customer-btn-secondary" x-text="label"></button>
+                        <section id="card-install-help" x-show="showHelp && !installed" x-cloak
+                            class="mt-3 rounded-xl border border-stone-200 bg-white p-4 text-sm customer-card-body" aria-label="Home screen instructions">
+                            <div x-show="ios">
+                                <p class="font-semibold">On iPhone or iPad</p>
+                                <ol class="mt-2 list-inside list-decimal space-y-2">
+                                    <li>Open this card in Safari.</li>
+                                    <li>Tap Share, then Add to Home Screen. You may need to scroll through the options.</li>
+                                    <li>Tap Add to confirm.</li>
+                                </ol>
+                            </div>
+                            <div x-show="android">
+                                <p class="font-semibold">On Android</p>
+                                <p class="mt-2">Open your browser menu and look for Install app or Add to Home screen. If neither appears, open this card in Chrome and try again.</p>
+                            </div>
+                            <p class="mt-3 text-xs">Adding a shortcut is optional. You can keep using your card in the browser.</p>
+                            <button type="button" @click="showHelp = false" class="mt-2 min-h-11 font-semibold text-brand-700">Close instructions</button>
+                        </section>
+                        <p x-show="message" x-text="message" role="status" aria-live="polite" class="mt-2 text-sm customer-muted"></p>
+                    </div>
                     <button type="button" @click="refreshCard()" :disabled="refreshing" class="customer-btn customer-btn-secondary" x-text="refreshing ? 'Refreshing…' : 'Refresh card'">Refresh card</button>
                     <p x-show="refreshMessage" x-text="refreshMessage" class="customer-muted text-sm" role="status" aria-live="polite"></p>
                 </div>
@@ -153,43 +176,6 @@
                         <p class="card-muted py-2 text-center text-sm">Loading recent activity…</p>
                     </div>
                 </section>
-
-                    <!-- Add to Home Screen Card -->
-                <div class="card-surface rounded-2xl overflow-hidden mb-4" x-show="showInstallPrompt" x-cloak>
-                        <div class="p-6">
-                            <div class="flex items-center gap-4 mb-3">
-                                <div class="w-12 h-12 card-btn-icon rounded-full flex items-center justify-center">
-                                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
-                                    </svg>
-                                </div>
-                                <p class="card-text font-semibold">Add to Home Screen</p>
-                            </div>
-                            <p class="card-muted text-xs mb-4">
-                                <span class="font-semibold card-text">Tip:</span> Add this page to your Home Screen to access your card easily!
-                            </p>
-                            <button 
-                                @click="installPWA()" 
-                                x-show="deferredPrompt !== null"
-                                class="card-btn w-full font-semibold py-2 px-4 rounded-lg transition-colors">
-                                Install App
-                            </button>
-                            <div x-show="deferredPrompt === null && !isIOS && !isStandalone" class="card-muted text-xs space-y-1">
-                                <p class="font-semibold card-text mb-1">Manual Instructions:</p>
-                                <p><strong>Chrome/Edge:</strong> Click menu (⋮) → "Install app"</p>
-                                <p><strong>Firefox:</strong> Click menu (☰) → "Install"</p>
-                                <p><strong>Safari:</strong> Share button (□↑) → "Add to Home Screen"</p>
-                            </div>
-                            <div x-show="isIOS && !isStandalone" class="card-muted text-xs space-y-2">
-                                <p class="font-semibold card-text">iOS Instructions:</p>
-                                <ol class="list-decimal list-inside space-y-1">
-                                    <li>Tap the Share button <svg class="inline w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M15 8a3 3 0 10-2.977-2.63l-4.94 2.47a3 3 0 100 4.319l4.94 2.47a3 3 0 10.895-1.789l-4.94-2.47a3.027 3.027 0 000-.74l4.94-2.47C13.456 7.68 14.19 8 15 8z"></path></svg> at the bottom</li>
-                                    <li>Scroll down and tap "Add to Home Screen"</li>
-                                    <li>Tap "Add" to confirm</li>
-                                </ol>
-                            </div>
-                        </div>
-                    </div>
 
                 <!-- Forget Card Link -->
                 <div class="text-center">
@@ -416,17 +402,12 @@
                     verifying: false,
                     verifyMessage: '',
                     cardForgotten: false,
-                    // PWA Install Prompt
-                    deferredPrompt: null,
-                    showInstallPrompt: false,
                     isIOS: /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream,
                     isAndroid: /Android/.test(navigator.userAgent),
-                    isStandalone: window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone || document.referrer.includes('android-app://'),
 
                     init() {
                         this.persistCard();
                         this.initialize();
-                        this.setupPWAInstall();
                         this.initWalletNudge();
 
                         // Lock body scroll whenever any modal is open
@@ -747,60 +728,6 @@
                         }, 2000);
                     },
 
-                    setupPWAInstall() {
-                        // Don't show if already installed
-                        if (this.isStandalone) {
-                            this.showInstallPrompt = false;
-                            return;
-                        }
-
-                        // Listen for the beforeinstallprompt event (Chrome, Edge, etc.)
-                        window.addEventListener('beforeinstallprompt', (e) => {
-                            // Prevent the default mini-infobar from appearing
-                            e.preventDefault();
-                            // Stash the event so it can be triggered later
-                            this.deferredPrompt = e;
-                            // Show our install prompt
-                            this.showInstallPrompt = true;
-                        });
-
-                        // For iOS or if prompt isn't available, show manual instructions
-                        if (this.isIOS || (!this.deferredPrompt && !this.isStandalone)) {
-                            this.showInstallPrompt = true;
-                        }
-
-                        // Hide prompt if user dismissed it before
-                        const installDismissed = localStorage.getItem('pwa_install_dismissed');
-                        if (installDismissed === 'true') {
-                            this.showInstallPrompt = false;
-                        }
-                    },
-
-                    async installPWA() {
-                        if (!this.deferredPrompt) {
-                            // Manual instructions already shown in template
-                            return;
-                        }
-
-                        // Show the install prompt
-                        this.deferredPrompt.prompt();
-
-                        // Wait for the user to respond to the prompt
-                        const { outcome } = await this.deferredPrompt.userChoice;
-
-                        if (outcome === 'accepted') {
-                            console.log('User accepted the install prompt');
-                            this.showInstallPrompt = false;
-                        } else {
-                            console.log('User dismissed the install prompt');
-                            // Optionally hide the prompt if user dismissed it
-                            localStorage.setItem('pwa_install_dismissed', 'true');
-                            this.showInstallPrompt = false;
-                        }
-
-                        // Clear the deferredPrompt so it can only be used once
-                        this.deferredPrompt = null;
-                    }
                 }));
             });
 
