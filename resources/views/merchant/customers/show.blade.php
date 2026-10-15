@@ -16,21 +16,21 @@
     </x-slot:actions>
     @if($errors->any())<div role="alert" class="rounded-lg bg-red-50 p-4 text-red-800">@foreach($errors->all() as $error)<p>{{ $error }}</p>@endforeach</div>@endif
 
-    <div class="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-stone-600">
-        @if($customerName && $account->customer->email)<span>{{ $account->customer->email }}</span>@endif
-        @if($account->customer->phone)<span>Phone: {{ $account->customer->phone }}</span>@endif
-        <span>Joined {{ $account->created_at->format('M d, Y') }}</span>
-        @if($extraCustomerDetails)
-            <details class="relative">
-                <summary class="cursor-pointer rounded text-sm font-semibold text-brand-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-600">More customer details</summary>
-                <dl class="mt-3 space-y-2 rounded-xl border border-stone-200 bg-white p-4">
-                    @foreach($extraCustomerDetails as $label => $value)
-                        <div><dt class="inline font-medium">{{ $label }}:</dt> <dd class="inline">{{ $value }}</dd></div>
-                    @endforeach
-                </dl>
-            </details>
-        @endif
-    </div>
+    <section aria-labelledby="customer-details-heading" class="rounded-2xl border border-stone-200 bg-white p-5 sm:p-6">
+        <h2 id="customer-details-heading" class="text-lg font-semibold text-stone-900">Customer details</h2>
+        <dl class="mt-5 grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+            @if($account->customer->email)
+                <div class="min-w-0"><dt class="text-sm text-stone-500">Email</dt><dd class="mt-1 break-words text-sm font-medium text-stone-900">{{ $account->customer->email }}</dd></div>
+            @endif
+            @if($account->customer->phone)
+                <div><dt class="text-sm text-stone-500">Phone</dt><dd class="mt-1 break-words text-sm font-medium text-stone-900">{{ $account->customer->phone }}</dd></div>
+            @endif
+            <div><dt class="text-sm text-stone-500">Joined</dt><dd class="mt-1 text-sm font-medium text-stone-900">{{ $account->created_at->format('M d, Y') }}</dd></div>
+            @foreach($extraCustomerDetails as $label => $value)
+                <div class="min-w-0"><dt class="text-sm text-stone-500">{{ $label }}</dt><dd class="mt-1 break-words text-sm font-medium text-stone-900">{{ $value }}</dd></div>
+            @endforeach
+        </dl>
+    </section>
 
     <x-ui.card class="p-5 sm:p-6">
         <h2 class="text-lg font-semibold text-stone-900">Loyalty progress</h2>

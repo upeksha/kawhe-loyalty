@@ -70,18 +70,19 @@ test('older stamp history stays available behind the activity disclosure', funct
     expect($dom->query('//li[.//p[contains(text(),"Stamps added")]]')->length)->toBe(7);
 });
 
-test('extra details are hidden when empty and never repeat the joined date', function () {
+test('customer details are always visible and never repeat the joined date', function () {
     $owner = User::factory()->create();
     $store = Store::factory()->for($owner)->create(['address' => null]);
     $customer = Customer::factory()->create(['first_name' => null, 'last_name' => null, 'birthday' => null]);
     $account = LoyaltyAccount::factory()->create(['store_id' => $store->id, 'customer_id' => $customer->id, 'verified_at' => null]);
     $this->actingAs($owner)->get(route('merchant.customers.show', $account))->assertOk()
-        ->assertSee('Joined '.$account->created_at->format('M d, Y'))->assertDontSee('More customer details')->assertDontSee('Joined:');
+        ->assertSee($account->created_at->format('M d, Y'))->assertDontSee('More customer details')->assertDontSee('Joined:');
 
     $customer->update(['birthday' => '1990-01-02']);
-    $response = $this->get(route('merchant.customers.show', $account))->assertOk()->assertSee('More customer details');
+    $response = $this->get(route('merchant.customers.show', $account))->assertOk()->assertDontSee('More customer details');
     $dom = customerDetailsDom($response->getContent());
-    $details = $dom->query('//details[summary[contains(text(),"More customer details")]]')->item(0);
-    expect($dom->query('.//dt', $details)->length)->toBe(1);
-    expect($details->textContent)->toContain('Birthday:', 'Jan 02, 1990')->not->toContain('Joined');
+    $details = $dom->query('//section[@aria-labelledby="customer-details-heading"]')->item(0);
+    expect($dom->query('.//details', $details)->length)->toBe(0);
+    expect($dom->query('.//dt[text()="Joined"]', $details)->length)->toBe(1);
+    expect($details->textContent)->toContain('Birthday', 'Jan 02, 1990');
 });
