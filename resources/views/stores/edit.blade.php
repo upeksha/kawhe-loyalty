@@ -63,25 +63,19 @@
                     </div>
 
                     @if($defaultProgram)
-                        <div class="mt-5 flex flex-col gap-5 rounded-2xl bg-stone-50 p-4 sm:flex-row sm:items-center sm:justify-between">
-                            <div class="min-w-0">
-                                <div class="flex flex-wrap items-center gap-2">
-                                    <h3 class="truncate font-semibold text-stone-900">{{ $defaultProgram->name }}</h3>
-                                    <x-ui.badge variant="success">Default card</x-ui.badge>
-                                    @if($defaultProgram->trashed())
-                                        <x-ui.badge variant="warning">Archived</x-ui.badge>
-                                    @endif
-                                </div>
-                                <dl class="mt-3 grid grid-cols-2 gap-x-6 gap-y-2 text-sm sm:grid-cols-3">
-                                    <div><dt class="text-stone-500">Stamps needed</dt><dd class="font-medium text-stone-900">{{ $defaultProgram->reward_target }}</dd></div>
-                                    <div><dt class="text-stone-500">Reward</dt><dd class="font-medium text-stone-900">{{ $defaultProgram->reward_title }}</dd></div>
-                                    <div><dt class="text-stone-500">Customers</dt><dd class="font-medium text-stone-900">{{ number_format($defaultProgram->loyalty_accounts_count ?? 0) }}</dd></div>
-                                </dl>
+                        <div class="mt-5 rounded-2xl bg-stone-50 p-4 sm:p-5">
+                            <div class="flex flex-wrap items-center gap-2">
+                                <h3 class="break-words text-base font-semibold text-stone-900">{{ $defaultProgram->name }}</h3>
+                                <x-ui.badge variant="success">Default card</x-ui.badge>
+                                @if($defaultProgram->trashed())
+                                    <x-ui.badge variant="warning">Archived</x-ui.badge>
+                                @endif
                             </div>
-                            <div class="flex flex-col gap-2 sm:items-end">
-                                <x-ui.button href="{{ route('merchant.stores.programs.edit', [$store, $defaultProgram]) }}" variant="primary" size="sm">Edit loyalty card</x-ui.button>
-                                <a href="{{ route('merchant.stores.programs.qr', [$store, $defaultProgram]) }}" class="inline-flex min-h-11 items-center justify-center text-sm font-semibold text-brand-700 hover:text-brand-800">View card QR</a>
-                            </div>
+                            <dl class="mt-4 grid gap-4 border-t border-stone-200 pt-4 text-sm sm:grid-cols-3">
+                                <div class="min-w-0"><dt class="text-stone-500">Reward</dt><dd class="mt-1 break-words font-semibold text-stone-900">{{ $defaultProgram->reward_title }}</dd></div>
+                                <div><dt class="text-stone-500">Stamps needed</dt><dd class="mt-1 font-semibold text-stone-900">{{ $defaultProgram->reward_target }} stamps</dd></div>
+                                <div><dt class="text-stone-500">Customers</dt><dd class="mt-1 font-semibold text-stone-900">{{ number_format($defaultProgram->loyalty_accounts_count ?? 0) }}</dd></div>
+                            </dl>
                         </div>
                     @else
                         <x-ui.empty-state class="mt-5" heading="No loyalty card found" description="Create a loyalty card before sharing a join QR." />
