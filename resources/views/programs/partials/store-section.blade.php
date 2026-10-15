@@ -49,7 +49,7 @@
 
                 <div class="space-y-6">
                     @foreach($activePrograms as $program)
-                        <div class="grid items-start gap-6 lg:grid-cols-[320px_minmax(0,1fr)] lg:gap-8">
+                        <div class="grid items-start gap-6 lg:grid-cols-[240px_minmax(0,1fr)] lg:gap-8">
                             <x-loyalty-design-preview :store="$store" :program="$program" />
                             <x-ui.card class="dashboard-panel min-w-0 space-y-4 p-6">
                                 <div class="flex flex-wrap items-center gap-3">
