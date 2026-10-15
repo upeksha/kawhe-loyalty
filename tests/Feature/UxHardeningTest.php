@@ -27,10 +27,18 @@ test('store edit keeps card configuration on the loyalty card screen', function 
     $response->assertOk()
         ->assertSee('Store information')
         ->assertSee('Loyalty cards')
-        ->assertSee('Edit loyalty card')
+        ->assertSee('View all cards')
+        ->assertSee($program->reward_title)
+        ->assertSee($program->reward_target.' stamps')
+        ->assertDontSee('Edit loyalty card')
+        ->assertDontSee('View card QR')
         ->assertDontSee('Legacy fallback settings')
         ->assertDontSee('name="brand_color"', false)
         ->assertDontSee('name="pass_logo"', false)
+        ->assertSee(route('merchant.stores.programs.index', $store), false);
+
+    $this->get(route('merchant.stores.programs.index', $store))
+        ->assertOk()
         ->assertSee(route('merchant.stores.programs.edit', [$store, $program]), false);
 });
 
@@ -96,17 +104,31 @@ test('customer card leads with progress qr guidance manual code and verification
         ->assertSee('Recent activity');
 });
 
-test('scanner exposes active store state progress and recovery language', function () {
+test('scanner exposes store selection manual entry progress and recovery language', function () {
     $merchant = User::factory()->create(['email_verified_at' => now()]);
     $store = uxStore($merchant);
 
-    $this->actingAs($merchant)->get(route('merchant.scanner'))
+    $response = $this->actingAs($merchant)->get(route('merchant.scanner'))
         ->assertOk()
-        ->assertSee('Active store')
+        ->assertSee('Scan a customer card')
+        ->assertSee('Enter card code')
+        ->assertSee('Check card')
         ->assertSee($store->name)
         ->assertSee('Place the customer QR code inside the frame')
         ->assertSee('Current progress')
         ->assertSee('Rewards available')
         ->assertSee('Scan next customer')
         ->assertSee('This card was just scanned');
+
+    $dom = new DOMDocument;
+    $previous = libxml_use_internal_errors(true);
+    $dom->loadHTML($response->getContent());
+    libxml_clear_errors();
+    libxml_use_internal_errors($previous);
+    $xpath = new DOMXPath($dom);
+    expect(trim($xpath->query('//label[@for="store_id"]')->item(0)->textContent))->toBe('Store');
+    expect($xpath->query('//select[@id="store_id"]/option[@value="'.$store->id.'"]')->length)->toBe(1);
+    expect($xpath->query('//label[@for="manual_token"]')->length)->toBe(1);
+    expect($xpath->query('//input[@id="manual_token"]')->length)->toBe(1);
+    expect($xpath->query('//*[@id="merchant-scanner"]//*[@role="status" and @aria-live="polite"]')->length)->toBeGreaterThan(0);
 });
