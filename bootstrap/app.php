@@ -35,5 +35,17 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
+        $exceptions->render(function (\Illuminate\Routing\Exceptions\InvalidSignatureException $exception, \Illuminate\Http\Request $request) {
+            if (! $request->routeIs('verification.verify') || $request->expectsJson()) {
+                return null;
+            }
+
+            // Only call an intact signed link expired; altered links stay invalid.
+            $expired = \Illuminate\Support\Facades\URL::hasCorrectSignature($request, false)
+                && ! \Illuminate\Support\Facades\URL::signatureHasNotExpired($request);
+
+            return response()->view('auth.verification-link-invalid', compact('expired'), 403)
+                ->header('Cache-Control', 'no-store')
+                ->header('Referrer-Policy', 'no-referrer');
+        });
     })->create();
