@@ -4,7 +4,6 @@
     $stamps = min(4, $target - 1);
     $theme = \App\Support\ProgramBranding::resolve($program, $store);
     $background = $theme->bg;
-    $accent = $theme->brand;
     $ink = $theme->textOnBg;
 @endphp
 <aside aria-label="Sample card preview for {{ $program->name }}" class="w-full max-w-[240px] space-y-3 rounded-2xl p-4" style="background-color: {{ $background }}; color: {{ $ink }}">
@@ -14,7 +13,7 @@
     <p class="text-xs">{{ $target - $stamps }} more stamps to your next reward</p>
     <div class="flex flex-wrap gap-1.5" aria-hidden="true">
         @for($i=0; $i < min($target, 20); $i++)
-            <span class="h-6 w-6 rounded-full" style="background-color: {{ $accent }}; opacity: {{ $i < $stamps ? '1' : '.25' }}"></span>
+            <span class="h-6 w-6 shrink-0 rounded-full border-2" style="border-color: {{ $ink }}; background-color: {{ $i < $stamps ? $ink : 'transparent' }}"></span>
         @endfor
         @if($target > 20)<span class="text-xs">+{{ $target - 20 }}</span>@endif
     </div>
