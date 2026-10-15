@@ -1,9 +1,37 @@
-<x-merchant-design-layout title="Help & support" subtitle="Find your next step, get help, or check a delivery issue.">
+<x-merchant-design-layout title="Help & support" subtitle="Quick answers and help for your café.">
     <x-slot:actions><x-ui.button href="mailto:support@kawhe.shop" variant="secondary">Contact support</x-ui.button></x-slot:actions>
     <section aria-label="Common tasks" class="grid gap-4 sm:grid-cols-3">
         <a href="{{ route('merchant.programs.index') }}" class="rounded-xl border border-stone-200 bg-white p-5 hover:bg-brand-50"><p class="font-semibold text-brand-700">Share your loyalty card →</p><p class="mt-2 text-sm text-stone-500">Find the join link and QR code for each card.</p></a>
         <a href="{{ route('merchant.staff.index') }}" class="rounded-xl border border-stone-200 bg-white p-5 hover:bg-brand-50"><p class="font-semibold text-brand-700">Give your team access →</p><p class="mt-2 text-sm text-stone-500">Invite staff with their own login and permissions.</p></a>
         <a href="{{ route('billing.index') }}" class="rounded-xl border border-stone-200 bg-white p-5 hover:bg-brand-50"><p class="font-semibold text-brand-700">Manage your plan →</p><p class="mt-2 text-sm text-stone-500">Review limits, update payment details or cancel.</p></a>
+    </section>
+    <div class="grid items-start gap-6 lg:grid-cols-2">
+        <section aria-labelledby="common-questions" class="rounded-2xl border border-stone-200 bg-white p-6">
+            <h2 id="common-questions" class="text-xl font-semibold">Common questions</h2>
+            <dl class="mt-5 space-y-6 text-sm">
+                <div><dt class="font-semibold text-stone-900">How do customers join?</dt><dd class="mt-2 text-stone-600">Open Loyalty cards and choose Share join QR. Customers scan the QR code and fill in the join form. They don’t need to download an app.</dd></div>
+                <div><dt class="font-semibold text-stone-900">What if a customer loses their card?</dt><dd class="mt-2 text-stone-600">Ask them to use the card recovery link on the join page and enter the email address they joined with.</dd></div>
+                <div><dt class="font-semibold text-stone-900">How do I give staff access?</dt><dd class="mt-2 text-stone-600">Go to Team and invite them to the right store. Choose whether they can add stamps, redeem rewards, or both. Each person uses their own login.</dd></div>
+                <div><dt class="font-semibold text-stone-900">Where can I change my plan?</dt><dd class="mt-2 text-stone-600">Open Billing to review your plan, payment details and cancellation options.</dd></div>
+            </dl>
+        </section>
+        <section aria-labelledby="troubleshooting" class="rounded-2xl border border-stone-200 bg-white p-6">
+            <h2 id="troubleshooting" class="text-xl font-semibold">Troubleshooting</h2>
+            <dl class="mt-5 space-y-6 text-sm">
+                <div><dt class="font-semibold text-stone-900">A card won’t scan</dt><dd class="mt-2 text-stone-600">Check camera access, improve the lighting and make sure the correct store is selected. You can also enter the card’s manual code.</dd></div>
+                <div><dt class="font-semibold text-stone-900">Connection lost while stamping or redeeming</dt><dd class="mt-2 text-stone-600">Reconnect and use Retry safely if shown. Check the card’s latest balance before starting a new action.</dd></div>
+                <div><dt class="font-semibold text-stone-900">A reward can’t be redeemed</dt><dd class="mt-2 text-stone-600">Check that the customer has verified their email and has an available reward. Make sure you’re in the correct store and have permission to redeem.</dd></div>
+                <div><dt class="font-semibold text-stone-900">A Wallet card hasn’t updated</dt><dd class="mt-2 text-stone-600">Open the customer’s card in the browser to check their latest stamps. For more help, open Wallet help in your store settings.</dd></div>
+                <div><dt class="font-semibold text-stone-900">An email hasn’t arrived</dt><dd class="mt-2 text-stone-600">Check the email address and junk folder. Business email users may also need to check quarantine with their email administrator.</dd></div>
+            </dl>
+        </section>
+    </div>
+    <section aria-labelledby="contact-support" class="flex flex-col gap-5 rounded-2xl border border-stone-200 bg-white p-6 sm:flex-row sm:items-center sm:justify-between">
+        <div class="max-w-xl">
+            <h2 id="contact-support" class="text-xl font-semibold">Still need help?</h2>
+            <p class="mt-2 text-sm text-stone-600">Email support@kawhe.shop with your store name, what happened and roughly when. A screenshot can help. Please don’t include passwords.</p>
+        </div>
+        <x-ui.button href="mailto:support@kawhe.shop" class="shrink-0">Contact support</x-ui.button>
     </section>
     @php
         $summaryCards = [
@@ -13,7 +41,10 @@
         ];
     @endphp
 
-    <div class="space-y-6">
+    <details id="advanced-support-details" class="min-w-0 rounded-2xl border border-stone-200 bg-stone-50 p-4 sm:p-6" @if(request()->anyFilled(['store_id', 'event_type', 'status', 'q', 'page'])) open @endif>
+        <summary class="cursor-pointer text-base font-semibold text-stone-900">Advanced details</summary>
+        <p class="mt-2 text-sm text-stone-600">Technical event logs for investigating an issue with support.</p>
+        <div class="mt-6 min-w-0 space-y-6">
         <section class="rounded-2xl border border-stone-200 bg-white p-6">
             <div class="space-y-4">
                 <div>
@@ -121,5 +152,6 @@
                 @endforeach
             </dl>
         </section>
-    </div>
+        </div>
+    </details>
 </x-merchant-design-layout>
