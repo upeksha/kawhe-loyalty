@@ -4,7 +4,7 @@
         <x-ui.button href="{{ route('merchant.stores.index') }}" variant="ghost">← Back to stores</x-ui.button>
         @if(!$store->trashed())<x-ui.button href="{{ route('merchant.stores.qr', $store) }}" variant="secondary">QR & poster</x-ui.button>@endif
     </x-slot:actions>
-    <div class="max-w-4xl space-y-6">
+    <div class="min-w-0 space-y-6">
         <div class="flex flex-wrap items-center gap-3 text-sm text-stone-500">
             <x-ui.badge :variant="$store->trashed() ? 'warning' : 'success'">{{ $store->trashed() ? 'Archived' : 'Active' }}</x-ui.badge>
             <span>{{ $store->trashed() ? 'Store activity is paused.' : 'Manage loyalty cards and customer activity for this location.' }}</span>
@@ -21,7 +21,7 @@
             </x-ui.alert>
         @endif
 
-        <div class="grid gap-6">
+        <div class="grid items-start gap-6 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
             <div class="space-y-6">
                 <section class="rounded-2xl border border-stone-200 bg-white p-5 shadow-sm sm:p-6" aria-labelledby="store-information-title">
                     <div class="border-b border-stone-100 pb-4">
@@ -85,8 +85,9 @@
 
             </div>
 
-            <details class="rounded-2xl border border-stone-200 bg-white p-5 sm:p-6">
-                <summary class="cursor-pointer rounded font-semibold text-stone-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-600">Wallet help</summary>
+            <div class="min-w-0 space-y-6">
+            <section aria-labelledby="wallet-help-title" class="rounded-2xl border border-stone-200 bg-white p-5 sm:p-6">
+                <h2 id="wallet-help-title" class="text-lg font-semibold text-stone-900">Wallet help</h2>
                 <div class="mt-5 space-y-4">
                     <h2 class="font-semibold text-stone-900">Saved card updates</h2>
                     <x-ui.status-icon-badge :icon="$walletHealth['status_icon']" :label="$walletHealth['status_label']" :tone="$walletHealth['status_tone']" />
@@ -104,9 +105,9 @@
                         <p class="text-xs text-stone-500">Queues an update for all customer cards at this store.</p>
                     @endif
                 </div>
-            </details>
-                <details class="rounded-2xl border border-stone-200 bg-white p-5 sm:p-6" @if($store->trashed()) open @endif>
-                    <summary class="cursor-pointer rounded font-semibold text-stone-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-600">Store management</summary>
+            </section>
+                <section aria-labelledby="store-management-title" class="rounded-2xl border border-stone-200 bg-white p-5 sm:p-6">
+                    <h2 id="store-management-title" class="text-lg font-semibold text-stone-900">Store management</h2>
                     <div class="mt-4 rounded-xl border border-red-200 bg-red-50 p-4">
                     <h2 id="archive-store-title" class="font-semibold text-red-900">{{ $store->trashed() ? 'Restore store' : 'Archive store' }}</h2>
                     <p class="mt-2 text-sm leading-6 text-red-800">{{ $store->trashed() ? 'Restoring re-enables join links, QR sharing, stamping, and redemption.' : 'Archiving pauses new joins and store activity. Existing customers, passes, and history remain preserved.' }}</p>
@@ -115,7 +116,8 @@
                         @unless($store->trashed()) @method('DELETE') @endunless
                         <x-ui.button type="submit" :variant="$store->trashed() ? 'secondary' : 'danger'" :loading-text="$store->trashed() ? 'Restoring…' : 'Archiving…'">{{ $store->trashed() ? 'Restore store' : 'Archive store' }}</x-ui.button>
                     </form>
-                </div></details>
+                </div></section>
+            </div>
         </div>
     </div>
 </x-merchant-design-layout>

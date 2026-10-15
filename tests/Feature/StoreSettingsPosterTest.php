@@ -51,9 +51,9 @@ test('store settings keep management and wallet actions accessible without legac
     libxml_clear_errors();
     libxml_use_internal_errors($previous);
     $xpath = new DOMXPath($dom);
-    expect($xpath->query('//details[@open]')->length)->toBe(0);
+    expect($xpath->query('//details')->length)->toBe(0);
     foreach (['refresh-wallets', 'destroy'] as $action) {
-        expect($xpath->query('//details//form[@method="POST" and @action="'.route('merchant.stores.'.$action, $store).'"]/input[@name="_token"]')->length)->toBe(1);
+        expect($xpath->query('//section[@aria-labelledby="wallet-help-title" or @aria-labelledby="store-management-title"]//form[@method="POST" and @action="'.route('merchant.stores.'.$action, $store).'"]/input[@name="_token"]')->length)->toBe(1);
     }
     expect($xpath->query('//form[@id="store-edit-form"]/input[@name="_method" and @value="PUT"]')->length)->toBe(1);
 
