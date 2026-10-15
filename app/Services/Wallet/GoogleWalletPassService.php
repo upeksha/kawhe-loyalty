@@ -683,8 +683,8 @@ class GoogleWalletPassService
     {
         if (\App\Support\CoffeeCardSample::enabled($account)) {
             return new \Google_Service_Walletobjects_Image([
-                'sourceUri' => ['uri' => asset(\App\Support\CoffeeCardSample::artwork($account, 'google'))],
-                'contentDescription' => ['defaultValue' => ['language' => 'en', 'value' => $account->stamp_count.' of 8 stamps; '.$account->reward_balance.' rewards available']],
+                'sourceUri' => ['uri' => $this->ensureHttps((string) StoreAssets::url(\App\Support\CoffeeCardSample::artwork($account, 'google')))],
+                'contentDescription' => ['defaultValue' => ['language' => 'en', 'value' => $account->stamp_count.' of '.$account->reward_target.' stamps; '.$account->reward_balance.' rewards available']],
             ]);
         }
         $relativePath = $this->stampStripRenderer->generateForAccount($account);
@@ -940,8 +940,10 @@ class GoogleWalletPassService
         $genericObject->setClassId($classId);
         $genericObject->setState('ACTIVE');
         $genericObject->setCardTitle($this->makeLocalizedString($store->name));
-        $genericObject->setHeader($this->makeLocalizedString($customerName));
-        $genericObject->setSubheader($this->makeLocalizedString($statusText));
+        $genericObject->setHeader($this->makeLocalizedString(\App\Support\CoffeeCardSample::enabled($account) ? \App\Support\CoffeeCardSample::shortReward($program->reward_title) : $customerName));
+        $genericObject->setSubheader($this->makeLocalizedString(\App\Support\CoffeeCardSample::enabled($account)
+            ? $account->stamp_count.'/'.$account->reward_target.' stamps · '.$account->reward_balance.' rewards'
+            : $statusText));
         $genericObject->setHexBackgroundColor($backgroundColor);
         $genericObject->setBarcode($barcode);
         $genericObject->setTextModulesData($textModules);

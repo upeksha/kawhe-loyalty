@@ -156,8 +156,9 @@ class AppleWalletPassService
                 'changeMessage' => 'Stamp balance: %@',
             ]];
             $passDefinition['storeCard']['secondaryFields'] = [[
-                'key' => 'coffee_reward', 'label' => 'REWARD', 'value' => $program->reward_title,
+                'key' => 'coffee_reward', 'label' => 'REWARD', 'value' => \App\Support\CoffeeCardSample::shortReward($program->reward_title),
             ]];
+            $passDefinition['storeCard']['backFields'][] = ['key' => 'full_reward', 'label' => 'Reward details', 'value' => $program->reward_title];
             $passDefinition['storeCard']['auxiliaryFields'] = [[
                 'key' => 'coffee_balance', 'label' => 'AVAILABLE',
                 'value' => (int) $account->reward_balance,
@@ -210,16 +211,17 @@ class AppleWalletPassService
             ];
             foreach ($assetNames as $manifestKey => $fileName) {
                 if ($coffeeSample) {
-                    $source = str_starts_with($manifestKey, 'strip')
-                        ? \App\Support\CoffeeCardSample::artwork($account, 'apple')
-                        : 'images/coffee-sample-v1/logo.png';
+                    $contents = str_starts_with($manifestKey, 'strip')
+                        ? StoreAssets::get(\App\Support\CoffeeCardSample::artwork($account, 'apple'))
+                        : file_get_contents(public_path('images/coffee-sample-v1/logo.png'));
                     $scale = str_ends_with($manifestKey, '_3x') ? 3 : (str_ends_with($manifestKey, '_2x') ? 2 : 1);
                     $localPath = $tempDir.'/'.$fileName;
-                    file_put_contents($localPath, \App\Support\CoffeeCardSample::resizedPng(
-                        public_path($source), (str_starts_with($manifestKey, 'strip') ? 375 : 160) * $scale
+                    file_put_contents($localPath, \App\Support\CoffeeCardSample::resizedContents(
+                        $contents, (str_starts_with($manifestKey, 'strip') ? 375 : 160) * $scale
                     ));
                     $pass->addAsset($localPath);
                     $assetsAdded[] = $fileName;
+
                     continue;
                 }
                 $relativePath = $appleManifest[$manifestKey] ?? null;

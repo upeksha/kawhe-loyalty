@@ -73,6 +73,7 @@
                         .loyalty-card{background:#263e30!important;color:#f2ecd7!important}
                         .loyalty-card .card-text,.loyalty-card .card-muted{color:#f2ecd7!important}
                         .loyalty-card #stamp-circles-container{display:none}
+                        .loyalty-card .card-text,.loyalty-card .card-muted{overflow-wrap:anywhere;white-space:normal}
                         .coffee-sample-art{display:block;width:100%;height:auto;margin:12px 0}
                     </style>
                 @endif
@@ -92,7 +93,7 @@
                         </div>
 
                         @if($coffeeSample)
-                            <img id="coffee-sample-art" class="coffee-sample-art" src="{{ asset(\App\Support\CoffeeCardSample::artwork($account, 'web')) }}" alt="Coffee cup stamp progress">
+                            <img id="coffee-sample-art" class="coffee-sample-art" src="{{ \App\Support\StoreAssets::url(\App\Support\CoffeeCardSample::artwork($account, 'web')) }}" alt="{{ $account->stamp_count }} of {{ $account->reward_target }} stamps; {{ $account->reward_balance }} rewards available">
                         @endif
                         <!-- Progress Section -->
                         <div class="mb-6">
@@ -104,6 +105,7 @@
                                 Your {{ strtolower($account->reward_title) }} is ready
                             </p>
                             <!-- Circular Checkmarks Row -->
+                            @unless($coffeeSample)
                             <div id="stamp-circles-container" class="flex gap-2 flex-wrap">
                                 @for ($i = 1; $i <= $account->reward_target; $i++)
                                     @if($i <= $account->stamp_count)
@@ -119,6 +121,7 @@
                                     @endif
                                 @endfor
                             </div>
+                            @endunless
                         </div>
 
                         <div class="customer-card-code flex flex-col items-center">
@@ -634,9 +637,8 @@
 
                         const coffeeArt = document.getElementById('coffee-sample-art');
                         if (coffeeArt) {
-                            const count = Math.max(0, Math.min(8, Number(data.stamp_count)));
-                            const state = Number(data.reward_balance) > 0 && count === 0 ? 'ready' : String(count);
-                            coffeeArt.src = @json(asset('images/coffee-sample-v1')) + '/web-' + state + '.png';
+                            if (data.coffee_artwork_url) coffeeArt.src = data.coffee_artwork_url;
+                            coffeeArt.alt = `${data.stamp_count} of ${data.reward_target} stamps; ${data.reward_balance} rewards available`;
                         }
                         // Update progress circles - ALWAYS update them, even after redemption
                         // Use the container ID to ensure we're updating the right element
@@ -675,7 +677,7 @@
                                 });
                             }
                         } else {
-                            console.error('Stamp circles container not found!');
+                            if (!coffeeArt) console.error('Stamp circles container not found!');
                         }
 
                         // Check if reward was redeemed
