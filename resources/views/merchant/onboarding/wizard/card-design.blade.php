@@ -77,9 +77,13 @@
         >
             @csrf
             <x-form-error-summary form-id="card-design-form" />
-            <div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
+            <div class="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-xl bg-brand-50 px-4 py-3 text-sm">
+                <p class="text-brand-900">Designing for <strong>{{ $store->name }}</strong></p>
+                <a href="#onboarding-card-preview" class="inline-flex min-h-11 items-center font-semibold text-brand-700 underline lg:hidden">See card preview ↓</a>
+            </div>
+            <div class="grid grid-cols-1 lg:grid-cols-5 gap-6 lg:gap-8">
                 <div class="lg:col-span-3 space-y-8">
-                    <x-onboarding-form-section title="1. Choose your colours">
+                    <section class="rounded-2xl border border-stone-200 bg-white p-5 sm:p-6"><h2 class="mb-2 text-lg font-semibold text-stone-900">Choose your colours</h2><p class="mb-5 text-sm text-stone-500">Pick your brand accent and card background. The preview updates as you edit.</p>
                         <div class="space-y-5">
                             <div>
                                 <label for="brand_color" class="block text-sm font-medium text-stone-700 mb-1.5">Accent colour</label>
@@ -116,75 +120,55 @@
                                 </x-ui.alert>
                             </div>
                         </div>
-                    </x-onboarding-form-section>
+                    </section>
 
-                    <x-onboarding-form-section title="2. Add your store logo">
-                        <div>
-                            <label for="logo" class="block text-sm font-medium text-stone-700 mb-1.5">Store logo <span class="text-red-500">*</span></label>
-                            <div class="mt-2 flex flex-col sm:flex-row sm:items-start gap-4">
-                                <div x-show="logoPreview" class="flex-shrink-0">
-                                    <p class="text-xs font-medium text-stone-500 mb-1.5">Preview</p>
-                                    <img :src="logoPreview" alt="Logo preview" class="h-20 w-20 object-contain rounded-xl border border-stone-200 bg-white p-1.5 shadow-sm">
-                                </div>
-                                <div class="flex-1 min-w-0">
-                                    <label class="block w-full rounded-xl border-2 border-dashed border-stone-300 hover:border-stone-400 hover:bg-stone-50/50 bg-stone-50/30 px-4 py-6 text-center cursor-pointer transition-all focus-within:ring-2 focus-within:ring-brand-500/20 focus-within:border-brand-500">
-                                        <span class="text-sm font-medium text-stone-600">Choose file</span>
-                                        <input type="file" id="logo" name="logo" @required(blank($store->logo_path)) x-ref="logoInput" accept="image/png,image/jpeg,image/jpg,image/webp" class="sr-only" />
-                                    </label>
-                                    <x-onboarding-helper-note class="mt-1.5">PNG, JPG or WebP, max 2MB. Shown on customer card.</x-onboarding-helper-note>
-                                    <p class="mt-2 text-xs leading-relaxed text-stone-500">Best results usually come from a simple square or circular logo with generous empty space around it.</p>
-                                </div>
-                            </div>
-                            <x-input-error :messages="$errors->get('logo')" class="mt-2" />
-                        </div>
-                    </x-onboarding-form-section>
-
-                    <x-onboarding-form-section title="3. Add your Wallet images">
-                        <p class="text-sm text-stone-600 mb-4">These two images appear when customers save their card to Apple Wallet or Google Wallet. PNG, JPG or WebP, up to 2MB each.</p>
-                        <div class="space-y-5">
-                            <div>
-                                <label for="pass_logo" class="block text-sm font-medium text-stone-700 mb-1.5">Wallet logo <span class="text-red-500">*</span></label>
-                                <div class="mt-2 flex flex-col sm:flex-row sm:items-start gap-4">
-                                    <div x-show="passLogoPreview" class="flex-shrink-0">
-                                        <p class="text-xs font-medium text-stone-500 mb-1.5">Preview</p>
-                                        <img :src="passLogoPreview" alt="Pass logo preview" class="h-12 w-20 object-contain rounded-xl border border-stone-200 bg-white p-1 shadow-sm">
+                    <section class="rounded-2xl border border-stone-200 bg-white p-5 sm:p-6" aria-labelledby="card-images-heading">
+                        <h2 id="card-images-heading" class="text-lg font-semibold text-stone-900">Add your images</h2>
+                        <p class="mt-2 text-sm text-stone-500">Three images give your card its own identity. PNG, JPG or WebP, up to 2MB each.</p>
+                        @php
+                            $uploads = [
+                                ['id' => 'logo', 'label' => 'Store logo', 'ref' => 'logoInput', 'preview' => 'logoPreview', 'path' => 'logo_path', 'hint' => 'Shown on your customer card and join page. A square logo works best.', 'shape' => 'h-16 w-16 object-contain'],
+                                ['id' => 'pass_logo', 'label' => 'Wallet logo', 'ref' => 'passLogoInput', 'preview' => 'passLogoPreview', 'path' => 'pass_logo_path', 'hint' => 'Across the top of the saved Wallet card. Recommended: 160×50px.', 'shape' => 'h-12 w-24 object-contain'],
+                                ['id' => 'pass_hero_image', 'label' => 'Wallet banner', 'ref' => 'passHeroInput', 'preview' => 'passHeroPreview', 'path' => 'pass_hero_image_path', 'hint' => 'A wide image for the saved card. Recommended: 640×180px (Apple) or 640×200px (Google).', 'shape' => 'h-16 w-28 object-cover'],
+                            ];
+                        @endphp
+                        <div class="mt-5 divide-y divide-stone-200">
+                            @foreach($uploads as $upload)
+                                <div class="py-5 first:pt-0 last:pb-0">
+                                    <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+                                        <label for="{{ $upload['id'] }}" class="font-semibold text-stone-900">{{ $upload['label'] }} <span class="text-xs font-normal text-stone-500">Required</span></label>
+                                        <span class="rounded-full bg-brand-50 px-2.5 py-1 text-xs font-medium text-brand-700" x-show="{{ $upload['preview'] }}" x-cloak>Image added</span>
                                     </div>
-                                    <label class="rounded-xl border-2 border-dashed border-stone-300 hover:border-stone-400 bg-stone-50/30 hover:bg-stone-50/50 px-4 py-3 text-center cursor-pointer transition-all flex-1">
-                                        <span class="text-sm font-medium text-stone-600">Choose file</span>
-                                        <input type="file" id="pass_logo" name="pass_logo" @required(blank($store->pass_logo_path)) x-ref="passLogoInput" accept="image/png,image/jpeg,image/jpg,image/webp" class="sr-only" />
-                                    </label>
-                                </div>
-                                <x-onboarding-helper-note>Your logo across the top of the saved card. Recommended: 160×50px.</x-onboarding-helper-note>
-                                <x-input-error :messages="$errors->get('pass_logo')" class="mt-2" />
-                            </div>
-                            <div>
-                                <label for="pass_hero_image" class="block text-sm font-medium text-stone-700 mb-1.5">Wallet banner <span class="text-red-500">*</span></label>
-                                <div class="mt-2 flex flex-col sm:flex-row sm:items-start gap-4">
-                                    <div x-show="passHeroPreview" class="flex-shrink-0">
-                                        <p class="text-xs font-medium text-stone-500 mb-1.5">Preview</p>
-                                        <img :src="passHeroPreview" alt="Hero preview" class="h-16 w-28 object-cover rounded-xl border border-stone-200 shadow-sm">
+                                    <p id="{{ $upload['id'] }}-hint" class="mb-3 text-sm text-stone-500">{{ $upload['hint'] }}</p>
+                                    <div class="flex min-h-24 items-center gap-4 rounded-xl border border-dashed border-stone-300 bg-stone-50 p-4">
+                                        <div class="flex h-20 w-28 shrink-0 items-center justify-center rounded-lg border border-stone-200 bg-white">
+                                            <img x-show="{{ $upload['preview'] }}" :src="{{ $upload['preview'] }}" alt="{{ $upload['label'] }} preview" class="{{ $upload['shape'] }} rounded p-1">
+                                            <span x-show="!{{ $upload['preview'] }}" class="text-2xl text-stone-400" aria-hidden="true">＋</span>
+                                        </div>
+                                        <div class="min-w-0 flex-1">
+                                            <label class="inline-flex min-h-11 cursor-pointer items-center justify-center rounded-lg border border-stone-300 bg-white px-3 text-sm font-semibold text-brand-700 focus-within:ring-2 focus-within:ring-brand-500">
+                                                <span x-text="{{ $upload['preview'] }} ? 'Replace image' : 'Choose image'">Choose image</span>
+                                                <input type="file" id="{{ $upload['id'] }}" name="{{ $upload['id'] }}" @required(blank($store->{$upload['path']})) x-ref="{{ $upload['ref'] }}" accept="image/png,image/jpeg,image/jpg,image/webp" aria-describedby="{{ $upload['id'] }}-hint" class="sr-only">
+                                            </label>
+                                            <p class="mt-2 break-all text-xs text-stone-500" x-text="{{ $upload['preview'] }} ? ($refs.{{ $upload['ref'] }}?.files[0]?.name || 'Saved image') : 'No image selected'"></p>
+                                        </div>
                                     </div>
-                                    <label class="rounded-xl border-2 border-dashed border-stone-300 hover:border-stone-400 bg-stone-50/30 hover:bg-stone-50/50 px-4 py-3 text-center cursor-pointer transition-all flex-1">
-                                        <span class="text-sm font-medium text-stone-600">Choose file</span>
-                                        <input type="file" id="pass_hero_image" name="pass_hero_image" @required(blank($store->pass_hero_image_path)) x-ref="passHeroInput" accept="image/png,image/jpeg,image/jpg,image/webp" class="sr-only" />
-                                    </label>
+                                    <x-input-error :messages="$errors->get($upload['id'])" class="mt-2" />
                                 </div>
-                                <x-onboarding-helper-note>A wide image for your saved card. Recommended: 640×180px (Apple) or 640×200px (Google).</x-onboarding-helper-note>
-                                <x-input-error :messages="$errors->get('pass_hero_image')" class="mt-2" />
-                            </div>
+                            @endforeach
                         </div>
-                    </x-onboarding-form-section>
+                    </section>
                 </div>
 
-                <aside class="min-w-0 lg:col-span-2">
-                    <div class="lg:sticky lg:top-8">
+                <aside id="onboarding-card-preview" class="min-w-0 scroll-mt-36 lg:col-span-2">
+                    <div class="rounded-2xl border border-stone-200 bg-stone-50 p-4 lg:sticky lg:top-36">
                         <h2 class="mb-3 text-lg font-semibold text-stone-900">Card preview</h2>
                         <x-wallet-pass-preview :preview-data="$walletPreview ?? []" />
                         <p class="mt-3 text-sm text-stone-500">Sample card. Check both Wallet previews before continuing.</p>
                     </div>
                 </aside>
             </div>
-            <div class="mt-6 border-t border-stone-200 pt-5">
+            <div class="mt-6 rounded-2xl border border-stone-200 bg-white p-5">
                 <p x-show="!hasRequiredAssets" class="mb-3 text-sm text-stone-600">Add your store logo, Wallet logo and Wallet banner to continue. Saved images are kept unless you replace them.</p>
                 <p x-show="hasBlockedContrast" x-cloak class="mb-3 text-sm text-red-700">Choose more distinct accent and background colours to continue.</p>
                 <div class="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
