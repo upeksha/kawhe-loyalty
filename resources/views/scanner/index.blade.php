@@ -22,7 +22,7 @@
             </x-ui.empty-state>
         @else
             <x-ui.section-panel class="p-4 sm:p-6">
-                <div class="max-w-md mx-auto" x-data="scannerApp()" @keydown.escape.window="handleEscape()">
+                <div id="merchant-scanner" class="max-w-md mx-auto" x-data="scannerApp()" @keydown.escape.window="handleEscape()">
                     <div>
                     <!-- Store Selector -->
                     <div class="mb-6">
@@ -42,6 +42,8 @@
                             <x-ui.button
                                 type="button"
                                 @click="switchCamera()"
+                                x-show="canSwitchCamera"
+                                x-cloak
                                 x-bind:disabled="!canSwitchCamera || !isScanning || isProcessingScan || cameraStarting"
                                 variant="secondary"
                                 size="md"
@@ -161,7 +163,7 @@
                     <div class="mb-6">
                         <label for="manual_token" class="block mb-2 text-sm font-medium text-stone-700">Enter card code</label>
                         <div class="flex flex-col sm:flex-row gap-2">
-                            <x-ui.input type="text" id="manual_token" x-model="manualToken" placeholder="e.g. A3CX" class="flex-1" maxlength="50" />
+                            <x-ui.input type="text" id="manual_token" x-model="manualToken" autocapitalize="characters" autocorrect="off" spellcheck="false" placeholder="e.g. A3CX" class="flex-1" maxlength="50" />
                             <x-ui.button @click="handleScan(manualToken)" x-bind:disabled="isProcessingScan || !manualToken || !activeStoreId" type="button" variant="primary" size="lg" class="w-full sm:w-auto min-h-[44px]">
                                 Check card
                             </x-ui.button>
@@ -403,6 +405,12 @@
     @push('scripts')
     <style>
         [x-cloak] { display: none !important; }
+        @media (max-width: 639px) {
+            #merchant-scanner button { min-height: 44px; min-width: 44px; }
+            #merchant-scanner input, #merchant-scanner select { font-size: 16px; }
+            #merchant-scanner [x-ref="actionModalPanel"],
+            #merchant-scanner [x-ref="cooldownModalPanel"] { max-height: 90dvh; }
+        }
         
         /* Reader container */
         #reader {
