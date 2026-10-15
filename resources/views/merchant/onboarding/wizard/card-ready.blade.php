@@ -95,8 +95,8 @@
                                     <p class="mt-1 text-xs leading-relaxed text-stone-500">Use the PDF so staff can place it near the counter. If the poster feels crowded, update the reward wording or branding before you print.</p>
                                 </li>
                                 <li class="rounded-lg border border-stone-200 bg-white px-4 py-3">
-                                    <span class="font-medium text-stone-800">Check wallet branding later if needed</span>
-                                    <p class="mt-1 text-xs leading-relaxed text-stone-500">If you skipped wallet-specific images, Kawhe will still generate a safe branded default presentation.</p>
+                                    <span class="font-medium text-stone-800">Check your card before sharing</span>
+                                    <p class="mt-1 text-xs leading-relaxed text-stone-500">Open a test card and check your chosen style, stamp icon and reward in the browser and Wallet. Apple and Google Wallet adapt the design to their own layouts.</p>
                                 </li>
                             </ul>
                         </div>
@@ -120,7 +120,7 @@
                         <div class="rounded-xl border border-stone-200 bg-white p-5 shadow-sm">
                             <p class="text-sm font-semibold text-stone-800">Poster guidance</p>
                             <p class="mt-2 text-sm leading-relaxed text-stone-600">
-                                Your PDF poster uses the same reward title, store branding, and join link customers will see live. If anything feels unclear here, it will usually feel unclear on the printed poster too.
+                                Your PDF poster uses the same reward title, store branding, and join link customers will see on their card. If anything feels unclear here, it will usually feel unclear on the printed poster too.
                             </p>
                         </div>
                     </div>

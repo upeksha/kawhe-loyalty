@@ -57,7 +57,7 @@
                     <div class="flex flex-col gap-4 border-b border-stone-100 pb-4 sm:flex-row sm:items-start sm:justify-between">
                         <div>
                             <h2 id="loyalty-cards-title" class="text-lg font-semibold text-stone-900">Loyalty cards</h2>
-                            <p class="mt-1 max-w-2xl text-sm text-stone-600">Reward settings, customer fields, colours and Wallet images are managed on the loyalty card.</p>
+                            <p class="mt-1 max-w-2xl text-sm text-stone-600">Card style, stamp icons, rewards, customer fields and branding are managed on the loyalty card.</p>
                         </div>
                         <x-ui.button href="{{ route('merchant.stores.programs.index', $store) }}" variant="secondary" size="sm">View all cards</x-ui.button>
                     </div>

@@ -15,6 +15,10 @@
 
     $textColor = '#ffffff';
     $mutedColor = '#ffffff';
+    if (\App\Support\CoffeeCardSample::programEnabled($program)) {
+        [$bg, $textColor] = \App\Support\CardDesign::colors($program);
+        $mutedColor = $textColor;
+    }
 @endphp
 <!DOCTYPE html>
 <html lang="en">
@@ -58,7 +62,7 @@
                 <img src="{{ $qrCodeDataUrl }}" alt="QR Code">
             </div>
 
-            <div class="instruction">Save your card to your wallet. Collect stamps. Get rewards.</div>
+            <div class="instruction">Scan to join. Collect stamps. Earn rewards.</div>
 
             @if(!empty($appleWalletBadgeDataUrl) || !empty($googleWalletBadgeDataUrl))
                 <div class="wallet-table">

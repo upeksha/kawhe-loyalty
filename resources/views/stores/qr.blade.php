@@ -17,23 +17,23 @@
             [
                 'label' => 'Join flow branding',
                 'ready' => !empty($store->background_color) && !empty($store->brand_color),
-                'hint' => 'Brand colors help the join page and loyalty card feel complete.',
+                'hint' => 'Check your selected card colours and branding before sharing.',
             ],
             [
                 'label' => 'Store logo',
                 'ready' => !empty($store->logo_path),
-                'hint' => 'Optional, but recommended for a more polished customer-facing card.',
+                'hint' => 'Your logo helps customers recognise your café.',
             ],
             [
-                'label' => 'Wallet-ready assets',
+                'label' => 'Wallet branding',
                 'ready' => $walletReady,
-                'hint' => 'Recommended if you expect customers to save cards to Apple Wallet or Google Wallet.',
+                'hint' => 'Check a saved card in Apple Wallet or Google Wallet before sharing.',
             ],
         ];
         $launchScore = collect($launchChecks)->where('ready', true)->count();
         $launchLabel = $launchScore >= count($launchChecks)
-            ? 'Good to launch'
-            : ($launchScore >= 3 ? 'Launchable, but could be improved' : 'Needs review');
+            ? 'Branding checks complete'
+            : ($launchScore >= 3 ? 'Review your branding' : 'Needs review');
         $launchIcon = $launchScore >= count($launchChecks) ? 'check' : ($launchScore >= 3 ? 'review' : 'alert');
         $launchTone = $launchScore >= count($launchChecks)
             ? 'bg-emerald-100 text-emerald-700'

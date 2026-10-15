@@ -62,3 +62,24 @@ test('store settings keep management and wallet actions accessible without legac
     $this->get(route('merchant.stores.edit', $store))->assertOk()->assertSee('Restore store')->assertSee(route('merchant.stores.restore', $store), false)->assertDontSee('Refresh store Wallets');
     $this->get(route('merchant.stores.qr.pdf', $store))->assertRedirect(route('merchant.stores.edit', $store));
 });
+
+test('three style posters use card background and readable text instead of legacy accent', function ($style, $background, $expectedBackground) {
+    config(['app.url' => 'https://testing.kawhe.shop', 'app.env' => 'testing']);
+    $owner = User::factory()->create();
+    $store = Store::factory()->for($owner)->create();
+    $program = $store->resolvedDefaultProgram();
+    $program->update(['card_design' => $style, 'background_color' => $background, 'brand_color' => '#ff00ff']);
+    [$bg, $ink] = \App\Support\CardDesign::colors($program);
+    expect($bg)->toBe($expectedBackground);
+    foreach ([route('merchant.stores.qr.pdf', ['store' => $store, 'preview' => 1]), route('merchant.stores.programs.qr.pdf', ['store' => $store, 'program' => $program, 'preview' => 1])] as $url) {
+        $this->actingAs($owner)->get($url)->assertOk()
+            ->assertSee('background: '.$expectedBackground, false)
+            ->assertSee('color: '.$ink, false)
+            ->assertDontSee('background: #ff00ff', false)
+            ->assertSee('Scan to join. Collect stamps. Earn rewards.');
+    }
+})->with([
+    ['simple', '#ffffff', '#FFFFFF'],
+    ['illustrated', '#263e30', '#263E30'],
+    ['photo', '#ffffff', '#182820'],
+]);

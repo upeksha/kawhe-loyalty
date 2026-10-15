@@ -129,7 +129,7 @@
             </div>
 
             <details class="rounded-xl border border-stone-200 p-4" @if(!$isEdit || $errors->hasAny(['brand_color', 'background_color', 'logo', 'pass_logo', 'pass_hero_image'])) open @endif>
-                <summary class="cursor-pointer text-base font-semibold text-stone-900">Card design <span class="block mt-1 text-sm font-normal text-stone-500">Colours, logos and Wallet images</span></summary>
+                <summary class="cursor-pointer text-base font-semibold text-stone-900">Card design <span class="block mt-1 text-sm font-normal text-stone-500">Colours and branding</span></summary>
                 <div class="mt-5 space-y-5">
 
             <div class="grid gap-4" x-show="cardDesign !== 'photo'">
@@ -161,7 +161,7 @@
 
             <div class="border-t border-stone-100 pt-5">
                 <h2 class="text-lg font-semibold text-stone-900">Apple and Google Wallet</h2>
-                <p class="mt-1 text-sm text-stone-600">Keep your current images or upload replacements. PNG, JPG or WebP, up to 2 MB each. Check the Wallet preview before saving.</p>
+                <p class="mt-1 text-sm text-stone-600">Keep your current logos or upload replacements. PNG, JPG or WebP, up to 2 MB each. Simple, Illustrated and Photo supply their own background artwork. Check the Wallet preview before saving.</p>
             </div>
 
             <div class="grid grid-cols-1 items-stretch gap-4">

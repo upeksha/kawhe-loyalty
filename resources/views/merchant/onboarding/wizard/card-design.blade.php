@@ -113,7 +113,7 @@
                                     </p>
                                 </x-ui.alert>
                             </div>
-                            <div x-show="!hasBlockedContrast && (hasLowContrastPreview || hasVeryLightBackground)" x-cloak>
+                            <div x-show="cardDesign === 'classic' && !hasBlockedContrast && (hasLowContrastPreview || hasVeryLightBackground)" x-cloak>
                                 <x-ui.alert variant="warning">
                                     <p class="font-semibold">Check your colours</p>
                                     <p class="mt-1 leading-relaxed">
