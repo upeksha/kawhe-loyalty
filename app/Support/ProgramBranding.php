@@ -17,6 +17,10 @@ final class ProgramBranding
 
     public static function resolve(?LoyaltyProgram $program = null, ?Store $store = null): ProgramTheme
     {
+        if (CoffeeCardSample::programEnabled($program) || (! $program && $store?->card_design === 'illustrated_coffee' && CoffeeCardSample::available())) {
+            return self::fromColors('#f2ecd7', '#263e30');
+        }
+
         $brand = self::normalizeBrand(
             $program?->brand_color
             ?? $store?->brand_color
@@ -34,6 +38,10 @@ final class ProgramBranding
 
     public static function resolveFromAccount(LoyaltyAccount $account): ProgramTheme
     {
+        if (CoffeeCardSample::enabled($account)) {
+            return self::fromColors('#f2ecd7', '#263e30');
+        }
+
         $program = $account->loyaltyProgram;
         $store = $account->store;
 

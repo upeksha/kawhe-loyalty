@@ -4,7 +4,7 @@ namespace App\Support;
 
 use App\Models\LoyaltyAccount;
 
-/** Isolated coffee design trial; never enabled for production or other programs. */
+/** Isolated coffee design trial; enabled only for selected programs on testing. */
 class CoffeeCardSample
 {
     public static function available(): bool
@@ -20,7 +20,7 @@ class CoffeeCardSample
 
     public static function programEnabled($program): bool
     {
-        return self::available() && $program?->card_design === 'illustrated_coffee';
+        return $program?->card_design === 'illustrated_coffee' && self::available();
     }
 
     public static function enabled(LoyaltyAccount $account): bool
