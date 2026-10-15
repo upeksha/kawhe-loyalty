@@ -30,7 +30,12 @@ const state = html.slice(html.indexOf('get scannerState() {'), html.indexOf('set
         await running;
         assert.equal(scanner.cameraStarting, false);
         assert.equal(scanner.isScanning, !error);
-        if (!error) assert.equal(scanner.scannerState, 'Ready to scan');
+        if (!error) {
+            assert.equal(scanner.scannerState, 'Ready to scan');
+            scanner.isScanning = false;
+            scanner.cameraStatus = 'Checking card';
+            assert.equal(scanner.scannerState, 'Camera not started', 'Manual lookup does not leave a stale camera status');
+        }
         else assert.equal(scanner.failureContext.type, error.name === 'NotAllowedError' ? 'permission' : error.name === 'NotFoundError' ? 'no_camera' : 'camera_unavailable');
     }
     console.log('PASS: pending camera, successful startup, permission denied, missing camera, busy camera and repeated starts');

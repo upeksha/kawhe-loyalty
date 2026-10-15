@@ -531,7 +531,7 @@
                                     if (this.cameraStarting) return this.cameraStatus;
                                     if (this.failureContext.type) return this.failureContext.title;
                                     if (this.isScanning) return 'Ready to scan';
-                                    return this.cameraStatus || 'Camera not started';
+                                    return 'Camera not started';
                                 },
 
                                 setFailureContext(type, title, detail) {
