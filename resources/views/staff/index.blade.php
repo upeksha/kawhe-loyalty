@@ -54,8 +54,8 @@
                     <x-ui.button type="submit" class="w-full" data-loading-text="Sending invitation…">Send invitation</x-ui.button>
                 </form>
             </details>
-            <details class="max-w-[660px]">
-                <summary class="flex max-w-[400px] min-h-12 cursor-pointer items-center justify-center rounded-lg border border-stone-200 bg-white px-4 py-3 text-sm font-semibold text-brand-700">Pending invitations ({{ $invitations->get($store->id, collect())->count() }})</summary>
+            <section aria-labelledby="pending-invitations-{{ $store->id }}" class="rounded-2xl border border-stone-200 bg-white p-5 sm:p-6">
+                <div class="flex items-center gap-2"><h3 id="pending-invitations-{{ $store->id }}" class="text-base font-semibold text-stone-900">Pending invitations</h3><span class="rounded-full bg-stone-100 px-2 py-0.5 text-xs font-medium text-stone-600">{{ $invitations->get($store->id, collect())->count() }}</span></div>
                 <div class="mt-6 space-y-6">
                     @forelse($invitations->get($store->id, collect()) as $invitation)
                         <article class="space-y-4 rounded-2xl border border-stone-200 bg-white p-6">
@@ -72,9 +72,9 @@
                                 <form method="POST" action="{{ route('merchant.staff.cancel', [$store, $invitation]) }}">@csrf @method('DELETE')<x-ui.button type="submit" variant="danger" class="w-full">Cancel invitation</x-ui.button></form>
                             </div>
                         </article>
-                    @empty<p class="text-sm text-stone-500">No pending invitations.</p>@endforelse
+                    @empty<p class="text-sm text-stone-500">No pending invitations. New invitations will appear here until accepted.</p>@endforelse
                 </div>
-            </details>
+            </section>
         </section>
     @empty
         <x-ui.card class="dashboard-panel p-6"><p>No active stores are available. Create or restore a store to invite staff.</p><x-ui.button href="{{ route('merchant.stores.index') }}" variant="secondary" class="mt-4">View stores</x-ui.button></x-ui.card>
