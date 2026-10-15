@@ -1,3 +1,4 @@
+@php($coffeeSample = \App\Support\CoffeeCardSample::enabled($account))
 <x-customer-layout
     :account="$account"
     :document-title="$account->store->name . ' – My Card'"
@@ -67,6 +68,14 @@
                     </div>
                 @endif
                 
+                @if($coffeeSample)
+                    <style>
+                        .loyalty-card{background:#263e30!important;color:#f2ecd7!important}
+                        .loyalty-card .card-text,.loyalty-card .card-muted{color:#f2ecd7!important}
+                        .loyalty-card #stamp-circles-container{display:none}
+                        .coffee-sample-art{display:block;width:100%;height:auto;margin:12px 0}
+                    </style>
+                @endif
                 <!-- Main Loyalty Card -->
                 <div class="loyalty-card rounded-2xl overflow-hidden mb-6">
                     
@@ -82,6 +91,9 @@
                             </div>
                         </div>
 
+                        @if($coffeeSample)
+                            <img id="coffee-sample-art" class="coffee-sample-art" src="{{ asset(\App\Support\CoffeeCardSample::artwork($account, 'web')) }}" alt="Coffee cup stamp progress">
+                        @endif
                         <!-- Progress Section -->
                         <div class="mb-6">
                             <p id="stamp-count" class="card-text text-[26px] font-semibold">{{ $account->stamp_count }} of {{ $account->reward_target }} stamps</p>
@@ -620,6 +632,12 @@
                             progressCopyEl.textContent = `${Math.max(0, data.reward_target - data.stamp_count)} more until ${String(data.reward_title || 'your reward').toLowerCase()}`;
                         }
 
+                        const coffeeArt = document.getElementById('coffee-sample-art');
+                        if (coffeeArt) {
+                            const count = Math.max(0, Math.min(8, Number(data.stamp_count)));
+                            const state = Number(data.reward_balance) > 0 && count === 0 ? 'ready' : String(count);
+                            coffeeArt.src = @json(asset('images/coffee-sample-v1')) + '/web-' + state + '.png';
+                        }
                         // Update progress circles - ALWAYS update them, even after redemption
                         // Use the container ID to ensure we're updating the right element
                         const circlesContainer = document.getElementById('stamp-circles-container');

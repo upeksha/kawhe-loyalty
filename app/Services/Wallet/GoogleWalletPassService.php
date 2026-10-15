@@ -317,6 +317,10 @@ class GoogleWalletPassService
         }
         $stampStripImage = $this->buildStampStripImage($account);
         $objectImageModules = $this->buildObjectImageModulesData($stampStripImage, $heroImage);
+        if (\App\Support\CoffeeCardSample::enabled($account)) {
+            $loyaltyObject->setHeroImage($stampStripImage);
+            $objectImageModules = [];
+        }
         if (! empty($objectImageModules)) {
             $loyaltyObject->setImageModulesData($objectImageModules);
         }
@@ -677,6 +681,12 @@ class GoogleWalletPassService
      */
     protected function buildStampStripImage(LoyaltyAccount $account): ?\Google_Service_Walletobjects_Image
     {
+        if (\App\Support\CoffeeCardSample::enabled($account)) {
+            return new \Google_Service_Walletobjects_Image([
+                'sourceUri' => ['uri' => asset(\App\Support\CoffeeCardSample::artwork($account, 'google'))],
+                'contentDescription' => ['defaultValue' => ['language' => 'en', 'value' => $account->stamp_count.' of 8 stamps; '.$account->reward_balance.' rewards available']],
+            ]);
+        }
         $relativePath = $this->stampStripRenderer->generateForAccount($account);
         if (! $relativePath) {
             return null;

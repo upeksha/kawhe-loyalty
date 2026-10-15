@@ -144,6 +144,27 @@ class AppleWalletPassService
         $passDefinition['foregroundColor'] = $this->hexToRgb($foregroundColor);
         $passDefinition['labelColor'] = $this->hexToRgb($foregroundColor);
 
+        $coffeeSample = \App\Support\CoffeeCardSample::enabled($account);
+        if ($coffeeSample) {
+            $passDefinition['logoText'] = '';
+            $passDefinition['foregroundColor'] = 'rgb(242,236,215)';
+            $passDefinition['labelColor'] = 'rgb(242,236,215)';
+            $passDefinition['storeCard']['primaryFields'] = [];
+            $passDefinition['storeCard']['headerFields'] = [[
+                'key' => 'coffee_progress', 'label' => 'STAMPS',
+                'value' => $account->stamp_count.' / '.$rewardTarget,
+                'changeMessage' => 'Stamp balance: %@',
+            ]];
+            $passDefinition['storeCard']['secondaryFields'] = [[
+                'key' => 'coffee_reward', 'label' => 'REWARD', 'value' => $program->reward_title,
+            ]];
+            $passDefinition['storeCard']['auxiliaryFields'] = [[
+                'key' => 'coffee_balance', 'label' => 'AVAILABLE',
+                'value' => (int) $account->reward_balance,
+                'changeMessage' => 'Rewards available: %@',
+            ]];
+        }
+
         // Initialize pass generator
         // Certificates are automatically loaded from config in constructor
         // Pass ID is optional - we use serial number for identification
@@ -188,6 +209,21 @@ class AppleWalletPassService
                 'strip_3x' => 'strip@3x.png',
             ];
             foreach ($assetNames as $manifestKey => $fileName) {
+                if ($coffeeSample) {
+                    $source = str_starts_with($manifestKey, 'strip')
+                        ? \App\Support\CoffeeCardSample::artwork($account, 'apple')
+                        : 'images/coffee-sample-v1/logo.png';
+                    $sourceImage = imagecreatefrompng(public_path($source));
+                    $scale = str_ends_with($manifestKey, '_3x') ? 3 : (str_ends_with($manifestKey, '_2x') ? 2 : 1);
+                    $resized = imagescale($sourceImage, (str_starts_with($manifestKey, 'strip') ? 375 : 160) * $scale);
+                    $localPath = $tempDir.'/'.$fileName;
+                    imagepng($resized, $localPath);
+                    imagedestroy($sourceImage);
+                    imagedestroy($resized);
+                    $pass->addAsset($localPath);
+                    $assetsAdded[] = $fileName;
+                    continue;
+                }
                 $relativePath = $appleManifest[$manifestKey] ?? null;
                 $contents = $relativePath ? StoreAssets::get($relativePath) : null;
                 if ($contents === null) {
