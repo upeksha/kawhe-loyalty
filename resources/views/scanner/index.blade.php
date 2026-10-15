@@ -1,5 +1,6 @@
 <x-dashboard-layout title="Scanner" :workspace="true">
-    <h1 class="mb-6 text-3xl font-semibold text-stone-900">Scanner</h1>
+    <h1 class="text-3xl font-semibold text-stone-900">Scan a customer card</h1>
+    <p class="mb-6 mt-2 text-sm text-stone-600">Choose your store, then scan a QR code or enter the customer’s card code.</p>
 
     @php
         $appleStoreUrl = config('services.merchant_app.apple_store_url');
@@ -7,14 +8,6 @@
     @endphp
 
     <div class="mx-auto space-y-6">
-        @if($stores->isNotEmpty())
-            <x-ui.page-hero
-                eyebrow="Counter tool"
-                title="Web Scanner Backup"
-                description="For daily counter use, install the Kawhe Merchant app. The browser scanner is kept here as a backup for setup, testing, or emergencies."
-            />
-        @endif
-
         @if(session('status'))<p role="status" class="rounded-lg bg-green-50 p-4 text-green-800">{{ session('status') }}</p>@endif
         @if($stores->isEmpty() && auth()->user()->is_staff_account)
             <x-ui.empty-state heading="No active staff access" description="Ask your cafe owner to invite you or restore your store permissions." />
@@ -28,111 +21,12 @@
                 </x-ui.button>
             </x-ui.empty-state>
         @else
-            <x-ui.section-panel class="mb-6 overflow-hidden border-stone-200/80 bg-gradient-to-br from-[#f3efe7] via-white to-[#edf4eb] p-5 sm:p-6">
-                <div class="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-                    <div class="max-w-xl">
-                        <p class="text-xs font-semibold uppercase tracking-[0.22em] text-[#4f7d54]">Recommended scanner</p>
-                        <h2 class="mt-2 text-xl font-semibold tracking-tight text-stone-900 sm:text-2xl">
-                            Use the Kawhe Merchant app at the counter
-                        </h2>
-                        <p class="mt-3 text-sm leading-6 text-stone-600">
-                            The mobile app has the fastest camera flow, clearer staff screens, and better recovery when a scan fails. Use this web scanner only as a backup.
-                        </p>
-                        <div class="mt-4 grid gap-2 text-sm text-stone-700 sm:grid-cols-3">
-                            <div class="rounded-xl border border-white/70 bg-white/70 px-3 py-2">Faster scanning</div>
-                            <div class="rounded-xl border border-white/70 bg-white/70 px-3 py-2">Better staff UX</div>
-                            <div class="rounded-xl border border-white/70 bg-white/70 px-3 py-2">Works on iPhone & Android</div>
-                        </div>
-                    </div>
-
-                    <div class="flex w-full max-w-md flex-col gap-3 sm:flex-row">
-                        @if($appleStoreUrl)
-                            <a
-                                href="{{ $appleStoreUrl }}"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                class="flex flex-1 items-center justify-center rounded-2xl bg-white p-1.5 transition hover:bg-[#edf4eb]"
-                            >
-                                <img
-                                    src="{{ asset('images/store-badges/app-store-light-en.png') }}"
-                                    alt="Download on the App Store"
-                                    class="h-14 w-auto"
-                                >
-                            </a>
-                        @endif
-
-                        @if($googlePlayUrl)
-                            <a
-                                href="{{ $googlePlayUrl }}"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                class="flex flex-1 items-center justify-center rounded-2xl bg-white p-1.5 transition hover:bg-[#edf4eb]"
-                            >
-                                <img
-                                    src="{{ asset('images/store-badges/google-play-light-en.png') }}"
-                                    alt="Get it on Google Play"
-                                    class="h-14 w-auto"
-                                >
-                            </a>
-                        @else
-                            <div
-                                class="flex flex-1 items-center justify-center rounded-2xl bg-white p-1.5 opacity-75"
-                                aria-label="Google Play badge"
-                            >
-                                <img
-                                    src="{{ asset('images/store-badges/google-play-light-en.png') }}"
-                                    alt="Get it on Google Play"
-                                    class="h-14 w-auto"
-                                >
-                            </div>
-                        @endif
-                    </div>
-                </div>
-
-                @if(!$appleStoreUrl)
-                    <p class="mt-4 text-xs text-stone-500">
-                        Set <code>MERCHANT_APP_APPLE_STORE_URL</code> in production to show the live App Store link here.
-                    </p>
-                @endif
-            </x-ui.section-panel>
-
             <x-ui.section-panel class="p-4 sm:p-6">
                 <div class="max-w-md mx-auto" x-data="scannerApp()" @keydown.escape.window="handleEscape()">
-                    <div x-show="!webScannerRevealed" class="rounded-2xl border border-amber-200 bg-amber-50 p-5 text-center sm:p-6">
-                        <div class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-amber-100 text-amber-800">
-                            <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 9v4m0 4h.01M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z" />
-                            </svg>
-                        </div>
-                        <h3 class="mt-4 text-lg font-semibold text-stone-900">Browser scanner is a backup</h3>
-                        <p class="mt-2 text-sm leading-6 text-stone-700">
-                            For real counter service, ask staff to use the Kawhe Merchant app. Browser camera scanning can be slower and less reliable, especially during busy service.
-                        </p>
-                        <div class="mt-5 flex flex-col gap-2">
-                            @if($appleStoreUrl)
-                                <a href="{{ $appleStoreUrl }}" target="_blank" rel="noopener noreferrer" class="inline-flex min-h-[44px] items-center justify-center rounded-xl bg-stone-950 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-stone-800">
-                                    Download iPhone app
-                                </a>
-                            @endif
-                            @if($googlePlayUrl)
-                                <a href="{{ $googlePlayUrl }}" target="_blank" rel="noopener noreferrer" class="inline-flex min-h-[44px] items-center justify-center rounded-xl bg-brand-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-800">
-                                    Download Android app
-                                </a>
-                            @endif
-                            <button type="button" @click="revealWebScanner()" class="inline-flex min-h-[44px] items-center justify-center rounded-xl border border-amber-300 bg-white px-4 py-2.5 text-sm font-semibold text-amber-900 transition hover:bg-amber-100">
-                                Use web scanner anyway
-                            </button>
-                        </div>
-                    </div>
-
-                    <div x-show="webScannerRevealed" x-cloak>
+                    <div>
                     <!-- Store Selector -->
                     <div class="mb-6">
-                        <div class="mb-3 rounded-xl border border-brand-200 bg-brand-50 px-4 py-3">
-                            <p class="text-xs font-semibold uppercase tracking-[0.16em] text-brand-700">Active store</p>
-                            <p class="mt-1 text-lg font-semibold text-stone-900" x-text="activeStoreName || 'Choose a store before scanning'"></p>
-                        </div>
-                        <label for="store_id" class="mb-2 block text-sm font-medium text-stone-700">Switch store</label>
+                        <label for="store_id" class="mb-2 block text-sm font-medium text-stone-700">Store</label>
                         <x-ui.select id="store_id" x-model="activeStoreId" class="rounded-lg">
                             <option value="">-- Choose a location --</option>
                             @foreach($stores as $store)
@@ -145,15 +39,10 @@
                     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-2">
                         <p class="text-sm text-stone-600" x-text="scannerState" role="status" aria-live="polite"></p>
                         <div class="flex items-center gap-2 flex-wrap">
-                            <span
-                                class="inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-semibold tracking-wide"
-                                :class="cooldownActive ? 'bg-amber-50 text-amber-700 border-amber-100' : (isProcessingScan ? 'bg-brand-50 text-brand-700 border-brand-100' : 'bg-emerald-50 text-emerald-700 border-emerald-100')"
-                                x-text="cooldownActive ? 'Cooldown' : (isProcessingScan || actionProcessing ? 'Processing' : 'Ready')"
-                            ></span>
                             <x-ui.button
                                 type="button"
                                 @click="switchCamera()"
-                                x-bind:disabled="!canSwitchCamera || !isScanning || isProcessingScan"
+                                x-bind:disabled="!canSwitchCamera || !isScanning || isProcessingScan || cameraStarting"
                                 variant="secondary"
                                 size="md"
                             >
@@ -197,26 +86,26 @@
                     </div>
 
                     <!-- Scanner Container with Cooldown Overlay -->
-                    <div class="relative mb-6 w-full overflow-hidden rounded-2xl bg-black" style="min-height: 360px; position: relative;">
+                    <div class="relative mb-6 w-full overflow-hidden rounded-2xl bg-black" style="min-height: 280px; position: relative;">
                         <div id="reader" class="w-full" style="min-height: 280px; width: 100%; position: relative; background: #000;"></div>
                         <div x-show="isScanning && !isProcessingScan && !cooldownActive" class="pointer-events-none absolute inset-0 z-30 flex flex-col items-center justify-center p-8">
-                            <div class="aspect-square w-full max-w-[250px] rounded-3xl border-2 border-white/90 shadow-[0_0_0_999px_rgba(0,0,0,0.28)]"></div>
+                            <div class="aspect-square w-full max-w-[180px] rounded-3xl border-2 border-white/90 shadow-[0_0_0_999px_rgba(0,0,0,0.28)]"></div>
                             <p class="mt-5 rounded-full bg-black/65 px-4 py-2 text-center text-sm font-medium text-white">Place the customer QR code inside the frame</p>
                         </div>
                         
                         <!-- Start Camera Button (shown when camera not started) -->
                         <div 
-                            x-show="!isScanning && cameraStatus !== 'Scanning…'" 
+                            x-show="!isScanning" 
                             x-cloak
                             class="absolute inset-0 flex items-center justify-center bg-stone-900 bg-opacity-90 z-40 rounded-lg"
                         >
                             <button
                                 type="button"
                                 @click="startScanner()"
-                                :disabled="isProcessingScan || !activeStoreId"
+                                :disabled="cameraStarting || isProcessingScan || !activeStoreId"
                                 class="px-6 py-3.5 text-base font-semibold rounded-xl bg-brand-600 hover:bg-brand-700 text-white transition shadow-lg disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px]"
                             >
-                                <span x-text="activeStoreId ? 'Start camera' : 'Choose a store first'"></span>
+                                <span x-text="cameraStarting ? 'Starting camera…' : (activeStoreId ? 'Start camera' : 'Choose a store first')"></span>
                             </button>
                         </div>
 
@@ -256,7 +145,7 @@
                             @click="showUploadFallback = !showUploadFallback"
                             class="text-xs text-stone-500 hover:text-stone-700 underline"
                         >
-                            Having trouble? Upload an image of the QR code
+                            Upload QR image
                         </button>
                         <div x-show="showUploadFallback" x-cloak class="mt-3">
                             <x-ui.input
@@ -270,14 +159,14 @@
 
                     <!-- Manual Input -->
                     <div class="mb-6">
-                        <label for="manual_token" class="block mb-2 text-sm font-medium text-stone-700">Enter the customer’s 4-character code</label>
+                        <label for="manual_token" class="block mb-2 text-sm font-medium text-stone-700">Enter card code</label>
                         <div class="flex flex-col sm:flex-row gap-2">
-                            <x-ui.input type="text" id="manual_token" x-model="manualToken" placeholder="e.g. A3CX or LA:..." class="flex-1" maxlength="50" />
+                            <x-ui.input type="text" id="manual_token" x-model="manualToken" placeholder="e.g. A3CX" class="flex-1" maxlength="50" />
                             <x-ui.button @click="handleScan(manualToken)" x-bind:disabled="isProcessingScan || !manualToken || !activeStoreId" type="button" variant="primary" size="lg" class="w-full sm:w-auto min-h-[44px]">
                                 Check card
                             </x-ui.button>
                         </div>
-                        <p class="mt-2 text-xs text-stone-500">Scanner pauses briefly while each scan is validated to prevent double actions.</p>
+                        <p class="mt-2 text-xs text-stone-500">Use the code shown on the customer’s card. Full card tokens are also accepted.</p>
                     </div>
 
                     <!-- Modal for Stamp Count / Reward Quantity -->
@@ -499,6 +388,15 @@
                     </div>
                 </div>
             </x-ui.section-panel>
+            @if($appleStoreUrl || $googlePlayUrl)
+                <aside class="rounded-xl border border-stone-200 bg-stone-50 p-4 text-sm text-stone-600">
+                    <p>Prefer scanning on your phone? Use the Kawhe Merchant app.</p>
+                    <div class="mt-2 flex flex-wrap gap-4 font-semibold text-brand-700">
+                        @if($appleStoreUrl)<a href="{{ $appleStoreUrl }}" target="_blank" rel="noopener noreferrer" class="underline">Download for iPhone</a>@endif
+                        @if($googlePlayUrl)<a href="{{ $googlePlayUrl }}" target="_blank" rel="noopener noreferrer" class="underline">Download for Android</a>@endif
+                    </div>
+                </aside>
+            @endif
         @endif
     </div>
 
@@ -554,7 +452,7 @@
                 resultData: null,
                 isScanning: false,
                 actionProcessing: false,
-                webScannerRevealed: false,
+                cameraStarting: false,
                 showModal: false,
                 showModeToggle: false, // Toggle between stamp/redeem in a single modal
                 verificationRequired: false, // Verification state inside the unified action modal
@@ -588,7 +486,7 @@
                 scannedStoreName: '',
 
 	                init() {
-	                    this.cameraStatus = 'Web scanner paused. Use the app unless this is a backup scan.';
+	                    this.cameraStatus = 'Camera not started';
 
                     this.$watch('showModal', (isOpen) => {
                         if (isOpen) {
@@ -609,17 +507,11 @@
 	                    });
 	                },
 
-	                revealWebScanner() {
-	                    this.webScannerRevealed = true;
-	                    this.cameraStatus = 'Starting camera…';
-	                    this.$nextTick(() => this.startScanner());
-	                },
-
                                 // Camera / scanner state
                                 html5QrCode: null,
                                 cameras: [],
                                 activeCameraId: null,
-                                cameraStatus: 'Use the merchant app for daily scanning.',
+                                cameraStatus: 'Camera not started',
                                 showUploadFallback: false,
                                 isProcessingScan: false,
 
@@ -636,6 +528,7 @@
                                     if (this.actionProcessing) return this.isRedeem ? 'Redeeming reward' : 'Adding stamp';
                                     if (this.isProcessingScan) return 'Checking card';
                                     if (this.cooldownActive) return 'Duplicate protection active';
+                                    if (this.cameraStarting) return this.cameraStatus;
                                     if (this.failureContext.type) return this.failureContext.title;
                                     if (this.isScanning) return 'Ready to scan';
                                     return this.cameraStatus || 'Camera not started';
@@ -764,6 +657,10 @@
                                 },
 
                                 async startScanner() {
+                                    if (this.cameraStarting || !this.activeStoreId) return;
+                                    this.cameraStarting = true;
+                                    this.cameraStatus = 'Starting camera…';
+                                    this.clearFailureContext();
                                     // Always stop scanner first if it's running
                                     try {
                                         await this.stopScanner();
@@ -781,7 +678,7 @@
                                     }
                                     
                                     this.cameraStatus = 'Requesting camera permission…';
-                                    this.isScanning = true;
+                                    this.isScanning = false;
 
                                     try {
                                         // Always create a new instance to avoid state issues
@@ -880,14 +777,14 @@
                                         const errorMessage = e?.message || e?.toString() || '';
                                         const errorName = e?.name || '';
                                         
-                                        if (errorName === 'NotAllowedError' || errorMessage.includes('permission')) {
-                                            this.cameraStatus = 'Camera permission denied. Please allow camera access in Safari settings.';
+                                        if (errorName === 'NotAllowedError' || /permission|notallowed/i.test(errorMessage)) {
+                                            this.cameraStatus = 'Camera permission denied. Please allow camera access in your browser settings.';
                                             this.setFailureContext(
                                                 'permission',
                                                 'Camera permission is blocked',
                                                 'Allow camera access in your browser settings, then tap Try again.'
                                             );
-                                        } else if (errorName === 'NotFoundError' || errorMessage.includes('camera')) {
+                                        } else if (errorName === 'NotFoundError' || /notfound|no cameras|device not found/i.test(errorMessage)) {
                                             this.cameraStatus = 'No camera found. Please check your device.';
                                             this.setFailureContext(
                                                 'no_camera',
@@ -906,6 +803,8 @@
                                                 'Close other camera apps and try again. You can still upload or enter code manually.'
                                             );
                                         }
+                                    } finally {
+                                        this.cameraStarting = false;
                                     }
                                 },
 
@@ -952,6 +851,7 @@
                                     const nextId = ids[nextIdx];
                                     
                                     this.cameraStatus = 'Switching camera…';
+                                    this.isScanning = false;
                                     
                                     try {
                                         // Stop current scanner
