@@ -11,7 +11,13 @@ class CoffeeCardSample
     {
         return config('app.env') === 'testing'
             && parse_url(config('app.url'), PHP_URL_HOST) === 'testing.kawhe.shop'
-            && $account->resolvedProgram()?->slug === 'kawhe-illustrated-wallet-qa';
+            && in_array($account->resolvedProgram()?->slug, [
+                'kawhe-illustrated-wallet-qa',
+                'kawhe-illustrated-wallet-qa-6',
+                'kawhe-illustrated-wallet-qa-10',
+                'kawhe-illustrated-wallet-qa-20',
+                'kawhe-illustrated-wallet-qa-30',
+            ], true);
     }
 
     public static function resizedPng(string $source, int $width): string

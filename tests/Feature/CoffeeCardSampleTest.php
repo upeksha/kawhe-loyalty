@@ -122,3 +122,17 @@ test('long unicode reward labels are bounded without losing stored reward text',
     $a->update(['stamp_count' => 5]);
     expect($this->getJson('/api/card/'.$a->public_token)->json('coffee_artwork_url'))->toContain('web-21-5.png');
 });
+
+
+test('only the explicit layout QA variants enable coffee artwork', function () {
+    $a = coffeeSampleAccount();
+    foreach ([6, 10, 20, 30] as $target) {
+        $a->loyaltyProgram->slug = 'kawhe-illustrated-wallet-qa-'.$target;
+        expect(CoffeeCardSample::enabled($a))->toBeTrue();
+    }
+    $a->loyaltyProgram->slug = 'kawhe-illustrated-wallet-qa-unapproved';
+    expect(CoffeeCardSample::enabled($a))->toBeFalse();
+    config(['app.env'=>'production']);
+    $a->loyaltyProgram->slug = 'kawhe-illustrated-wallet-qa-6';
+    expect(CoffeeCardSample::enabled($a))->toBeFalse();
+});
