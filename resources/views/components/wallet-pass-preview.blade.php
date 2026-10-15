@@ -122,7 +122,7 @@
             </div>
             <div class="relative flex items-center justify-center overflow-hidden px-6 py-4" :style="{aspectRatio: platform === 'apple' ? '1125 / 432' : '1032 / 812'}">
                 <svg class="absolute inset-0 h-full w-full opacity-20" viewBox="0 0 400 160" preserveAspectRatio="none" aria-hidden="true"><path d="M0 145 L70 100 L115 130 L200 80 L320 135 L400 100 M0 155 L70 110 L115 140 L200 90 L320 145 L400 110" fill="none" stroke="currentColor"/></svg>
-                <div x-show="previewMode === 'ready'" class="relative text-center"><span class="text-3xl">☕</span><p class="mt-2 text-xl font-semibold">Reward ready</p></div>
+                <img x-show="previewMode === 'ready'" :src="platform === 'apple' ? '{{ asset('images/coffee-sample-v1/apple-ready.png') }}' : '{{ asset('images/coffee-sample-v1/google-ready.png') }}'" alt="Reward ready coffee artwork" class="absolute inset-0 h-full w-full object-contain">
                 <div x-show="previewMode !== 'ready' && rewardTarget <= 20" class="relative grid w-full gap-2" :style="{gridTemplateColumns: `repeat(${rewardTarget <= 5 ? rewardTarget : Math.ceil(rewardTarget / 2)}, minmax(0, 1fr))`}">
                     <template x-for="stamp in Math.min(rewardTarget, 20)" :key="stamp">
                         <div class="aspect-square rounded-full border border-[#f2ecd7] p-[15%]" :style="{backgroundColor: stamp <= exampleStamps ? '#f2ecd7' : 'transparent', color: '#263e30'}">
