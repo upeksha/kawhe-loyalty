@@ -107,7 +107,7 @@
                 <h2 class="text-lg font-semibold text-stone-900">Reward</h2>
                 <p class="mt-1 text-sm text-stone-600">Set how customers earn and understand their reward.</p>
             </div>
-            <div class="grid gap-4" x-show="cardDesign !== 'illustrated_coffee'">
+            <div class="grid gap-4">
                 <div>
                     <label for="reward_target" class="block text-sm font-medium text-stone-700 mb-1.5">Stamps needed for reward</label>
                     @if($hasIssuedCards)
@@ -132,7 +132,7 @@
                 <summary class="cursor-pointer text-base font-semibold text-stone-900">Card design <span class="block mt-1 text-sm font-normal text-stone-500">Colours, logos and Wallet images</span></summary>
                 <div class="mt-5 space-y-5">
 
-            <div class="grid gap-4">
+            <div class="grid gap-4" x-show="cardDesign !== 'illustrated_coffee'">
                 <div>
                     <label for="brand_color" class="block text-sm font-medium text-stone-700 mb-1.5">Accent colour</label>
                     <input type="color" id="brand_color" name="brand_color" x-model="brandColor" value="{{ old('brand_color', $program?->brand_color ?? $store->brand_color ?? '#0EA5E9') }}" class="color-swatch-input h-11 w-11 rounded-full border-2 cursor-pointer flex-shrink-0 overflow-hidden p-0 bg-transparent appearance-none" x-bind:class="hasBlockedContrast ? 'border-red-300' : 'border-stone-300'">
