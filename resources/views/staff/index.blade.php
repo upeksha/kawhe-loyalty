@@ -10,11 +10,25 @@
                     <p>{{ auth()->user()->name }} · owner</p><p>{{ $store->name }}</p><p>Full access</p><p>Active</p>
                 </div>
                 @forelse($members->get($store->id, collect()) as $member)
-                    <div class="grid gap-3 border-t border-stone-100 pt-4 md:grid-cols-4">
-                        <div><p>{{ $member->user->name }} · staff</p><p class="mt-1 break-words text-sm text-stone-600">{{ $member->user->email }}</p></div>
+                    <div x-data="{ editing: false }" class="border-t border-stone-100 pt-4">
+                    <div class="grid gap-3 md:grid-cols-4">
+                        <div class="min-w-0"><div class="flex items-center gap-2"><p class="break-words">{{ $member->user->name }} · staff</p><button type="button" @click="editing = !editing" :aria-expanded="editing" aria-controls="member-permissions-{{ $member->id }}" aria-label="Edit permissions for {{ $member->user->name }} at {{ $store->name }}" title="Edit permissions" class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-brand-700 hover:bg-brand-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-600"><svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m16 4 4 4M4 20l4-1L20 7a2.8 2.8 0 0 0-4-4L4 15l-1 6Z" /></svg></button></div><p class="mt-1 break-words text-sm text-stone-600">{{ $member->user->email }}</p></div>
                         <p>{{ $store->name }}</p>
                         <p>{{ $member->can_stamp ? 'Stamp cards' : '' }}{{ $member->can_stamp && $member->can_redeem ? ' & ' : '' }}{{ $member->can_redeem ? 'Redeem rewards' : '' }}{{ !$member->can_stamp && !$member->can_redeem ? 'No actions allowed' : '' }}</p>
                         <p>Active</p>
+                    </div>
+                    <div id="member-permissions-{{ $member->id }}" x-show="editing" x-cloak class="mt-4 space-y-4 rounded-xl border border-stone-200 bg-stone-50 p-4">
+                        <p class="font-semibold">{{ $member->user->name }} · {{ $store->name }}</p><p class="break-words text-sm text-stone-600">{{ $member->user->email }}</p>
+                        <form method="POST" action="{{ route('merchant.staff.update', [$store, $member]) }}" class="space-y-4">
+                            @csrf @method('PATCH')
+                            <fieldset><legend class="mb-3 text-sm font-semibold">Permissions</legend><div class="flex flex-wrap gap-4 text-sm">
+                                <label class="flex items-center gap-2"><input type="checkbox" name="can_stamp" value="1" @checked($member->can_stamp)> Stamp cards</label>
+                                <label class="flex items-center gap-2"><input type="checkbox" name="can_redeem" value="1" @checked($member->can_redeem)> Redeem rewards</label>
+                            </div></fieldset>
+                            <x-ui.button type="submit" variant="secondary" class="w-full">Save permissions</x-ui.button>
+                        </form>
+                        <form method="POST" action="{{ route('merchant.staff.revoke', [$store, $member]) }}" onsubmit="return confirm('Remove this staff member’s access to this store? They will no longer be able to stamp or redeem here.');">@csrf @method('DELETE')<x-ui.button type="submit" variant="danger" class="w-full">Remove access</x-ui.button></form>
+                    </div>
                     </div>
                 @empty<p class="text-sm text-stone-500">No staff have joined this store yet.</p>@endforelse
                 <p class="text-sm text-stone-600">Staff cannot manage your stores, billing, customer lists, or other staff.</p>
@@ -40,23 +54,6 @@
                     <x-ui.button type="submit" class="w-full" data-loading-text="Sending invitation…">Send invitation</x-ui.button>
                 </form>
             </details>
-            @foreach($members->get($store->id, collect()) as $member)
-                <details class="max-w-[660px]">
-                    <summary class="flex max-w-[400px] min-h-12 cursor-pointer items-center justify-center rounded-lg border border-stone-200 bg-white px-4 py-3 text-sm font-semibold text-brand-700">Manage {{ $member->user->name }}’s permissions</summary>
-                    <div class="mt-6 space-y-4 rounded-2xl border border-stone-200 bg-white p-6">
-                        <p class="font-semibold">{{ $member->user->name }} · {{ $store->name }}</p><p class="break-words text-sm text-stone-600">{{ $member->user->email }}</p>
-                        <form method="POST" action="{{ route('merchant.staff.update', [$store, $member]) }}" class="space-y-4">
-                            @csrf @method('PATCH')
-                            <fieldset><legend class="mb-3 text-sm font-semibold">Permissions</legend><div class="flex flex-wrap gap-4 text-sm">
-                                <label class="flex items-center gap-2"><input type="checkbox" name="can_stamp" value="1" @checked($member->can_stamp)> Stamp cards</label>
-                                <label class="flex items-center gap-2"><input type="checkbox" name="can_redeem" value="1" @checked($member->can_redeem)> Redeem rewards</label>
-                            </div></fieldset>
-                            <x-ui.button type="submit" variant="secondary" class="w-full">Save permissions</x-ui.button>
-                        </form>
-                        <form method="POST" action="{{ route('merchant.staff.revoke', [$store, $member]) }}" onsubmit="return confirm('Remove this staff member’s access to this store? They will no longer be able to stamp or redeem here.');">@csrf @method('DELETE')<x-ui.button type="submit" variant="danger" class="w-full">Remove access</x-ui.button></form>
-                    </div>
-                </details>
-            @endforeach
             <details class="max-w-[660px]">
                 <summary class="flex max-w-[400px] min-h-12 cursor-pointer items-center justify-center rounded-lg border border-stone-200 bg-white px-4 py-3 text-sm font-semibold text-brand-700">Pending invitations ({{ $invitations->get($store->id, collect())->count() }})</summary>
                 <div class="mt-6 space-y-6">
