@@ -59,6 +59,7 @@ class Store extends Model
 
     protected $fillable = [
         'card_design',
+        'card_pattern', 'stamp_icon', 'stamp_icon_path', 'card_photo_path',
         'name',
         'default_loyalty_program_id',
         'slug',
@@ -244,6 +245,11 @@ class Store extends Model
                 'join_token' => $store->join_token,
                 'join_short_code' => $store->join_short_code,
                 'card_design' => $store->card_design ?? 'classic',
+                'card_pattern' => $store->card_pattern ?? 'mountains',
+                'stamp_icon' => $store->stamp_icon ?? 'coffee',
+                'stamp_icon_path' => $store->stamp_icon_path,
+                'card_photo_path' => $store->card_photo_path,
+
                 'brand_color' => $store->brand_color,
                 'background_color' => $store->background_color,
                 'logo_path' => $store->logo_path,
@@ -282,6 +288,11 @@ class Store extends Model
             'reward_target' => $this->reward_target,
             'reward_title' => $this->reward_title,
             'card_design' => $this->card_design ?? 'classic',
+            'card_pattern' => $this->card_pattern ?? 'mountains',
+            'stamp_icon' => $this->stamp_icon ?? 'coffee',
+            'stamp_icon_path' => $this->stamp_icon_path,
+            'card_photo_path' => $this->card_photo_path,
+
             'brand_color' => $this->brand_color,
             'background_color' => $this->background_color,
             'logo_path' => $this->logo_path,

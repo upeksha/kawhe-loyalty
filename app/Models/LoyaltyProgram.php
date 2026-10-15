@@ -20,6 +20,7 @@ class LoyaltyProgram extends Model
 
     protected $fillable = [
         'card_design',
+        'card_pattern', 'stamp_icon', 'stamp_icon_path', 'card_photo_path',
         'store_id',
         'name',
         'slug',

@@ -30,6 +30,7 @@ class EnsureMerchantHasStore
 
         // Allow poster downloads/previews while onboarding is still in progress.
         if (in_array($routeName, [
+            'merchant.card-design.preview',
             'merchant.stores.qr.pdf',
             'merchant.stores.qr.image',
         ], true)) {

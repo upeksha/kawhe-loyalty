@@ -70,8 +70,11 @@
                 
                 @if($coffeeSample)
                     <style>
-                        .loyalty-card{background:#263e30!important;color:#f2ecd7!important}
-                        .loyalty-card .card-text,.loyalty-card .card-muted{color:#f2ecd7!important}
+                        .loyalty-card{background:{{ \App\Support\CardDesign::colors($account->resolvedProgram())[0] }}!important;color:{{ \App\Support\CardDesign::colors($account->resolvedProgram())[1] }}!important}
+                        .loyalty-card .card-text,.loyalty-card .card-muted{color:{{ \App\Support\CardDesign::colors($account->resolvedProgram())[1] }}!important}
+                        @if($account->resolvedProgram()->card_design === 'photo' && $account->resolvedProgram()->card_photo_path)
+                        .loyalty-card{background:linear-gradient(rgba(0,0,0,.66),rgba(0,0,0,.66)),url('{{ \App\Support\StoreAssets::url($account->resolvedProgram()->card_photo_path) }}') center/cover!important}
+                        @endif
                         .loyalty-card #stamp-circles-container{display:none}
                         .loyalty-card .card-text,.loyalty-card .card-muted{overflow-wrap:anywhere;white-space:normal}
                         .coffee-sample-art{display:block;width:100%;height:auto;margin:12px 0}

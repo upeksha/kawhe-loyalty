@@ -15,12 +15,12 @@ class CoffeeCardSample
 
     public static function rules(): array
     {
-        return ['sometimes', 'required', \Illuminate\Validation\Rule::in(self::available() ? ['classic', 'illustrated_coffee'] : ['classic'])];
+        return ['sometimes', 'required', \Illuminate\Validation\Rule::in(self::available() ? ['simple', 'illustrated', 'photo', 'classic', 'illustrated_coffee'] : ['classic'])];
     }
 
     public static function programEnabled($program): bool
     {
-        return $program?->card_design === 'illustrated_coffee' && self::available();
+        return in_array($program?->card_design, ['simple', 'illustrated', 'photo', 'illustrated_coffee'], true) && self::available();
     }
 
     public static function enabled(LoyaltyAccount $account): bool
@@ -66,6 +66,17 @@ class CoffeeCardSample
         $count = max(0, min($target, (int) $account->stamp_count));
         $state = $account->reward_balance > 0 && $count === 0 ? 'ready' : (string) $count;
 
+        $program = $account->resolvedProgram();
+        if ($program->card_design !== 'illustrated_coffee') {
+            $options = CardDesign::options($program);
+            $hash = substr(hash('sha256', serialize($options)), 0, 24);
+            $path = "wallet/card-styles-v1/{$hash}/{$platform}-{$target}-{$state}.png";
+            if (! StoreAssets::exists($path)) {
+                StoreAssets::put($path, app(\App\Services\Wallet\Artwork\CardStyleArtwork::class)->render($target, $count, $account->reward_balance > 0, $platform, $options));
+            }
+
+            return $path;
+        }
         $path = "wallet/coffee-sample-v2/{$platform}-{$target}-{$state}.png";
         if (! StoreAssets::exists($path)) {
             StoreAssets::put($path, app(\App\Services\Wallet\Artwork\CoffeeStampArtwork::class)

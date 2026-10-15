@@ -104,6 +104,7 @@ class LoyaltyProgramController extends Controller
 
         $validated = $request->validate([
             'card_design' => \App\Support\CoffeeCardSample::rules(),
+            ...\App\Support\CardDesign::rules($request, isset($program) ? $program : null),
             'name' => ['required', 'string', 'max:255'],
             'reward_target' => ['required', 'integer', 'min:1'],
             'reward_title' => ['required', 'string', 'max:255'],
@@ -114,6 +115,7 @@ class LoyaltyProgramController extends Controller
             'pass_logo' => ['nullable', 'image', 'mimes:png,jpg,jpeg,webp', 'max:2048', new ValidWalletImage('logo')],
             'pass_hero_image' => ['nullable', 'image', 'mimes:png,jpg,jpeg,webp', 'max:2048', new ValidWalletImage('hero')],
         ]);
+        $validated = \App\Support\CardDesign::saveUploads($request, $validated);
         $imageWarnings = $this->walletImageValidator->warningsForRequest($request, [
             'logo' => 'logo',
             'pass_logo' => 'logo',
@@ -168,6 +170,7 @@ class LoyaltyProgramController extends Controller
 
         $validated = $request->validate([
             'card_design' => \App\Support\CoffeeCardSample::rules(),
+            ...\App\Support\CardDesign::rules($request, isset($program) ? $program : null),
             'name' => ['required', 'string', 'max:255'],
             'reward_target' => $hasIssuedCards ? ['nullable', 'integer', 'min:1'] : ['required', 'integer', 'min:1'],
             'reward_title' => ['required', 'string', 'max:255'],
@@ -178,6 +181,7 @@ class LoyaltyProgramController extends Controller
             'pass_logo' => ['nullable', 'image', 'mimes:png,jpg,jpeg,webp', 'max:2048', new ValidWalletImage('logo')],
             'pass_hero_image' => ['nullable', 'image', 'mimes:png,jpg,jpeg,webp', 'max:2048', new ValidWalletImage('hero')],
         ]);
+        $validated = \App\Support\CardDesign::saveUploads($request, $validated);
         $imageWarnings = $this->walletImageValidator->warningsForRequest($request, [
             'logo' => 'logo',
             'pass_logo' => 'logo',
@@ -351,6 +355,11 @@ class LoyaltyProgramController extends Controller
 
         $store->forceFill([
             'card_design' => $program->card_design,
+            'card_pattern' => $program->card_pattern,
+            'stamp_icon' => $program->stamp_icon,
+            'stamp_icon_path' => $program->stamp_icon_path,
+            'card_photo_path' => $program->card_photo_path,
+
             'reward_target' => $program->reward_target,
             'reward_title' => $program->reward_title,
             'registration_form_config' => $program->registration_form_config,

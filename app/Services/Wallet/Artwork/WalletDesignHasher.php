@@ -13,6 +13,7 @@ class WalletDesignHasher
         $payload = [
             'renderer_version' => WalletArtworkService::RENDERER_VERSION,
             'card_design' => $program->card_design ?? 'classic',
+            'card_options' => $program->only(\App\Support\CardDesign::FIELDS),
             'program_name' => trim((string) $program->name),
             'store_name' => trim((string) $program->store?->name),
             'reward_title' => trim((string) $program->reward_title),

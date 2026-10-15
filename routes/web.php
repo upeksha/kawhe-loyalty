@@ -117,6 +117,7 @@ Route::middleware(['auth', 'verified', App\Http\Middleware\OwnerAccount::class])
 
 // Merchant area routes (requires store)
 Route::middleware(['auth', 'verified', App\Http\Middleware\OwnerAccount::class, App\Http\Middleware\EnsureMerchantHasStore::class])->prefix('merchant')->name('merchant.')->group(function () {
+    Route::post('/card-design-preview', \App\Http\Controllers\CardDesignPreviewController::class)->middleware('throttle:60,1')->name('card-design.preview');
     Route::get('/dashboard', function (Request $request) {
         $usageService = app(\App\Services\Billing\UsageService::class);
         $stats = $usageService->getUsageStats($request->user());

@@ -1,9 +1,9 @@
 <?php
 
+use App\Jobs\RefreshProgramWalletsJob;
+use App\Models\LoyaltyAccount;
 use App\Models\Store;
 use App\Models\User;
-use App\Models\LoyaltyAccount;
-use App\Jobs\RefreshProgramWalletsJob;
 use Illuminate\Support\Facades\Queue;
 use Laravel\Cashier\Subscription;
 
@@ -14,6 +14,7 @@ function coffeeDesignMerchant(): array
     $owner = User::factory()->create(['stripe_id' => 'cus_coffee_test']);
     $store = Store::factory()->for($owner)->create();
     Subscription::create(['user_id' => $owner->id, 'name' => 'default', 'stripe_id' => 'sub_coffee_'.$owner->id, 'stripe_status' => 'active', 'quantity' => 1]);
+
     return [$owner, $store];
 }
 
@@ -26,7 +27,7 @@ test('merchant can create and switch coffee style while retaining reward balance
     $account = LoyaltyAccount::factory()->create(['store_id' => $store->id, 'loyalty_program_id' => $program->id, 'stamp_count' => 1, 'reward_balance' => 2]);
     $hash = $program->wallet_design_hash;
     $hero = $program->pass_hero_image_path;
-    $this->actingAs($owner)->get(route('merchant.stores.programs.edit', [$store, $program]))->assertOk()->assertSee('Illustrated coffee')->assertSee('coffee-preview-panel');
+    $this->actingAs($owner)->get(route('merchant.stores.programs.edit', [$store, $program]))->assertOk()->assertSee('Illustrated — patterns and artwork')->assertSee('coffee-preview-panel');
     $data['card_design'] = 'classic';
     $this->put(route('merchant.stores.programs.update', [$store, $program]), $data)->assertSessionHasNoErrors();
     expect($program->fresh()->card_design)->toBe('classic');

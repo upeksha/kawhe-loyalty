@@ -15,7 +15,7 @@
     >
         <form method="POST" action="{{ route('merchant.onboarding.wizard.card-design.store') }}" enctype="multipart/form-data" id="card-design-form"
         x-data="{
-            cardDesign: @js(old('card_design', $store->card_design ?? 'classic')),
+            cardDesign: @js(old('card_design', \App\Support\CardDesign::style($store))),
             storeName: {{ json_encode($store->name ?? '') }},
             rewardTarget: {{ (int) ($store->reward_target ?? 9) }},
             rewardTitle: {{ json_encode($store->reward_title ?? 'Free coffee') }},
@@ -54,13 +54,13 @@
                 return (lighter + 0.05) / (darker + 0.05);
             },
             get hasRequiredAssets() {
-                return Boolean(this.logoPreview && this.passLogoPreview && (this.cardDesign === 'illustrated_coffee' || this.passHeroPreview));
+                return Boolean(this.logoPreview && this.passLogoPreview && (this.cardDesign !== 'classic' || this.passHeroPreview));
             },
             get hasLowContrastPreview() {
-                return this.cardDesign !== 'illustrated_coffee' && this.contrastRatio(this.brandColor, this.bgColor) < 3;
+                return this.cardDesign === 'classic' && this.contrastRatio(this.brandColor, this.bgColor) < 3;
             },
             get hasBlockedContrast() {
-                return this.cardDesign !== 'illustrated_coffee' && this.contrastRatio(this.brandColor, this.bgColor) < 2;
+                return this.cardDesign === 'classic' && this.contrastRatio(this.brandColor, this.bgColor) < 2;
             },
             get hasVeryLightBackground() {
                 return this.luminance(this.bgColor) > 0.9;
@@ -77,7 +77,7 @@
         "
         >
             @csrf
-            <x-card-design-choice :value="$store->card_design ?? 'classic'" />
+            <x-card-design-choice :model="$store" />
             <x-form-error-summary form-id="card-design-form" />
             <div class="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-xl bg-brand-50 px-4 py-3 text-sm">
                 <p class="text-brand-900">Designing for <strong>{{ $store->name }}</strong></p>
@@ -85,13 +85,13 @@
             </div>
             <div class="grid grid-cols-1 lg:grid-cols-5 gap-6 lg:gap-8">
                 <div class="lg:col-span-3 space-y-8">
-                    <section x-show="cardDesign !== 'illustrated_coffee'" class="rounded-2xl border border-stone-200 bg-white p-5 sm:p-6"><h2 class="mb-2 text-lg font-semibold text-stone-900">Choose your colours</h2><p class="mb-5 text-sm text-stone-500">Pick your brand accent and card background. The preview updates as you edit.</p>
+                    <section x-show="cardDesign !== 'photo'" class="rounded-2xl border border-stone-200 bg-white p-5 sm:p-6"><h2 class="mb-2 text-lg font-semibold text-stone-900">Choose your background colour</h2><p class="mb-5 text-sm text-stone-500">Text and stamp colours adjust automatically for contrast.</p>
                         <div class="space-y-5">
-                            <div>
+                            <div x-show="cardDesign === 'classic'">
                                 <label for="brand_color" class="block text-sm font-medium text-stone-700 mb-1.5">Accent colour</label>
                                 <div class="flex gap-3 mt-1.5">
                                     <input type="color" id="brand_color" name="brand_color" x-ref="brandColor" value="{{ $brandColor }}" class="color-swatch-input h-11 w-11 rounded-full border-2 cursor-pointer flex-shrink-0 overflow-hidden p-0 bg-transparent appearance-none" x-bind:class="hasBlockedContrast ? 'border-red-300' : 'border-stone-300'" />
-                                    <input type="text" id="brand_color_text" :disabled="cardDesign === 'illustrated_coffee'" x-ref="brandColorText" value="{{ $brandColor }}" placeholder="#0EA5E9" aria-label="Accent colour hex code" required pattern="#[0-9A-Fa-f]{6}" maxlength="7" title="Enter a colour code such as #0EA5E9" aria-describedby="brand_color_note" autocapitalize="off" spellcheck="false" class="{{ $inputClass }}" x-bind:class="hasBlockedContrast ? '!border-red-300 !ring-red-100' : ''" />
+                                    <input type="text" id="brand_color_text" :disabled="cardDesign !== 'classic'" x-ref="brandColorText" value="{{ $brandColor }}" placeholder="#0EA5E9" aria-label="Accent colour hex code" required pattern="#[0-9A-Fa-f]{6}" maxlength="7" title="Enter a colour code such as #0EA5E9" aria-describedby="brand_color_note" autocapitalize="off" spellcheck="false" class="{{ $inputClass }}" x-bind:class="hasBlockedContrast ? '!border-red-300 !ring-red-100' : ''" />
                                 </div>
                                 <x-onboarding-helper-note id="brand_color_note">Used for buttons and accents on the customer card.</x-onboarding-helper-note>
                                 <x-input-error :messages="$errors->get('brand_color')" class="mt-2" />
@@ -100,7 +100,7 @@
                                 <label for="background_color" class="block text-sm font-medium text-stone-700 mb-1.5">Card background</label>
                                 <div class="flex gap-3 mt-1.5">
                                     <input type="color" id="background_color" name="background_color" x-ref="bgColor" value="{{ $bgColor }}" class="color-swatch-input h-11 w-11 rounded-full border-2 cursor-pointer flex-shrink-0 overflow-hidden p-0 bg-transparent appearance-none" x-bind:class="hasBlockedContrast ? 'border-red-300' : 'border-stone-300'" />
-                                    <input type="text" id="background_color_text" :disabled="cardDesign === 'illustrated_coffee'" x-ref="bgColorText" value="{{ $bgColor }}" placeholder="#1F2937" aria-label="Background colour hex code" required pattern="#[0-9A-Fa-f]{6}" maxlength="7" title="Enter a colour code such as #1F2937" aria-describedby="background_color_note" autocapitalize="off" spellcheck="false" class="{{ $inputClass }}" x-bind:class="hasBlockedContrast ? '!border-red-300 !ring-red-100' : ''" />
+                                    <input type="text" id="background_color_text" :disabled="cardDesign === 'photo'" x-ref="bgColorText" value="{{ $bgColor }}" placeholder="#1F2937" aria-label="Background colour hex code" required pattern="#[0-9A-Fa-f]{6}" maxlength="7" title="Enter a colour code such as #1F2937" aria-describedby="background_color_note" autocapitalize="off" spellcheck="false" class="{{ $inputClass }}" x-bind:class="hasBlockedContrast ? '!border-red-300 !ring-red-100' : ''" />
                                 </div>
                                 <x-onboarding-helper-note id="background_color_note">Background of the join page and card.</x-onboarding-helper-note>
                                 <x-input-error :messages="$errors->get('background_color')" class="mt-2" />
@@ -126,7 +126,7 @@
 
                     <section class="rounded-2xl border border-stone-200 bg-white p-5 sm:p-6" aria-labelledby="card-images-heading">
                         <h2 id="card-images-heading" class="text-lg font-semibold text-stone-900">Add your images</h2>
-                        <p class="mt-2 text-sm text-stone-500">Add your store and Wallet logos. Classic also needs a banner; coffee artwork is included. PNG, JPG or WebP, up to 2MB each.</p>
+                        <p class="mt-2 text-sm text-stone-500">Add your store and Wallet logos. Your selected card style supplies the background artwork. PNG, JPG or WebP, up to 2MB each.</p>
                         @php
                             $uploads = [
                                 ['id' => 'logo', 'label' => 'Store logo', 'ref' => 'logoInput', 'preview' => 'logoPreview', 'path' => 'logo_path', 'hint' => 'Shown on your customer card and join page. A square logo works best.', 'shape' => 'h-16 w-16 object-contain'],
@@ -136,7 +136,7 @@
                         @endphp
                         <div class="mt-5 divide-y divide-stone-200">
                             @foreach($uploads as $upload)
-                                <div class="py-5 first:pt-0 last:pb-0" @if($upload['id'] === 'pass_hero_image') x-show="cardDesign !== 'illustrated_coffee'" @endif>
+                                <div class="py-5 first:pt-0 last:pb-0" @if($upload['id'] === 'pass_hero_image') x-show="cardDesign === 'classic'" @endif>
                                     <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
                                         <label for="{{ $upload['id'] }}" class="font-semibold text-stone-900">{{ $upload['label'] }} <span class="text-xs font-normal text-stone-500">Required</span></label>
                                         <span class="rounded-full bg-brand-50 px-2.5 py-1 text-xs font-medium text-brand-700" x-show="{{ $upload['preview'] }}" x-cloak>Image added</span>
@@ -150,7 +150,7 @@
                                         <div class="min-w-0 flex-1">
                                             <label class="inline-flex min-h-11 cursor-pointer items-center justify-center rounded-lg border border-stone-300 bg-white px-3 text-sm font-semibold text-brand-700 focus-within:ring-2 focus-within:ring-brand-500">
                                                 <span x-text="{{ $upload['preview'] }} ? 'Replace image' : 'Choose image'">Choose image</span>
-                                                <input type="file" id="{{ $upload['id'] }}" name="{{ $upload['id'] }}" @required(blank($store->{$upload['path']}) && (old('card_design', $store->card_design) !== 'illustrated_coffee' || $upload['id'] !== 'pass_hero_image')) :required="{{ blank($store->{$upload['path']}) ? 'true' : 'false' }} && (cardDesign !== 'illustrated_coffee' || '{{ $upload['id'] }}' !== 'pass_hero_image')" x-ref="{{ $upload['ref'] }}" accept="image/png,image/jpeg,image/jpg,image/webp" aria-describedby="{{ $upload['id'] }}-hint" class="sr-only">
+                                                <input type="file" id="{{ $upload['id'] }}" name="{{ $upload['id'] }}" @required(blank($store->{$upload['path']}) && (old('card_design', \App\Support\CardDesign::style($store)) === 'classic' || $upload['id'] !== 'pass_hero_image')) :required="{{ blank($store->{$upload['path']}) ? 'true' : 'false' }} && (cardDesign === 'classic' || '{{ $upload['id'] }}' !== 'pass_hero_image')" x-ref="{{ $upload['ref'] }}" accept="image/png,image/jpeg,image/jpg,image/webp" aria-describedby="{{ $upload['id'] }}-hint" class="sr-only">
                                             </label>
                                             <p class="mt-2 break-all text-xs text-stone-500" x-text="{{ $upload['preview'] }} ? ($refs.{{ $upload['ref'] }}?.files[0]?.name || 'Saved image') : 'No image selected'"></p>
                                         </div>
@@ -171,7 +171,7 @@
                 </aside>
             </div>
             <div class="mt-6 rounded-2xl border border-stone-200 bg-white p-5">
-                <p x-show="!hasRequiredAssets" class="mb-3 text-sm text-stone-600">Add your logos and, for Classic, a Wallet banner to continue. Saved images are kept unless you replace them.</p>
+                <p x-show="!hasRequiredAssets" class="mb-3 text-sm text-stone-600">Add your logos and any photo or custom icon required by your style to continue. Saved images are kept unless you replace them.</p>
                 <p x-show="hasBlockedContrast" x-cloak class="mb-3 text-sm text-red-700">Choose more distinct accent and background colours to continue.</p>
                 <div class="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <a href="{{ route('merchant.onboarding.wizard.store-basics') }}" class="inline-flex min-h-11 items-center justify-center rounded-xl px-4 text-sm font-semibold text-stone-600">Back to reward setup</a>

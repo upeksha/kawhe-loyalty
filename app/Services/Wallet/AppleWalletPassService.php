@@ -146,9 +146,9 @@ class AppleWalletPassService
 
         $coffeeSample = \App\Support\CoffeeCardSample::enabled($account);
         if ($coffeeSample) {
-            $passDefinition['backgroundColor'] = 'rgb(38,62,48)';
-            $passDefinition['foregroundColor'] = 'rgb(242,236,215)';
-            $passDefinition['labelColor'] = 'rgb(242,236,215)';
+            $passDefinition['backgroundColor'] = $this->hexToRgb(\App\Support\CardDesign::colors($program)[0]);
+            $passDefinition['foregroundColor'] = $this->hexToRgb(\App\Support\CardDesign::colors($program)[1]);
+            $passDefinition['labelColor'] = $passDefinition['foregroundColor'];
             $passDefinition['storeCard']['primaryFields'] = [];
             $passDefinition['storeCard']['headerFields'] = [[
                 'key' => 'coffee_progress', 'label' => 'STAMPS',

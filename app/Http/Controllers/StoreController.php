@@ -87,11 +87,13 @@ class StoreController extends Controller
 
         unset($validated['logo'], $validated['pass_logo'], $validated['pass_hero_image']);
 
+        $validated = \App\Support\CardDesign::saveUploads($request, $validated);
         $store = Auth::user()->stores()->create($validated);
 
         $program = $store->loyaltyPrograms()->create([
             'name' => $validated['reward_title'],
             'card_design' => $validated['card_design'] ?? 'classic',
+            ...array_intersect_key($validated, array_flip(\App\Support\CardDesign::FIELDS)),
             'slug' => $store->slug,
             'reward_target' => $validated['reward_target'],
             'reward_title' => $validated['reward_title'],

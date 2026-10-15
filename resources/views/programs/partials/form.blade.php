@@ -9,7 +9,7 @@
 <div
     class="space-y-6"
     x-data="{
-            cardDesign: @js(old('card_design', $program?->card_design ?? 'classic')),
+            cardDesign: @js(old('card_design', \App\Support\CardDesign::style($program))),
         brandColor: @js(old('brand_color', $program?->brand_color ?? $store->brand_color ?? '#0EA5E9')),
         bgColor: @js(old('background_color', $program?->background_color ?? $store->background_color ?? '#1F2937')),
         hexToRgb(hex) {
@@ -38,10 +38,10 @@
             return (lighter + 0.05) / (darker + 0.05);
         },
         get hasLowContrastPreview() {
-            return this.cardDesign !== 'illustrated_coffee' && this.contrastRatio(this.brandColor, this.bgColor) < 3;
+            return this.cardDesign === 'classic' && this.contrastRatio(this.brandColor, this.bgColor) < 3;
         },
         get hasBlockedContrast() {
-            return this.cardDesign !== 'illustrated_coffee' && this.contrastRatio(this.brandColor, this.bgColor) < 2;
+            return this.cardDesign === 'classic' && this.contrastRatio(this.brandColor, this.bgColor) < 2;
         },
         get hasVeryLightBackground() {
             return this.luminance(this.bgColor) > 0.9;
@@ -89,7 +89,7 @@
     <div class="grid items-start gap-8 xl:grid-cols-[minmax(0,760fr)_minmax(0,568fr)]">
         <form id="loyalty-card-form" method="POST" action="{{ $action }}" enctype="multipart/form-data" class="min-w-0 space-y-6 rounded-2xl border border-stone-200 bg-white p-4 sm:p-6">
             @csrf
-            <x-card-design-choice :value="$program?->card_design ?? 'classic'" />
+            <x-card-design-choice :model="$program" />
             @if($method !== 'POST') @method($method) @endif
             <x-form-error-summary form-id="loyalty-card-form" />
 
@@ -132,8 +132,8 @@
                 <summary class="cursor-pointer text-base font-semibold text-stone-900">Card design <span class="block mt-1 text-sm font-normal text-stone-500">Colours, logos and Wallet images</span></summary>
                 <div class="mt-5 space-y-5">
 
-            <div class="grid gap-4" x-show="cardDesign !== 'illustrated_coffee'">
-                <div>
+            <div class="grid gap-4" x-show="cardDesign !== 'photo'">
+                <div x-show="cardDesign === 'classic'">
                     <label for="brand_color" class="block text-sm font-medium text-stone-700 mb-1.5">Accent colour</label>
                     <input type="color" id="brand_color" name="brand_color" x-model="brandColor" value="{{ old('brand_color', $program?->brand_color ?? $store->brand_color ?? '#0EA5E9') }}" class="color-swatch-input h-11 w-11 rounded-full border-2 cursor-pointer flex-shrink-0 overflow-hidden p-0 bg-transparent appearance-none" x-bind:class="hasBlockedContrast ? 'border-red-300' : 'border-stone-300'">
                     <x-input-error :messages="$errors->get('brand_color')" class="mt-2" />
@@ -152,7 +152,7 @@
                 </p>
             </div>
 
-            <div x-show="cardDesign !== 'illustrated_coffee' && !hasBlockedContrast && (hasLowContrastPreview || hasVeryLightBackground)" x-cloak class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            <div x-show="cardDesign === 'classic' && !hasBlockedContrast && (hasLowContrastPreview || hasVeryLightBackground)" x-cloak class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
                 <p class="font-semibold">Preview warning</p>
                 <p class="mt-1 leading-relaxed">
                     This combination will save, but it may still look washed out on the join page or wallet handoff. The safest fix is a darker background and a more distinct accent color.
@@ -178,7 +178,7 @@
                 @endphp
 
                 @foreach($imageFields as $field)
-                    <div x-show="cardDesign !== 'illustrated_coffee' || '{{ $field['id'] }}' !== 'pass_hero_image'">
+                    <div x-show="cardDesign === 'classic' || '{{ $field['id'] }}' !== 'pass_hero_image'">
                     <x-ui.image-upload-field
                         :id="$field['id']"
                         :helper="$field['helper']"

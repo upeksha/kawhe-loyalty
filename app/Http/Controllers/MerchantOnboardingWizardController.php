@@ -189,6 +189,8 @@ class MerchantOnboardingWizardController extends Controller
             $updates['pass_hero_image_path'] = StoreAssets::storeUploaded($request->file('pass_hero_image'), 'pass-heroes');
         }
 
+        $designOptions = array_intersect_key($validated, array_flip(['card_pattern', 'stamp_icon', 'card_photo', 'stamp_icon_upload']));
+        $updates = \App\Support\CardDesign::saveUploads($request, array_merge($updates, $designOptions));
         $updates['onboarding_step'] = Store::ONBOARDING_STEP_CUSTOMER_FORM;
         $store->update($updates);
         $store->syncDefaultProgramFromStore();
