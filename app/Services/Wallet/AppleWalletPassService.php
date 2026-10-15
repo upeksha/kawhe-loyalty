@@ -213,13 +213,11 @@ class AppleWalletPassService
                     $source = str_starts_with($manifestKey, 'strip')
                         ? \App\Support\CoffeeCardSample::artwork($account, 'apple')
                         : 'images/coffee-sample-v1/logo.png';
-                    $sourceImage = imagecreatefrompng(public_path($source));
                     $scale = str_ends_with($manifestKey, '_3x') ? 3 : (str_ends_with($manifestKey, '_2x') ? 2 : 1);
-                    $resized = imagescale($sourceImage, (str_starts_with($manifestKey, 'strip') ? 375 : 160) * $scale);
                     $localPath = $tempDir.'/'.$fileName;
-                    imagepng($resized, $localPath);
-                    imagedestroy($sourceImage);
-                    imagedestroy($resized);
+                    file_put_contents($localPath, \App\Support\CoffeeCardSample::resizedPng(
+                        public_path($source), (str_starts_with($manifestKey, 'strip') ? 375 : 160) * $scale
+                    ));
                     $pass->addAsset($localPath);
                     $assetsAdded[] = $fileName;
                     continue;

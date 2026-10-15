@@ -66,3 +66,23 @@ test('customer sample keeps working card controls and artwork while normal cards
     $a->loyaltyProgram->update(['slug' => 'ordinary-program']);
     $this->get('/c/'.$a->public_token)->assertOk()->assertDontSee('id="coffee-sample-art"', false);
 });
+
+test('Apple sample logos preserve transparent backgrounds at every resolution', function () {
+    foreach ([160, 320, 480] as $width) {
+        $png = CoffeeCardSample::resizedPng(public_path('images/coffee-sample-v1/logo.png'), $width);
+        $image = imagecreatefromstring($png);
+        expect(imagesx($image))->toBe($width);
+        expect(imagecolorsforindex($image, imagecolorat($image, 0, 0))['alpha'])->toBe(127);
+        $hasInk = false;
+        for ($y = 0; $y < imagesy($image); $y++) {
+            for ($x = 0; $x < imagesx($image); $x++) {
+                if (imagecolorsforindex($image, imagecolorat($image, $x, $y))['alpha'] === 0) {
+                    $hasInk = true;
+                    break 2;
+                }
+            }
+        }
+        expect($hasInk)->toBeTrue();
+        imagedestroy($image);
+    }
+});

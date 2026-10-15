@@ -15,6 +15,22 @@ class CoffeeCardSample
             && (int) $account->resolvedProgram()->reward_target === 8;
     }
 
+    public static function resizedPng(string $source, int $width): string
+    {
+        $image = imagecreatefrompng($source);
+        $resized = imagescale($image, $width);
+        try {
+            // GD otherwise writes transparent pixels as opaque black in the pass logo.
+            imagesavealpha($resized, true);
+            ob_start();
+            imagepng($resized);
+            return ob_get_clean();
+        } finally {
+            imagedestroy($image);
+            imagedestroy($resized);
+        }
+    }
+
     public static function artwork(LoyaltyAccount $account, string $platform): string
     {
         if (! in_array($platform, ['web', 'apple', 'google'], true)) {
