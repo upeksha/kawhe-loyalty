@@ -125,7 +125,7 @@ class GoogleWalletPassService
         $imageModulesData = $this->buildImageModulesData($heroImage);
 
         // Always set background color (Google requires it for pass to show color)
-        $backgroundColor = $program->background_color ?? '#1F2937';
+        $backgroundColor = \App\Support\CoffeeCardSample::programEnabled($program) ? '#263e30' : ($program->background_color ?? '#1F2937');
         // Ensure hex format for Google
         $backgroundColor = ltrim($backgroundColor, '#');
         if (strlen($backgroundColor) === 3) {
@@ -890,7 +890,7 @@ class GoogleWalletPassService
 
         $heroImage = $this->getPassHeroImageUri($program) ?: $this->getPassLogoUri($program) ?: $this->getLogoUri($program);
         $logoUri = $this->getPassLogoUri($program) ?: $this->getLogoUri($program);
-        $backgroundColor = $program->background_color ?? '#1F2937';
+        $backgroundColor = \App\Support\CoffeeCardSample::programEnabled($program) ? '#263e30' : ($program->background_color ?? '#1F2937');
         $backgroundColor = ltrim($backgroundColor, '#');
         if (strlen($backgroundColor) === 3) {
             $backgroundColor = $backgroundColor[0].$backgroundColor[0].$backgroundColor[1].$backgroundColor[1].$backgroundColor[2].$backgroundColor[2];

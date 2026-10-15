@@ -7,17 +7,25 @@ use App\Models\LoyaltyAccount;
 /** Isolated coffee design trial; never enabled for production or other programs. */
 class CoffeeCardSample
 {
-    public static function enabled(LoyaltyAccount $account): bool
+    public static function available(): bool
     {
         return config('app.env') === 'testing'
-            && parse_url(config('app.url'), PHP_URL_HOST) === 'testing.kawhe.shop'
-            && in_array($account->resolvedProgram()?->slug, [
-                'kawhe-illustrated-wallet-qa',
-                'kawhe-illustrated-wallet-qa-6',
-                'kawhe-illustrated-wallet-qa-10',
-                'kawhe-illustrated-wallet-qa-20',
-                'kawhe-illustrated-wallet-qa-30',
-            ], true);
+            && parse_url(config('app.url'), PHP_URL_HOST) === 'testing.kawhe.shop';
+    }
+
+    public static function rules(): array
+    {
+        return ['sometimes', 'required', \Illuminate\Validation\Rule::in(self::available() ? ['classic', 'illustrated_coffee'] : ['classic'])];
+    }
+
+    public static function programEnabled($program): bool
+    {
+        return self::available() && $program?->card_design === 'illustrated_coffee';
+    }
+
+    public static function enabled(LoyaltyAccount $account): bool
+    {
+        return self::programEnabled($account->resolvedProgram());
     }
 
     public static function resizedPng(string $source, int $width): string

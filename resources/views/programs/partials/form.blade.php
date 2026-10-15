@@ -9,6 +9,7 @@
 <div
     class="space-y-6"
     x-data="{
+            cardDesign: @js(old('card_design', $program?->card_design ?? 'classic')),
         brandColor: @js(old('brand_color', $program?->brand_color ?? $store->brand_color ?? '#0EA5E9')),
         bgColor: @js(old('background_color', $program?->background_color ?? $store->background_color ?? '#1F2937')),
         hexToRgb(hex) {
@@ -37,10 +38,10 @@
             return (lighter + 0.05) / (darker + 0.05);
         },
         get hasLowContrastPreview() {
-            return this.contrastRatio(this.brandColor, this.bgColor) < 3;
+            return this.cardDesign !== 'illustrated_coffee' && this.contrastRatio(this.brandColor, this.bgColor) < 3;
         },
         get hasBlockedContrast() {
-            return this.contrastRatio(this.brandColor, this.bgColor) < 2;
+            return this.cardDesign !== 'illustrated_coffee' && this.contrastRatio(this.brandColor, this.bgColor) < 2;
         },
         get hasVeryLightBackground() {
             return this.luminance(this.bgColor) > 0.9;
@@ -88,6 +89,7 @@
     <div class="grid items-start gap-8 xl:grid-cols-[minmax(0,760fr)_minmax(0,568fr)]">
         <form id="loyalty-card-form" method="POST" action="{{ $action }}" enctype="multipart/form-data" class="min-w-0 space-y-6 rounded-2xl border border-stone-200 bg-white p-4 sm:p-6">
             @csrf
+            <x-card-design-choice :value="$program?->card_design ?? 'classic'" />
             @if($method !== 'POST') @method($method) @endif
             <x-form-error-summary form-id="loyalty-card-form" />
 
@@ -105,7 +107,7 @@
                 <h2 class="text-lg font-semibold text-stone-900">Reward</h2>
                 <p class="mt-1 text-sm text-stone-600">Set how customers earn and understand their reward.</p>
             </div>
-            <div class="grid gap-4">
+            <div class="grid gap-4" x-show="cardDesign !== 'illustrated_coffee'">
                 <div>
                     <label for="reward_target" class="block text-sm font-medium text-stone-700 mb-1.5">Stamps needed for reward</label>
                     @if($hasIssuedCards)
@@ -150,7 +152,7 @@
                 </p>
             </div>
 
-            <div x-show="!hasBlockedContrast && (hasLowContrastPreview || hasVeryLightBackground)" x-cloak class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            <div x-show="cardDesign !== 'illustrated_coffee' && !hasBlockedContrast && (hasLowContrastPreview || hasVeryLightBackground)" x-cloak class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
                 <p class="font-semibold">Preview warning</p>
                 <p class="mt-1 leading-relaxed">
                     This combination will save, but it may still look washed out on the join page or wallet handoff. The safest fix is a darker background and a more distinct accent color.
@@ -176,6 +178,7 @@
                 @endphp
 
                 @foreach($imageFields as $field)
+                    <div x-show="cardDesign !== 'illustrated_coffee' || '{{ $field['id'] }}' !== 'pass_hero_image'">
                     <x-ui.image-upload-field
                         :id="$field['id']"
                         :helper="$field['helper']"
@@ -186,6 +189,7 @@
                     >
                         <x-input-error :messages="$errors->get($field['id'])" class="mt-2" />
                     </x-ui.image-upload-field>
+                    </div>
                 @endforeach
             </div>
             @if(!$isEdit && ($store->logo_path || $store->pass_logo_path || $store->pass_hero_image_path))

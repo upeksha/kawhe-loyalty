@@ -11,12 +11,12 @@ function coffeeSampleAccount(): LoyaltyAccount
 {
     config(['app.env' => 'testing', 'app.url' => 'https://testing.kawhe.shop']);
     $account = LoyaltyAccount::factory()->create(['stamp_count' => 3, 'reward_balance' => 0]);
-    $account->resolvedProgram()->update(['slug' => 'kawhe-illustrated-wallet-qa', 'reward_target' => 8]);
+    $account->resolvedProgram()->update(['card_design' => 'illustrated_coffee', 'reward_target' => 8]);
 
     return $account->fresh(['store', 'loyaltyProgram', 'customer']);
 }
 
-test('coffee artwork is restricted to the dedicated testing program', function () {
+test('coffee artwork requires an explicit saved choice and testing environment', function () {
     $account = coffeeSampleAccount();
     expect(CoffeeCardSample::enabled($account))->toBeTrue();
     config(['app.env' => 'production']);
@@ -24,9 +24,9 @@ test('coffee artwork is restricted to the dedicated testing program', function (
     config(['app.env' => 'testing', 'app.url' => 'https://app.kawhe.shop']);
     expect(CoffeeCardSample::enabled($account))->toBeFalse();
     config(['app.url' => 'https://testing.kawhe.shop']);
-    $account->loyaltyProgram->slug = 'another-program';
+    $account->loyaltyProgram->card_design = 'classic';
     expect(CoffeeCardSample::enabled($account))->toBeFalse();
-    $account->loyaltyProgram->slug = 'kawhe-illustrated-wallet-qa';
+    $account->loyaltyProgram->card_design = 'illustrated_coffee';
     $account->loyaltyProgram->reward_target = 10;
     expect(CoffeeCardSample::enabled($account))->toBeTrue();
 });
@@ -67,7 +67,7 @@ test('Google sample image changes with balance and retains accessible progress',
 test('customer sample keeps working card controls and artwork while normal cards stay unchanged', function () {
     $a = coffeeSampleAccount();
     $this->get('/c/'.$a->public_token)->assertOk()->assertSee('coffee-sample-art')->assertSee('web-8-3.png')->assertSee('stamp-qr-container');
-    $a->loyaltyProgram->update(['slug' => 'ordinary-program']);
+    $a->loyaltyProgram->update(['card_design' => 'classic']);
     $this->get('/c/'.$a->public_token)->assertOk()->assertDontSee('id="coffee-sample-art"', false);
 });
 
@@ -121,18 +121,4 @@ test('long unicode reward labels are bounded without losing stored reward text',
     expect($response->json('coffee_artwork_url'))->toContain('web-21-ready.png');
     $a->update(['stamp_count' => 5]);
     expect($this->getJson('/api/card/'.$a->public_token)->json('coffee_artwork_url'))->toContain('web-21-5.png');
-});
-
-
-test('only the explicit layout QA variants enable coffee artwork', function () {
-    $a = coffeeSampleAccount();
-    foreach ([6, 10, 20, 30] as $target) {
-        $a->loyaltyProgram->slug = 'kawhe-illustrated-wallet-qa-'.$target;
-        expect(CoffeeCardSample::enabled($a))->toBeTrue();
-    }
-    $a->loyaltyProgram->slug = 'kawhe-illustrated-wallet-qa-unapproved';
-    expect(CoffeeCardSample::enabled($a))->toBeFalse();
-    config(['app.env'=>'production']);
-    $a->loyaltyProgram->slug = 'kawhe-illustrated-wallet-qa-6';
-    expect(CoffeeCardSample::enabled($a))->toBeFalse();
 });

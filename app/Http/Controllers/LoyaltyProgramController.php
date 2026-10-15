@@ -103,6 +103,7 @@ class LoyaltyProgramController extends Controller
         }
 
         $validated = $request->validate([
+            'card_design' => \App\Support\CoffeeCardSample::rules(),
             'name' => ['required', 'string', 'max:255'],
             'reward_target' => ['required', 'integer', 'min:1'],
             'reward_title' => ['required', 'string', 'max:255'],
@@ -166,6 +167,7 @@ class LoyaltyProgramController extends Controller
         $hasIssuedCards = LoyaltyAccount::where('loyalty_program_id', $program->id)->exists();
 
         $validated = $request->validate([
+            'card_design' => \App\Support\CoffeeCardSample::rules(),
             'name' => ['required', 'string', 'max:255'],
             'reward_target' => $hasIssuedCards ? ['nullable', 'integer', 'min:1'] : ['required', 'integer', 'min:1'],
             'reward_title' => ['required', 'string', 'max:255'],
@@ -348,6 +350,7 @@ class LoyaltyProgramController extends Controller
         }
 
         $store->forceFill([
+            'card_design' => $program->card_design,
             'reward_target' => $program->reward_target,
             'reward_title' => $program->reward_title,
             'registration_form_config' => $program->registration_form_config,

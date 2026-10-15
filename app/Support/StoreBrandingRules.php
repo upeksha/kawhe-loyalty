@@ -21,11 +21,14 @@ class StoreBrandingRules
         $imageRules = ['image', 'mimes:png,jpg,jpeg,webp', 'max:2048'];
 
         return [
+            'card_design' => CoffeeCardSample::rules(),
             'brand_color' => ['required', 'string', 'regex:/^#[0-9A-Fa-f]{6}$/'],
             'background_color' => ['required', 'string', 'regex:/^#[0-9A-Fa-f]{6}$/'],
             'logo' => self::imageFieldRules($store, 'logo_path', [...$imageRules, new ValidWalletImage('logo')]),
             'pass_logo' => self::imageFieldRules($store, 'pass_logo_path', [...$imageRules, new ValidWalletImage('logo')]),
-            'pass_hero_image' => self::imageFieldRules($store, 'pass_hero_image_path', [...$imageRules, new ValidWalletImage('hero')]),
+            'pass_hero_image' => CoffeeCardSample::available() && request('card_design', $store?->card_design) === 'illustrated_coffee'
+                ? ['nullable', ...$imageRules, new ValidWalletImage('hero')]
+                : self::imageFieldRules($store, 'pass_hero_image_path', [...$imageRules, new ValidWalletImage('hero')]),
         ];
     }
 

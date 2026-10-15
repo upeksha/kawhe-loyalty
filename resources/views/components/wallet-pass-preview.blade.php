@@ -2,6 +2,7 @@
 
 @php
     $defaults = [
+        'card_design' => 'classic',
         'store_name' => 'Your store',
         'program_name' => 'Loyalty card',
         'reward_title' => 'Free coffee',
@@ -26,6 +27,7 @@
     class="space-y-3"
     x-data="{
         platform: 'apple',
+        cardDesign: @js($preview['card_design']),
         previewMode: 'collecting',
         storeName: @js($preview['store_name']),
         programName: @js($preview['program_name']),
@@ -78,6 +80,8 @@
             });
         },
         initPreview() {
+            this.bindField('card_design', 'cardDesign');
+            this.cardDesign = document.getElementById('card_design')?.value || this.cardDesign;
             this.bindField('name', 'programName');
             this.bindField('reward_title', 'rewardTitle');
             this.bindField('reward_target', 'rewardTarget', value => Math.max(1, Number(value) || 1));
@@ -98,8 +102,8 @@
             <p class="mt-1 text-sm text-stone-600">Review each platform before saving.</p>
         </div>
         <div class="inline-flex rounded-xl border border-stone-200 bg-white p-1 shadow-sm" role="tablist" aria-label="Wallet platform preview">
-            <button type="button" role="tab" id="apple-preview-tab" :aria-selected="platform === 'apple'" aria-controls="apple-preview-panel" @click="platform = 'apple'" @keydown.right.prevent="platform = 'google'; $nextTick(() => $refs.googleTab.focus())" x-ref="appleTab" class="rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors" :class="platform === 'apple' ? 'bg-[#2b1e18] text-white' : 'text-stone-600 hover:bg-stone-50'">Apple Wallet</button>
-            <button type="button" role="tab" id="google-preview-tab" :aria-selected="platform === 'google'" aria-controls="google-preview-panel" @click="platform = 'google'" @keydown.left.prevent="platform = 'apple'; $nextTick(() => $refs.appleTab.focus())" x-ref="googleTab" class="rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors" :class="platform === 'google' ? 'bg-[#2b1e18] text-white' : 'text-stone-600 hover:bg-stone-50'">Google Wallet</button>
+            <button type="button" role="tab" id="apple-preview-tab" :aria-selected="platform === 'apple'" :aria-controls="cardDesign === 'illustrated_coffee' ? 'coffee-preview-panel' : 'apple-preview-panel'" @click="platform = 'apple'" @keydown.right.prevent="platform = 'google'; $nextTick(() => $refs.googleTab.focus())" x-ref="appleTab" class="rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors" :class="platform === 'apple' ? 'bg-[#2b1e18] text-white' : 'text-stone-600 hover:bg-stone-50'">Apple Wallet</button>
+            <button type="button" role="tab" id="google-preview-tab" :aria-selected="platform === 'google'" :aria-controls="cardDesign === 'illustrated_coffee' ? 'coffee-preview-panel' : 'google-preview-panel'" @click="platform = 'google'" @keydown.left.prevent="platform = 'apple'; $nextTick(() => $refs.appleTab.focus())" x-ref="googleTab" class="rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors" :class="platform === 'google' ? 'bg-[#2b1e18] text-white' : 'text-stone-600 hover:bg-stone-50'">Google Wallet</button>
         </div>
     </div>
 
@@ -110,7 +114,31 @@
         </div>
     </div>
 
-    <section id="apple-preview-panel" role="tabpanel" aria-labelledby="apple-preview-tab" x-show="platform === 'apple'" class="rounded-2xl border border-stone-200 bg-[#f5f5f7] p-4 shadow-sm">
+    <section id="coffee-preview-panel" role="tabpanel" :aria-labelledby="platform + '-preview-tab'" x-show="cardDesign === 'illustrated_coffee'" x-cloak class="rounded-2xl border border-stone-200 bg-stone-50 p-4">
+        <div class="mx-auto max-w-[20rem] overflow-hidden rounded-2xl bg-[#263e30] text-[#f2ecd7] shadow-lg">
+            <div class="flex items-center justify-between gap-3 p-4">
+                <div class="min-w-0"><img x-show="appleLogo" :src="appleLogo" alt="Your café logo" class="mb-2 max-h-10 max-w-32 object-contain"><p class="break-words text-sm font-semibold" x-text="storeName"></p></div>
+                <div class="shrink-0 text-right"><p class="text-xs">STAMPS</p><p class="text-xl" x-text="`${previewMode === 'ready' ? 0 : exampleStamps} / ${rewardTarget}`"></p></div>
+            </div>
+            <div class="relative flex items-center justify-center overflow-hidden px-6 py-4" :style="{aspectRatio: platform === 'apple' ? '1125 / 432' : '1032 / 812'}">
+                <svg class="absolute inset-0 h-full w-full opacity-20" viewBox="0 0 400 160" preserveAspectRatio="none" aria-hidden="true"><path d="M0 145 L70 100 L115 130 L200 80 L320 135 L400 100 M0 155 L70 110 L115 140 L200 90 L320 145 L400 110" fill="none" stroke="currentColor"/></svg>
+                <div x-show="previewMode === 'ready'" class="relative text-center"><span class="text-3xl">☕</span><p class="mt-2 text-xl font-semibold">Reward ready</p></div>
+                <div x-show="previewMode !== 'ready' && rewardTarget <= 20" class="relative grid w-full gap-2" :style="{gridTemplateColumns: `repeat(${rewardTarget <= 5 ? rewardTarget : Math.ceil(rewardTarget / 2)}, minmax(0, 1fr))`}">
+                    <template x-for="stamp in Math.min(rewardTarget, 20)" :key="stamp">
+                        <div class="aspect-square rounded-full border border-[#f2ecd7] p-[15%]" :style="{backgroundColor: stamp <= exampleStamps ? '#f2ecd7' : 'transparent', color: '#263e30'}">
+                            <svg x-show="stamp <= exampleStamps" viewBox="0 0 40 40" class="h-full w-full" aria-hidden="true"><path d="M8 15H29V26Q29 34 18 34Q8 34 8 26Z" fill="currentColor"/><path d="M29 18H32Q39 18 36 25Q34 28 29 27M6 37H32M15 3Q10 7 15 10M23 3Q18 7 23 10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                        </div>
+                    </template>
+                </div>
+                <div x-show="previewMode !== 'ready' && rewardTarget > 20" class="relative w-full text-center"><span class="text-3xl">☕</span><p class="my-3" x-text="`${exampleStamps} / ${rewardTarget} stamps`"></p><div class="h-2 overflow-hidden rounded bg-white/20"><div class="h-full bg-[#f2ecd7]" :style="{width: `${exampleStamps / rewardTarget * 100}%`}"></div></div></div>
+            </div>
+            <div class="flex justify-between gap-4 px-4 py-3"><div class="min-w-0"><p class="text-xs">REWARD</p><p class="break-words text-lg" x-text="Array.from(rewardTitle).length > 24 ? Array.from(rewardTitle).slice(0,23).join('') + '…' : rewardTitle"></p></div><div><p class="text-xs">AVAILABLE</p><p class="text-xl" x-text="previewMode === 'ready' ? 1 : 0"></p></div></div>
+            <div class="p-5"><img src="{{ asset('images/qr-preview-sample.png') }}" alt="Sample QR code, not for scanning" class="mx-auto h-28 w-28 rounded bg-white p-2"></div>
+        </div>
+        <p class="mt-3 break-words text-xs text-stone-600">Full reward: <span x-text="rewardTitle"></span></p>
+    </section>
+
+    <section id="apple-preview-panel" role="tabpanel" aria-labelledby="apple-preview-tab" x-show="platform === 'apple' && cardDesign !== 'illustrated_coffee'" class="rounded-2xl border border-stone-200 bg-[#f5f5f7] p-4 shadow-sm">
         <div class="mx-auto w-full max-w-[20rem] overflow-hidden rounded-[13px] shadow-[0_18px_40px_rgba(43,30,24,0.22)]" :style="{ backgroundColor: bgColor, color: contrastText }">
             <div class="flex h-[64px] items-center gap-3 px-4">
                 <div class="flex h-[42px] w-[136px] shrink-0 items-center justify-start overflow-hidden">
@@ -148,7 +176,7 @@
         </div>
     </section>
 
-    <section id="google-preview-panel" role="tabpanel" aria-labelledby="google-preview-tab" x-show="platform === 'google'" x-cloak class="rounded-2xl border border-stone-200 bg-[#f6f8fc] p-4 shadow-sm">
+    <section id="google-preview-panel" role="tabpanel" aria-labelledby="google-preview-tab" x-show="platform === 'google' && cardDesign !== 'illustrated_coffee'" x-cloak class="rounded-2xl border border-stone-200 bg-[#f6f8fc] p-4 shadow-sm">
         <div class="mx-auto w-full max-w-[20rem] overflow-hidden rounded-[24px] bg-white shadow-[0_18px_40px_rgba(43,30,24,0.16)]">
             <div class="flex items-center gap-3 px-5 py-4" :style="{ backgroundColor: bgColor, color: contrastText }">
                 <div class="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white/95">

@@ -83,7 +83,7 @@ class StoreController extends Controller
 
         $validated['logo_path'] = StoreAssets::storeUploaded($request->file('logo'), 'logos');
         $validated['pass_logo_path'] = StoreAssets::storeUploaded($request->file('pass_logo'), 'pass-logos');
-        $validated['pass_hero_image_path'] = StoreAssets::storeUploaded($request->file('pass_hero_image'), 'pass-heroes');
+        $validated['pass_hero_image_path'] = $request->hasFile('pass_hero_image') ? StoreAssets::storeUploaded($request->file('pass_hero_image'), 'pass-heroes') : null;
 
         unset($validated['logo'], $validated['pass_logo'], $validated['pass_hero_image']);
 
@@ -91,6 +91,7 @@ class StoreController extends Controller
 
         $program = $store->loyaltyPrograms()->create([
             'name' => $validated['reward_title'],
+            'card_design' => $validated['card_design'] ?? 'classic',
             'slug' => $store->slug,
             'reward_target' => $validated['reward_target'],
             'reward_title' => $validated['reward_title'],

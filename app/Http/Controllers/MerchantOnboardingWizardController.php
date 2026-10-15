@@ -113,7 +113,7 @@ class MerchantOnboardingWizardController extends Controller
             ]));
             $existing->syncDefaultProgramFromStore();
             $program = $existing->resolvedDefaultProgram();
-            if ($program?->pass_logo_path && $program?->pass_hero_image_path) {
+            if ($program?->pass_logo_path && ($program?->pass_hero_image_path || \App\Support\CoffeeCardSample::programEnabled($program))) {
                 $this->walletArtworkService->syncForProgram($program);
             }
 
@@ -174,6 +174,7 @@ class MerchantOnboardingWizardController extends Controller
         ]);
 
         $updates = [
+            'card_design' => $validated['card_design'] ?? $store->card_design ?? 'classic',
             'brand_color' => $validated['brand_color'],
             'background_color' => $validated['background_color'],
         ];

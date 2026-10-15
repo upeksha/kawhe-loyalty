@@ -146,7 +146,7 @@ class AppleWalletPassService
 
         $coffeeSample = \App\Support\CoffeeCardSample::enabled($account);
         if ($coffeeSample) {
-            $passDefinition['logoText'] = '';
+            $passDefinition['backgroundColor'] = 'rgb(38,62,48)';
             $passDefinition['foregroundColor'] = 'rgb(242,236,215)';
             $passDefinition['labelColor'] = 'rgb(242,236,215)';
             $passDefinition['storeCard']['primaryFields'] = [];
@@ -210,14 +210,12 @@ class AppleWalletPassService
                 'strip_3x' => 'strip@3x.png',
             ];
             foreach ($assetNames as $manifestKey => $fileName) {
-                if ($coffeeSample) {
-                    $contents = str_starts_with($manifestKey, 'strip')
-                        ? StoreAssets::get(\App\Support\CoffeeCardSample::artwork($account, 'apple'))
-                        : file_get_contents(public_path('images/coffee-sample-v1/logo.png'));
+                if ($coffeeSample && str_starts_with($manifestKey, 'strip')) {
+                    $contents = StoreAssets::get(\App\Support\CoffeeCardSample::artwork($account, 'apple'));
                     $scale = str_ends_with($manifestKey, '_3x') ? 3 : (str_ends_with($manifestKey, '_2x') ? 2 : 1);
                     $localPath = $tempDir.'/'.$fileName;
                     file_put_contents($localPath, \App\Support\CoffeeCardSample::resizedContents(
-                        $contents, (str_starts_with($manifestKey, 'strip') ? 375 : 160) * $scale
+                        $contents, 375 * $scale
                     ));
                     $pass->addAsset($localPath);
                     $assetsAdded[] = $fileName;

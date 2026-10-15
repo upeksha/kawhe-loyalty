@@ -11,7 +11,7 @@ class WalletPreviewDataFactory
     {
         $program->loadMissing('store');
 
-        return $this->make(
+        return ['card_design' => $program->card_design ?? 'classic'] + $this->make(
             $program->store,
             $program->name,
             $program->reward_title,

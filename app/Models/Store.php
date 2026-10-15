@@ -58,6 +58,7 @@ class Store extends Model
     public const DEFAULT_BACKGROUND_COLOR = '#1F2937';
 
     protected $fillable = [
+        'card_design',
         'name',
         'default_loyalty_program_id',
         'slug',
@@ -242,6 +243,7 @@ class Store extends Model
                 'reward_title' => $store->reward_title,
                 'join_token' => $store->join_token,
                 'join_short_code' => $store->join_short_code,
+                'card_design' => $store->card_design ?? 'classic',
                 'brand_color' => $store->brand_color,
                 'background_color' => $store->background_color,
                 'logo_path' => $store->logo_path,
@@ -279,6 +281,7 @@ class Store extends Model
             'name' => $this->reward_title ?: ($this->name.' Loyalty Card'),
             'reward_target' => $this->reward_target,
             'reward_title' => $this->reward_title,
+            'card_design' => $this->card_design ?? 'classic',
             'brand_color' => $this->brand_color,
             'background_color' => $this->background_color,
             'logo_path' => $this->logo_path,

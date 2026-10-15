@@ -19,6 +19,7 @@ class LoyaltyProgram extends Model
     private const JOIN_SHORT_CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 
     protected $fillable = [
+        'card_design',
         'store_id',
         'name',
         'slug',
