@@ -141,7 +141,7 @@
                         </div>
 
                         <div x-show="rewardBalance > 0 && hasRedeemToken" x-cloak class="mt-5">
-                            <button @click="showRedeemModal = true" class="flex min-h-12 w-full items-center justify-center rounded-xl bg-yellow-500 px-5 py-3 font-bold text-stone-950 transition hover:bg-yellow-400">
+                            <button @click="showRedeemModal = true" class="customer-btn customer-btn-primary">
                                 Redeem reward <span x-show="rewardBalance > 1" class="ml-1" x-text="`(${rewardBalance} available)`"></span>
                             </button>
                         </div>
@@ -307,7 +307,7 @@
                         <!-- Dismiss -->
                         <button
                             @click="dismissWalletNudge()"
-                            class="mt-5 mb-2 w-full text-center text-sm card-muted hover:opacity-80 transition py-3"
+                            class="mt-5 mb-2 w-full text-center text-sm text-brand-700 underline py-3"
                         >
                             I'll keep using the browser link
                         </button>
@@ -384,7 +384,7 @@
 
                                 <button 
                                     @click="showRedeemModal = false"
-                                    class="w-full card-inner hover:opacity-80 card-text font-semibold py-3 px-6 rounded-xl transition-colors"
+                                    class="customer-btn customer-btn-secondary"
                                 >
                                 Close
                             </button>

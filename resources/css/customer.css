@@ -483,13 +483,17 @@
 @media (prefers-reduced-motion: reduce) { .customer-redesign * { scroll-behavior: auto; animation: none; transition: none; } }
 
 /* Merchant colour on light signup and recovery pages; keep form copy neutral. */
+.customer-signup-theme .card-btn,
 .customer-signup-theme .customer-btn-primary { background: var(--signup-button); color: var(--signup-text); border: 1px solid var(--signup-link); }
 .customer-signup-theme .customer-btn-secondary,
 .customer-signup-theme .customer-btn-outline,
 .customer-signup-theme .customer-btn-status,
 .customer-signup-theme .customer-help-link { color: var(--signup-link); background: #fff; }
 .customer-signup-theme .text-brand-700 { color: var(--signup-link); }
+.customer-signup-theme .card-btn:hover,
 .customer-signup-theme .customer-btn:hover { filter: none; text-decoration: underline; }
 .customer-signup-theme a:focus-visible,
 .customer-signup-theme button:focus-visible,
 .customer-signup-theme .customer-field:focus-within { outline: 2px solid var(--signup-link); outline-offset: 3px; box-shadow: none; }
+
+.customer-signup-theme .loyalty-card .customer-btn-primary { border-color: var(--signup-text); }

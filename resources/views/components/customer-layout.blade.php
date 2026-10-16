@@ -1,5 +1,5 @@
 @php
-    $signupTheme = request()->routeIs('join.*') ? \App\Support\ProgramBranding::signupColors($theme->bg) : null;
+    $signupTheme = (request()->routeIs('join.*') || $account !== null) ? \App\Support\ProgramBranding::signupColors($theme->bg) : null;
     $pageTitle = $title !== '' ? $title : $displayTitle;
     $resolvedDocumentTitle = $documentTitle ?? (
         $title !== '' && $title !== $displayTitle
