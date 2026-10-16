@@ -92,6 +92,7 @@
             if (!['simple','illustrated','photo'].includes(this.cardDesign)) return;
             const form = document.getElementById('card-design-form') || document.getElementById('loyalty-card-form');
             if (!form) return;
+            if (Array.from(form.querySelectorAll('input[type=file]')).some(input => !input.disabled && input.files.length && !input.validity.valid)) return;
             const data = new FormData(form);
             data.delete('_method');
             data.set('platform', this.platform);
