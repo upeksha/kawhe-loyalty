@@ -36,3 +36,18 @@ test('customer card actions use the saved colour across all styles', function ($
         ->assertSee('--signup-button: '.$colour, false)->assertSee('--signup-text: '.$theme['text'], false)
         ->assertSee('--signup-link: '.$theme['link'], false)->assertSee('Save to Wallet')->assertSee('Refresh card');
 })->with(['simple', 'illustrated', 'photo'])->with(['#263E30', '#FAEDD7', '#FFFFFF', '#777777']);
+
+test('photo web cards use live stamp circles without duplicate artwork', function ($target) {
+    config(['app.env' => 'testing', 'app.url' => 'https://testing.kawhe.shop']);
+    $store = Store::factory()->create();
+    $program = $store->resolvedDefaultProgram();
+    $program->update(['card_design' => 'photo', 'reward_target' => $target]);
+    $account = \App\Models\LoyaltyAccount::factory()->create(['store_id' => $store->id, 'loyalty_program_id' => $program->id, 'stamp_count' => 2]);
+    $response = $this->get(route('card.show', $account->public_token))->assertOk()
+        ->assertDontSee('<img id="coffee-sample-art"', false)->assertSee('data-photo="true"', false);
+    if ($target <= 20) {
+        $response->assertSee('Stamp 1: collected')->assertSee('Stamp 3: empty');
+    } else {
+        $response->assertSee('id="photo-stamp-progress"', false);
+    }
+})->with([6, 8, 20, 30]);

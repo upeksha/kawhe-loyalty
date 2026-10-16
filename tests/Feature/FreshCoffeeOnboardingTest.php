@@ -60,7 +60,12 @@ test('fresh coffee cafe completes verified onboarding and issues a customer card
     $account = LoyaltyAccount::where('loyalty_program_id', $program->id)->sole();
     expect($account->stamp_count)->toBe(0);
     expect($account->reward_balance)->toBe(0);
-    $this->get('/c/'.$account->public_token)->assertOk()->assertSee('coffee-sample-art')->assertSee('web-6-0.png')->assertSee('Save to Wallet');
+    $card = $this->get('/c/'.$account->public_token)->assertOk()->assertSee('Save to Wallet');
+    if ($program->card_design === 'photo') {
+        $card->assertSee('data-photo="true"', false)->assertDontSee('<img id="coffee-sample-art"', false);
+    } else {
+        $card->assertSee('web-6-0.png');
+    }
     $this->getJson('/api/card/'.$account->public_token)->assertOk()->assertJsonPath('reward_target', 6);
     foreach (['apple', 'google', 'web'] as $platform) {
         $art = \App\Support\CoffeeCardSample::artwork($account, $platform);

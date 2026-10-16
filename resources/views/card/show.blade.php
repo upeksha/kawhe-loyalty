@@ -1,3 +1,4 @@
+@php($webPhoto = $account->resolvedProgram()->card_design === 'photo')
 @php($coffeeSample = \App\Support\CoffeeCardSample::enabled($account))
 <x-customer-layout
     :account="$account"
@@ -75,7 +76,7 @@
                         @if($account->resolvedProgram()->card_design === 'photo' && $account->resolvedProgram()->card_photo_path)
                         .loyalty-card{background:linear-gradient(rgba(0,0,0,.66),rgba(0,0,0,.66)),url('{{ \App\Support\StoreAssets::url($account->resolvedProgram()->card_photo_path) }}') center/cover!important}
                         @endif
-                        .loyalty-card #stamp-circles-container{display:none}
+                        @unless($webPhoto).loyalty-card #stamp-circles-container{display:none}@endunless
                         .loyalty-card .card-text,.loyalty-card .card-muted{overflow-wrap:anywhere;white-space:normal}
                         .coffee-sample-art{display:block;width:100%;height:auto;margin:12px 0}
                     </style>
@@ -95,7 +96,7 @@
                             </div>
                         </div>
 
-                        @if($coffeeSample)
+                        @if($coffeeSample && !$webPhoto)
                             <img id="coffee-sample-art" class="coffee-sample-art" src="{{ \App\Support\StoreAssets::url(\App\Support\CoffeeCardSample::artwork($account, 'web')) }}" alt="{{ $account->stamp_count }} of {{ $account->reward_target }} stamps; {{ $account->reward_balance }} rewards available">
                         @endif
                         <!-- Progress Section -->
@@ -108,7 +109,10 @@
                                 Your {{ strtolower($account->reward_title) }} is ready
                             </p>
                             <!-- Circular Checkmarks Row -->
-                            @unless($coffeeSample)
+                            @if($webPhoto)
+                                <x-photo-web-stamps :account="$account" />
+                            @endif
+                            @unless($coffeeSample || $webPhoto)
                             <div id="stamp-circles-container" class="flex gap-2 flex-wrap">
                                 @for ($i = 1; $i <= $account->reward_target; $i++)
                                     @if($i <= $account->stamp_count)
@@ -647,6 +651,8 @@
                         // Use the container ID to ensure we're updating the right element
                         const circlesContainer = document.getElementById('stamp-circles-container');
                         if (circlesContainer) {
+                            const photoProgress = document.getElementById('photo-stamp-progress');
+                            if (photoProgress) { photoProgress.max = data.reward_target; photoProgress.value = data.stamp_count; }
                             const circles = circlesContainer.querySelectorAll('.stamp-circle');
                             if (circles.length > 0 && data.stamp_count !== undefined && data.reward_target !== undefined) {
                                 // Ensure we have the right number of circles
@@ -657,6 +663,11 @@
                                 
                                 circles.forEach((circle, index) => {
                                     const stampNumber = index + 1;
+                                    if (circlesContainer.dataset.photo === 'true') {
+                                        circle.classList.toggle('is-filled', stampNumber <= data.stamp_count);
+                                        circle.setAttribute('aria-label', `Stamp ${stampNumber}: ${stampNumber <= data.stamp_count ? 'collected' : 'empty'}`);
+                                        return;
+                                    }
                                     if (stampNumber <= data.stamp_count) {
                                         circle.className = 'stamp-circle stamp-circle--filled w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold';
                                         circle.style.backgroundColor = '';
