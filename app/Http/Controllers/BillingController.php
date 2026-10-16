@@ -240,7 +240,7 @@ class BillingController extends Controller
         return view('billing.cancel', [
             'stats' => $stats,
             'nextSteps' => [
-                'Nothing has been charged. Your current plan stays exactly as it was.',
+                'Leaving checkout does not cancel an existing subscription. Review Billing for your current plan and invoices.',
                 ($stats['can_create_program'] ?? false)
                     ? 'You still have room to add another loyalty card on your current plan if you want to wait before upgrading.'
                     : 'If you need another loyalty card later, you can return to billing anytime and restart checkout when you are ready.',

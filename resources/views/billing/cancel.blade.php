@@ -5,7 +5,7 @@
             <h2 class="text-xl font-semibold text-stone-900 mb-2">Checkout Cancelled</h2>
             
             <p class="text-stone-600 mb-6">
-                Your subscription checkout was cancelled. No charges were made.
+                You left checkout. Check Billing for your current subscription and payment status before trying again.
             </p>
 
             @if(!empty($nextSteps))

@@ -165,3 +165,12 @@ test('explicitly configured legacy Pro prices retain paid access', function () {
     syncBillingLifecycle($this)->assertOk();
     expect(app(UsageService::class)->planFor($this->owner->fresh()))->toBe('pro');
 });
+
+test('checkout cancel page does not claim no charges or cancel an existing subscription', function () {
+    syncBillingLifecycle($this)->assertOk();
+    $this->get(route('billing.cancel'))->assertOk()
+        ->assertSee('Leaving checkout does not cancel an existing subscription.')
+        ->assertDontSee('No charges were made.')->assertDontSee('Nothing has been charged.');
+    expect(app(UsageService::class)->planFor($this->owner->fresh()))->toBe('pro');
+    expect($this->owner->fresh()->subscription()->ends_at)->toBeNull();
+});

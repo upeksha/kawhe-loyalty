@@ -80,7 +80,7 @@ class BillingDiagnosticsTest extends TestCase
         $response->assertOk();
         $response->assertSee('Checkout Cancelled');
         $response->assertSee('What this means');
-        $response->assertSee('No charges were made');
+        $response->assertSee('Check Billing for your current subscription and payment status before trying again.');
     }
 
     public function test_billing_success_page_shows_guidance_when_missing_session(): void
