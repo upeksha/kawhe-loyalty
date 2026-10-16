@@ -1,0 +1,25 @@
+<?php
+
+use App\Models\Store;
+use App\Support\ProgramBranding;
+
+test('signup actions follow saved card colours for every style', function ($style, $colour) {
+    config(['app.env' => 'testing', 'app.url' => 'https://testing.kawhe.shop']);
+    $store = Store::factory()->create();
+    $program = $store->resolvedDefaultProgram();
+    $program->update(['card_design' => $style, 'background_color' => $colour]);
+    $theme = ProgramBranding::signupColors($colour);
+    $this->get(route('join.index', ['slug' => $program->slug, 't' => $program->join_token]))
+        ->assertOk()->assertSee('customer-signup-theme')
+        ->assertSee('--signup-button: '.$colour, false)
+        ->assertSee('--signup-text: '.$theme['text'], false)
+        ->assertSee('--signup-link: '.$theme['link'], false);
+})->with(['simple', 'illustrated', 'photo'])->with(['#263E30', '#FAEDD7', '#FFFFFF', '#777777']);
+
+test('light card colours receive dark button text and darker links', function () {
+    $theme = ProgramBranding::signupColors('#FAEDD7');
+    expect($theme['button'])->toBe('#FAEDD7');
+    expect($theme['text'])->toBe('#000000');
+    expect($theme['link'])->not->toBe('#FAEDD7');
+    expect(ProgramBranding::signupColors('#263E30')['text'])->toBe('#FFFFFF');
+});

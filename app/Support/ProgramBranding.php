@@ -38,6 +38,19 @@ final class ProgramBranding
         return self::fromColors($brand, $background);
     }
 
+    /** Colours for actions on the light customer signup pages. */
+    public static function signupColors(string $background): array
+    {
+        $background = self::normalizeBackground($background);
+        $text = self::contrastRatio($background, '#000000') > self::contrastRatio($background, '#FFFFFF') ? '#000000' : '#FFFFFF';
+        $link = $background;
+        for ($step = 1; self::contrastRatio($link, '#FAFAF9') < 4.5 && $step <= 20; $step++) {
+            $link = self::mix($background, '#000000', $step / 20);
+        }
+
+        return ['button' => $background, 'text' => $text, 'link' => $link];
+    }
+
     public static function resolveFromAccount(LoyaltyAccount $account): ProgramTheme
     {
         if (CoffeeCardSample::enabled($account)) {

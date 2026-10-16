@@ -1,4 +1,5 @@
 @php
+    $signupTheme = request()->routeIs('join.*') ? \App\Support\ProgramBranding::signupColors($theme->bg) : null;
     $pageTitle = $title !== '' ? $title : $displayTitle;
     $resolvedDocumentTitle = $documentTitle ?? (
         $title !== '' && $title !== $displayTitle
@@ -27,9 +28,12 @@
         <link href="https://fonts.bunny.net/css?family=figtree:400,500,600,700&display=swap" rel="stylesheet" />
         @vite(['resources/css/app.css', 'resources/js/app.js'])
         <style>{!! $theme->cssVariableBlock('.customer-page') !!}</style>
+        @if($signupTheme)
+            <style>.customer-signup-theme { --signup-button: {{ $signupTheme['button'] }}; --signup-text: {{ $signupTheme['text'] }}; --signup-link: {{ $signupTheme['link'] }}; }</style>
+        @endif
         @stack('head')
     </head>
-    <body {{ $attributes->merge(['class' => 'overflow-x-hidden font-sans antialiased customer-page customer-redesign min-h-screen min-h-[100dvh] flex flex-col']) }}>
+    <body {{ $attributes->merge(['class' => ($signupTheme ? 'customer-signup-theme ' : '').'overflow-x-hidden font-sans antialiased customer-page customer-redesign min-h-screen min-h-[100dvh] flex flex-col']) }}>
         <main id="main-content" @class([
             'customer-shell',
             'customer-shell--centered py-8 sm:py-10 lg:py-12' => $centered,
