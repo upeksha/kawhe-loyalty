@@ -83,3 +83,19 @@ test('three style posters use card background and readable text instead of legac
     ['illustrated', '#263e30', '#263E30'],
     ['photo', '#ffffff', '#FFFFFF'],
 ]);
+
+test('poster preserves a wide logo and uses a consistent embedded font', function () {
+    Storage::fake('public');
+    config(['filesystems.assets_disk' => 'public']);
+    $owner = User::factory()->create();
+    $logo = UploadedFile::fake()->image('wide.png', 550, 174)->store('logos', 'public');
+    $store = Store::factory()->for($owner)->create();
+    $program = $store->resolvedDefaultProgram();
+    $program->update(['pass_logo_path' => $logo]);
+    foreach ([route('merchant.stores.qr.pdf', ['store' => $store, 'preview' => 1]), route('merchant.stores.programs.qr.pdf', ['store' => $store, 'program' => $program, 'preview' => 1])] as $url) {
+        $this->actingAs($owner)->get($url)->assertOk()
+            ->assertSee('width: 65mm; height: 20.56mm', false)
+            ->assertSee('DejaVu Sans')->assertSee('Scan to join')
+            ->assertDontSee('object-fit: cover', false);
+    }
+});
