@@ -20,11 +20,15 @@
         </select>
         <p class="mt-2 text-sm text-stone-500">Subtle artwork uses your background colour. Preview each option before saving.</p>
     </div>
-    <div x-show="cardDesign === 'photo'" x-cloak>
-        <label for="card_photo" class="block text-sm font-semibold">Café or coffee photo</label>
-        <input type="file" id="card_photo" name="card_photo" accept="image/png,image/jpeg,image/webp" class="mt-2 block w-full text-sm" :disabled="cardDesign !== 'photo'" :required="cardDesign === 'photo' && {{ $model?->card_photo_path ? 'false' : 'true' }}">
+    <div x-show="cardDesign === 'photo'" x-cloak class="rounded-xl border-2 border-brand-200 bg-brand-50 p-4 sm:p-5">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+            <label for="card_photo" class="block text-base font-semibold text-brand-900">Café or coffee photo</label>
+            <span class="rounded-full bg-white px-3 py-1 text-xs font-semibold text-brand-900">Required for Photo cards</span>
+        </div>
+        <p id="card-photo-guidance" class="mt-2 text-sm text-brand-900">{{ $model?->card_photo_path ? 'Your saved photo is ready. Choose a file only if you want to replace it.' : 'Choose a photo to use this card style. Add it before you continue.' }}</p>
+        <input type="file" id="card_photo" name="card_photo" accept="image/png,image/jpeg,image/webp" aria-describedby="card-photo-guidance card-photo-formats" class="mt-4 block min-h-11 w-full rounded-lg border border-brand-200 bg-white p-2 text-sm text-stone-700 file:mr-3 file:min-h-11 file:cursor-pointer file:rounded-lg file:border-0 file:bg-brand-700 file:px-4 file:py-3 file:font-semibold file:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-700" :disabled="cardDesign !== 'photo'" :required="cardDesign === 'photo' && {{ $model?->card_photo_path ? 'false' : 'true' }}">
         @if($model?->card_photo_path)<img src="{{ \App\Support\StoreAssets::url($model->card_photo_path) }}" alt="Saved card photo" class="mt-3 h-24 w-40 rounded-lg object-cover">@endif
-        <p class="mt-2 text-sm text-stone-500">PNG, JPG or WebP, up to 2 MB and 3000 × 3000 pixels. We centre-crop the photo and add a dark overlay for readable stamps. Keep important details near the centre.</p>
+        <p id="card-photo-formats" class="mt-3 text-sm text-stone-600">PNG, JPG or WebP, up to 2 MB and 3000 × 3000 pixels. We centre-crop the photo and add a dark overlay for readable stamps. Keep important details near the centre.</p>
         <x-input-error :messages="$errors->get('card_photo')" class="mt-2" />
     </div>
     <div x-show="cardDesign !== 'simple'" x-cloak x-data="{ stampIcon: @js(old('stamp_icon', $model?->stamp_icon ?? 'coffee')) }">
