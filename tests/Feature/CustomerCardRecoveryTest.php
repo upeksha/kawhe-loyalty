@@ -184,3 +184,21 @@ test('customer card and signup offer program scoped recovery and privacy safe he
     }
     $this->get($url)->assertOk()->assertDontSee($this->account->public_token);
 });
+
+test('recovering a styled card preserves partial stamps rewards and its existing identity', function (string $style) {
+    config(['app.env' => 'testing', 'app.url' => 'https://testing.kawhe.shop']);
+    \Illuminate\Support\Facades\Storage::fake('public');
+    $this->program->update(['card_design' => $style, 'reward_target' => 6, 'card_pattern' => 'botanical', 'stamp_icon' => 'bean']);
+    $this->account->update(['stamp_count' => 2, 'reward_balance' => 1, 'redeem_token' => 'RECOVERY-REWARD']);
+    $identity = $this->account->only(['id', 'public_token', 'manual_entry_code', 'redeem_token', 'stamp_count', 'reward_balance']);
+    $this->post($this->lookupUrl, ['email' => $this->customer->email])->assertOk();
+    $url = recoveryUrl();
+    $this->get($url)->assertOk();
+    $this->get($url)->assertOk();
+    $this->post($url)->assertRedirect(route('card.show', ['public_token' => $this->account->public_token]));
+    expect($this->account->fresh()->only(array_keys($identity)))->toBe($identity);
+    expect(LoyaltyAccount::where('customer_id', $this->customer->id)->count())->toBe(1);
+    $this->getJson('/api/card/'.$this->account->public_token)->assertOk();
+    $this->post($url)->assertStatus(410);
+    expect($this->account->fresh()->only(array_keys($identity)))->toBe($identity);
+})->with(['simple', 'illustrated', 'photo']);
