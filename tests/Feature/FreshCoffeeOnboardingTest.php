@@ -35,7 +35,10 @@ test('fresh coffee cafe completes verified onboarding and issues a customer card
     }
     $this->post(route('merchant.onboarding.wizard.card-design.store'), $design)->assertSessionHasNoErrors()->assertRedirect(route('merchant.onboarding.wizard.customer-form'));
     $this->post(route('merchant.onboarding.wizard.customer-form.store'), ['first_name_enabled' => '1'])->assertRedirect(route('merchant.onboarding.wizard.card-ready'));
-    $this->get(route('merchant.onboarding.wizard.card-ready'))->assertOk()->assertSee('Your loyalty card is ready');
+    $this->get(route('merchant.onboarding.wizard.card-ready'))->assertOk()->assertSee('Your loyalty card is ready')
+        ->assertSee('Saved card design with empty stamps')->assertSee('0 / 6 stamps')
+        ->assertSee('Open customer signup')->assertSee('Download poster (PDF)')
+        ->assertSee('Download QR (SVG)')->assertDontSee('<iframe', false);
     $store = $owner->stores()->sole();
     $program = $store->resolvedDefaultProgram();
     expect($program->card_design)->toBe($style);

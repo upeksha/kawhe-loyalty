@@ -5,126 +5,66 @@
         :step="4"
         :totalSteps="4"
         title="Your loyalty card is ready"
-        subtitle="You can start collecting customers today. Review the checklist below first, then finish setup and start sharing your card."
+        subtitle="Check your card, try the signup link, then finish setup."
         :backUrl="route('merchant.onboarding.wizard.customer-form')"
     >
-        <div class="space-y-8">
-            <x-ui.alert variant="success">
-                <p class="font-semibold">Your default loyalty card is ready.</p>
-                <p class="mt-0.5">You can start sharing your QR code right away.</p>
-            </x-ui.alert>
-
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                {{-- QR + actions --}}
-                <div class="lg:col-span-2 space-y-6">
-                    <x-ui.section-panel class="rounded-[24px] border-stone-200/80 p-6 sm:p-8">
-                        <p class="text-sm font-semibold text-stone-600 mb-4">Share your QR code or link</p>
-                        <div class="flex flex-col sm:flex-row items-center gap-6">
-                            <div class="flex-shrink-0 p-4 bg-white rounded-xl border border-stone-200 inline-block shadow-sm">
-                                {!! SimpleSoftwareIO\QrCode\Facades\QrCode::size(200)->generate($joinUrl) !!}
-                            </div>
-                            <div class="flex-1 w-full min-w-0">
-                                <label for="join-link" class="block text-sm font-medium text-stone-700 mb-1.5">Join link</label>
-                                <div class="flex gap-2">
-                                    <input type="text" id="join-link" value="{{ $joinUrl }}" readonly class="block w-full rounded-xl border border-stone-300 bg-stone-50 px-4 py-2.5 text-sm text-stone-700 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500" />
-                                    <x-ui.button type="button" onclick="copyJoinLink()" variant="primary" size="md" class="flex-shrink-0">Copy</x-ui.button>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="mt-5 rounded-xl border border-stone-200 bg-stone-50/70 p-4">
-                            <p class="text-sm font-semibold text-stone-800">What to check before launch</p>
-                            <ul class="mt-2 space-y-2 text-sm leading-relaxed text-stone-600">
-                                <li>The join page looks clear on a phone, not just on a desktop screen.</li>
-                                <li>The reward wording is short enough to understand in one quick glance.</li>
-                                <li>The poster QR scans comfortably from counter distance.</li>
-                            </ul>
-                        </div>
-                    </x-ui.section-panel>
-
-                    <div class="flex flex-nowrap items-center gap-2 sm:gap-3 overflow-x-auto">
-                        <form method="GET" action="{{ route('merchant.stores.qr.pdf', $store) }}" class="shrink-0">
-                            <x-ui.button type="submit" variant="secondary" size="md" class="whitespace-nowrap">
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-                                Download poster (PDF)
-                            </x-ui.button>
-                        </form>
-                        <form method="GET" action="{{ route('merchant.stores.qr.image', $store) }}" class="shrink-0">
-                            <x-ui.button type="submit" variant="secondary" size="md" class="whitespace-nowrap">
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h2m4 0h-2m-4 4h6m-6-2h2m2 0h2m-4-4h2m2 0h2"/></svg>
-                                Download QR (SVG)
-                            </x-ui.button>
-                        </form>
-                        <x-ui.button href="{{ $joinUrl }}" target="_blank" rel="noopener" variant="secondary" size="md" class="shrink-0 whitespace-nowrap">
-                            Open test join page
-                        </x-ui.button>
-                    </div>
+        <div class="grid items-start gap-6 lg:grid-cols-2">
+            <section class="min-w-0 rounded-2xl border border-stone-200 bg-white p-5 sm:p-6" aria-labelledby="ready-preview-title">
+                <div class="mb-5 flex flex-wrap items-center justify-between gap-3">
+                    <h2 id="ready-preview-title" class="text-lg font-semibold">Your customer card</h2>
+                    <a href="{{ route('merchant.onboarding.wizard.card-design') }}" class="inline-flex min-h-11 items-center text-sm font-semibold text-brand-700 underline">Edit design</a>
                 </div>
-
-                {{-- How it works + phone preview --}}
-                <div class="lg:col-span-1">
-                    <div class="sticky top-8 space-y-4">
-                        <div class="rounded-xl border border-stone-200 bg-stone-900 p-4 shadow-lg">
-                            <p class="text-xs font-semibold uppercase tracking-wider text-stone-400 mb-3 text-center">Customer preview</p>
-                            <div class="mx-auto w-[220px] rounded-[2rem] border-[10px] border-stone-700 bg-stone-800 p-2 shadow-2xl">
-                                <div class="rounded-[1.25rem] overflow-hidden bg-white aspect-[9/16]">
-                                    <iframe
-                                        src="{{ $joinUrl }}"
-                                        title="Join page preview"
-                                        class="w-[200%] h-[200%] origin-top-left scale-50 border-0 pointer-events-none"
-                                        loading="lazy"
-                                        tabindex="-1"
-                                    ></iframe>
-                                </div>
+                @if($program && \App\Support\CoffeeCardSample::programEnabled($program))
+                    @php
+                        [$background, $ink] = \App\Support\CardDesign::colors($program);
+                        $target = max(1, (int) $program->reward_target);
+                        $artwork = app(\App\Services\Wallet\Artwork\CardStyleArtwork::class)->render($target, 0, false, 'web', \App\Support\CardDesign::options($program));
+                    @endphp
+                    <div class="mx-auto max-w-sm overflow-hidden rounded-2xl" style="background-color: {{ $background }}; color: {{ $ink }}">
+                        <div class="space-y-2 p-5">
+                            @if($program->logo_url)<img src="{{ $program->logo_url }}" alt="{{ $store->name }} logo" class="max-h-14 max-w-36 object-contain">@endif
+                            <p class="break-words text-lg font-semibold">{{ $store->name }}</p>
+                            <p class="text-sm">0 / {{ $target }} stamps · 0 rewards</p>
+                        </div>
+                        <img src="data:image/png;base64,{{ base64_encode($artwork) }}" width="720" height="470" alt="Saved card design with empty stamps" class="block h-auto w-full">
+                        <div class="space-y-3 p-5">
+                            <p class="text-xs font-semibold uppercase tracking-wide">Your reward</p>
+                            <p class="break-words text-lg font-semibold">{{ $program->reward_title }}</p>
+                            <div class="rounded-xl bg-white p-4 text-center text-stone-600">
+                                <img src="{{ asset('images/loyalty-card-demo-qr.svg') }}" width="100" height="100" alt="Non-scannable sample card QR" class="mx-auto h-24 w-24">
+                                <p class="mt-2 text-xs">Sample card · not for scanning</p>
                             </div>
-                            <p class="mt-3 text-center text-xs leading-relaxed text-stone-400">
-                                This is what customers see after scanning your QR code.
-                            </p>
-                            <a href="{{ $joinUrl }}" target="_blank" rel="noopener" class="mt-3 block text-center text-sm font-medium text-brand-400 hover:text-brand-300 transition-colors">
-                                Open full preview →
-                            </a>
-                        </div>
-                        <div class="rounded-xl border border-stone-200 bg-stone-50/70 p-5 shadow-sm">
-                            <p class="text-sm font-semibold text-stone-800 mb-4">Before you share</p>
-                            <ul class="space-y-3 text-sm text-stone-700">
-                                <li class="rounded-lg border border-stone-200 bg-white px-4 py-3">
-                                    <span class="font-medium text-stone-800">Test the join page once yourself</span>
-                                    <p class="mt-1 text-xs leading-relaxed text-stone-500">Make sure the store name, reward wording, and signup fields feel clear on mobile.</p>
-                                </li>
-                                <li class="rounded-lg border border-stone-200 bg-white px-4 py-3">
-                                    <span class="font-medium text-stone-800">Print or save the poster</span>
-                                    <p class="mt-1 text-xs leading-relaxed text-stone-500">Use the PDF so staff can place it near the counter. If the poster feels crowded, update the reward wording or branding before you print.</p>
-                                </li>
-                                <li class="rounded-lg border border-stone-200 bg-white px-4 py-3">
-                                    <span class="font-medium text-stone-800">Check your card before sharing</span>
-                                    <p class="mt-1 text-xs leading-relaxed text-stone-500">Open a test card and check your chosen style, stamp icon and reward in the browser and Wallet. Apple and Google Wallet adapt the design to their own layouts.</p>
-                                </li>
-                            </ul>
-                        </div>
-                        <div class="rounded-xl border border-stone-200 bg-stone-50/70 p-5 shadow-sm">
-                        <p class="text-sm font-semibold text-stone-800 mb-4">How it works</p>
-                        <ol class="space-y-4 text-sm text-stone-700">
-                            <li class="flex gap-3">
-                                <span class="flex-shrink-0 w-7 h-7 rounded-full bg-brand-100 text-brand-700 font-semibold flex items-center justify-center text-xs">1</span>
-                                <span>Customer scans your QR code</span>
-                            </li>
-                            <li class="flex gap-3">
-                                <span class="flex-shrink-0 w-7 h-7 rounded-full bg-brand-100 text-brand-700 font-semibold flex items-center justify-center text-xs">2</span>
-                                <span>They save their loyalty card</span>
-                            </li>
-                            <li class="flex gap-3">
-                                <span class="flex-shrink-0 w-7 h-7 rounded-full bg-brand-100 text-brand-700 font-semibold flex items-center justify-center text-xs">3</span>
-                                <span>You stamp and reward returning customers</span>
-                            </li>
-                        </ol>
-                        </div>
-                        <div class="rounded-xl border border-stone-200 bg-white p-5 shadow-sm">
-                            <p class="text-sm font-semibold text-stone-800">Poster guidance</p>
-                            <p class="mt-2 text-sm leading-relaxed text-stone-600">
-                                Your PDF poster uses the same reward title, store branding, and join link customers will see on their card. If anything feels unclear here, it will usually feel unclear on the printed poster too.
-                            </p>
                         </div>
                     </div>
-                </div>
+                @elseif($program)
+                    <div class="flex justify-center"><x-loyalty-design-preview :store="$store" :program="$program" /></div>
+                @endif
+                <p class="mt-4 text-sm text-stone-500">Preview only—no customer account is created. Apple and Google Wallet use the same design in their own layouts.</p>
+            </section>
+
+            <div class="min-w-0 space-y-6">
+                <section class="rounded-2xl border border-stone-200 bg-white p-5 sm:p-6" aria-labelledby="share-title">
+                    <h2 id="share-title" class="text-lg font-semibold">Invite your first customer</h2>
+                    <p class="mt-2 text-sm text-stone-600">Customers scan this QR code to join and get their own card.</p>
+                    <div class="mx-auto my-5 flex w-fit max-w-full justify-center rounded-xl border border-stone-200 bg-white p-4 [&_svg]:h-auto [&_svg]:max-w-full">
+                        {!! SimpleSoftwareIO\QrCode\Facades\QrCode::size(184)->margin(1)->generate($joinUrl) !!}
+                    </div>
+                    <label for="join-link" class="mb-2 block text-sm font-medium">Customer signup link</label>
+                    <div class="flex min-w-0 gap-2">
+                        <input type="text" id="join-link" value="{{ $joinUrl }}" readonly class="min-w-0 flex-1 rounded-xl border border-stone-300 bg-stone-50 px-3 py-3 text-sm">
+                        <x-ui.button type="button" onclick="copyJoinLink()" variant="secondary">Copy</x-ui.button>
+                    </div>
+                    <div class="mt-4 grid gap-3 sm:grid-cols-2">
+                        <x-ui.button href="{{ $joinUrl }}" target="_blank" rel="noopener" variant="secondary" class="min-h-11 w-full sm:col-span-2">Open customer signup</x-ui.button>
+                        <a href="{{ route('merchant.stores.qr.pdf', $store) }}" class="inline-flex min-h-11 items-center justify-center rounded-xl border border-stone-300 px-3 py-3 text-center text-sm font-semibold text-brand-700">Download poster (PDF)</a>
+                        <a href="{{ route('merchant.stores.qr.image', $store) }}" class="inline-flex min-h-11 items-center justify-center rounded-xl border border-stone-300 px-3 py-3 text-center text-sm font-semibold text-brand-700">Download QR (SVG)</a>
+                    </div>
+                </section>
+                <section class="rounded-2xl bg-brand-50 p-5 sm:p-6">
+                    <h2 class="font-semibold text-brand-900">Try it before sharing</h2>
+                    <p class="mt-2 text-sm leading-relaxed text-brand-900">Scan the join QR on your phone, sign up and save your card to Wallet. Then use the merchant scanner to test a stamp.</p>
+                    <p class="mt-3 text-sm text-brand-900">Happy with your card? Finish setup below. You can change your design later.</p>
+                </section>
             </div>
         </div>
 
@@ -173,7 +113,7 @@
                 return;
             }
 
-            navigator.clipboard.writeText(value).then(function() {
+            Promise.resolve().then(() => navigator.clipboard.writeText(value)).then(function() {
                 showCopyToast('Join link copied.');
             }).catch(function() {
                 el.select();
