@@ -26,7 +26,13 @@
             <span class="rounded-full bg-white px-3 py-1 text-xs font-semibold text-brand-900">Required for Photo cards</span>
         </div>
         <p id="card-photo-guidance" class="mt-2 text-sm text-brand-900">{{ $model?->card_photo_path ? 'Your saved photo is ready. Choose a file only if you want to replace it.' : 'Choose a photo to use this card style. Add it before you continue.' }}</p>
-        <input type="file" id="card_photo" name="card_photo" accept="image/png,image/jpeg,image/webp" aria-describedby="card-photo-guidance card-photo-formats" class="mt-4 block min-h-11 w-full rounded-lg border border-brand-200 bg-white p-2 text-sm text-stone-700 file:mr-3 file:min-h-11 file:cursor-pointer file:rounded-lg file:border-0 file:bg-brand-700 file:px-4 file:py-3 file:font-semibold file:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-700" :disabled="cardDesign !== 'photo'" :required="cardDesign === 'photo' && {{ $model?->card_photo_path ? 'false' : 'true' }}">
+        <div class="mt-4" x-data="{ photoName: '' }">
+            <label class="flex cursor-pointer flex-wrap items-center gap-3 rounded-lg border border-brand-200 bg-white p-3 focus-within:ring-2 focus-within:ring-brand-700">
+                <span class="inline-flex min-h-11 items-center rounded-lg bg-brand-700 px-4 py-3 text-sm font-semibold text-white">Choose photo</span>
+                <span class="min-w-0 break-all text-sm text-stone-600" x-text="photoName || '{{ $model?->card_photo_path ? 'Saved photo will be kept' : 'No photo selected' }}'" aria-live="polite"></span>
+                <input type="file" id="card_photo" name="card_photo" accept="image/png,image/jpeg,image/webp" aria-label="Café or coffee photo" aria-describedby="card-photo-guidance card-photo-formats" class="sr-only" @change="photoName = $event.target.files[0]?.name || ''" :disabled="cardDesign !== 'photo'" :required="cardDesign === 'photo' && {{ $model?->card_photo_path ? 'false' : 'true' }}">
+            </label>
+        </div>
         @if($model?->card_photo_path)<img src="{{ \App\Support\StoreAssets::url($model->card_photo_path) }}" alt="Saved card photo" class="mt-3 h-24 w-40 rounded-lg object-cover">@endif
         <p id="card-photo-formats" class="mt-3 text-sm text-stone-600">PNG, JPG or WebP, up to 2 MB and 3000 × 3000 pixels. We centre-crop the photo and add a dark overlay for readable stamps. Keep important details near the centre.</p>
         <x-input-error :messages="$errors->get('card_photo')" class="mt-2" />
