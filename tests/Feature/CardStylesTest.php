@@ -106,3 +106,17 @@ test('artwork caches vary by design and simple always uses coffee', function () 
         expect(strlen($png))->toBeLessThan(500000);
     }
 });
+
+
+test('failed onboarding upload retains chosen colour and style without advancing', function () {
+    [$owner, $store, $program] = cardStyleOwner();
+    $store->update(['onboarding_step' => 'card_design', 'onboarding_completed_at' => null]);
+    $this->actingAs($owner)->from(route('merchant.onboarding.wizard.card-design'))
+        ->post(route('merchant.onboarding.wizard.card-design.store'), [
+            'card_design' => 'photo', 'brand_color' => '#123456', 'background_color' => '#FAEDD7',
+            'card_photo' => UploadedFile::fake()->create('bad.pdf', 10, 'application/pdf'),
+        ])->assertSessionHasErrors('card_photo')
+        ->assertSessionHasInput('background_color', '#FAEDD7')->assertSessionHasInput('card_design', 'photo');
+    $this->get(route('merchant.onboarding.wizard.card-design'))->assertOk()->assertSee('value="#FAEDD7"', false);
+    expect($store->fresh()->onboarding_step)->toBe('card_design');
+});
