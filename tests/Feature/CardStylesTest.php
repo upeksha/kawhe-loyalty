@@ -34,6 +34,8 @@ test('all three styles save and render without changing customer balances', func
     $this->actingAs($owner)->put(route('merchant.stores.programs.update', [$store, $program]), $data)->assertSessionHasNoErrors();
     $program->refresh();
     expect($program->card_design)->toBe($style);
+    expect($program->background_color)->toBe('#FAEDD7');
+    expect(CardDesign::colors($program)[0])->toBe('#FAEDD7');
     expect($program->stamp_icon)->toBe($style === 'simple' ? 'coffee' : 'heart');
     expect($account->fresh()->stamp_count)->toBe(2);
     expect($account->fresh()->reward_balance)->toBe(1);
@@ -70,6 +72,7 @@ test('onboarding saves a photo and custom stamp without requiring a wallet banne
     $this->actingAs($owner)->post(route('merchant.onboarding.wizard.card-design.store'), ['card_design' => 'photo', 'stamp_icon' => 'custom', 'brand_color' => '#123456', 'background_color' => '#263e30', 'card_photo' => UploadedFile::fake()->image('photo.jpg', 600, 400), 'stamp_icon_upload' => UploadedFile::fake()->image('icon.png', 100, 100)])->assertSessionHasNoErrors()->assertRedirect(route('merchant.onboarding.wizard.customer-form'));
     expect($store->fresh()->resolvedDefaultProgram()->card_photo_path)->toBe($store->fresh()->card_photo_path);
     expect($store->fresh()->resolvedDefaultProgram()->stamp_icon)->toBe('custom');
+    expect(CardDesign::colors($store->fresh()->resolvedDefaultProgram())[0])->toBe('#263E30');
 });
 
 test('preview works during onboarding is tenant scoped and stores no uploaded files', function () {

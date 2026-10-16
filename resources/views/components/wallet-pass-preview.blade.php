@@ -158,7 +158,7 @@
     </div>
 
     <section id="coffee-preview-panel" role="tabpanel" :aria-labelledby="platform + '-preview-tab'" x-show="cardDesign !== 'classic'" x-cloak class="rounded-2xl border border-stone-200 bg-stone-50 p-4">
-        <div class="mx-auto max-w-[20rem] overflow-hidden rounded-2xl shadow-lg" :style="{backgroundColor: cardDesign === 'photo' ? '#182820' : bgColor, color: cardDesign === 'photo' ? '#ffffff' : contrastText}">
+        <div class="mx-auto max-w-[20rem] overflow-hidden rounded-2xl shadow-lg" :style="{backgroundColor: bgColor, color: contrastText}">
             <div class="flex items-center justify-between gap-3 p-4">
                 <div class="min-w-0"><img x-show="appleLogo" :src="appleLogo" alt="Your café logo" class="mb-2 max-h-10 max-w-32 object-contain"><p class="break-words text-sm font-semibold" x-text="storeName"></p></div>
                 <div class="shrink-0 text-right"><p class="text-xs">STAMPS</p><p class="text-xl" x-text="`${previewMode === 'ready' ? 0 : exampleStamps} / ${rewardTarget}`"></p></div>

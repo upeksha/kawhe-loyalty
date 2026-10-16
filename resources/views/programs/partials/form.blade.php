@@ -128,19 +128,21 @@
                 </div>
             </div>
 
-            <details class="rounded-xl border border-stone-200 p-4" @if(!$isEdit || $errors->hasAny(['brand_color', 'background_color', 'logo', 'pass_logo', 'pass_hero_image'])) open @endif>
+            <details class="rounded-xl border border-stone-200 p-4" open>
                 <summary class="cursor-pointer text-base font-semibold text-stone-900">Card design <span class="block mt-1 text-sm font-normal text-stone-500">Colours and branding</span></summary>
                 <div class="mt-5 space-y-5">
 
-            <div class="grid gap-4" x-show="cardDesign !== 'photo'">
+            <div class="grid gap-4">
                 <div x-show="cardDesign === 'classic'">
                     <label for="brand_color" class="block text-sm font-medium text-stone-700 mb-1.5">Accent colour</label>
                     <input type="color" id="brand_color" name="brand_color" x-model="brandColor" value="{{ old('brand_color', $program?->brand_color ?? $store->brand_color ?? '#0EA5E9') }}" class="color-swatch-input h-11 w-11 rounded-full border-2 cursor-pointer flex-shrink-0 overflow-hidden p-0 bg-transparent appearance-none" x-bind:class="hasBlockedContrast ? 'border-red-300' : 'border-stone-300'">
                     <x-input-error :messages="$errors->get('brand_color')" class="mt-2" />
                 </div>
                 <div>
-                    <label for="background_color" class="block text-sm font-medium text-stone-700 mb-1.5">Background colour</label>
+                    <label for="background_color" class="block text-sm font-medium text-stone-700 mb-1.5">Card colour</label>
                     <input type="color" id="background_color" name="background_color" x-model="bgColor" value="{{ old('background_color', $program?->background_color ?? $store->background_color ?? '#1F2937') }}" class="color-swatch-input h-11 w-11 rounded-full border-2 cursor-pointer flex-shrink-0 overflow-hidden p-0 bg-transparent appearance-none" x-bind:class="hasBlockedContrast ? 'border-red-300' : 'border-stone-300'">
+                    <p class="mt-2 text-sm text-stone-500">Available for every style. With Photo, this colour surrounds your image; the photo keeps its colours and automatic readability overlay.</p>
+                    <x-card-colour-presets />
                     <x-input-error :messages="$errors->get('background_color')" class="mt-2" />
                 </div>
             </div>

@@ -49,7 +49,7 @@ class CardDesign
 
     public static function colors($model): array
     {
-        $bg = self::style($model) === 'photo' ? '#182820' : ($model?->background_color ?: '#263e30');
+        $bg = $model?->background_color ?: '#263e30';
         if ($model?->card_design === 'illustrated_coffee') {
             return ['#263e30', '#f2ecd7'];
         }

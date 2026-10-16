@@ -81,5 +81,5 @@ test('three style posters use card background and readable text instead of legac
 })->with([
     ['simple', '#ffffff', '#FFFFFF'],
     ['illustrated', '#263e30', '#263E30'],
-    ['photo', '#ffffff', '#182820'],
+    ['photo', '#ffffff', '#FFFFFF'],
 ]);

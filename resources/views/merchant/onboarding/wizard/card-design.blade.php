@@ -85,7 +85,7 @@
             </div>
             <div class="grid grid-cols-1 lg:grid-cols-5 gap-6 lg:gap-8">
                 <div class="lg:col-span-3 space-y-8">
-                    <section x-show="cardDesign !== 'photo'" class="rounded-2xl border border-stone-200 bg-white p-5 sm:p-6"><h2 class="mb-2 text-lg font-semibold text-stone-900">Choose your background colour</h2><p class="mb-5 text-sm text-stone-500">Text and stamp colours adjust automatically for contrast.</p>
+                    <section class="rounded-2xl border border-stone-200 bg-white p-5 sm:p-6"><h2 class="mb-2 text-lg font-semibold text-stone-900">Choose your card colour</h2><p class="mb-5 text-sm text-stone-500">Text and stamp colours adjust automatically for contrast.</p>
                         <div class="space-y-5">
                             <div x-show="cardDesign === 'classic'">
                                 <label for="brand_color" class="block text-sm font-medium text-stone-700 mb-1.5">Accent colour</label>
@@ -97,13 +97,14 @@
                                 <x-input-error :messages="$errors->get('brand_color')" class="mt-2" />
                             </div>
                             <div>
-                                <label for="background_color" class="block text-sm font-medium text-stone-700 mb-1.5">Card background</label>
+                                <label for="background_color" class="block text-sm font-medium text-stone-700 mb-1.5">Card colour</label>
                                 <div class="flex gap-3 mt-1.5">
                                     <input type="color" id="background_color" name="background_color" x-ref="bgColor" value="{{ $bgColor }}" class="color-swatch-input h-11 w-11 rounded-full border-2 cursor-pointer flex-shrink-0 overflow-hidden p-0 bg-transparent appearance-none" x-bind:class="hasBlockedContrast ? 'border-red-300' : 'border-stone-300'" />
-                                    <input type="text" id="background_color_text" :disabled="cardDesign === 'photo'" x-ref="bgColorText" value="{{ $bgColor }}" placeholder="#1F2937" aria-label="Background colour hex code" required pattern="#[0-9A-Fa-f]{6}" maxlength="7" title="Enter a colour code such as #1F2937" aria-describedby="background_color_note" autocapitalize="off" spellcheck="false" class="{{ $inputClass }}" x-bind:class="hasBlockedContrast ? '!border-red-300 !ring-red-100' : ''" />
+                                    <input type="text" id="background_color_text" x-ref="bgColorText" value="{{ $bgColor }}" placeholder="#1F2937" aria-label="Background colour hex code" required pattern="#[0-9A-Fa-f]{6}" maxlength="7" title="Enter a colour code such as #1F2937" aria-describedby="background_color_note" autocapitalize="off" spellcheck="false" class="{{ $inputClass }}" x-bind:class="hasBlockedContrast ? '!border-red-300 !ring-red-100' : ''" />
                                 </div>
-                                <x-onboarding-helper-note id="background_color_note">Background of the join page and card.</x-onboarding-helper-note>
-                                <x-input-error :messages="$errors->get('background_color')" class="mt-2" />
+                                <x-onboarding-helper-note id="background_color_note">Used for your card background and page colours. With Photo, it surrounds your image; the photo keeps its colours and automatic readability overlay.</x-onboarding-helper-note>
+                                <x-card-colour-presets />
+                    <x-input-error :messages="$errors->get('background_color')" class="mt-2" />
                             </div>
                             <div x-show="hasBlockedContrast" x-cloak>
                                 <x-ui.alert variant="danger">

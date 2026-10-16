@@ -52,7 +52,7 @@ test('fresh coffee cafe completes verified onboarding and issues a customer card
     expect($store->fresh()->onboarding_completed_at)->not->toBeNull();
     $this->post('/logout');
     $this->get($program->join_url)->assertRedirect();
-    $this->get(route('join.index', ['slug' => $program->slug, 't' => $program->join_token]))->assertOk()->assertSee('--program-bg: '.($style === 'photo' ? '#182820' : '#263E30'), false);
+    $this->get(route('join.index', ['slug' => $program->slug, 't' => $program->join_token]))->assertOk()->assertSee('--program-bg: '.'#263E30', false);
     $this->post(route('join.store', ['slug' => $program->slug, 't' => $program->join_token]), ['email' => 'fresh-customer@example.com', 'first_name' => 'Fresh', 'name' => 'Fresh Customer'])->assertRedirect();
     $account = LoyaltyAccount::where('loyalty_program_id', $program->id)->sole();
     expect($account->stamp_count)->toBe(0);

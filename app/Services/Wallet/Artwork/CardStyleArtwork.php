@@ -21,6 +21,9 @@ class CardStyleArtwork
         if ($options['style'] === 'photo' && $options['photo']) {
             $photo = imagecreatefromstring($options['photo']);
             if ($photo) {
+                // Photo artwork stays readable independently of the surrounding card colour.
+                $bg = $this->color($im, '#182820');
+                $ink = $this->color($im, '#ffffff');
                 $this->cover($im, $photo, $w, $h);
                 imagedestroy($photo);
                 imagefilledrectangle($im, 0, 0, $w, $h, imagecolorallocatealpha($im, 0, 0, 0, 44));
