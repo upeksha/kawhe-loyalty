@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\MerchantOnboardingWizardController;
-use App\Mail\MerchantWelcomeEmail;
 use App\Models\User;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
@@ -12,7 +11,6 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\Rules;
 use Illuminate\View\View;
 
@@ -68,31 +66,6 @@ class RegisteredUserController extends Controller
         } catch (\Throwable $e) {
             $verificationQueued = false;
             \Log::warning('New merchant verification could not be queued', ['user_id' => $user->id]);
-        }
-
-        // Send welcome email to merchant (sync = immediate, else high-priority queue)
-        $mailable = new MerchantWelcomeEmail($user);
-        try {
-            if (config('mail.welcome_sync', false)) {
-                Mail::to($user->email)->send($mailable);
-                \Log::info('Merchant welcome email sent synchronously', [
-                    'user_id' => $user->id,
-                    'email' => $user->email,
-                ]);
-            } else {
-                Mail::to($user->email)->queue($mailable);
-                \Log::info('Merchant welcome email queued successfully', [
-                    'user_id' => $user->id,
-                    'email' => $user->email,
-                ]);
-            }
-        } catch (\Exception $e) {
-            // Log the error but don't fail the registration
-            \Log::error('Failed to send/queue merchant welcome email', [
-                'user_id' => $user->id,
-                'email' => $user->email,
-                'error' => $e->getMessage(),
-            ]);
         }
 
         Auth::login($user);
