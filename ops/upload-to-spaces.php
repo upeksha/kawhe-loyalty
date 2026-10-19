@@ -56,4 +56,16 @@ $client->putObject([
     'ACL' => 'private',
 ]);
 
+// Read the private object back before reporting success or pruning old backups.
+$download = $client->getObject(['Bucket' => $bucket, 'Key' => $remoteKey]);
+$body = $download['Body'];
+$hash = hash_init('sha256');
+while (! $body->eof()) {
+    hash_update($hash, $body->read(1024 * 1024));
+}
+if (! hash_equals(hash_file('sha256', $localFile), hash_final($hash))) {
+    fwrite(STDERR, "Uploaded backup verification failed.\n");
+    exit(1);
+}
+
 fwrite(STDOUT, $remoteKey . PHP_EOL);

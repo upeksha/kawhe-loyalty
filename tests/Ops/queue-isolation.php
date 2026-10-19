@@ -49,7 +49,10 @@ try {
             $table->timestamp('failed_at')->useCurrent();
         });
         // Consume exactly the queue arguments in the deployed Supervisor template.
-        $ini = parse_ini_file(base_path('ops/supervisor/kawhe-testing-workers.conf'), true, INI_SCANNER_RAW);
+        $template = in_array('--production-template', $argv, true)
+            ? 'ops/supervisor/kawhe-production-workers.conf'
+            : 'ops/supervisor/kawhe-testing-workers.conf';
+        $ini = parse_ini_file(base_path($template), true, INI_SCANNER_RAW);
         foreach ($ini as $worker) {
             $command = preg_replace('#^/usr/bin/php#', escapeshellarg(PHP_BINARY), $worker['command']);
             $env = array_merge(getenv(), ['APP_ENV' => 'testing', 'DB_CONNECTION' => 'sqlite', 'DB_DATABASE' => $root.'/database.sqlite', 'QUEUE_CONNECTION' => 'database', 'CACHE_STORE' => 'array', 'APP_CONFIG_CACHE' => $root.'/no-config.php']);
