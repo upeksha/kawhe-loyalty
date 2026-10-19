@@ -98,7 +98,7 @@ test('customer card leads with progress qr guidance manual code and verification
         ->assertOk()
         ->assertSee('5 of 8 stamps')
         ->assertSee('3 more until free coffee')
-        ->assertSee('Show this code when you buy a coffee')
+        ->assertSee('Show this code to staff to collect stamps or redeem rewards.')
         ->assertSee('Manual code ·')
         ->assertSee('Your card is active')
         ->assertSee('Recent activity');

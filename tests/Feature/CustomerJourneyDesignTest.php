@@ -38,11 +38,11 @@ it('keeps real stamp and reward codes, signed wallet URLs and partial reward sta
     ]);
     $this->get(route('card.show', $account->public_token))->assertOk()
         ->assertSee((string) QrCode::size(220)->errorCorrection('L')->margin(2)->generate('LA:'.$account->public_token), false)
-        ->assertSee((string) QrCode::size(250)->errorCorrection('L')->margin(1)->generate('LR:'.$account->redeem_token), false)
+        ->assertDontSee('redeem-qr-container')
         ->assertSee(e(URL::signedRoute('wallet.apple.download', ['public_token' => $account->public_token])), false)
         ->assertSee(e(URL::signedRoute('wallet.google.save', ['public_token' => $account->public_token])), false)
         ->assertSee('rewardBalance: 2', false)->assertSee('rewardRedeemed: false', false)
-        ->assertSee('Remaining after redeem: 1')->assertSee('Save to Wallet')->assertSee('Refresh card')
+        ->assertSee('Show this code to staff to collect stamps or redeem rewards.')->assertSee('Save to Wallet')->assertSee('Refresh card')
         ->assertSee('Recent activity')->assertSee('Add to Home Screen')
         ->assertSee('--program-bg: #254B3A', false)
         ->assertDontSee('See reward-ready state')->assertDontSee('Demo card')

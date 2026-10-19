@@ -106,8 +106,10 @@ test('card page shows redeem qr when available', function () {
 
     $response->assertOk();
     $response->assertSee('is ready');
-    $response->assertSee('Redeem reward');
-    // Verify the redeem token is passed to the QR generator
+    $response->assertSee('Show this code to staff to collect stamps or redeem rewards.');
+    $response->assertDontSee('redeem-qr-container')->assertDontSee('showRedeemModal');
+    expect(substr_count($response->getContent(), 'id="stamp-qr-container"'))->toBe(1);
+    // Internal redemption token remains available for authenticated staff.
     $response->assertViewHas('account', function ($viewAccount) {
         return $viewAccount->redeem_token === 'visible-redeem-token';
     });
@@ -262,3 +264,23 @@ test('multi-reward: idempotency still works with new math', function () {
     expect($account->stamp_count)->toBe($stampCountAfterFirst);
     expect($account->reward_balance)->toBe($rewardBalanceAfterFirst);
 });
+
+test('one card QR supports staff stamp and verified redemption with safe retries', function (string $prefix) {
+    Illuminate\Support\Facades\Queue::fake();
+    $owner = User::factory()->create();
+    $store = Store::factory()->create(['user_id' => $owner->id, 'reward_target' => 3]);
+    $card = LoyaltyAccount::factory()->create(['store_id' => $store->id, 'stamp_count' => 0, 'reward_balance' => 0, 'signup_requires_verification' => true, 'verified_at' => null]);
+    $this->actingAs($owner);
+    $scan = ['store_id' => $store->id, 'token' => 'LA:'.$card->public_token];
+    $this->postJson($prefix.'/scanner/preview', $scan)->assertOk()->assertJsonPath('can_stamp', true);
+    $this->postJson($prefix.'/stamp', ['store_id' => $store->id, 'token' => $card->public_token, 'count' => 3, 'idempotency_key' => 'single-qr-stamp'])->assertOk();
+    $preview = $this->postJson($prefix.'/scanner/preview', $scan)->assertOk()->assertJsonPath('has_rewards', true)->assertJsonPath('can_redeem', true);
+    $redeem = ['store_id' => $store->id, 'token' => $preview->json('redeem_token'), 'idempotency_key' => 'single-qr-redeem'];
+    $this->postJson($prefix.'/redeem', $redeem)->assertStatus(422)->assertJsonPath('status', 'verification_required');
+    $card->update(['verified_at' => now()]);
+    $this->postJson($prefix.'/redeem', $redeem)->assertOk();
+    $this->postJson($prefix.'/redeem', $redeem)->assertOk()->assertJsonPath('status', 'duplicate');
+    expect($card->fresh()->reward_balance)->toBe(0);
+    $this->postJson($prefix.'/scanner/preview', $scan)->assertOk()->assertJsonPath('has_rewards', false);
+    $this->actingAs(User::factory()->create())->postJson($prefix.'/scanner/preview', $scan)->assertForbidden();
+})->with(['web' => '', 'mobile API' => '/api/v1']);

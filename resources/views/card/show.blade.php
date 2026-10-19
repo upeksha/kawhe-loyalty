@@ -132,7 +132,7 @@
                         </div>
 
                         <div class="customer-card-code flex flex-col items-center">
-                            <p class="card-text mb-3 text-center text-xs" x-text="rewardBalance > 0 ? 'Show this code to redeem your reward' : 'Show this code when you buy a coffee'"></p>
+                            <p class="card-text mb-3 text-center text-xs">Show this code to staff to collect stamps or redeem rewards.</p>
                             <div class="customer-qr-panel rounded-xl bg-white p-4">
                                 <div id="stamp-qr-container" class="customer-qr">
                                     {!! SimpleSoftwareIO\QrCode\Facades\QrCode::size(220)->errorCorrection('L')->margin(2)->generate('LA:' . $account->public_token) !!}
@@ -144,11 +144,6 @@
                             @endif
                         </div>
 
-                        <div x-show="rewardBalance > 0 && hasRedeemToken" x-cloak class="mt-5">
-                            <button @click="showRedeemModal = true" class="customer-btn customer-btn-primary">
-                                Redeem reward <span x-show="rewardBalance > 1" class="ml-1" x-text="`(${rewardBalance} available)`"></span>
-                            </button>
-                        </div>
                     </div>
                 </div>
 
@@ -319,83 +314,6 @@
                 </div>
             </div>
 
-            <!-- Redeem QR Code Modal (Full Screen Popup) -->
-            @if(($account->reward_balance ?? 0) > 0 && $account->redeem_token)
-                <div 
-                    x-show="showRedeemModal && rewardBalance > 0 && hasRedeemToken" 
-                    x-cloak
-                    @click.away="showRedeemModal = false"
-                    @keydown.escape.window="showRedeemModal = false"
-                    class="fixed inset-0 z-[80] flex items-center justify-center bg-black bg-opacity-75 backdrop-blur-sm"
-                    x-transition:enter="transition ease-out duration-300"
-                    x-transition:enter-start="opacity-0"
-                    x-transition:enter-end="opacity-100"
-                    x-transition:leave="transition ease-in duration-200"
-                    x-transition:leave-start="opacity-100"
-                    x-transition:leave-end="opacity-0"
-                >
-                    <div 
-                        @click.stop
-                        role="dialog" aria-modal="true" aria-labelledby="redeem-title" class="card-surface rounded-2xl p-6 max-w-sm w-full mx-4 relative max-h-[90dvh] overflow-y-auto"
-                        x-transition:enter="transition ease-out duration-300"
-                        x-transition:enter-start="opacity-0 transform scale-95"
-                        x-transition:enter-end="opacity-100 transform scale-100"
-                        x-transition:leave="transition ease-in duration-200"
-                        x-transition:leave-start="opacity-100 transform scale-100"
-                        x-transition:leave-end="opacity-0 transform scale-95"
-                    >
-                        <!-- Close Button -->
-                        <button 
-                            @click="showRedeemModal = false"
-                            aria-label="Close reward" class="absolute top-4 right-4 card-muted hover:opacity-80 transition-colors"
-                        >
-                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                            </svg>
-                        </button>
-
-                        <!-- Modal Content -->
-                        <div class="text-center">
-                                <div class="mb-4">
-                                    <h2 id="redeem-title" class="customer-page-heading card-text mb-2 pr-5">Redeem your reward</h2>
-                                    <p class="card-muted text-sm">Show this QR code to staff. Opening it does not spend your reward.</p>
-                                </div>
-
-                                <!-- QR Code -->
-                                <div class="bg-white rounded-xl p-4 border border-stone-200 mb-4 flex flex-col items-center">
-                                    <div id="redeem-qr-container">
-                                        @if($account->redeem_token)
-                                            {!! SimpleSoftwareIO\QrCode\Facades\QrCode::size(250)->errorCorrection('L')->margin(1)->generate('LR:' . $account->redeem_token) !!}
-                                        @else
-                                            <p class="text-red-500">Error: Redeem token not available. Please refresh the page.</p>
-                                        @endif
-                                    </div>
-                                    <p class="mt-3 text-xs font-semibold card-accent">Scan to redeem reward</p>
-                                    @if($account->manual_entry_code ?? null)
-                                        <p class="mt-2 text-sm font-mono font-bold card-accent tracking-widest">{{ $account->manual_entry_code }}</p>
-                                        <p class="text-xs card-accent">If scan fails, tell staff this code</p>
-                                    @endif
-                                </div>
-
-                                <p class="card-muted text-sm mb-4">
-                                    Present this QR code to claim your <span class="font-semibold card-reward-copy">{{ $account->reward_title }}</span>
-                                </p>
-                                @if(($account->reward_balance ?? 0) > 1)
-                                    <p class="card-reward-copy text-xs text-center mb-2">
-                                        Redeems 1 reward. Remaining after redeem: {{ ($account->reward_balance ?? 0) - 1 }}
-                                    </p>
-                                @endif
-
-                                <button 
-                                    @click="showRedeemModal = false"
-                                    class="customer-btn customer-btn-secondary"
-                                >
-                                Close
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            @endif
             @endpush
 
         @push('scripts')
@@ -409,7 +327,6 @@
                     publicToken: '{{ $account->public_token }}',
                     accountData: null,
                     bannerDismissed: false,
-                    showRedeemModal: false,
                     // Wallet nudge
                     showWalletNudge: false,
                     justRegistered: @json(session('show_wallet_nudge', false)),
@@ -418,7 +335,6 @@
                     // (partial redemption). So we only consider the reward "fully redeemed" when no rewards remain.
                     rewardRedeemed: {{ ($account->reward_redeemed_at && (($account->reward_balance ?? 0) <= 0)) ? 'true' : 'false' }},
                     rewardBalance: {{ $account->reward_balance ?? 0 }},
-                    hasRedeemToken: {{ $account->redeem_token ? 'true' : 'false' }},
                     emailVerified: {{ $account->verified_at ? 'true' : 'false' }},
                     refreshing: false,
                     refreshMessage: '',
@@ -434,8 +350,7 @@
                         this.initWalletNudge();
 
                         // Lock body scroll whenever any modal is open
-                        this.$watch('showWalletNudge', v => document.body.style.overflow = (v || this.showRedeemModal) ? 'hidden' : '');
-                        this.$watch('showRedeemModal', v => document.body.style.overflow = (v || this.showWalletNudge)  ? 'hidden' : '');
+                        this.$watch('showWalletNudge', v => document.body.style.overflow = v ? 'hidden' : '');
                     },
 
                     initWalletNudge() {
@@ -614,7 +529,6 @@
                         const rewardBalance = data.reward_balance ?? 0;
                         const previousRewardBalance = this.rewardBalance;
                         this.rewardBalance = rewardBalance;
-                        this.hasRedeemToken = !!data.redeem_token;
                         
                         // Update reward balance display in banner
                         const rewardBalanceBanner = document.getElementById('reward-balance-banner');
@@ -698,7 +612,6 @@
                         if (data.reward_redeemed_at) {
                             // Hide button and banner if no rewards left
                             this.rewardRedeemed = rewardBalance <= 0;
-                            this.showRedeemModal = false; // Close modal if open
                             
                             // Reload page after redemption to ensure card state is correct
                             // This fixes issues with stamp circles disappearing
