@@ -28,7 +28,7 @@ class CustomerCardRecoveryController extends Controller
             }
 
             // Email scanners may follow GET links. Only an explicit CSRF-protected POST consumes it.
-            if ($request->isMethod('get')) {
+            if (! $request->isMethod('post')) {
                 return response()->view('join.recovery-confirm', compact('program', 'store', 'token'));
             }
 

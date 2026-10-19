@@ -46,6 +46,9 @@ test('email scanners do not consume links and explicit confirmation opens a card
     $this->get($url)->assertOk()->assertViewIs('join.recovery-confirm')->assertDontSee($this->account->public_token)
         ->assertHeader('Referrer-Policy', 'no-referrer');
     $this->get($url)->assertOk();
+    $this->head($url)->assertOk()->assertHeader('Referrer-Policy', 'no-referrer');
+    $this->head($url)->assertOk();
+    $this->assertDatabaseHas('customer_card_recoveries', ['token_hash' => hash('sha256', basename($url))]);
     $this->post($url)->assertRedirect(route('card.show', ['public_token' => $this->account->public_token]));
     $this->post($url)->assertStatus(410)->assertDontSee($this->account->public_token);
     $this->get($url)->assertStatus(410);
