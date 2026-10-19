@@ -39,7 +39,7 @@ test('enrollment creates customer and loyalty account', function () {
     $response->assertRedirect(route('card.show', ['public_token' => $account->public_token]));
 });
 
-test('enrollment reuses existing customer', function () {
+test('enrollment does not reuse a customer outside the target store', function () {
     $user = User::factory()->create();
     $store = Store::factory()->create(['user_id' => $user->id]);
     $customer = Customer::create(['name' => 'Existing User', 'email' => 'existing@example.com']);
@@ -49,12 +49,13 @@ test('enrollment reuses existing customer', function () {
         'email' => 'existing@example.com',
     ]);
 
-    $this->assertEquals(1, Customer::count());
+    $this->assertEquals(2, Customer::count());
     $customer->refresh();
     $this->assertEquals('Existing User', $customer->name); // Public signup cannot overwrite an existing identity.
 
-    $response->assertOk()->assertViewIs('join.recovery-sent');
-    expect(LoyaltyAccount::count())->toBe(0);
+    $response->assertRedirect();
+    expect(LoyaltyAccount::count())->toBe(1);
+    expect(LoyaltyAccount::sole()->customer_id)->not->toBe($customer->id);
 });
 
 test('enrollment reuses existing loyalty account', function () {

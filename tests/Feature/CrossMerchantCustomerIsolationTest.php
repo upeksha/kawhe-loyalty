@@ -2,6 +2,7 @@
 
 use App\Mail\CustomerCardRecovery;
 use App\Models\Customer;
+use App\Models\LoyaltyAccount;
 use App\Models\Store;
 use App\Models\User;
 use Illuminate\Support\Facades\Mail;
@@ -32,14 +33,17 @@ test('same email joins different owners with isolated cards balances and merchan
     $this->post($join($programs[0]), ['email' => $email, 'name' => 'TEST Shared Customer'])->assertRedirect();
     $customer = Customer::where('email', $email)->sole();
     $a = $customer->loyaltyAccounts()->sole();
-    $this->post($join($programs[1]), ['email' => $email])->assertOk()->assertViewIs('join.recovery-sent');
-    $mail = Mail::queued(CustomerCardRecovery::class)->last();
-    expect($mail->hasTo($email))->toBeTrue();
-    $this->get($mail->recoveryUrl)->assertOk()->assertViewIs('join.recovery-confirm');
-    expect($customer->loyaltyAccounts()->count())->toBe(1);
-    $this->post($mail->recoveryUrl)->assertRedirect();
-    $b = $customer->loyaltyAccounts()->where('store_id', $stores[1]->id)->sole();
-    $this->post($mail->recoveryUrl)->assertStatus(410);
+    $this->post($join($programs[1]), ['email' => $email, 'name' => 'New store name'])->assertRedirect();
+    $b = LoyaltyAccount::where('store_id', $stores[1]->id)->sole();
+    expect($b->customer_id)->not->toBe($a->customer_id);
+    expect($b->verified_at)->toBeNull();
+    expect($b->customer->email)->toBe($email);
+    expect($a->customer->name)->toBe('TEST Shared Customer');
+    $welcome = Mail::queued(\App\Mail\CustomerWelcomeEmail::class)->last();
+    $verify = '/verify-email/'.$welcome->verificationToken.'?card='.$b->public_token;
+    $this->get($verify)->assertOk();
+    expect($b->fresh()->verified_at)->toBeNull();
+    $this->post($verify)->assertRedirect();
     expect($a->public_token)->not->toBe($b->public_token);
     expect($a->wallet_auth_token)->not->toBe($b->wallet_auth_token);
     expect($a->store->user_id)->not->toBe($b->store->user_id);

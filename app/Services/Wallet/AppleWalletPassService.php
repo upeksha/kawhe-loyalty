@@ -118,7 +118,7 @@ class AppleWalletPassService
                     [
                         'key' => 'verification',
                         'label' => 'Redemption',
-                        'value' => ($program->require_verification_for_redemption ?? $store->require_verification_for_redemption)
+                        'value' => $account->requires_verification_for_redemption
                             ? 'Email verification is required before rewards can be redeemed.'
                             : 'Rewards can be redeemed without email verification.',
                     ],

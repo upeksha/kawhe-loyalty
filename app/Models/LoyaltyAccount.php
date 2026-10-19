@@ -49,6 +49,7 @@ class LoyaltyAccount extends Model
         'reward_available_at',
         'reward_redeemed_at',
         'verified_at',
+        'signup_requires_verification',
         'email_verification_token_hash',
         'email_verification_expires_at',
         'email_verification_sent_at',
@@ -60,6 +61,7 @@ class LoyaltyAccount extends Model
         'reward_available_at' => 'datetime',
         'reward_redeemed_at' => 'datetime',
         'verified_at' => 'datetime',
+        'signup_requires_verification' => 'boolean',
         'email_verification_expires_at' => 'datetime',
         'email_verification_sent_at' => 'datetime',
         'version' => 'integer',
@@ -169,7 +171,7 @@ class LoyaltyAccount extends Model
 
     public function getRequiresVerificationForRedemptionAttribute(): bool
     {
-        return (bool) ($this->resolvedProgram()?->require_verification_for_redemption ?? $this->store?->require_verification_for_redemption ?? true);
+        return $this->signup_requires_verification || (bool) ($this->resolvedProgram()?->require_verification_for_redemption ?? $this->store?->require_verification_for_redemption ?? true);
     }
 
     /**

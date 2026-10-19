@@ -25,9 +25,7 @@ test('customer can join two different stores and get distinct loyalty accounts',
 
     // Join Store B
     $responseB = $this->post(route('join.store', ['slug' => $storeB->slug, 't' => $storeB->join_token]), $customerData);
-    $responseB->assertOk()->assertViewIs('join.recovery-sent');
-    $mail = \Illuminate\Support\Facades\Mail::queued(\App\Mail\CustomerCardRecovery::class)->first();
-    $this->post($mail->recoveryUrl)->assertRedirect();
+    $responseB->assertRedirect();
 
     $accountB = LoyaltyAccount::where('store_id', $storeB->id)->first();
     expect($accountB)->not->toBeNull();

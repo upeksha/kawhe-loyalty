@@ -219,17 +219,19 @@ class JoinController extends Controller
         $nameParts = array_filter([$customerData['first_name'] ?? '', $customerData['last_name'] ?? '']);
         $customerData['name'] = $nameParts ? implode(' ', $nameParts) : ($validated['name'] ?? null);
 
-        // Find existing customer or create new one
+        // Only recover identities already enrolled at this store. Other stores remain private.
         $customer = null;
 
         if (! empty($customerData['email'])) {
-            $customer = Customer::whereRaw('LOWER(email) = ?', [Str::lower($customerData['email'])])
+            $customer = Customer::whereHas('loyaltyAccounts', fn ($q) => $q->where('store_id', $store->id))
+                ->whereRaw('LOWER(email) = ?', [Str::lower($customerData['email'])])
                 ->withExists(['loyaltyAccounts as joined_program' => fn ($q) => $q->where('loyalty_program_id', $program->id)])
                 ->orderByDesc('joined_program')->first();
         }
 
         if (! $customer && ! empty($customerData['phone'])) {
-            $customer = Customer::where('phone', $customerData['phone'])
+            $customer = Customer::whereHas('loyaltyAccounts', fn ($q) => $q->where('store_id', $store->id))
+                ->where('phone', $customerData['phone'])
                 ->withExists(['loyaltyAccounts as joined_program' => fn ($q) => $q->where('loyalty_program_id', $program->id)])
                 ->orderByDesc('joined_program')->first();
         }
@@ -265,6 +267,7 @@ class JoinController extends Controller
             'customer_id' => $customer->id,
             'public_token' => Str::random(\App\Models\LoyaltyAccount::PUBLIC_TOKEN_LENGTH),
             'stamp_count' => 0,
+            'signup_requires_verification' => true,
             'version' => 1,
         ]);
 

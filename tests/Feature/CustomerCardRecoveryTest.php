@@ -102,7 +102,7 @@ test('phone only customers get no public card or recovery email', function () {
 });
 
 test('existing identity enrollment waits for email ownership and cannot access another program', function () {
-    $other = Store::factory()->create()->resolvedDefaultProgram();
+    $other = $this->store->loyaltyPrograms()->create(['name' => 'Other programme', 'reward_target' => 3, 'reward_title' => 'Coffee']);
     $lookup = route('join.lookup', ['slug' => $other->slug, 't' => $other->join_token]);
     $this->post($lookup, ['email' => $this->customer->email])->assertOk();
     Mail::assertNothingQueued();
@@ -149,13 +149,15 @@ test('repeat signup endpoint also enforces per IP request limits', function () {
 });
 
 test('new enrollment checks the plan limit again when the email link is consumed', function () {
+    $other = $this->store->loyaltyPrograms()->create(['name' => 'Other', 'reward_target' => 3, 'reward_title' => 'Coffee']);
+    LoyaltyAccount::factory()->create(['store_id' => $this->store->id, 'loyalty_program_id' => $other->id, 'customer_id' => $this->customer->id]);
     $this->account->delete();
     $this->post($this->joinUrl, ['email' => $this->customer->email])->assertOk();
     $this->mock(\App\Services\Billing\UsageService::class, function ($mock) {
         $mock->shouldReceive('canAcceptNewCustomer')->once()->andReturn(false);
     });
     $this->post(recoveryUrl())->assertOk()->assertViewIs('join.limit-reached');
-    expect(LoyaltyAccount::count())->toBe(0);
+    expect(LoyaltyAccount::count())->toBe(1);
 });
 
 test('queue failure leaves no usable token and keeps the neutral response', function () {
@@ -217,7 +219,8 @@ test('fresh signup and repeat signup behave consistently across deployment envir
 })->with(['testing', 'production']);
 
 test('signup explains separate store enrollment without exposing or changing existing cards', function () {
-    $other = Store::factory()->create(['name' => 'New Cafe'])->resolvedDefaultProgram();
+    $this->store->update(['name' => 'New Cafe']);
+    $other = $this->store->loyaltyPrograms()->create(['name' => 'Other programme', 'reward_target' => 3, 'reward_title' => 'Coffee']);
     $this->post(route('join.store', ['slug' => $other->slug, 't' => $other->join_token]), ['email' => $this->customer->email])
         ->assertOk()->assertSee('Check your email to continue')->assertSee('New Cafe')->assertSee('stay separate')->assertDontSee($this->account->public_token)
         ->assertSee(e(route('join.show', ['slug' => $other->slug, 't' => $other->join_token])), false);
