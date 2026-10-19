@@ -5,6 +5,7 @@
     $rewardTarget = (int) old('reward_target', 9);
     $rewardTitle = old('reward_title', 'Free coffee');
     $storeName = old('name', '');
+    $newStylesAvailable = \App\Support\CoffeeCardSample::available();
 @endphp
 
 <x-merchant-design-layout title="Add a store" subtitle="Create another location within your plan limits.">
@@ -19,6 +20,7 @@
                             storeName: @js($storeName),
                             rewardTarget: {{ $rewardTarget }},
                             rewardTitle: @js($rewardTitle),
+                            cardDesign: @js(\App\Support\CoffeeCardSample::available() ? 'simple' : 'classic'),
                             brandColor: @js($brandColor),
                             bgColor: @js($bgColor),
                             logoPreview: null,
@@ -54,7 +56,7 @@
                                 return (lighter + 0.05) / (darker + 0.05);
                             },
                             get hasRequiredAssets() {
-                                return Boolean(this.logoPreview && this.passLogoPreview && this.passHeroPreview);
+                                return Boolean(this.logoPreview && this.passLogoPreview && (this.cardDesign !== 'classic' || this.passHeroPreview));
                             },
                             get launchScore() {
                                 let score = 0;
@@ -62,13 +64,13 @@
                                 if (this.brandColor && this.bgColor) score++;
                                 if (this.logoPreview) score++;
                                 if (this.passLogoPreview) score++;
-                                if (this.passHeroPreview) score++;
+                                if (this.cardDesign === 'classic' && this.passHeroPreview) score++;
                                 if (!this.hasLowContrastPreview && !this.hasVeryLightBackground) score++;
                                 return score;
                             },
                             get launchLabel() {
-                                if (this.launchScore >= 6) return 'Good to launch';
-                                if (this.launchScore >= 4) return 'Almost ready';
+                                if (this.launchScore >= (this.cardDesign === 'classic' ? 6 : 5)) return 'Good to launch';
+                                if (this.launchScore >= (this.cardDesign === 'classic' ? 4 : 3)) return 'Almost ready';
                                 return 'Needs review';
                             },
                             get launchTone() {
@@ -169,7 +171,7 @@
                                             <ul class="mt-2 space-y-2 text-sm leading-relaxed text-stone-600">
                                                 <li>Use a background that feels clearly darker or lighter than your accent so wallet text stays readable.</li>
                                                 <li>If you are unsure, keep your accent bright and your background dark. That is the safest launch combination.</li>
-                                                <li>Upload a square store logo plus wallet pass logo and hero image before saving.</li>
+                                                <li>Upload a square store logo and wallet pass logo before saving. @if($newStylesAvailable)A banner is optional for the Simple card.@else Add a banner for the Classic card.@endif</li>
                                             </ul>
                                         </div>
                                     </div>
@@ -197,7 +199,7 @@
                                 </x-onboarding-form-section>
 
                                 <x-onboarding-form-section title="Wallet assets">
-                                    <p class="text-sm text-stone-600 mb-4">Required for Apple Wallet and Google Wallet passes. Upload both images so customers see a polished card when they save it.</p>
+                                    <p class="text-sm text-stone-600 mb-4">@if($newStylesAvailable)Upload a Wallet logo for the Simple card. A banner image is optional.@else Upload a Wallet logo and banner for the Classic card.@endif</p>
                                     <div class="space-y-5">
                                         <div>
                                             <label for="pass_logo" class="block text-sm font-medium text-stone-700 mb-1.5">Pass logo <span class="text-red-500">*</span></label>
@@ -215,7 +217,7 @@
                                             <x-input-error :messages="$errors->get('pass_logo')" class="mt-2" />
                                         </div>
                                         <div>
-                                            <label for="pass_hero_image" class="block text-sm font-medium text-stone-700 mb-1.5">Pass hero image <span class="text-red-500">*</span></label>
+                                        <label for="pass_hero_image" class="block text-sm font-medium text-stone-700 mb-1.5">Pass hero image @if($newStylesAvailable)<span class="text-stone-500 font-normal">(optional)</span>@else<span class="text-red-500">*</span>@endif</label>
                                             <div class="mt-2 flex flex-col sm:flex-row sm:items-start gap-4">
                                                 <div x-show="passHeroPreview" class="flex-shrink-0">
                                                     <p class="text-xs font-medium text-stone-500 mb-1.5">Preview</p>
@@ -245,7 +247,7 @@
                                             </div>
                                             <span class="inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold" x-bind:class="launchTone" x-text="launchLabel"></span>
                                         </div>
-                                        <p class="mt-3 text-xs text-stone-500" x-text="launchScore + ' of 6 launch signals are in a strong place.'"></p>
+                                        <p class="mt-3 text-xs text-stone-500" x-text="launchScore + ' of ' + (cardDesign === 'classic' ? 6 : 5) + ' launch signals are in a strong place.'"></p>
                                         <p class="mt-4 text-xs font-semibold uppercase tracking-wider text-stone-500">Setup status</p>
                                         <ul class="mt-4 space-y-3 text-sm">
                                             <li class="flex items-start justify-between gap-3">
@@ -265,22 +267,22 @@
                                                 <span class="font-medium" x-bind:class="passLogoPreview ? 'text-emerald-700' : 'text-stone-500'" x-text="passLogoPreview ? 'Ready' : 'Needed'"></span>
                                             </li>
                                             <li class="flex items-start justify-between gap-3">
-                                                <span class="text-stone-700">Pass hero image</span>
-                                                <span class="font-medium" x-bind:class="passHeroPreview ? 'text-emerald-700' : 'text-stone-500'" x-text="passHeroPreview ? 'Ready' : 'Needed'"></span>
+                                                <span class="text-stone-700">Pass hero image @if($newStylesAvailable)(optional)@endif</span>
+                                                <span class="font-medium" x-bind:class="passHeroPreview ? 'text-emerald-700' : 'text-stone-500'" x-text="passHeroPreview ? 'Added' : (cardDesign === 'classic' ? 'Needed' : 'Optional')"></span>
                                             </li>
                                             <li class="flex items-start justify-between gap-3">
                                                 <span class="text-stone-700">Visual contrast</span>
                                                 <span class="font-medium" x-bind:class="hasBlockedContrast ? 'text-red-700' : ((hasLowContrastPreview || hasVeryLightBackground) ? 'text-amber-700' : 'text-emerald-700')" x-text="hasBlockedContrast ? 'Blocked' : ((hasLowContrastPreview || hasVeryLightBackground) ? 'Review' : 'Ready')"></span>
                                             </li>
                                         </ul>
-                                        <p class="mt-4 text-xs leading-relaxed text-stone-500">Upload all branding assets before creating the store. Unreadable color combinations are blocked until they are fixed.</p>
+                                        <p class="mt-4 text-xs leading-relaxed text-stone-500">Upload your store and Wallet logos @if(!$newStylesAvailable)and a banner @endif before creating the store. Unreadable color combinations are blocked until they are fixed.</p>
                                     </div>
                                     <div class="rounded-xl bg-white border border-stone-200/80 p-5 shadow-sm">
                                         <p class="text-sm font-semibold text-stone-800">Asset guidance</p>
                                         <ul class="mt-3 space-y-2 text-sm text-stone-600">
                                             <li>Lead with a clear logo first. It improves the join page, poster, and wallet pass all at once.</li>
                                             <li>Only add a hero image when it adds atmosphere without making the pass harder to read.</li>
-                                            <li>Upload all three images — they power the join page, wallet pass, and poster for this store.</li>
+                                            <li>@if($newStylesAvailable)The two logos power the join page, Wallet pass, and poster. The Simple card generates its own artwork.@else The logos and banner power the join page, Wallet pass, and poster.@endif</li>
                                         </ul>
                                     </div>
                                     <div class="rounded-xl bg-stone-50/80 border border-stone-200/80 p-5">

@@ -51,6 +51,7 @@ class RegisteredUserController extends Controller
                 'address' => $request->filled('address') ? $request->string('address')->toString() : null,
                 'reward_target' => 9,
                 'reward_title' => 'Free coffee',
+                'card_design' => \App\Support\CoffeeCardSample::available() ? 'simple' : 'classic',
                 'onboarding_step' => MerchantOnboardingWizardController::STEP_STORE_BASICS,
             ]);
 

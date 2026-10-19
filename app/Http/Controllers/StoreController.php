@@ -88,11 +88,12 @@ class StoreController extends Controller
         unset($validated['logo'], $validated['pass_logo'], $validated['pass_hero_image']);
 
         $validated = \App\Support\CardDesign::saveUploads($request, $validated);
+        $validated['card_design'] ??= \App\Support\CoffeeCardSample::available() ? 'simple' : 'classic';
         $store = Auth::user()->stores()->create($validated);
 
         $program = $store->loyaltyPrograms()->create([
             'name' => $validated['reward_title'],
-            'card_design' => $validated['card_design'] ?? 'classic',
+            'card_design' => $validated['card_design'],
             ...array_intersect_key($validated, array_flip(\App\Support\CardDesign::FIELDS)),
             'slug' => $store->slug,
             'reward_target' => $validated['reward_target'],

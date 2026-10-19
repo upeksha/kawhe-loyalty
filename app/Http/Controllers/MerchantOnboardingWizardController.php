@@ -126,6 +126,7 @@ class MerchantOnboardingWizardController extends Controller
         }
 
         $store = Auth::user()->stores()->create(array_merge($validated, [
+            'card_design' => \App\Support\CoffeeCardSample::available() ? 'simple' : 'classic',
             'onboarding_step' => Store::ONBOARDING_STEP_CARD_DESIGN,
         ]));
         $store->ensureDefaultProgramExists();

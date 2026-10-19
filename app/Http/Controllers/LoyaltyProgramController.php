@@ -116,6 +116,7 @@ class LoyaltyProgramController extends Controller
             'pass_hero_image' => ['nullable', 'image', 'mimes:png,jpg,jpeg,webp', 'max:2048', new ValidWalletImage('hero')],
         ]);
         $validated = \App\Support\CardDesign::saveUploads($request, $validated);
+        $validated['card_design'] ??= \App\Support\CoffeeCardSample::available() ? 'simple' : 'classic';
         $imageWarnings = $this->walletImageValidator->warningsForRequest($request, [
             'logo' => 'logo',
             'pass_logo' => 'logo',

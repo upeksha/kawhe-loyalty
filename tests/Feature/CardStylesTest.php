@@ -7,8 +7,11 @@ use App\Services\Wallet\Artwork\CardStyleArtwork;
 use App\Support\CardDesign;
 use App\Support\CoffeeCardSample;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\URL;
+use Laravel\Cashier\Subscription;
 
 beforeEach(function () {
     config(['app.env' => 'testing', 'app.url' => 'https://testing.kawhe.shop', 'filesystems.assets_disk' => 'public']);
@@ -23,6 +26,69 @@ function cardStyleOwner(): array
 
     return [$owner, $store, $store->resolvedDefaultProgram()];
 }
+
+test('new merchant starts with a Simple card and can finish branding without a banner', function (string $environment) {
+    config(['app.env' => $environment, 'app.url' => $environment === 'production' ? 'https://app.kawhe.shop' : 'https://testing.kawhe.shop']);
+    Mail::fake();
+
+    $this->post('/register', [
+        'name' => 'New cafe owner', 'email' => 'new-cafe@example.com', 'store_name' => 'New Cafe',
+        'password' => 'test-password123', 'password_confirmation' => 'test-password123',
+    ])->assertRedirect(route('verification.notice'));
+
+    $owner = User::where('email', 'new-cafe@example.com')->firstOrFail();
+    $verificationUrl = URL::temporarySignedRoute('verification.verify', now()->addHour(), [
+        'id' => $owner->id, 'hash' => sha1($owner->email),
+    ], absolute: false);
+    $this->post($verificationUrl)->assertRedirect();
+    $store = $owner->stores()->firstOrFail();
+    $this->post(route('merchant.onboarding.wizard.store-basics.store'), [
+        'name' => 'New Cafe', 'reward_target' => 9, 'reward_title' => 'Free coffee',
+    ])->assertRedirect(route('merchant.onboarding.wizard.card-design'));
+    expect($store->card_design)->toBe('simple');
+    expect($store->resolvedDefaultProgram()->card_design)->toBe('simple');
+    $this->get(route('merchant.onboarding.wizard.card-design'))
+        ->assertOk()->assertSee("cardDesign: 'simple'", false);
+
+    $this->post(route('merchant.onboarding.wizard.card-design.store'), [
+        'card_design' => 'simple', 'brand_color' => '#0EA5E9', 'background_color' => '#1F2937',
+        'logo' => UploadedFile::fake()->image('logo.png', 200, 200),
+        'pass_logo' => UploadedFile::fake()->image('pass-logo.png', 160, 50),
+    ])->assertRedirect(route('merchant.onboarding.wizard.customer-form'))->assertSessionHasNoErrors();
+    expect($store->fresh()->pass_hero_image_path)->toBeNull();
+    expect($store->fresh()->resolvedDefaultProgram()->card_design)->toBe('simple');
+})->with(['testing', 'production']);
+
+test('additional stores and cards default to Simple while existing Classic cards stay Classic', function () {
+    [$owner, $existingStore, $existingProgram] = cardStyleOwner();
+    $owner->forceFill(['stripe_id' => 'cus_simple_default'])->save();
+    Subscription::create(['user_id' => $owner->id, 'name' => 'default', 'stripe_id' => 'sub_simple_default', 'stripe_status' => 'active', 'quantity' => 1]);
+    $existingProgram->update(['card_design' => 'classic']);
+
+    $this->actingAs($owner)->get(route('merchant.stores.create'))
+        ->assertOk()->assertSee('Pass hero image <span class="text-stone-500 font-normal">(optional)', false);
+    $this->post(route('merchant.stores.store'), [
+        'name' => 'Second Cafe', 'reward_target' => 8, 'reward_title' => 'Free coffee',
+        'brand_color' => '#0EA5E9', 'background_color' => '#1F2937',
+        'logo' => UploadedFile::fake()->image('logo.png', 200, 200),
+        'pass_logo' => UploadedFile::fake()->image('pass-logo.png', 160, 50),
+    ])->assertRedirect(route('merchant.stores.index'))->assertSessionHasNoErrors();
+
+    $newStore = $owner->stores()->where('name', 'Second Cafe')->firstOrFail();
+    expect($newStore->card_design)->toBe('simple');
+    expect($newStore->resolvedDefaultProgram()->card_design)->toBe('simple');
+    expect($newStore->pass_hero_image_path)->toBeNull();
+
+    $this->get(route('merchant.stores.programs.create', $newStore))->assertOk()->assertSee("cardDesign: 'simple'", false);
+    $this->post(route('merchant.stores.programs.store', $newStore), [
+        'name' => 'Pastry card', 'reward_target' => 6, 'reward_title' => 'Free pastry',
+        'require_verification_for_redemption' => 1,
+    ])->assertSessionHasNoErrors();
+    expect($newStore->loyaltyPrograms()->where('name', 'Pastry card')->firstOrFail()->card_design)->toBe('simple');
+    expect($existingProgram->fresh()->card_design)->toBe('classic');
+    $this->get(route('merchant.stores.programs.edit', [$existingStore, $existingProgram]))
+        ->assertOk()->assertSee("cardDesign: 'classic'", false);
+});
 
 test('all three styles save and render without changing customer balances', function (string $style, string $environment) {
     config(['app.env' => $environment, 'app.url' => $environment === 'production' ? 'https://app.kawhe.shop' : 'https://testing.kawhe.shop']);
@@ -103,11 +169,10 @@ test('artwork caches vary by design and simple always uses coffee', function () 
     $a->refresh();
     expect(CoffeeCardSample::artwork($a, 'apple'))->not->toBe($illustrated);
     foreach ([1, 6, 10, 20, 21, 1000] as $target) {
-        $png = app(CardStyleArtwork::class)->render($target,1,true,'apple',CardDesign::options($program));
+        $png = app(CardStyleArtwork::class)->render($target, 1, true, 'apple', CardDesign::options($program));
         expect(strlen($png))->toBeLessThan(500000);
     }
 });
-
 
 test('failed onboarding upload retains chosen colour and style without advancing', function () {
     [$owner, $store, $program] = cardStyleOwner();
@@ -121,7 +186,6 @@ test('failed onboarding upload retains chosen colour and style without advancing
     $this->get(route('merchant.onboarding.wizard.card-design'))->assertOk()->assertSee('value="#FAEDD7"', false);
     expect($store->fresh()->onboarding_step)->toBe('card_design');
 });
-
 
 test('production Google Wallet artwork tracks stamps reward and redemption for each style', function (string $style) {
     config(['app.env' => 'production', 'app.url' => 'https://app.kawhe.shop']);
@@ -140,7 +204,9 @@ test('production Google Wallet artwork tracks stamps reward and redemption for e
         $account->reward_balance = $rewards;
         $image = $method->invoke($service, $account);
         $urls[] = $image->getSourceUri()->getUri();
-        if ($rewards) expect($image->getContentDescription()->getDefaultValue()->getValue())->toContain('1 rewards available');
+        if ($rewards) {
+            expect($image->getContentDescription()->getDefaultValue()->getValue())->toContain('1 rewards available');
+        }
     }
     expect($urls[0])->not->toBe($urls[1]);
     expect($urls[1])->not->toBe($urls[2]);
