@@ -4,7 +4,7 @@ import { realtimeConfig } from '../resources/js/realtime-config.js';
 test('runtime environment key connects securely to the current origin without build variables',()=>{
  for(const hostname of ['testing.kawhe.shop','app.kawhe.shop']) {
   const c=realtimeConfig({key:hostname+'-public'}, {}, {hostname,protocol:'https:',port:''});
-  assert.equal(c.wsHost,hostname);assert.equal(c.key,hostname+'-public');assert.equal(c.wssPort,443);assert.equal(c.forceTLS,true);assert.deepEqual(c.enabledTransports,['wss']);
+  assert.equal(c.wsHost,hostname);assert.equal(c.key,hostname+'-public');assert.equal(c.wssPort,443);assert.equal(c.forceTLS,true);assert.deepEqual(c.enabledTransports,['ws','wss']);
  }
 });
 test('runtime settings override stale testing build configuration',()=>{
