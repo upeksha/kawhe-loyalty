@@ -215,3 +215,27 @@ test('fresh signup and repeat signup behave consistently across deployment envir
     $this->post(recoveryUrl())->assertRedirect(route('card.show', ['public_token' => $card->public_token]));
     expect($customer->loyaltyAccounts()->count())->toBe(1);
 })->with(['testing', 'production']);
+
+test('signup explains separate store enrollment without exposing or changing existing cards', function () {
+    $other = Store::factory()->create(['name' => 'New Cafe'])->resolvedDefaultProgram();
+    $this->post(route('join.store', ['slug' => $other->slug, 't' => $other->join_token]), ['email' => $this->customer->email])
+        ->assertOk()->assertSee('Check your email to continue')->assertSee('New Cafe')->assertSee('stay separate')->assertDontSee($this->account->public_token)
+        ->assertSee(e(route('join.show', ['slug' => $other->slug, 't' => $other->join_token])), false);
+    $mail = Mail::queued(CustomerCardRecovery::class)->last();
+    expect($mail->envelope()->subject)->toBe('Continue to New Cafe');
+    expect($mail->render())->toContain('Continue to New Cafe', 'separate loyalty card', '20 minutes');
+    $this->get($mail->recoveryUrl)->assertOk()->assertSee('Confirm and continue');
+    expect(LoyaltyAccount::count())->toBe(1);
+    $this->post($mail->recoveryUrl)->assertRedirect();
+    expect(LoyaltyAccount::count())->toBe(2);
+    $this->post($mail->recoveryUrl)->assertStatus(410);
+    expect($this->account->fresh()->public_token)->toBe($this->account->public_token);
+});
+
+test('explicit recovery retains recovery email wording', function () {
+    $this->post($this->lookupUrl, ['email' => $this->customer->email])->assertOk()->assertSee('Check your email')->assertDontSee('Check your email to continue');
+    $mail = Mail::queued(CustomerCardRecovery::class)->last();
+    expect($mail->joining)->toBeFalse();
+    expect($mail->envelope()->subject)->toBe('Open your loyalty card at '.$this->store->name);
+    expect($mail->render())->toContain('Open my card')->not->toContain('separate loyalty card');
+});

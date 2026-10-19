@@ -237,7 +237,7 @@ class JoinController extends Controller
         if ($customer) {
             app(CardRecoveryService::class)->send($customer, $program, allowEnrollment: true);
 
-            return response()->view('join.recovery-sent', compact('store', 'program', 'token'))
+            return response()->view('join.recovery-sent', [...compact('store', 'program', 'token'), 'joining' => true])
                 ->header('Cache-Control', 'no-store, private');
         }
 

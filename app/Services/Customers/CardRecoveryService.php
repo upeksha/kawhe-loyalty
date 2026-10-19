@@ -42,7 +42,7 @@ class CardRecoveryService
         // Use the configured origin, never an untrusted request Host header.
         $url = rtrim(config('app.url'), '/').route('customer.card.recover', ['token' => $token], false);
         try {
-            Mail::to($customer->email)->queue(new CustomerCardRecovery($url, $program->store->name));
+            Mail::to($customer->email)->queue(new CustomerCardRecovery($url, $program->store->name, $allowEnrollment));
         } catch (\Throwable $e) {
             DB::table('customer_card_recoveries')->where('token_hash', $hash)->delete();
             RateLimiter::decrement($key);
