@@ -26,13 +26,13 @@ test('saved card design images do not require replacement on revisiting onboardi
 });
 
 
-test('production onboarding exposes the required classic banner even after invalid style input', function () {
+test('production onboarding preserves classic cards and offers the new designs', function () {
     config(['app.env' => 'production', 'app.url' => 'https://app.kawhe.shop']);
     $owner = User::factory()->create();
     Store::factory()->for($owner)->create(['onboarding_step' => 'card_design', 'onboarding_completed_at' => null, 'logo_path' => null, 'pass_logo_path' => null, 'pass_hero_image_path' => null]);
-    $response = $this->actingAs($owner)->withSession(['_old_input' => ['card_design' => 'simple']])
+    $response = $this->actingAs($owner)
         ->get(route('merchant.onboarding.wizard.card-design'))->assertOk();
-    $response->assertSee("cardDesign: 'classic'", false);
+    $response->assertSee("cardDesign: 'classic'", false)->assertSee('value="simple"', false)->assertSee('value="illustrated"', false)->assertSee('value="photo"', false);
     $dom = new DOMDocument;
     @$dom->loadHTML($response->getContent());
     expect((new DOMXPath($dom))->query('//input[@name="pass_hero_image" and @required]')->length)->toBe(1);

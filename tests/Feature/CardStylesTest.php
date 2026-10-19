@@ -24,7 +24,8 @@ function cardStyleOwner(): array
     return [$owner, $store, $store->resolvedDefaultProgram()];
 }
 
-test('all three styles save and render without changing customer balances', function (string $style) {
+test('all three styles save and render without changing customer balances', function (string $style, string $environment) {
+    config(['app.env' => $environment, 'app.url' => $environment === 'production' ? 'https://app.kawhe.shop' : 'https://testing.kawhe.shop']);
     [$owner,$store,$program] = cardStyleOwner();
     $account = LoyaltyAccount::factory()->create(['store_id' => $store->id, 'loyalty_program_id' => $program->id, 'stamp_count' => 2, 'reward_balance' => 1]);
     $data = ['name' => 'My card', 'reward_target' => $program->reward_target, 'reward_title' => 'A large coffee and a freshly baked pastry', 'card_design' => $style, 'card_pattern' => 'waves', 'stamp_icon' => 'heart', 'background_color' => '#FAEDD7', 'require_verification_for_redemption' => 1];
@@ -46,7 +47,7 @@ test('all three styles save and render without changing customer balances', func
         expect(array_slice(getimagesizefromstring(\App\Support\StoreAssets::get($path)), 0, 2))->toBe($size);
     }
     $this->get('/c/'.$account->public_token)->assertOk()->assertSee('coffee-sample-art');
-})->with(['simple', 'illustrated', 'photo']);
+})->with(['simple', 'illustrated', 'photo'])->with(['testing', 'production']);
 
 test('photo and custom icon uploads are required validated and persist on editing', function () {
     [$owner,$store,$program] = cardStyleOwner();
@@ -120,3 +121,28 @@ test('failed onboarding upload retains chosen colour and style without advancing
     $this->get(route('merchant.onboarding.wizard.card-design'))->assertOk()->assertSee('value="#FAEDD7"', false);
     expect($store->fresh()->onboarding_step)->toBe('card_design');
 });
+
+
+test('production Google Wallet artwork tracks stamps reward and redemption for each style', function (string $style) {
+    config(['app.env' => 'production', 'app.url' => 'https://app.kawhe.shop']);
+    [$owner, $store, $program] = cardStyleOwner();
+    $program->update(['card_design' => $style]);
+    if ($style === 'photo') {
+        $path = \App\Support\StoreAssets::storeUploaded(UploadedFile::fake()->image('cafe.png', 600, 400), 'card-designs');
+        $program->update(['card_photo_path' => $path]);
+    }
+    $account = LoyaltyAccount::factory()->create(['store_id' => $store->id, 'loyalty_program_id' => $program->id]);
+    $service = (new ReflectionClass(\App\Services\Wallet\GoogleWalletPassService::class))->newInstanceWithoutConstructor();
+    $method = new ReflectionMethod($service, 'buildStampStripImage');
+    $urls = [];
+    foreach ([[0, 0], [1, 0], [0, 1], [0, 0]] as [$stamps, $rewards]) {
+        $account->stamp_count = $stamps;
+        $account->reward_balance = $rewards;
+        $image = $method->invoke($service, $account);
+        $urls[] = $image->getSourceUri()->getUri();
+        if ($rewards) expect($image->getContentDescription()->getDefaultValue()->getValue())->toContain('1 rewards available');
+    }
+    expect($urls[0])->not->toBe($urls[1]);
+    expect($urls[1])->not->toBe($urls[2]);
+    expect($urls[3])->toBe($urls[0]);
+})->with(['simple', 'illustrated', 'photo']);

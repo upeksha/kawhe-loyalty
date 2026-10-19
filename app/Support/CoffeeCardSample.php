@@ -4,13 +4,15 @@ namespace App\Support;
 
 use App\Models\LoyaltyAccount;
 
-/** Isolated coffee design trial; enabled only for selected programs on testing. */
+/** Shared card-style rendering for explicitly selected loyalty programs. */
 class CoffeeCardSample
 {
     public static function available(): bool
     {
-        return config('app.env') === 'testing'
-            && parse_url(config('app.url'), PHP_URL_HOST) === 'testing.kawhe.shop';
+        return in_array([config('app.env'), parse_url(config('app.url'), PHP_URL_HOST)], [
+            ['testing', 'testing.kawhe.shop'],
+            ['production', 'app.kawhe.shop'],
+        ], true);
     }
 
     public static function rules(): array

@@ -5,6 +5,7 @@
     <div>
         <label for="card_design" class="block text-base font-semibold text-stone-900">Card style</label>
         <select id="card_design" name="card_design" x-model="cardDesign" class="mt-2 block w-full rounded-lg border-stone-300 text-base">
+            <option value="classic">Classic — uploaded Wallet banner</option>
             <option value="simple">Simple — one colour, coffee stamps</option>
             <option value="illustrated">Illustrated — patterns and artwork</option>
             <option value="photo">Photo — your café or coffee image</option>

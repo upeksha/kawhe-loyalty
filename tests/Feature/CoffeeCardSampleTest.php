@@ -16,11 +16,13 @@ function coffeeSampleAccount(): LoyaltyAccount
     return $account->fresh(['store', 'loyaltyProgram', 'customer']);
 }
 
-test('coffee artwork requires an explicit saved choice and testing environment', function () {
+test('coffee artwork requires an explicit saved choice and matching environment', function () {
     $account = coffeeSampleAccount();
     expect(CoffeeCardSample::enabled($account))->toBeTrue();
     config(['app.env' => 'production']);
     expect(CoffeeCardSample::enabled($account))->toBeFalse();
+    config(['app.url' => 'https://app.kawhe.shop']);
+    expect(CoffeeCardSample::enabled($account))->toBeTrue();
     config(['app.env' => 'testing', 'app.url' => 'https://app.kawhe.shop']);
     expect(CoffeeCardSample::enabled($account))->toBeFalse();
     config(['app.url' => 'https://testing.kawhe.shop']);

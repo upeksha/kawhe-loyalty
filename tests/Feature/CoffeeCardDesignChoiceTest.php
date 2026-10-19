@@ -39,7 +39,7 @@ test('merchant can create and switch coffee style while retaining reward balance
     $this->get('/c/'.$account->public_token)->assertOk()->assertDontSee('id="coffee-sample-art"', false);
 });
 
-test('design selection rejects unknown styles production requests and other merchants', function () {
+test('design selection rejects unknown styles mismatched environments and other merchants', function () {
     [$owner, $store] = coffeeDesignMerchant();
     $program = $store->resolvedDefaultProgram();
     $data = ['name' => 'Coffee', 'reward_target' => $program->reward_target, 'reward_title' => 'Coffee', 'card_design' => 'unknown'];

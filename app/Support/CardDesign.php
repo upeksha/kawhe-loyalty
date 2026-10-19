@@ -22,7 +22,7 @@ class CardDesign
     public static function formStyle($model = null): string
     {
         return CoffeeCardSample::available()
-            ? old('card_design', self::style($model))
+            ? old('card_design', $model?->card_design === 'classic' ? 'classic' : self::style($model))
             : 'classic';
     }
 
