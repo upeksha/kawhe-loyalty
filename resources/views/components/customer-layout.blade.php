@@ -26,6 +26,9 @@
         <title>{{ $resolvedDocumentTitle }}</title>
         <link rel="preconnect" href="https://fonts.bunny.net">
         <link href="https://fonts.bunny.net/css?family=figtree:400,500,600,700&display=swap" rel="stylesheet" />
+        @if(config('broadcasting.default') === 'reverb' && config('broadcasting.connections.reverb.key'))
+            <meta name="kawhe-reverb-key" content="{{ config('broadcasting.connections.reverb.key') }}">
+        @endif
         @vite(['resources/css/app.css', 'resources/js/app.js'])
         <style>{!! $theme->cssVariableBlock('.customer-page') !!}</style>
         @if($signupTheme)

@@ -292,3 +292,9 @@ test('browser refresh snapshot exposes card revision and card scoped verificatio
     $this->getJson('/api/card/'.$account->public_token)->assertOk()->assertJsonPath('version', 7)->assertJsonPath('verified', true);
     $this->get('/c/'.$account->public_token)->assertOk()->assertSee('js/card-refresh.js')->assertSee('watchCard');
 });
+
+test('customer card renders only public runtime websocket configuration', function () {
+    config(['broadcasting.default' => 'reverb', 'broadcasting.connections.reverb.key' => 'public-browser-test', 'broadcasting.connections.reverb.secret' => 'private-secret-never-render']);
+    $account = LoyaltyAccount::factory()->create();
+    $this->get('/c/'.$account->public_token)->assertOk()->assertSee('kawhe-reverb-key')->assertSee('public-browser-test')->assertDontSee('private-secret-never-render')->assertDontSee('x-init="init()"', false);
+});

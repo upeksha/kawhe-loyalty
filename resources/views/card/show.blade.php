@@ -7,7 +7,6 @@
     shell="card"
     title="My Card"
     x-data="cardApp()"
-    x-init="init()"
 >
     <x-slot name="brand"></x-slot>
     <header class="mb-6">
@@ -467,14 +466,8 @@
                                 
                                 channel
                                     .listen('.StampUpdated', (e) => {
-                                        console.log('Stamp Updated event received:', e);
-                                        if (e && e.stamp_count !== undefined) {
-                                            this.showUpdateNotification();
-                                            this.updateUI(e);
-                                            this.loadTransactionHistory();
-                                        } else {
-                                            this.refreshCardWithRetry();
-                                        }
+                                        // Re-render the authoritative balance, artwork and activity together.
+                                        window.location.reload();
                                     })
                                     .error((error) => {
                                         console.error('Echo channel error:', error);
