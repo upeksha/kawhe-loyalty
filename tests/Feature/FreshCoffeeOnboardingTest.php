@@ -8,8 +8,8 @@ use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\URL;
 
-test('fresh coffee cafe completes verified onboarding and issues a customer card with wallet actions', function (string $style) {
-    config(['app.env' => 'testing', 'app.url' => 'https://testing.kawhe.shop']);
+test('fresh coffee cafe completes verified onboarding and issues a customer card with wallet actions', function (string $style, string $environment) {
+    config(['app.env' => $environment, 'app.url' => $environment === 'production' ? 'https://app.kawhe.shop' : 'https://testing.kawhe.shop']);
     \Illuminate\Support\Facades\Storage::fake('public');
     Mail::fake();
     Notification::fake();
@@ -71,7 +71,7 @@ test('fresh coffee cafe completes verified onboarding and issues a customer card
         $art = \App\Support\CoffeeCardSample::artwork($account, $platform);
         expect(\App\Support\StoreAssets::exists($art))->toBeTrue();
     }
-})->with(['simple', 'illustrated', 'photo']);
+})->with(['simple', 'illustrated', 'photo'])->with(['testing', 'production']);
 
 test('coffee palette applies consistently without overwriting classic colours or enabling production', function () {
     config(['app.env' => 'testing', 'app.url' => 'https://testing.kawhe.shop']);

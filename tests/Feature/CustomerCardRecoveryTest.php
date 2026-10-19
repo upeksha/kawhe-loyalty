@@ -202,3 +202,16 @@ test('recovering a styled card preserves partial stamps rewards and its existing
     $this->post($url)->assertStatus(410);
     expect($this->account->fresh()->only(array_keys($identity)))->toBe($identity);
 })->with(['simple', 'illustrated', 'photo']);
+
+
+test('fresh signup and repeat signup behave consistently across deployment environments', function (string $environment) {
+    config(['app.env' => $environment, 'app.url' => $environment === 'production' ? 'https://app.kawhe.shop' : 'https://testing.kawhe.shop']);
+    $this->post($this->joinUrl, ['email' => 'new-customer@example.invalid', 'name' => 'TEST New Customer'])->assertRedirect();
+    $customer = Customer::where('email', 'new-customer@example.invalid')->sole();
+    $card = $customer->loyaltyAccounts()->sole();
+    $this->post($this->joinUrl, ['email' => $customer->email])->assertOk()->assertViewIs('join.recovery-sent')->assertDontSee($card->public_token);
+    expect(parse_url(recoveryUrl(), PHP_URL_HOST))->toBe(parse_url(config('app.url'), PHP_URL_HOST));
+    $this->get(recoveryUrl())->assertOk()->assertViewIs('join.recovery-confirm');
+    $this->post(recoveryUrl())->assertRedirect(route('card.show', ['public_token' => $card->public_token]));
+    expect($customer->loyaltyAccounts()->count())->toBe(1);
+})->with(['testing', 'production']);
