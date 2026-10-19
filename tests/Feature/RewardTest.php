@@ -284,3 +284,11 @@ test('one card QR supports staff stamp and verified redemption with safe retries
     $this->postJson($prefix.'/scanner/preview', $scan)->assertOk()->assertJsonPath('has_rewards', false);
     $this->actingAs(User::factory()->create())->postJson($prefix.'/scanner/preview', $scan)->assertForbidden();
 })->with(['web' => '', 'mobile API' => '/api/v1']);
+
+test('browser refresh snapshot exposes card revision and card scoped verification', function () {
+    $account = LoyaltyAccount::factory()->create(['version' => 7, 'verified_at' => null]);
+    $this->getJson('/api/card/'.$account->public_token)->assertOk()->assertJsonPath('version', 7)->assertJsonPath('verified', false);
+    $account->update(['verified_at' => now()]);
+    $this->getJson('/api/card/'.$account->public_token)->assertOk()->assertJsonPath('version', 7)->assertJsonPath('verified', true);
+    $this->get('/c/'.$account->public_token)->assertOk()->assertSee('js/card-refresh.js')->assertSee('watchCard');
+});

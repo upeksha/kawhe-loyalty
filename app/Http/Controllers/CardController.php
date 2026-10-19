@@ -124,6 +124,8 @@ class CardController extends Controller
         $rewardBalance = $account->reward_balance ?? 0;
 
         return response()->json([
+            'version' => (int) $account->version,
+            'verified' => (bool) $account->verified_at,
             'coffee_artwork_url' => \App\Support\CoffeeCardSample::enabled($account)
                 ? \App\Support\StoreAssets::url(\App\Support\CoffeeCardSample::artwork($account, 'web')) : null,
             'stamp_count' => $account->stamp_count,

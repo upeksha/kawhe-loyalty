@@ -317,6 +317,16 @@
             @endpush
 
         @push('scripts')
+        <script type="module">
+            import { watchCard } from '{{ asset('js/card-refresh.js') }}';
+            const stopWatchingCard = watchCard({
+                url: @json(url('/api/card/'.$account->public_token)),
+                version: @json((int) $account->version),
+                verified: @json((bool) $account->verified_at),
+            });
+            window.addEventListener('pagehide', stopWatchingCard, { once: true });
+            window.addEventListener('pageshow', event => { if (event.persisted) window.location.reload(); });
+        </script>
         <script>
             const themePage = document.querySelector('.customer-page');
             const themeVar = (name) => themePage ? getComputedStyle(themePage).getPropertyValue(name).trim() : '';
