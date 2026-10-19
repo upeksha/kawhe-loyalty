@@ -15,7 +15,7 @@
     >
         <form method="POST" action="{{ route('merchant.onboarding.wizard.card-design.store') }}" enctype="multipart/form-data" id="card-design-form"
         x-data="{
-            cardDesign: @js(old('card_design', \App\Support\CardDesign::style($store))),
+            cardDesign: @js(\App\Support\CardDesign::formStyle($store)),
             storeName: {{ json_encode($store->name ?? '') }},
             rewardTarget: {{ (int) ($store->reward_target ?? 9) }},
             rewardTitle: {{ json_encode($store->reward_title ?? 'Free coffee') }},
@@ -151,7 +151,7 @@
                                         <div class="min-w-0 flex-1">
                                             <label class="inline-flex min-h-11 cursor-pointer items-center justify-center rounded-lg border border-stone-300 bg-white px-3 text-sm font-semibold text-brand-700 focus-within:ring-2 focus-within:ring-brand-500">
                                                 <span x-text="{{ $upload['preview'] }} ? 'Replace image' : 'Choose image'">Choose image</span>
-                                                <input type="file" id="{{ $upload['id'] }}" name="{{ $upload['id'] }}" @required(blank($store->{$upload['path']}) && (old('card_design', \App\Support\CardDesign::style($store)) === 'classic' || $upload['id'] !== 'pass_hero_image')) :required="{{ blank($store->{$upload['path']}) ? 'true' : 'false' }} && (cardDesign === 'classic' || '{{ $upload['id'] }}' !== 'pass_hero_image')" x-ref="{{ $upload['ref'] }}" accept="image/png,image/jpeg,image/jpg,image/webp" aria-describedby="{{ $upload['id'] }}-hint" class="sr-only">
+                                                <input type="file" id="{{ $upload['id'] }}" name="{{ $upload['id'] }}" @required(blank($store->{$upload['path']}) && (\App\Support\CardDesign::formStyle($store) === 'classic' || $upload['id'] !== 'pass_hero_image')) :required="{{ blank($store->{$upload['path']}) ? 'true' : 'false' }} && (cardDesign === 'classic' || '{{ $upload['id'] }}' !== 'pass_hero_image')" x-ref="{{ $upload['ref'] }}" accept="image/png,image/jpeg,image/jpg,image/webp" aria-describedby="{{ $upload['id'] }}-hint" class="sr-only">
                                             </label>
                                             <p class="mt-2 break-all text-xs text-stone-500" x-text="{{ $upload['preview'] }} ? ($refs.{{ $upload['ref'] }}?.files[0]?.name || 'Saved image') : 'No image selected'"></p>
                                         </div>

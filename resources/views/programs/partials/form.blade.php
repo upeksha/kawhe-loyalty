@@ -9,7 +9,7 @@
 <div
     class="space-y-6"
     x-data="{
-            cardDesign: @js(old('card_design', \App\Support\CardDesign::style($program))),
+            cardDesign: @js(\App\Support\CardDesign::formStyle($program)),
         brandColor: @js(old('brand_color', $program?->brand_color ?? $store->brand_color ?? '#0EA5E9')),
         bgColor: @js(old('background_color', $program?->background_color ?? $store->background_color ?? '#1F2937')),
         hexToRgb(hex) {

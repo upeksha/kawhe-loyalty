@@ -19,6 +19,13 @@ class CardDesign
         };
     }
 
+    public static function formStyle($model = null): string
+    {
+        return CoffeeCardSample::available()
+            ? old('card_design', self::style($model))
+            : 'classic';
+    }
+
     public static function rules(Request $request, $model = null): array
     {
         $style = $request->input('card_design', $model?->card_design ?? 'simple');

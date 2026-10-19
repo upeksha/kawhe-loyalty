@@ -12,7 +12,7 @@ test('card design keeps uploads and its guarded continue button within the form'
     @$dom->loadHTML($response->getContent());
     $xpath = new DOMXPath($dom);
     expect($xpath->query('//form[@id="card-design-form"]//button[@type="submit"]')->length)->toBe(1);
-    expect($xpath->query('//form[@id="card-design-form"]//input[@type="file" and @required]')->length)->toBe(2);
+    expect($xpath->query('//form[@id="card-design-form"]//input[@type="file" and @required]')->length)->toBe(3);
     expect($xpath->query('//input[@type="text" and @pattern]')->length)->toBe(2);
 });
 
@@ -23,4 +23,17 @@ test('saved card design images do not require replacement on revisiting onboardi
     $dom = new DOMDocument;
     @$dom->loadHTML($response->getContent());
     expect((new DOMXPath($dom))->query('//input[@type="file" and @required]')->length)->toBe(0);
+});
+
+
+test('production onboarding exposes the required classic banner even after invalid style input', function () {
+    config(['app.env' => 'production', 'app.url' => 'https://app.kawhe.shop']);
+    $owner = User::factory()->create();
+    Store::factory()->for($owner)->create(['onboarding_step' => 'card_design', 'onboarding_completed_at' => null, 'logo_path' => null, 'pass_logo_path' => null, 'pass_hero_image_path' => null]);
+    $response = $this->actingAs($owner)->withSession(['_old_input' => ['card_design' => 'simple']])
+        ->get(route('merchant.onboarding.wizard.card-design'))->assertOk();
+    $response->assertSee("cardDesign: 'classic'", false);
+    $dom = new DOMDocument;
+    @$dom->loadHTML($response->getContent());
+    expect((new DOMXPath($dom))->query('//input[@name="pass_hero_image" and @required]')->length)->toBe(1);
 });
