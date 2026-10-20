@@ -18,10 +18,12 @@ APP_DIR_DEFAULT="$(cd "$SCRIPT_DIR/.." && pwd)"
 APP_DIR="${APP_DIR:-$APP_DIR_DEFAULT}"
 REMOTE_NAME="${REMOTE_NAME:-origin}"
 TARGET_REF="${1:-}"
-RUN_NPM_BUILD="${RUN_NPM_BUILD:-1}"
+RUN_NPM_BUILD="${RUN_NPM_BUILD:-0}"
 RUN_MIGRATIONS="${RUN_MIGRATIONS:-1}"
 ALLOW_DIRTY="${ALLOW_DIRTY:-0}"
 WEB_USER="${WEB_USER:-www-data}"
+PREBUILT_ASSET_TAR="${PREBUILT_ASSET_TAR:-}"
+PREBUILT_ASSET_SHA256="${PREBUILT_ASSET_SHA256:-}"
 
 if [[ -z "$TARGET_REF" ]]; then
   echo "Usage: $0 <git-ref>"
@@ -30,6 +32,50 @@ if [[ -z "$TARGET_REF" ]]; then
   echo "  APP_DIR=/var/www/kawhe $0 1a5e99cbfcfa8c6e15730f61689c79271d50edf3"
   exit 1
 fi
+
+if [[ "$RUN_NPM_BUILD" != "0" ]]; then
+  echo "On-server npm builds are disabled. Build and test locally, then provide a prebuilt release archive." >&2
+  exit 1
+fi
+
+if [[ -z "$PREBUILT_ASSET_TAR" || -z "$PREBUILT_ASSET_SHA256" || ! -f "$PREBUILT_ASSET_TAR" ]]; then
+  echo "A prebuilt release archive and its SHA-256 are required (PREBUILT_ASSET_TAR and PREBUILT_ASSET_SHA256)." >&2
+  exit 1
+fi
+
+printf '%s  %s\n' "$PREBUILT_ASSET_SHA256" "$PREBUILT_ASSET_TAR" | sha256sum --check --status || {
+  echo "Prebuilt release archive checksum does not match." >&2
+  exit 1
+}
+
+release_stage="$(mktemp -d "${TMPDIR:-/tmp}/kawhe-release.XXXXXX")"
+trap 'rm -rf "$release_stage"' EXIT
+
+# Only accept the two paths produced by package-release-local.sh. Reject an
+# unexpected archive before tar extracts anything on the server.
+while IFS= read -r entry; do
+  case "$entry" in
+    /*|*..*) echo "Unsafe path in prebuilt release archive: $entry" >&2; exit 1;;
+    release-commit.txt|build|build/|build/*) ;;
+    *) echo "Unexpected path in prebuilt release archive: $entry" >&2; exit 1;;
+  esac
+done < <(tar -tzf "$PREBUILT_ASSET_TAR")
+tar -xzf "$PREBUILT_ASSET_TAR" -C "$release_stage" --no-same-owner
+if [[ -n "$(find "$release_stage" -type l -print -quit)" || ! -s "$release_stage/build/manifest.json" || ! -s "$release_stage/release-commit.txt" ]]; then
+  echo "Prebuilt release archive is incomplete or contains symlinks." >&2
+  exit 1
+fi
+
+php -r '
+  $base = $argv[1];
+  $manifest = json_decode(file_get_contents($base."/manifest.json"), true, 512, JSON_THROW_ON_ERROR);
+  if (!is_array($manifest) || !$manifest) exit(1);
+  foreach ($manifest as $entry) {
+    foreach (array_merge(isset($entry["file"]) ? [$entry["file"]] : [], $entry["css"] ?? [], $entry["assets"] ?? []) as $asset) {
+      if (!is_string($asset) || str_contains($asset, "..") || !is_file($base."/".$asset)) exit(1);
+    }
+  }
+' "$release_stage/build" || { echo "Prebuilt Vite manifest references missing assets." >&2; exit 1; }
 
 case "$APP_DIR" in
   /var/www/kawhe-testing) DEPLOY_HEALTH_URL="${DEPLOY_HEALTH_URL:-https://testing.kawhe.shop/up}";;
@@ -69,6 +115,11 @@ git fetch "$REMOTE_NAME" --tags
 target_commit="$(git rev-parse "$TARGET_REF")"
 echo "Target commit:  $target_commit"
 
+if [[ "$(cat "$release_stage/release-commit.txt")" != "$target_commit" ]]; then
+  echo "Prebuilt assets were made for a different commit; refusing deployment." >&2
+  exit 1
+fi
+
 if [[ "$current_commit" = "$target_commit" ]]; then
   echo "Already at target commit."
 else
@@ -77,9 +128,11 @@ fi
 
 composer install --no-dev --optimize-autoloader --no-interaction
 
-if [[ "$RUN_NPM_BUILD" = "1" && -f package.json ]]; then
-  npm run build
-fi
+# Hashed assets can be copied ahead of the manifest. Keep old hashes available
+# for in-flight pages and rollback; replace the manifest only after all assets
+# and PHP dependencies are installed.
+mkdir -p public/build
+rsync -a --exclude=manifest.json "$release_stage/build/" public/build/
 
 if [[ "$RUN_MIGRATIONS" = "1" ]]; then
   php artisan migrate --force
@@ -90,6 +143,9 @@ php artisan config:cache
 php artisan route:cache
 php artisan event:cache
 php artisan view:cache
+
+cp "$release_stage/build/manifest.json" public/build/manifest.json.next
+mv -f public/build/manifest.json.next public/build/manifest.json
 
 if [[ "$(id -u)" = "0" ]] && id "$WEB_USER" >/dev/null 2>&1; then
   chown -R "$WEB_USER:$WEB_USER" storage bootstrap/cache

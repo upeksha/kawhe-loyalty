@@ -36,9 +36,9 @@ Standard path:
 Recommended Git flow:
 
 1. Create a feature branch locally: `feature/<short-name>` or `codex/<short-name>`
-2. Build and test locally
-3. Push the branch
-4. Deploy that branch, or a chosen commit from it, to testing
+2. Commit the change, then test and build locally
+3. Push the exact commit
+4. Deploy its prebuilt package to testing
 5. Approve the exact commit that passed testing
 6. Deploy that exact commit SHA to production
 
@@ -51,37 +51,34 @@ Important rule:
 
 ### 1. Local development
 
-Before testing deployment:
+Use the repository's local packaging command after committing the candidate:
 
 ```bash
-php artisan test
-npm run build
+./ops/package-release-local.sh <commit-sha>
 ```
 
-For smaller changes, run the narrowest relevant test target as well.
+It runs the complete PHP test suite locally (using local PHP, or the local
+`kawhe-php84-test:latest` Docker image), then `npm ci` and `npm run build` on
+the Mac. It writes `output/releases/<sha>.tar.gz` and a SHA-256 file. This
+directory is ignored by Git. The release contains the exact commit ID and
+`public/build`; no `.env`, customer data, or private keys are packaged. Keep
+the package for a possible frontend rollback. Run narrower tests while
+developing, but the package requires the full suite to pass.
 
 ### 2. Deploy to testing
 
-Run on the testing server checkout:
+Push the candidate commit to GitHub, then run on the Mac:
 
 ```bash
-cd /var/www/kawhe-testing
-APP_DIR=/var/www/kawhe-testing ./ops/deploy-release.sh <git-ref-or-commit>
+./ops/deploy-prebuilt-local.sh testing <full-commit-sha>
 ```
 
-Examples:
-
-```bash
-APP_DIR=/var/www/kawhe-testing ./ops/deploy-release.sh origin/feature/store-threshold-lock
-APP_DIR=/var/www/kawhe-testing ./ops/deploy-release.sh 1a5e99cbfcfa8c6e15730f61689c79271d50edf3
-```
-
-Short wrapper:
-
-```bash
-cd /var/www/kawhe-testing
-./ops/deploy-testing.sh <git-ref-or-commit>
-```
+The wrapper uploads the checked package and deployment helper to a private
+temporary path, verifies its checksum and embedded commit, then deploys the
+Git commit with the prebuilt assets. The server does not run npm or tests.
+It still installs production PHP dependencies, runs migrations and refreshes
+Laravel caches. Review migrations and take the required backups before using
+this for a release that changes data or production operations.
 
 ### 3. Test on `testing.kawhe.shop`
 
@@ -104,25 +101,16 @@ For risky changes also verify:
 
 ### 4. Promote to production
 
-Once testing is approved, deploy the same commit SHA to production:
+Once testing is approved, deploy the **same package and commit SHA** from the Mac:
 
 ```bash
-cd /var/www/kawhe
-APP_DIR=/var/www/kawhe ./ops/deploy-release.sh <approved-commit-sha>
+./ops/deploy-prebuilt-local.sh production <approved-full-commit-sha>
 ```
 
-Example:
-
-```bash
-APP_DIR=/var/www/kawhe ./ops/deploy-release.sh 1a5e99cbfcfa8c6e15730f61689c79271d50edf3
-```
-
-Short wrapper:
-
-```bash
-cd /var/www/kawhe
-./ops/deploy-production.sh <approved-commit-sha>
-```
+The wrapper refuses production unless testing currently runs that SHA. Deploy
+only during the reviewed release window with fresh backups, worker handling,
+and rollback plan. The package is staged under `/tmp/kawhe-release-<sha>` on
+the server; it may be removed after the release is verified.
 
 ## Rules For Safe Releases
 
@@ -130,6 +118,8 @@ cd /var/www/kawhe
 - Never share the production database with testing
 - Never edit tracked app files directly on the production server
 - Never deploy from an uncommitted local server state
+- Never run npm builds or automated test suites on the droplet
+- Never deploy without the matching locally tested release archive
 - Never run unreviewed migrations first on production
 - Never promote a different commit than the one approved on testing
 
@@ -158,9 +148,8 @@ If `git status --short` shows modified tracked files:
 4. Remove generated or accidental files from the repo checkout
 5. Re-run deployment only after the checkout is clean
 
-Current known issue to resolve:
-
-- Production checkout has local drift and should be cleaned before relying on automated releases.
+If the server checkout is dirty, investigate that specific drift before a
+release; do not force the deployment.
 
 ## Suggested Ownership Model
 
