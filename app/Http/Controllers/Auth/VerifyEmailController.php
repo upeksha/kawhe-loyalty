@@ -38,6 +38,8 @@ class VerifyEmailController extends Controller
         }
 
         if ($request->user()?->is($user)) {
+            $request->user()->refresh();
+
             return redirect()->intended(route('dashboard', absolute: false).'?verified=1');
         }
 
