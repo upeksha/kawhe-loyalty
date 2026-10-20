@@ -75,8 +75,10 @@ Push the candidate commit to GitHub, then run on the Mac:
 
 The wrapper uploads the checked package and deployment helper to a private
 temporary path, verifies its checksum and embedded commit, then deploys the
-Git commit with the prebuilt assets. The server does not run npm or tests.
-It still installs production PHP dependencies, runs migrations and refreshes
+Git commit with the prebuilt assets. The server does not run npm, Composer or
+tests. It reuses the installed PHP vendor tree only when `composer.lock` is
+unchanged and refuses dependency changes until a reviewed Linux vendor
+artifact has been prepared off-server. It still runs migrations and refreshes
 Laravel caches. Review migrations and take the required backups before using
 this for a release that changes data or production operations.
 

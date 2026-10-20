@@ -120,13 +120,18 @@ if [[ "$(cat "$release_stage/release-commit.txt")" != "$target_commit" ]]; then
   exit 1
 fi
 
+current_lock_hash="$(sha256sum composer.lock | awk '{print $1}')"
+target_lock_hash="$(git show "$target_commit:composer.lock" | sha256sum | awk '{print $1}')"
+if [[ "$current_lock_hash" != "$target_lock_hash" || ! -s vendor/autoload.php ]]; then
+  echo "PHP dependencies changed or vendor is missing. Prepare a reviewed Linux vendor artifact off-server; Composer is disabled on this droplet." >&2
+  exit 1
+fi
+
 if [[ "$current_commit" = "$target_commit" ]]; then
   echo "Already at target commit."
 else
   git checkout --detach "$target_commit"
 fi
-
-composer install --no-dev --optimize-autoloader --no-interaction
 
 # Hashed assets can be copied ahead of the manifest. Keep old hashes available
 # for in-flight pages and rollback; replace the manifest only after all assets
