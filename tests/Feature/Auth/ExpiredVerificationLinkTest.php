@@ -40,9 +40,9 @@ test('resend from expired link uses only the authenticated account and retains f
     $this->get($link)->assertSee('A new verification email has been queued.');
 });
 
-test('verified accounts get an account link and guests must sign in', function () {
+test('verified accounts get an account link and expired guests can sign in for a new link', function () {
     $user = User::factory()->create();
     $link = expiredMerchantLink($user);
-    $this->get($link)->assertRedirect(route('login'));
+    $this->get($link)->assertForbidden()->assertSee('Sign in to request a new link');
     $this->actingAs($user)->get($link)->assertForbidden()->assertSee('already verified')->assertDontSee('Resend verification email');
 });

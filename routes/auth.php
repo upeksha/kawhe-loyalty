@@ -28,13 +28,13 @@ Route::middleware('guest')->group(function () {
     Route::post('login', [AuthenticatedSessionController::class, 'store']);
 });
 
+Route::match(['GET', 'POST'], 'verify-email/{id}/{hash}', VerifyEmailController::class)
+    ->middleware(['signed:relative', 'throttle:6,1'])
+    ->name('verification.verify');
+
 Route::middleware('auth')->group(function () {
     Route::get('verify-email', EmailVerificationPromptController::class)
         ->name('verification.notice');
-
-    Route::match(['GET', 'POST'], 'verify-email/{id}/{hash}', VerifyEmailController::class)
-        ->middleware(['signed:relative', 'throttle:6,1'])
-        ->name('verification.verify');
 
     Route::post('email/verification-notification', [EmailVerificationNotificationController::class, 'store'])
         ->middleware('throttle:6,1')

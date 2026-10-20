@@ -6,8 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Mail\MerchantWelcomeEmail;
 use App\Models\User;
 use Illuminate\Auth\Events\Verified;
-use Illuminate\Foundation\Auth\EmailVerificationRequest;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
 
 class VerifyEmailController extends Controller
@@ -15,10 +15,16 @@ class VerifyEmailController extends Controller
     /**
      * Mark the authenticated user's email address as verified.
      */
-    public function __invoke(EmailVerificationRequest $request): RedirectResponse|\Illuminate\Http\Response
+    public function __invoke(Request $request, string $id, string $hash): RedirectResponse|\Illuminate\Http\Response
     {
-        if ($request->user()->hasVerifiedEmail()) {
-            return redirect()->intended(route('dashboard', absolute: false).'?verified=1');
+        $user = User::findOrFail($id);
+
+        if (! hash_equals(sha1($user->getEmailForVerification()), $hash)) {
+            abort(403);
+        }
+
+        if ($request->user() && ! $request->user()->is($user)) {
+            abort(403);
         }
 
         if (! $request->isMethod('post')) {
@@ -26,12 +32,17 @@ class VerifyEmailController extends Controller
                 ->header('Cache-Control', 'no-store')->header('Referrer-Policy', 'no-referrer');
         }
 
-        if ($request->user()->markEmailAsVerified()) {
-            event(new Verified($request->user()));
-            $this->sendWelcomeOnce($request->user());
+        if (! $user->hasVerifiedEmail() && $user->markEmailAsVerified()) {
+            event(new Verified($user));
+            $this->sendWelcomeOnce($user);
         }
 
-        return redirect()->intended(route('dashboard', absolute: false).'?verified=1');
+        if ($request->user()?->is($user)) {
+            return redirect()->intended(route('dashboard', absolute: false).'?verified=1');
+        }
+
+        return response()->view('auth.email-verified')
+            ->header('Cache-Control', 'no-store')->header('Referrer-Policy', 'no-referrer');
     }
 
     private function sendWelcomeOnce(User $user): void
