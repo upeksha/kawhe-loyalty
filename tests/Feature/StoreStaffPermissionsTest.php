@@ -38,6 +38,14 @@ function staffTokenFromLink(): string
     return basename(staffInvitationLink());
 }
 
+test('new staff invitations default to stamp permission only', function () {
+    $response = $this->actingAs($this->owner)->get(route('merchant.staff.index'))->assertOk();
+    $inviteForm = explode('Invitations expire in seven days.', explode('Invite a staff member', $response->getContent(), 2)[1], 2)[0];
+
+    expect($inviteForm)->toMatch('/name="can_stamp" value="1" checked/');
+    expect($inviteForm)->not->toMatch('/name="can_redeem" value="1" checked/');
+});
+
 test('owner can invite staff with only selected permissions and token is stored hashed', function () {
     $this->actingAs($this->owner)->post(route('merchant.staff.invite', $this->store), ['email' => 'NEWSTAFF@example.com', 'can_stamp' => 1])->assertRedirect();
     Mail::assertQueued(StoreStaffInvitationMail::class, fn ($mail) => $mail->hasTo('newstaff@example.com'));

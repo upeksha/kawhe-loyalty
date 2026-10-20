@@ -47,7 +47,7 @@
                         <legend class="px-1 text-sm font-semibold">Permissions</legend>
                         <div class="flex flex-wrap gap-4 text-sm">
                             <input type="hidden" name="can_stamp" value="0"><label class="flex items-center gap-2"><input type="checkbox" name="can_stamp" value="1" @checked(old('invitation_store_id') == $store->id ? old('can_stamp') : true)> Stamp cards</label>
-                            <input type="hidden" name="can_redeem" value="0"><label class="flex items-center gap-2"><input type="checkbox" name="can_redeem" value="1" @checked(old('invitation_store_id') == $store->id ? old('can_redeem') : true)> Redeem rewards</label>
+                            <input type="hidden" name="can_redeem" value="0"><label class="flex items-center gap-2"><input type="checkbox" name="can_redeem" value="1" @checked(old('invitation_store_id') == $store->id ? old('can_redeem') : false)> Redeem rewards</label>
                         </div>
                     </fieldset>
                     <p class="text-sm text-stone-600">Invitations expire in seven days. Your team member gets their own login; they do not need to create a store.</p>
