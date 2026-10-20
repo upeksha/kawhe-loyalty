@@ -8,8 +8,8 @@ cd "$SCRIPT_DIR/.."
 environment="${1:-}"
 target_commit="${2:-}"
 case "$environment" in
-  testing) app_dir=/var/www/kawhe-testing;;
-  production) app_dir=/var/www/kawhe;;
+  testing) app_dir=/var/www/kawhe-testing; ops_env=/etc/kawhe-testing-ops.env;;
+  production) app_dir=/var/www/kawhe; ops_env=/etc/kawhe-ops.env;;
   *) echo "Usage: $0 <testing|production> <full-commit-sha>" >&2; exit 1;;
 esac
 if [[ ! "$target_commit" =~ ^[0-9a-f]{40}$ ]]; then
@@ -40,6 +40,6 @@ remote_stage="/tmp/kawhe-release-$target_commit"
 ssh -o BatchMode=yes kawhe-loyalty "mkdir -p -m 700 '$remote_stage'"
 scp -q "$archive" "$SCRIPT_DIR/deploy-release.sh" "$SCRIPT_DIR/alert.sh" "kawhe-loyalty:$remote_stage/"
 ssh -o BatchMode=yes kawhe-loyalty \
-  "APP_DIR='$app_dir' PREBUILT_ASSET_TAR='$remote_stage/$target_commit.tar.gz' PREBUILT_ASSET_SHA256='$checksum' bash '$remote_stage/deploy-release.sh' '$target_commit'"
+  "APP_DIR='$app_dir' OPS_ENV_FILE='$ops_env' PREBUILT_ASSET_TAR='$remote_stage/$target_commit.tar.gz' PREBUILT_ASSET_SHA256='$checksum' bash '$remote_stage/deploy-release.sh' '$target_commit'"
 
 echo "Deployed $target_commit to $environment with locally built assets."
