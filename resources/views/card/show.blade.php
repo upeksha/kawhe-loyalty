@@ -80,6 +80,13 @@
                         .coffee-sample-art{display:block;width:100%;height:auto;margin:12px 0}
                     </style>
                 @endif
+                @if($webPhoto)
+                    <style>
+                        .loyalty-card { background-color: #263e30 !important; color: #fff !important; }
+                        .loyalty-card .card-text, .loyalty-card .card-muted,
+                        .loyalty-card #reward-balance-display { color: #fff !important; opacity: 1; }
+                    </style>
+                @endif
                 <!-- Main Loyalty Card -->
                 <div class="loyalty-card rounded-2xl overflow-hidden mb-6">
                     

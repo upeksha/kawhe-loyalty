@@ -61,7 +61,9 @@
             const r = (value >> 16) & 255;
             const g = (value >> 8) & 255;
             const b = value & 255;
-            return ((0.299 * r) + (0.587 * g) + (0.114 * b)) > 127.5 ? '#111111' : '#ffffff';
+            const linear = channel => { const v = channel / 255; return v <= 0.04045 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
+            const luminance = 0.2126 * linear(r) + 0.7152 * linear(g) + 0.0722 * linear(b);
+            return luminance > 0.179 ? '#000000' : '#ffffff';
         },
         bindField(id, property, parser = value => value) {
             const field = document.getElementById(id);
