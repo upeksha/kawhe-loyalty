@@ -5,8 +5,9 @@
         </h2>
 
         <p class="mt-1 text-sm text-stone-600">
-            {{ __('Once your account is deleted, all of its resources and data will be permanently deleted. Before deleting your account, please download any data or information that you wish to retain.') }}
+            {{ __('Permanently delete your account and the stores, cards and customer records that belong only to them, including archived stores and cards. Uploaded images and generated card files are queued for removal. Download anything you want to keep first.') }}
         </p>
+        <p class="mt-2 text-sm text-stone-600">{{ __('To pause a store or card and keep its images and history, use Archive instead. Other cafés and their customer cards are not deleted. Existing backups are handled separately under the backup retention policy.') }}</p>
     </header>
 
     @unless(auth()->user()->is_staff_account)
@@ -30,7 +31,7 @@
             </h2>
 
             <p class="mt-1 text-sm text-stone-600">
-                {{ __('Once your account is deleted, all of its resources and data will be permanently deleted. Please enter your password to confirm you would like to permanently delete your account.') }}
+                {{ __('This permanently removes your account, including your archived stores and cards. Image cleanup normally starts within a few minutes and retries if storage is unavailable. This cannot be undone. Enter your password to confirm.') }}
             </p>
 
             <x-input-error :messages="$errors->userDeletion->get('billing')" class="mt-2" />

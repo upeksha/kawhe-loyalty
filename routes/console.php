@@ -9,6 +9,7 @@ Artisan::command('inspire', function () {
 })->purpose('Display an inspiring quote');
 
 Schedule::command('wallet:cleanup-assets')->dailyAt('03:30')->withoutOverlapping();
+Schedule::command('accounts:cleanup-files')->everyMinute()->withoutOverlapping(30)->runInBackground();
 
 // Production maintenance schedules (run with cron: * * * * * php artisan schedule:run)
 Schedule::command('queue:prune-failed --hours=168')->dailyAt('02:10');

@@ -16,6 +16,8 @@ class AccountDeletionService
             $user = User::whereKey($user->id)->lockForUpdate()->firstOrFail();
             $this->closeBilling($user);
 
+            app(AccountDataDeletion::class)->deleteOwnedData($user);
+
             // Cashier and Sanctum tables do not cascade on user deletion.
             foreach ($user->subscriptions()->get() as $subscription) {
                 $subscription->items()->delete();

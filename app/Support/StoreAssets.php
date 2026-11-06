@@ -40,6 +40,11 @@ class StoreAssets
 
     public static function storeUploaded(UploadedFile $file, string $directory): string
     {
+        // Keep replaced uploads attributable to their owner for permanent deletion.
+        if (auth()->id() && in_array($directory, \App\Services\Billing\AccountDataDeletion::UPLOAD_DIRECTORIES, true)) {
+            $directory .= '/accounts/'.auth()->id();
+        }
+
         return $file->store($directory, static::diskName());
     }
 

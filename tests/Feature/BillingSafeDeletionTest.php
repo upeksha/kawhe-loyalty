@@ -31,6 +31,7 @@ test('active trialing delinquent incomplete paused and grace period subscription
     expect($this->merchant->fresh())->not->toBeNull();
     expect($this->store->fresh())->not->toBeNull();
     expect($this->merchant->tokens()->count())->toBe(1);
+    $this->assertDatabaseCount('account_file_cleanups', 0);
     $this->assertAuthenticated();
     expect(collect($this->stripeHttp->requests)->where(0, 'delete'))->toHaveCount(0);
 })->with(['active', 'trialing', 'past_due', 'unpaid', 'incomplete', 'paused', 'unknown_future_status']);

@@ -72,7 +72,9 @@ class CoffeeCardSample
         if ($program->card_design !== 'illustrated_coffee') {
             $options = CardDesign::options($program);
             $hash = substr(hash('sha256', serialize($options)), 0, 24);
-            $path = "wallet/card-styles-v1/{$hash}/{$platform}-{$target}-{$state}.png";
+            // Account-scoped cache also covers old/replaced photos at deletion.
+            $ownerId = $account->store->user_id;
+            $path = "wallet/card-styles-v2/accounts/{$ownerId}/{$hash}/{$platform}-{$target}-{$state}.png";
             if (! StoreAssets::exists($path)) {
                 StoreAssets::put($path, app(\App\Services\Wallet\Artwork\CardStyleArtwork::class)->render($target, $count, $account->reward_balance > 0, $platform, $options));
             }

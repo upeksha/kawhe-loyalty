@@ -27,6 +27,7 @@ class HealthCheck extends Command
         $this->checkDatabase();
         $this->checkStorage();
         $this->checkQueue();
+        $this->checkAccountFileCleanups();
         $this->checkReverb();
         $this->checkWallet();
         $this->checkStripe();
@@ -171,6 +172,20 @@ class HealthCheck extends Command
             }
         } elseif ($driver === 'sync') {
             $this->warnResult('Queue driver is sync (jobs run inline). Consider database/redis for production.');
+        }
+    }
+
+    protected function checkAccountFileCleanups(): void
+    {
+        if (! DB::getSchemaBuilder()->hasTable('account_file_cleanups')) {
+            $this->failResult('Account file cleanup table missing (run migrations)');
+
+            return;
+        }
+        $overdue = DB::table('account_file_cleanups')->whereNull('completed_at')
+            ->where('created_at', '<', now()->subHour())->count();
+        if ($overdue) {
+            $this->failResult("Account file cleanup overdue: {$overdue} request(s). Check scheduler and storage access.");
         }
     }
 
