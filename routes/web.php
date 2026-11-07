@@ -17,6 +17,7 @@ use Illuminate\Support\Facades\Route;
 
 // Public start page for merchant onboarding
 Route::get('/start', [PublicStartController::class, 'index'])->name('start');
+Route::view('/account-deletion', 'account-deletion')->name('account-deletion');
 
 Route::get('/', function () {
     return redirect()->route('login');
