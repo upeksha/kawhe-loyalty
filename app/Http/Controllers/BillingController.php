@@ -273,7 +273,7 @@ class BillingController extends Controller
             return [
                 'label' => 'Pro ending',
                 'tone' => 'bg-amber-100 text-amber-700',
-                'summary' => 'Your Pro plan is still active for now, but it is scheduled to end on '.$subscription->ends_at->format('M d, Y').'.',
+                'summary' => 'Your Pro plan is still active for now, but it is scheduled to end on '.$subscription->ends_at->copy()->timezone('Pacific/Auckland')->format('j F Y \\a\\t g:i a T').'.',
                 'transition' => 'After the billing period ends, limits fall back to Free (1 store, 1 card, 100 customers per card). Existing stores, cards, and customers keep working — only new growth is gated.',
             ];
         }

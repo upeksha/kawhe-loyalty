@@ -2,6 +2,7 @@
 
 use App\Models\User;
 use App\Services\Billing\UsageService;
+use Illuminate\Support\Carbon;
 use Stripe\ApiRequestor;
 use Stripe\HttpClient\CurlClient;
 use Tests\Support\BillingStripeHttpFake;
@@ -105,6 +106,24 @@ test('ended and expired access shows Free rather than a future cancellation', fu
     $this->owner->subscription()->update(['stripe_status' => 'active', 'ends_at' => now()->subMinute()]);
     expect(app(UsageService::class)->planFor($this->owner->fresh()))->toBe('free');
 });
+
+test('billing cancellation dates use New Zealand time without changing the stored end', function ($utcEnd, $localEnd) {
+    $this->travelTo(Carbon::parse('2026-11-01 00:00:00', 'UTC'));
+    $timestamp = Carbon::parse($utcEnd, 'UTC')->timestamp;
+    $this->remote['cancel_at_period_end'] = true;
+    $this->remote['items']['data'][0]['current_period_end'] = $timestamp;
+
+    syncBillingLifecycle($this)->assertOk();
+    $this->get(route('billing.index'))
+        ->assertOk()
+        ->assertSee('Pro ending')
+        ->assertSee('scheduled to end on '.$localEnd.'.');
+
+    expect($this->owner->fresh()->subscription()->ends_at->timestamp)->toBe($timestamp);
+})->with([
+    'daylight saving' => ['2026-12-07 22:20:11', '8 December 2026 at 11:20 am NZDT'],
+    'standard time' => ['2027-06-07 22:20:11', '8 June 2027 at 10:20 am NZST'],
+]);
 
 test('unknown price cannot grant Pro and changed items are replaced', function () {
     syncBillingLifecycle($this)->assertOk();
