@@ -1,4 +1,22 @@
 <x-guest-layout>
+    @if($signupAnalytics ?? null)
+        <script id="merchant-signup-conversion">
+            (() => {
+                if (window.__kawheSignupTracked) return;
+                window.__kawheSignupTracked = true;
+                const analytics = {{ Illuminate\Support\Js::from($signupAnalytics) }};
+                window.dataLayer = window.dataLayer || [];
+                window.gtag = window.gtag || function () { window.dataLayer.push(arguments); };
+                window.gtag('js', new Date());
+                window.gtag('config', analytics.id, analytics.options);
+                window.gtag('event', 'sign_up', { method: 'email', account_type: 'merchant', send_to: analytics.id });
+                const script = document.createElement('script');
+                script.async = true;
+                script.src = 'https://www.googletagmanager.com/gtag/js?id=' + encodeURIComponent(analytics.id);
+                document.head.appendChild(script);
+            })();
+        </script>
+    @endif
     <div class="mb-4 text-sm text-gray-600">
         {{ __('Verify your email before using your merchant dashboard, stores, or scanner. Open the verification email, or request a new link below. Check your spam folder too.') }}
     </div>

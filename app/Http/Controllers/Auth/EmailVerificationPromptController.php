@@ -14,8 +14,12 @@ class EmailVerificationPromptController extends Controller
      */
     public function __invoke(Request $request): RedirectResponse|View
     {
+        $signupAnalytics = $request->session()->pull('merchant_signup_completed') === true
+            ? \App\Support\MerchantSignupAnalytics::configuration($request->user())
+            : null;
+
         return $request->user()->hasVerifiedEmail()
                     ? redirect()->intended(route('dashboard', absolute: false))
-                    : view('auth.verify-email');
+                    : view('auth.verify-email', compact('signupAnalytics'));
     }
 }

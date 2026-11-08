@@ -78,6 +78,8 @@ class RegisteredUserController extends Controller
 
         Auth::login($user);
         $request->session()->forget('signup_attribution');
+        // Only a committed new merchant account can emit the conversion.
+        $request->session()->flash('merchant_signup_completed', true);
 
         return redirect()->route('verification.notice')->with('status', $verificationQueued ? 'verification-link-sent' : 'verification-link-failed');
     }
