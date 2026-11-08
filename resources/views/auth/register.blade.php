@@ -6,6 +6,11 @@
         @csrf
         <x-form-error-summary form-id="register-form" max-items="3" />
 
+        <div aria-hidden="true" style="position:absolute;left:-10000px;width:1px;height:1px;overflow:hidden;">
+            <label for="company_website">Leave this field empty</label>
+            <input id="company_website" name="company_website" type="text" tabindex="-1" autocomplete="off" value="">
+        </div>
+
         <div>
             <label for="name" class="block text-sm font-medium text-stone-700 mb-1.5">Full name</label>
             <input id="name" type="text" name="name" value="{{ old('name') }}" required autofocus autocomplete="name"
@@ -57,6 +62,23 @@
                 class="w-full rounded-xl border bg-stone-50 px-4 py-3 text-sm text-stone-900 placeholder-stone-400 focus:outline-none focus:ring-2 transition @error('password_confirmation') border-red-300 focus:border-red-500 focus:ring-red-500/30 @else border-stone-300 focus:ring-brand-500/30 focus:border-brand-500 @enderror">
             <x-input-error :messages="$errors->get('password_confirmation')" class="mt-1.5 text-sm" />
         </div>
+
+        @if(config('merchant_signup.turnstile_enabled'))
+            <div class="space-y-2">
+                <div id="signup-security-check" class="cf-turnstile" data-sitekey="{{ config('merchant_signup.site_key') }}"
+                    data-action="{{ config('merchant_signup.action') }}" data-theme="light" data-size="flexible"></div>
+                <p class="text-xs leading-5 text-stone-500">Protected from spam by Cloudflare Turnstile.
+                    <a class="underline underline-offset-2" href="https://www.cloudflare.com/privacypolicy/" target="_blank" rel="noopener noreferrer">Privacy</a>
+                </p>
+                <noscript><p class="text-sm text-red-700">Please enable JavaScript to complete the signup security check.</p></noscript>
+            </div>
+            <script>
+                const signupSecurityCheck = document.getElementById('signup-security-check');
+                if (signupSecurityCheck.clientWidth < 300) signupSecurityCheck.dataset.size = 'compact';
+            </script>
+            <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+        @endif
+        <x-input-error :messages="$errors->get('signup_verification')" class="mt-1.5 text-sm" />
 
         <x-ui.button type="submit" variant="primary" class="w-full" data-loading-text="Creating account...">
             Create account

@@ -24,6 +24,18 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        RateLimiter::for('merchant-signup', function (Request $request): array {
+            $email = $request->input('email');
+            $email = is_string($email) ? mb_strtolower(trim($email)) : '';
+            $ip = \App\Services\MerchantSignupProtection::clientIp($request);
+
+            return [
+                Limit::perMinute(5)->by('minute:'.$ip),
+                Limit::perHour(20)->by('hour:'.$ip),
+                Limit::perHour(10)->by('email:'.hash('sha256', $email)),
+            ];
+        });
+
         RateLimiter::for('api-login', function (Request $request): array {
             $email = strtolower((string) $request->input('email'));
 

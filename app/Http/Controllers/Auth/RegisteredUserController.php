@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\MerchantOnboardingWizardController;
 use App\Models\User;
+use App\Rules\PlainSignupName;
+use App\Services\MerchantSignupProtection;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -32,12 +34,14 @@ class RegisteredUserController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $request->validate([
-            'name' => ['required', 'string', 'max:255'],
+            'name' => ['required', 'string', 'max:255', new PlainSignupName],
             'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:'.User::class],
-            'store_name' => ['required', 'string', 'max:255'],
+            'store_name' => ['required', 'string', 'max:255', new PlainSignupName],
             'address' => ['nullable', 'string', 'max:255'],
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
         ]);
+
+        app(MerchantSignupProtection::class)->verify($request);
 
         $user = DB::transaction(function () use ($request) {
             $user = User::create([
