@@ -18,6 +18,7 @@
     </div>
 
     <nav class="flex-1 overflow-y-auto px-4 pb-6">
+        <a href="{{ route('admin.merchants.index') }}" @click="$dispatch('close-admin-sidebar')" class="mb-3 flex items-center rounded-2xl px-4 py-3 text-sm font-semibold {{ request()->routeIs('admin.merchants.*') ? 'bg-brand-50 text-brand-700' : 'bg-white text-stone-700 hover:bg-brand-50' }}">Café signups</a>
         <div class="space-y-2 rounded-[28px] bg-white p-3 shadow-sm shadow-stone-200/70 ring-1 ring-stone-200/70">
             <a
                 href="{{ route('admin.dashboard') }}"

@@ -58,6 +58,9 @@ class RegisteredUserController extends Controller
             $store->ensureDefaultProgramExists();
             $store->syncDefaultProgramFromStore();
 
+            $user->forceFill(['signup_attribution' => $request->session()->get('signup_attribution')])->save();
+            app(\App\Services\MerchantSignupAlerts::class)->record($user, 'registered');
+
             return $user;
         });
 
@@ -70,6 +73,7 @@ class RegisteredUserController extends Controller
         }
 
         Auth::login($user);
+        $request->session()->forget('signup_attribution');
 
         return redirect()->route('verification.notice')->with('status', $verificationQueued ? 'verification-link-sent' : 'verification-link-failed');
     }

@@ -186,6 +186,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 // Admin area routes (super admin only)
 Route::middleware(['auth', 'verified', App\Http\Middleware\SuperAdmin::class])->prefix('admin')->name('admin.')->group(function () {
     Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
+    Route::get('/merchants', [\App\Http\Controllers\AdminMerchantsController::class, 'index'])->name('merchants.index');
     Route::get('/support', [SupportLogController::class, 'adminIndex'])->name('support.index');
 });
 

@@ -14,3 +14,4 @@ Schedule::command('accounts:cleanup-files')->everyMinute()->withoutOverlapping(3
 // Production maintenance schedules (run with cron: * * * * * php artisan schedule:run)
 Schedule::command('queue:prune-failed --hours=168')->dailyAt('02:10');
 Schedule::command('queue:prune-batches --hours=168')->dailyAt('02:20');
+Schedule::command('admin:dispatch-signup-alerts')->everyMinute()->withoutOverlapping();

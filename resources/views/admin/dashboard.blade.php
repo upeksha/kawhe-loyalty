@@ -2,6 +2,7 @@
     <x-slot name="header">
         Admin Dashboard
     </x-slot>
+    <div class="mb-6 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-stone-200 bg-white p-5"><div><h2 class="font-semibold text-stone-900">New café owners</h2><p class="mt-1 text-sm text-stone-600">Track signups, email verification, setup and campaign referrals.</p></div><x-ui.button href="{{ route('admin.merchants.index') }}" variant="primary">View café signups</x-ui.button></div>
 
     @php
         $billingIssues = collect($merchant_issue_diagnostics)->sum('billing_issue_count');

@@ -37,6 +37,10 @@ class VerifyEmailController extends Controller
             $this->sendWelcomeOnce($user);
         }
 
+        // Also repairs a missed dispatch after a successful verification. The
+        // unique outbox event prevents repeat link visits from sending twice.
+        app(\App\Services\MerchantSignupAlerts::class)->record($user, 'verified');
+
         if ($request->user()?->is($user)) {
             $request->user()->refresh();
 
@@ -49,7 +53,7 @@ class VerifyEmailController extends Controller
 
     private function sendWelcomeOnce(User $user): void
     {
-        if ($user->is_staff_account) {
+        if ($user->is_staff_account || $user->isSuperAdmin()) {
             return;
         }
 
