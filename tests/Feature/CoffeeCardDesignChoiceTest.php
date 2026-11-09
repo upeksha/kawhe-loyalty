@@ -18,7 +18,7 @@ function coffeeDesignMerchant(): array
     return [$owner, $store];
 }
 
-test('merchant can create and switch coffee style while retaining reward balances and classic assets', function () {
+test('merchant can create and switch supported coffee styles while retaining reward balances and uploaded assets', function () {
     [$owner, $store] = coffeeDesignMerchant();
     $data = ['name' => 'Coffee club', 'reward_target' => 10, 'reward_title' => 'A large coffee and pastry', 'card_design' => 'illustrated_coffee', 'require_verification_for_redemption' => '1'];
     $this->actingAs($owner)->post(route('merchant.stores.programs.store', $store), $data)->assertSessionHasNoErrors();
@@ -28,15 +28,15 @@ test('merchant can create and switch coffee style while retaining reward balance
     $hash = $program->wallet_design_hash;
     $hero = $program->pass_hero_image_path;
     $this->actingAs($owner)->get(route('merchant.stores.programs.edit', [$store, $program]))->assertOk()->assertSee('Illustrated — patterns and artwork')->assertSee('coffee-preview-panel');
-    $data['card_design'] = 'classic';
+    $data['card_design'] = 'simple';
     $this->put(route('merchant.stores.programs.update', [$store, $program]), $data)->assertSessionHasNoErrors();
-    expect($program->fresh()->card_design)->toBe('classic');
+    expect($program->fresh()->card_design)->toBe('simple');
     expect($program->fresh()->wallet_design_hash)->not->toBe($hash);
     expect($program->fresh()->pass_hero_image_path)->toBe($hero);
     expect($account->fresh()->stamp_count)->toBe(1);
     expect($account->fresh()->reward_balance)->toBe(2);
     Queue::assertPushed(RefreshProgramWalletsJob::class);
-    $this->get('/c/'.$account->public_token)->assertOk()->assertDontSee('id="coffee-sample-art"', false);
+    $this->get('/c/'.$account->public_token)->assertOk()->assertSee('id="coffee-sample-art"', false);
 });
 
 test('design selection rejects unknown styles mismatched environments and other merchants', function () {
@@ -62,5 +62,5 @@ test('onboarding coffee design needs logos but no banner and synchronizes defaul
     expect($store->fresh()->card_design)->toBe('illustrated_coffee');
     expect($store->fresh()->resolvedDefaultProgram()->card_design)->toBe('illustrated_coffee');
     $data['card_design'] = 'classic';
-    $this->post(route('merchant.onboarding.wizard.card-design.store'), $data)->assertSessionHasErrors('pass_hero_image');
+    $this->post(route('merchant.onboarding.wizard.card-design.store'), $data)->assertSessionHasErrors('card_design');
 });

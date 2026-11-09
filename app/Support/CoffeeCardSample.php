@@ -15,9 +15,19 @@ class CoffeeCardSample
         ], true);
     }
 
-    public static function rules(): array
+    public static function rules($model = null): array
     {
-        return ['sometimes', 'required', \Illuminate\Validation\Rule::in(self::available() ? ['simple', 'illustrated', 'photo', 'classic', 'illustrated_coffee'] : ['classic'])];
+        $styles = self::available()
+            ? ['simple', 'illustrated', 'photo', 'illustrated_coffee']
+            : ['classic'];
+
+        // Classic is no longer offered for new cards. Keep accepting it only
+        // when editing a legacy Classic record restored from an older release.
+        if ($model?->card_design === 'classic' && ! in_array('classic', $styles, true)) {
+            $styles[] = 'classic';
+        }
+
+        return ['sometimes', 'required', \Illuminate\Validation\Rule::in($styles)];
     }
 
     public static function programEnabled($program): bool

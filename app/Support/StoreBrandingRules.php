@@ -21,7 +21,7 @@ class StoreBrandingRules
         $imageRules = ['image', 'mimes:png,jpg,jpeg,webp', 'max:2048'];
 
         return [
-            'card_design' => CoffeeCardSample::rules(),
+            'card_design' => CoffeeCardSample::rules($store),
             ...CardDesign::rules(request(), $store),
             'brand_color' => ['required', 'string', 'regex:/^#[0-9A-Fa-f]{6}$/'],
             'background_color' => ['required', 'string', 'regex:/^#[0-9A-Fa-f]{6}$/'],

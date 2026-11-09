@@ -48,7 +48,9 @@ test('new merchant starts with a Simple card and can finish branding without a b
     expect($store->card_design)->toBe('simple');
     expect($store->resolvedDefaultProgram()->card_design)->toBe('simple');
     $this->get(route('merchant.onboarding.wizard.card-design'))
-        ->assertOk()->assertSee("cardDesign: 'simple'", false);
+        ->assertOk()
+        ->assertSee("cardDesign: 'simple'", false)
+        ->assertDontSee('Classic — uploaded Wallet banner');
 
     $this->post(route('merchant.onboarding.wizard.card-design.store'), [
         'card_design' => 'simple', 'brand_color' => '#0EA5E9', 'background_color' => '#1F2937',
@@ -79,7 +81,10 @@ test('additional stores and cards default to Simple while existing Classic cards
     expect($newStore->resolvedDefaultProgram()->card_design)->toBe('simple');
     expect($newStore->pass_hero_image_path)->toBeNull();
 
-    $this->get(route('merchant.stores.programs.create', $newStore))->assertOk()->assertSee("cardDesign: 'simple'", false);
+    $this->get(route('merchant.stores.programs.create', $newStore))
+        ->assertOk()
+        ->assertSee("cardDesign: 'simple'", false)
+        ->assertDontSee('Classic — uploaded Wallet banner');
     $this->post(route('merchant.stores.programs.store', $newStore), [
         'name' => 'Pastry card', 'reward_target' => 6, 'reward_title' => 'Free pastry',
         'require_verification_for_redemption' => 1,
@@ -87,7 +92,29 @@ test('additional stores and cards default to Simple while existing Classic cards
     expect($newStore->loyaltyPrograms()->where('name', 'Pastry card')->firstOrFail()->card_design)->toBe('simple');
     expect($existingProgram->fresh()->card_design)->toBe('classic');
     $this->get(route('merchant.stores.programs.edit', [$existingStore, $existingProgram]))
-        ->assertOk()->assertSee("cardDesign: 'classic'", false);
+        ->assertOk()
+        ->assertSee("cardDesign: 'classic'", false)
+        ->assertSee('Classic — uploaded Wallet banner');
+});
+
+test('modern cards cannot be changed back to the retired Classic style', function () {
+    [$owner, $store, $program] = cardStyleOwner();
+    $program->update(['card_design' => 'simple']);
+    $store->update(['card_design' => 'simple']);
+
+    $this->actingAs($owner)
+        ->get(route('merchant.stores.programs.edit', [$store, $program]))
+        ->assertOk()
+        ->assertDontSee('Classic — uploaded Wallet banner');
+
+    $this->put(route('merchant.stores.programs.update', [$store, $program]), [
+        'name' => $program->name,
+        'reward_target' => $program->reward_target,
+        'reward_title' => $program->reward_title,
+        'card_design' => 'classic',
+    ])->assertSessionHasErrors('card_design');
+
+    expect($program->fresh()->card_design)->toBe('simple');
 });
 
 test('all three styles save and render without changing customer balances', function (string $style, string $environment) {

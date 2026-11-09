@@ -170,7 +170,7 @@ class LoyaltyProgramController extends Controller
         $hasIssuedCards = LoyaltyAccount::where('loyalty_program_id', $program->id)->exists();
 
         $validated = $request->validate([
-            'card_design' => \App\Support\CoffeeCardSample::rules(),
+            'card_design' => \App\Support\CoffeeCardSample::rules($program),
             ...\App\Support\CardDesign::rules($request, isset($program) ? $program : null),
             'name' => ['required', 'string', 'max:255'],
             'reward_target' => $hasIssuedCards ? ['nullable', 'integer', 'min:1'] : ['required', 'integer', 'min:1'],
