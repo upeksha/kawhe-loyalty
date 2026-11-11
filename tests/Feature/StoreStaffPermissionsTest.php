@@ -7,6 +7,7 @@ use App\Models\Store;
 use App\Models\StoreStaff;
 use App\Models\StoreStaffInvitation;
 use App\Models\User;
+use Laravel\Cashier\Subscription;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Queue;
 
@@ -62,11 +63,17 @@ test('new staff accepts invitation without store setup and cannot forge their ro
     session()->invalidate();
     $this->get($url)->assertOk()->assertSee('Accept invitation');
     $this->post($url, ['name' => 'Barista', 'password' => 'test-password-123', 'password_confirmation' => 'test-password-123', 'email' => 'attacker@example.com', 'is_super_admin' => 1])
-        ->assertRedirect(route('merchant.scanner'));
+        ->assertRedirect(route('staff.welcome'));
     $staff = User::where('email', 'newstaff@example.com')->firstOrFail();
     expect($staff->is_staff_account)->toBeTrue()->and($staff->is_super_admin)->toBeFalse()->and($staff->hasVerifiedEmail())->toBeTrue();
     expect($staff->stores()->count())->toBe(0)->and($staff->scannerStores()->count())->toBe(1);
-    $this->get('/dashboard')->assertRedirect(route('merchant.scanner'));
+    $this->get('/dashboard')->assertRedirect(route('staff.welcome'));
+    $this->get(route('staff.welcome'))->assertOk()
+        ->assertSee('You’re ready to scan')
+        ->assertSee('iPhone · App Store')
+        ->assertSee('Android · Google Play')
+        ->assertSee('newstaff@example.com')
+        ->assertSee($this->store->name);
     $this->get($url)->assertStatus(410);
     $this->post($url)->assertStatus(410);
 });
@@ -80,7 +87,7 @@ test('existing account must sign in with the invited verified email', function (
     $this->get($url)->assertOk()->assertSee('Sign in');
     $this->post($url, ['name' => 'Overwrite', 'password' => 'password', 'password_confirmation' => 'password'])->assertForbidden();
     $this->actingAs($this->staff)->post($url)->assertForbidden();
-    $this->actingAs($existing)->post($url)->assertRedirect(route('merchant.scanner'));
+    $this->actingAs($existing)->post($url)->assertRedirect(route('staff.welcome'));
     expect($existing->scannerStores()->count())->toBe(1);
     expect($existing->fresh()->name)->not->toBe('Overwrite');
 });
@@ -121,6 +128,62 @@ test('resending rotates invitation links without granting access before acceptan
     $this->get($second)->assertOk();
     expect(StoreStaffInvitation::count())->toBe(1);
     expect(User::where('email', 'newstaff@example.com')->exists())->toBeFalse();
+});
+
+test('Free allows two staff places including pending invitations but resending does not take another place', function () {
+    createStaffInvite($this, 'second@example.com')->assertRedirect();
+    createStaffInvite($this, 'third@example.com')->assertSessionHasErrors('email');
+    expect(StoreStaffInvitation::count())->toBe(1);
+
+    createStaffInvite($this, 'second@example.com')->assertRedirect();
+    expect(StoreStaffInvitation::count())->toBe(1);
+    $this->get(route('merchant.staff.index'))->assertOk()
+        ->assertSee('2 of 2 staff places used on Free')
+        ->assertSee('Both Free staff places are in use');
+
+    $invitation = StoreStaffInvitation::firstOrFail();
+    $this->delete(route('merchant.staff.cancel', [$this->store, $invitation]))->assertRedirect();
+    createStaffInvite($this, 'third@example.com')->assertRedirect();
+});
+
+test('expired invitations free a staff place and an accepted invitation uses its reserved place', function () {
+    createStaffInvite($this, 'expired@example.com')->assertRedirect();
+    StoreStaffInvitation::firstOrFail()->update(['expires_at' => now()->subSecond()]);
+    createStaffInvite($this, 'second@example.com')->assertRedirect();
+    $url = staffInvitationLink();
+
+    auth()->logout();
+    session()->invalidate();
+    $this->post($url, ['name' => 'Second', 'password' => 'test-password-123', 'password_confirmation' => 'test-password-123'])
+        ->assertRedirect(route('staff.welcome'));
+    expect(StoreStaff::where('store_id', $this->store->id)->count())->toBe(2);
+});
+
+test('Pro has no staff limit and a downgrade blocks new places without revoking existing staff', function () {
+    config(['cashier.price_id' => 'price_pro']);
+    $this->owner->forceFill(['stripe_id' => 'cus_staff_pro'])->save();
+    $subscription = Subscription::create([
+        'user_id' => $this->owner->id, 'name' => 'default', 'stripe_id' => 'sub_staff_pro',
+        'stripe_status' => 'active', 'stripe_price' => 'price_pro', 'quantity' => 1,
+    ]);
+    foreach (range(2, 4) as $number) {
+        createStaffInvite($this, "staff{$number}@example.com")->assertRedirect();
+    }
+    expect(StoreStaffInvitation::count())->toBe(3);
+    $this->get(route('merchant.staff.index'))->assertOk()->assertSee('Pro includes unlimited staff');
+
+    $second = User::factory()->create(['is_staff_account' => true]);
+    StoreStaff::create(['store_id' => $this->store->id, 'user_id' => $second->id, 'can_stamp' => true, 'can_redeem' => false]);
+    $subscription->update(['stripe_status' => 'canceled']);
+    createStaffInvite($this, 'fifth@example.com')->assertSessionHasErrors('email');
+    expect(StoreStaff::where('store_id', $this->store->id)->count())->toBe(2);
+
+    $url = staffInvitationLink();
+    auth()->logout();
+    session()->invalidate();
+    $this->post($url, ['name' => 'Fourth', 'password' => 'test-password-123', 'password_confirmation' => 'test-password-123'])
+        ->assertSessionHasErrors('invitation');
+    expect(User::where('email', 'staff4@example.com')->exists())->toBeFalse();
 });
 
 test('only owners can manage staff and another store member cannot be modified', function () {
@@ -187,7 +250,8 @@ test('revocation takes effect for existing sessions and API tokens', function ()
     $this->withToken($token)->getJson('/api/v1/stores')->assertOk()->assertJsonCount(0, 'stores');
     $this->withToken($token)->postJson('/api/v1/stamp', ['token' => $this->account->public_token, 'store_id' => $this->store->id])->assertForbidden();
     $this->actingAs($this->staff, 'web')->get(route('merchant.scanner'))->assertOk()->assertSee('No active staff access');
-    $this->get('/dashboard')->assertRedirect(route('merchant.scanner'));
+    $this->get('/dashboard')->assertRedirect(route('staff.welcome'));
+    $this->get(route('staff.welcome'))->assertOk()->assertSee('No active café access');
 });
 
 test('permission edits apply to API calls without signing in again', function () {

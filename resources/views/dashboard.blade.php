@@ -255,6 +255,21 @@
             <h1 class="text-3xl font-semibold leading-snug text-stone-900 sm:text-4xl">Welcome back, {{ request()->user()->name ?? 'Merchant' }}</h1>
             <p class="text-base text-stone-600">Here is how your loyalty programme is doing across your stores.</p>
         </header>
+        <section aria-labelledby="next-actions-title" class="rounded-2xl border border-brand-100 bg-[#f5f8f3] p-5 sm:p-6">
+            <div class="mb-4 flex flex-wrap items-baseline justify-between gap-2">
+                <h2 id="next-actions-title" class="text-xl font-semibold text-stone-900">What to do next</h2>
+                <p class="text-sm text-stone-600">Useful actions for your café right now</p>
+            </div>
+            <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                @foreach($nextActions as $action)
+                    <article class="flex flex-col rounded-xl border border-stone-200 bg-white p-4">
+                        <h3 class="font-semibold leading-snug text-brand-900">{{ $action['title'] }}</h3>
+                        <p class="mt-2 flex-1 text-sm leading-6 text-stone-600">{{ $action['detail'] }}</p>
+                        <a href="{{ $action['url'] }}" class="mt-4 inline-flex min-h-11 w-fit items-center font-semibold text-brand-700 underline underline-offset-4 hover:text-brand-900">{{ $action['label'] }} <span aria-hidden="true" class="ml-1">→</span></a>
+                    </article>
+                @endforeach
+            </div>
+        </section>
         <section aria-label="Loyalty summary" class="grid gap-6 lg:grid-cols-3">
             @foreach($summaryCards as $card)
                 <x-ui.card class="dashboard-panel min-w-0 space-y-4 p-6">
@@ -265,12 +280,13 @@
                 </x-ui.card>
             @endforeach
         </section>
+        <x-merchant-launch-checklist />
         <section aria-label="Loyalty charts" class="grid gap-6 lg:grid-cols-[3fr_2fr]">
             <x-ui.card class="dashboard-panel min-w-0 space-y-4 p-6">
                 <h2 class="text-xl font-semibold text-stone-900">Loyalty Activity</h2>
                 <p class="text-sm font-semibold leading-relaxed text-stone-600">New cards {{ number_format($analytics['joins_last_window']) }} · Stamp activity {{ number_format($trendPoints->sum('stamps')) }} · Avg per day {{ number_format($trendPoints->sum('total') / max(1, $trendPoints->count()), 1) }}</p>
                 @if($trendPoints->every(fn ($day) => ($day['total'] ?? 0) === 0))
-                    <div class="rounded-xl border border-dashed border-stone-200 p-6 text-sm text-stone-600">No recent join or card activity yet. As customers join and start collecting stamps, your activity graph will appear here.</div>
+                    <div class="rounded-xl border border-dashed border-stone-200 p-6 text-sm text-stone-600">Stamps and redemptions will appear here once customers start using their cards.<br><a href="{{ $merchantStores->first() ? route('merchant.stores.qr', $merchantStores->first()) : route('merchant.stores.index') }}" class="mt-3 inline-flex min-h-11 items-center font-semibold text-brand-700 underline underline-offset-4">Open join poster →</a></div>
                 @else
                     <div class="relative h-64"><canvas data-chart='@json($loyaltyActivityChart)' role="img" aria-label="Loyalty activity chart: daily joins, stamps and redeems over the last 14 days"></canvas></div>
                 @endif
@@ -279,7 +295,7 @@
                 <h2 class="text-xl font-semibold text-stone-900">Card Growth</h2>
                 <p class="text-sm font-semibold leading-relaxed text-stone-600">Cards added {{ number_format($analytics['joins_last_window']) }} · Daily average {{ number_format($analytics['joins_last_window'] / max(1, $trendPoints->count()), 1) }}</p>
                 @if($trendPoints->every(fn ($day) => ($day['joins'] ?? 0) === 0))
-                    <div class="rounded-xl border border-dashed border-stone-200 p-6 text-sm text-stone-600">No new customer cards in the last 14 days yet.</div>
+                    <div class="rounded-xl border border-dashed border-stone-200 p-6 text-sm text-stone-600">New customer cards will appear here when someone joins your café.<br><a href="{{ $merchantStores->first() ? route('merchant.stores.qr', $merchantStores->first()) : route('merchant.stores.index') }}" class="mt-3 inline-flex min-h-11 items-center font-semibold text-brand-700 underline underline-offset-4">Share join link →</a></div>
                 @else
                     <div class="relative h-64"><canvas data-chart='@json($cardGrowthChart)' role="img" aria-label="Card growth chart: new customer cards over the last 14 days"></canvas></div>
                 @endif

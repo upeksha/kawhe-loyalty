@@ -42,7 +42,7 @@
 
 
     <div class="grid gap-6 xl:grid-cols-2">
-        <x-ui.card class="p-5 sm:p-6">
+        <x-ui.card id="download-poster" class="p-5 sm:p-6 scroll-mt-24">
             <div class="flex items-center gap-3">
                 <span class="qr-section-icon"><x-merchant-icon name="scan" /></span>
                 <div><h2 class="text-lg font-semibold text-stone-900">Print a poster</h2>
@@ -98,8 +98,8 @@
 
     <x-ui.card class="p-5 sm:p-6">
         <div class="flex flex-wrap items-center justify-between gap-3">
-            <div><h2 class="text-lg font-semibold text-stone-900">Store launch checklist</h2>
-            <p class="mt-1 text-sm text-stone-500">{{ $launchScore }} of {{ count($launchChecks) }} setup checks ready. Review any gaps before sharing.</p></div>
+            <div><h2 class="text-lg font-semibold text-stone-900">Card and Wallet checks</h2>
+            <p class="mt-1 text-sm text-stone-500">Review the design and Wallet details before sharing your card.</p></div>
             <x-ui.status-icon-badge :icon="$launchIcon" :label="$launchLabel" :tone="$launchTone" />
         </div>
         <ul class="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -200,7 +200,10 @@
                 document.body.appendChild(link);
                 link.click();
                 link.remove();
-                window.URL.revokeObjectURL(blobUrl);
+                window.setTimeout(() => {
+                    window.URL.revokeObjectURL(blobUrl);
+                    window.location.reload();
+                }, 500);
             } catch (error) {
                 window.location.href = url;
             }

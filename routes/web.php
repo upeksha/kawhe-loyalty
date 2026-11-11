@@ -27,7 +27,7 @@ Route::get('/', function () {
 Route::middleware(['auth', 'verified'])->get('/dashboard', function (Request $request) {
     $user = $request->user();
     if ($user->is_staff_account || (! $user->stores()->exists() && $user->scannerStores()->exists())) {
-        return redirect()->route('merchant.scanner');
+        return redirect()->route('staff.welcome');
     }
 
     // Super admin goes to admin dashboard
@@ -114,6 +114,8 @@ Route::middleware(['auth', 'verified', App\Http\Middleware\OwnerAccount::class])
     Route::post('/wizard/card-ready', [MerchantOnboardingWizardController::class, 'completeOnboarding'])->name('wizard.card-ready.advance');
     Route::get('/wizard/continue-trial', fn () => redirect()->route('merchant.onboarding.wizard.card-ready'))->name('wizard.continue-trial');
     Route::post('/wizard/complete', [MerchantOnboardingWizardController::class, 'completeOnboarding'])->name('wizard.complete');
+    Route::get('/launch/{store}', [App\Http\Controllers\MerchantLaunchChecklistController::class, 'show'])->name('launch.show');
+    Route::post('/launch/{store}/app-installed', [App\Http\Controllers\MerchantLaunchChecklistController::class, 'confirmAppInstalled'])->name('launch.app-installed');
 });
 
 // Merchant area routes (requires store)
@@ -123,10 +125,12 @@ Route::middleware(['auth', 'verified', App\Http\Middleware\OwnerAccount::class, 
         $usageService = app(\App\Services\Billing\UsageService::class);
         $stats = $usageService->getUsageStats($request->user());
         $analytics = app(MerchantAnalyticsService::class)->getDashboardAnalytics($request->user());
+        $nextActions = app(\App\Services\Analytics\MerchantDashboardActions::class)->forOwner($request->user(), $stats);
 
         return view('dashboard', [
             'usageStats' => $stats,
             'analytics' => $analytics,
+            'nextActions' => $nextActions,
         ]);
     })->name('dashboard');
 
@@ -172,6 +176,7 @@ Route::middleware(['auth', 'verified', App\Http\Middleware\OwnerAccount::class, 
     Route::post('/customers/{loyaltyAccount}/resend-welcome', [MerchantCustomersController::class, 'resendWelcomeEmail'])->name('customers.resend-welcome');
     Route::post('/customers/{loyaltyAccount}/sync-wallet', [MerchantCustomersController::class, 'syncWallet'])->middleware('throttle:5,1')->name('customers.sync-wallet');
     Route::get('/activity', [App\Http\Controllers\MerchantActivityController::class, 'index'])->name('activity.index');
+    Route::get('/activity/export', [App\Http\Controllers\MerchantActivityController::class, 'export'])->name('activity.export');
     Route::get('/support', [SupportLogController::class, 'merchantIndex'])->name('support.index');
 });
 
@@ -237,5 +242,6 @@ Route::match(['get', 'post'], '/recover-card/{token}', App\Http\Controllers\Cust
     ->where('token', '[A-Za-z0-9]{64}')->middleware('throttle:20,1')->name('customer.card.recover');
 
 Route::get('/merchant/scanner', [ScannerController::class, 'index'])->middleware(['auth', 'verified', App\Http\Middleware\EnsureMerchantHasStore::class])->name('merchant.scanner');
+Route::get('/staff/get-started', [App\Http\Controllers\StaffInvitationController::class, 'welcome'])->middleware(['auth', 'verified'])->name('staff.welcome');
 Route::get('/staff/invitations/{token}', [App\Http\Controllers\StaffInvitationController::class, 'show'])->where('token', '[A-Za-z0-9]{64}')->middleware('throttle:30,1')->name('staff.invitation');
 Route::post('/staff/invitations/{token}', [App\Http\Controllers\StaffInvitationController::class, 'accept'])->where('token', '[A-Za-z0-9]{64}')->middleware('throttle:10,1')->name('staff.accept');

@@ -239,3 +239,19 @@ test('production Google Wallet artwork tracks stamps reward and redemption for e
     expect($urls[1])->not->toBe($urls[2]);
     expect($urls[3])->toBe($urls[0]);
 })->with(['simple', 'illustrated', 'photo']);
+
+
+test('photo web card forces readable ink over artwork regardless of saved background', function () {
+    [$owner, $store, $program] = cardStyleOwner();
+    $path = \App\Support\StoreAssets::storeUploaded(UploadedFile::fake()->image('bright.png', 600, 400), 'card-designs');
+    $program->update(['card_design' => 'photo', 'background_color' => '#ffffff', 'card_photo_path' => $path]);
+    $account = LoyaltyAccount::factory()->create(['store_id' => $store->id, 'loyalty_program_id' => $program->id]);
+    $this->get('/c/'.$account->public_token)->assertOk()
+        ->assertSee('color: #fff !important', false)
+        ->assertSee('rgba(0,0,0,.66)', false)
+        ->assertSee('customer-qr-panel', false);
+    $this->actingAs($owner)->get(route('merchant.stores.programs.edit', [$store, $program]))
+        ->assertOk()->assertSee('const luminance =', false);
+    $program->update(['card_design' => 'simple']);
+    $this->get('/c/'.$account->public_token)->assertOk()->assertDontSee('color: #fff !important', false);
+});

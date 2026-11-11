@@ -318,7 +318,12 @@ class LoyaltyProgramController extends Controller
 
         $pdf = Pdf::loadView('programs.qr-poster', $viewData)->setPaper('a4', 'portrait');
 
-        return $pdf->download(Str::slug($store->name.' '.$program->name).'-join-poster.pdf');
+        $download = $pdf->download(Str::slug($store->name.' '.$program->name).'-join-poster.pdf');
+        if ($store->user_id === Auth::id() && ! $store->launch_poster_downloaded_at) {
+            $store->forceFill(['launch_poster_downloaded_at' => now()])->save();
+        }
+
+        return $download;
     }
 
     public function qrImage(Store $store, LoyaltyProgram $program)

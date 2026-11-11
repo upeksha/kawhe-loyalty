@@ -6,6 +6,7 @@ use App\Models\StoreStaff;
 use App\Models\StoreStaffInvitation;
 use App\Models\User;
 use App\Services\Support\SupportAuditService;
+use App\Services\Staff\StaffSeatService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -32,9 +33,15 @@ class StaffInvitationController extends Controller
     public function accept(Request $request, string $token)
     {
         $user = DB::transaction(function () use ($request, $token) {
+            $preview = $this->validInvitation($token);
+            abort_unless($preview, 410, 'This invitation has expired or is no longer available. Ask the owner for a new one.');
+            $store = \App\Models\Store::whereKey($preview->store_id)->lockForUpdate()->firstOrFail();
             $invitation = $this->validInvitation($token, true);
             abort_unless($invitation, 410, 'This invitation has expired or is no longer available. Ask the owner for a new one.');
             $user = $request->user();
+            if (! app(StaffSeatService::class)->canAccept($store, $user?->id)) {
+                throw \Illuminate\Validation\ValidationException::withMessages(['invitation' => 'This café has reached the Free plan’s two-staff limit. Ask the owner to free a place or upgrade to Pro.']);
+            }
             if ($user) {
                 abort_unless(Str::lower($user->email) === $invitation->email && $user->hasVerifiedEmail(), 403, 'Sign in and verify the email address that received this invitation.');
             } else {
@@ -57,7 +64,19 @@ class StaffInvitationController extends Controller
         $request->session()->regenerate();
         $request->session()->forget('url.intended');
 
-        return redirect()->route('merchant.scanner')->with('status', 'You have joined the team. Your store permissions are ready.');
+        return redirect()->route('staff.welcome')->with('status', 'You have joined the team.');
+    }
+
+    public function welcome(Request $request)
+    {
+        $user = $request->user();
+        if (! $user->is_staff_account && ! $user->scannerStores()->exists()) {
+            return redirect()->route('dashboard');
+        }
+
+        return view('staff.welcome', [
+            'storeNames' => $user->scannerStores()->orderBy('name')->pluck('name'),
+        ]);
     }
 
     private function validInvitation(string $token, bool $lock = false): ?StoreStaffInvitation

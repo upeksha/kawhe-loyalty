@@ -17,7 +17,8 @@
             })();
         </script>
     @endif
-    <div class="mb-4 text-sm text-gray-600">
+    <script>try { sessionStorage.removeItem('kawhe_merchant_signup_draft'); } catch (_) {}</script>
+    <div id="verification-instructions" class="mb-4 scroll-mt-24 text-sm text-gray-600">
         {{ __('Verify your email before using your merchant dashboard, stores, or scanner. Open the verification email, or request a new link below. Check your spam folder too.') }}
     </div>
 

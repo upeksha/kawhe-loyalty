@@ -37,6 +37,14 @@
             const darker = Math.min(l1, l2);
             return (lighter + 0.05) / (darker + 0.05);
         },
+        get automaticCardText() {
+            const light = this.contrastRatio(this.bgColor, '#FFFFFF');
+            const dark = this.contrastRatio(this.bgColor, '#111827');
+            return dark >= 4.5 && dark >= light ? '#111827' : (light >= 4.5 ? '#FFFFFF' : '#000000');
+        },
+        get automaticCardContrast() {
+            return this.contrastRatio(this.bgColor, this.automaticCardText).toFixed(1);
+        },
         get hasLowContrastPreview() {
             return this.cardDesign === 'classic' && this.contrastRatio(this.brandColor, this.bgColor) < 3;
         },
@@ -146,6 +154,11 @@
                     <x-input-error :messages="$errors->get('background_color')" class="mt-2" />
                 </div>
             </div>
+
+            <p x-show="cardDesign !== 'classic'" x-cloak class="rounded-xl border border-stone-200 bg-stone-50 px-4 py-3 text-sm leading-6 text-stone-700" role="status" aria-live="polite">
+                <span x-show="cardDesign !== 'photo'">Card text switches automatically to <span x-text="automaticCardText === '#FFFFFF' ? 'light' : 'dark'"></span> for a <span x-text="automaticCardContrast"></span>:1 contrast ratio against your chosen colour.</span>
+                <span x-show="cardDesign === 'photo'">Photo cards place white text over a dark overlay so it stays readable even with a bright uploaded photo. Check your photo in the card preview before saving.</span>
+            </p>
 
             <div x-show="hasBlockedContrast" x-cloak class="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900">
                 <p class="font-semibold">Colors need more contrast</p>

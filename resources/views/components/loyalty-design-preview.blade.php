@@ -1,25 +1,26 @@
 @props(['store', 'program'])
 @php
-    $target = max(1, (int) $program->reward_target);
-    $stamps = min(4, $target - 1);
     $theme = \App\Support\ProgramBranding::resolve($program, $store);
-    $background = $theme->bg;
-    $ink = $theme->textOnBg;
+    $logo = $program->pass_logo_url ?? $program->logo_url ?? $store->pass_logo_url ?? $store->logo_url;
+    $photo = $program->card_design === 'photo'
+        ? ($program->pass_hero_image_url ?? $store->pass_hero_image_url)
+        : null;
 @endphp
-<aside aria-label="Sample card preview for {{ $program->name }}" class="w-full max-w-[240px] space-y-3 rounded-2xl p-4" style="background-color: {{ $background }}; color: {{ $ink }}">
-    <p class="break-words text-sm font-semibold">{{ $store->name }}</p>
-    <p class="break-words text-base font-semibold">{{ $program->reward_title }}</p>
-    <p class="text-xl font-semibold">{{ $stamps }} of {{ $target }} stamps</p>
-    <p class="text-xs">{{ $target - $stamps }} more stamps to your next reward</p>
-    <div class="flex flex-wrap gap-1.5" aria-hidden="true">
-        @for($i=0; $i < min($target, 20); $i++)
-            <span class="h-6 w-6 shrink-0 rounded-full border-2" style="border-color: {{ $ink }}; background-color: {{ $i < $stamps ? $ink : 'transparent' }}"></span>
-        @endfor
-        @if($target > 20)<span class="text-xs">+{{ $target - 20 }}</span>@endif
+<aside aria-label="Design preview for {{ $program->name }}" class="relative flex h-40 w-full max-w-[220px] flex-col justify-between overflow-hidden rounded-2xl p-4 shadow-sm" style="background-color: {{ $theme->bg }}; color: {{ $photo ? '#ffffff' : $theme->textOnBg }}">
+    @if($photo)
+        <img src="{{ $photo }}" alt="" class="absolute inset-0 h-full w-full object-cover">
+        <div class="absolute inset-0 bg-black/60"></div>
+    @endif
+    <div class="relative flex items-start justify-between gap-2">
+        @if($logo)
+            <img src="{{ $logo }}" alt="{{ $store->name }} logo" class="max-h-9 max-w-20 object-contain object-left">
+        @else
+            <span class="text-xs font-semibold uppercase tracking-wide">{{ $store->name }}</span>
+        @endif
+        <span class="shrink-0 text-[10px] font-semibold uppercase tracking-wide opacity-80">Card preview</span>
     </div>
-    <div class="space-y-2 rounded-xl bg-white p-3 text-center text-stone-600">
-        <img src="{{ asset('images/loyalty-card-demo-qr.svg') }}" width="100" height="100" alt="Non-scannable customer preview" class="mx-auto h-[100px] w-[100px]">
-        <p class="text-xs">Demo card · not for scanning</p>
+    <div class="relative min-w-0">
+        <p class="text-[10px] font-semibold uppercase tracking-wider opacity-80">Your reward</p>
+        <p class="mt-1 max-h-12 overflow-hidden break-words text-lg font-semibold leading-6">{{ $program->reward_title }}</p>
     </div>
-    <p class="text-xs">Sample progress only · no customer account</p>
 </aside>

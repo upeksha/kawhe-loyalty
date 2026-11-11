@@ -81,6 +81,8 @@ class Store extends Model
 
     protected $casts = [
         'onboarding_completed_at' => 'datetime',
+        'launch_poster_downloaded_at' => 'datetime',
+        'launch_merchant_app_installed_at' => 'datetime',
         'registration_form_config' => 'array',
         'deleted_at' => 'datetime',
     ];

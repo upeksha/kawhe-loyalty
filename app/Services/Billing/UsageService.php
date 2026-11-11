@@ -63,6 +63,13 @@ class UsageService
         return $limit === null ? null : (int) $limit;
     }
 
+    public function staffPerStoreLimitForUser(User $user): ?int
+    {
+        $limit = $this->planConfig($this->planFor($user))['staff_per_store'] ?? null;
+
+        return $limit === null ? null : (int) $limit;
+    }
+
     public function storesCountForUser(User $user): int
     {
         try {

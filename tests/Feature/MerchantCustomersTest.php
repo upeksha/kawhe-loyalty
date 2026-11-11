@@ -170,8 +170,11 @@ test('search works by phone', function () {
     $response = $this->actingAs($userA)->get(route('merchant.customers.index', ['q' => '123456']));
 
     $response->assertOk();
-    $response->assertSee('1234567890');
-    $response->assertDontSee('0987654321');
+    $response->assertSee('john@example.com');
+    $response->assertDontSee('jane@example.com');
+    $response->assertDontSee('Contact and card details');
+    $this->actingAs($userA)->get(route('merchant.customers.show', $account1))
+        ->assertOk()->assertSee('1234567890');
 });
 
 test('merchant can view their own loyalty account detail', function () {

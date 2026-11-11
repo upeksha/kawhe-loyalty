@@ -5,26 +5,13 @@
     </x-slot:actions>
 
     <div class="grid items-start gap-6 lg:grid-cols-2">
-        <x-ui.card class="min-w-0 p-5 sm:p-6">
-            <h2 class="text-lg font-semibold text-stone-900">Your customer join QR</h2>
-            <p class="mt-1 text-sm leading-relaxed text-stone-500">Customers scan this code to get their own loyalty card.</p>
-            <div class="mt-5 rounded-2xl border border-stone-200 bg-stone-50 px-4 py-6 text-center">
-                @php($logoUrl = $program->logo_url ?? $program->pass_logo_url ?? $store->logo_url ?? $store->pass_logo_url)
-                @if($logoUrl)
-                    <img src="{{ $logoUrl }}" alt="{{ $store->name }} logo" class="mx-auto mb-3 h-14 max-w-full rounded-lg object-contain" onerror="this.hidden = true">
-                @endif
-                <p class="break-words text-xl font-semibold text-stone-900">{{ $store->name }}</p>
-                <p class="mt-1 break-words text-sm text-stone-600">{{ $program->name }}</p>
-                <div class="mx-auto my-5 w-full max-w-[240px] rounded-xl bg-white p-3 [&>svg]:h-auto [&>svg]:w-full" role="img" aria-label="QR code to join {{ $program->name }} at {{ $store->name }}">
-                    {!! SimpleSoftwareIO\QrCode\Facades\QrCode::size(240)->margin(2)->generate($joinUrl) !!}
-                </div>
-                <p class="text-base font-semibold text-brand-700">Scan to get your loyalty card</p>
-                <p class="mt-1 text-xs text-stone-500">Collect stamps. Earn rewards.</p>
+        <x-ui.card class="min-w-0 p-5 sm:p-6 lg:self-stretch">
+            <h2 class="text-lg font-semibold text-stone-900">Your join poster</h2>
+            <p class="mt-1 text-sm leading-relaxed text-stone-500">This is the A4 poster customers scan to join your card.</p>
+            <div id="join-poster-preview" class="relative mx-auto mt-5 w-full max-w-[390px] overflow-hidden rounded-lg border border-stone-200 shadow-sm" style="aspect-ratio: 794 / 1123">
+                <iframe src="{{ route('merchant.stores.programs.qr.pdf', [$store, $program, 'preview' => 1]) }}" title="A4 join poster preview for {{ $program->name }} at {{ $store->name }}" class="pointer-events-none absolute left-0 top-0 border-0" style="width: 794px; height: 1123px; transform-origin: top left"></iframe>
             </div>
-            <div class="mt-5 flex flex-wrap items-center justify-between gap-3">
-                <p class="text-xs text-stone-500">Try the customer experience before sharing.</p>
-                <x-ui.button :href="$joinUrl" target="_blank" rel="noopener" variant="secondary">Open join page ↗</x-ui.button>
-            </div>
+            <p class="mt-4 text-xs text-stone-500">The downloaded PDF uses this same poster design and join QR.</p>
         </x-ui.card>
 
         <div class="min-w-0 space-y-5">
@@ -33,31 +20,45 @@
                 <p class="mt-2 text-sm leading-relaxed text-stone-500">Download a ready-to-print poster with your loyalty card branding and join QR.</p>
                 <div class="mt-5 flex flex-wrap gap-2">
                     <x-ui.button type="button" onclick="downloadProgramPoster('{{ route('merchant.stores.programs.qr.pdf', [$store, $program]) }}', '{{ \Illuminate\Support\Str::slug($store->name . ' ' . $program->name) }}-join-poster.pdf')">Download A4 poster</x-ui.button>
-                    <x-ui.button href="{{ route('merchant.stores.programs.qr.pdf', [$store, $program, 'preview' => 1]) }}" target="_blank" rel="noopener" variant="secondary">Preview poster ↗</x-ui.button>
+                    <x-ui.button href="{{ route('merchant.stores.programs.qr.pdf', [$store, $program, 'preview' => 1]) }}" target="_blank" rel="noopener" variant="secondary">Open full size ↗</x-ui.button>
                 </div>
-                <p class="mt-3 text-xs text-stone-500">PDF · A4 portrait. Check the preview, then print and test a scan.</p>
+                <p class="mt-3 text-xs text-stone-500">PDF · A4 portrait. Print and test a scan before displaying it.</p>
             </x-ui.card>
 
             <x-ui.card class="min-w-0 p-5 sm:p-6">
                 <h2 class="text-lg font-semibold text-stone-900">Share online</h2>
                 <p class="mt-2 text-sm leading-relaxed text-stone-500">Add your join link to your website, social profile or messages.</p>
                 <label for="join-link" class="mt-4 block text-sm font-medium text-stone-700">Customer join link</label>
-                <div class="mt-2 flex flex-col gap-2 sm:flex-row">
-                    <x-ui.input id="join-link" type="text" :value="$joinUrl" readonly class="min-w-0 flex-1" aria-describedby="join-link-status" />
-                    <x-ui.button type="button" onclick="copyToClipboard()" variant="secondary" class="shrink-0">Copy link</x-ui.button>
+                <div class="mt-2 space-y-2">
+                    <x-ui.input id="join-link" type="text" :value="$joinUrl" readonly class="w-full min-w-0" aria-describedby="join-link-status" />
+                    <div class="flex flex-wrap gap-2">
+                        <x-ui.button type="button" onclick="copyToClipboard()" variant="secondary">Copy link</x-ui.button>
+                        <x-ui.button :href="$joinUrl" target="_blank" rel="noopener" variant="secondary">Open join page ↗</x-ui.button>
+                    </div>
                 </div>
                 <p id="join-link-status" role="status" aria-live="polite" class="mt-2 min-h-5 text-xs text-stone-600"></p>
-                <div class="mt-3 border-t border-stone-200 pt-4">
-                    <h3 class="text-sm font-semibold text-stone-900">Making your own signage?</h3>
-                    <p class="mt-1 text-sm text-stone-500">Use the QR image on menus, table signs or other designs.</p>
-                    <form class="mt-3" method="GET" data-disable-submit-loading="false" action="{{ route('merchant.stores.programs.qr.image', [$store, $program]) }}">
-                        <x-ui.button type="submit" variant="secondary">Download QR image (SVG)</x-ui.button>
-                    </form>
-                </div>
+            </x-ui.card>
+
+            <x-ui.card class="min-w-0 p-5 sm:p-6">
+                <h2 class="text-lg font-semibold text-stone-900">Making your own signage?</h2>
+                <p class="mt-2 text-sm leading-relaxed text-stone-500">Use the QR image on menus, table signs or other designs.</p>
+                <form class="mt-5" method="GET" data-disable-submit-loading="false" action="{{ route('merchant.stores.programs.qr.image', [$store, $program]) }}">
+                    <x-ui.button type="submit" variant="secondary">Download QR image (SVG)</x-ui.button>
+                </form>
             </x-ui.card>
         </div>
     </div>
     <script>
+        const posterPreview = document.getElementById('join-poster-preview');
+        if (posterPreview && 'ResizeObserver' in window) {
+            const posterFrame = posterPreview.querySelector('iframe');
+            const resizePoster = () => {
+                posterFrame.style.transform = `scale(${posterPreview.clientWidth / 794})`;
+            };
+            new ResizeObserver(resizePoster).observe(posterPreview);
+            resizePoster();
+        }
+
         async function downloadProgramPoster(url, filename) {
             try {
                 const response = await fetch(url, {

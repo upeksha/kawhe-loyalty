@@ -423,7 +423,12 @@ class StoreController extends Controller
 
         $filename = Str::slug($store->name).'-join-poster.pdf';
 
-        return $pdf->download($filename);
+        $download = $pdf->download($filename);
+        if ($store->user_id === Auth::id() && ! $store->launch_poster_downloaded_at) {
+            $store->forceFill(['launch_poster_downloaded_at' => now()])->save();
+        }
+
+        return $download;
     }
 
     /**

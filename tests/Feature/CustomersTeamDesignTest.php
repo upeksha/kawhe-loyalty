@@ -34,11 +34,11 @@ test('customer list preserves lookup fields and uses actual available reward bal
     $store = Store::factory()->for($owner)->create();
     $customer = Customer::factory()->create(['name' => 'Alex Morgan', 'phone' => '021555123', 'birthday' => '1990-01-02']);
     $account = LoyaltyAccount::factory()->create(['store_id' => $store->id, 'customer_id' => $customer->id, 'reward_balance' => 2, 'reward_redeemed_at' => now()->subDay()]);
-    $response = $this->actingAs($owner)->get(route('merchant.customers.index', ['q' => 'Alex', 'store_id' => $store->id]))->assertOk()->assertSee('2 available')->assertSee('021555123')->assertSee('Jan 02, 1990')->assertSee($account->manual_entry_code);
+    $response = $this->actingAs($owner)->get(route('merchant.customers.index', ['q' => 'Alex', 'store_id' => $store->id]))->assertOk()->assertSee('2 available')->assertSee('Alex Morgan')->assertDontSee('021555123')->assertDontSee($account->manual_entry_code);
     $dom = customersTeamDom($response->getContent());
     $links = $dom->query('//a[contains(@href,"/customers/'.$account->id.'?")]');
     expect($links->length)->toBeGreaterThan(0);
     parse_str(parse_url($links->item(0)->getAttribute('href'), PHP_URL_QUERY), $query);
     expect($query['q'])->toBe('Alex')->and($query['store_id'])->toBe((string) $store->id);
-    $this->get(route('merchant.customers.show', $account))->assertOk()->assertSee('2 rewards available')->assertSee('Help with this card');
+    $this->get(route('merchant.customers.show', $account))->assertOk()->assertSee('2 rewards available')->assertSee('021555123')->assertSee('Jan 02, 1990')->assertSee($account->manual_entry_code)->assertSee('Help with this card');
 });

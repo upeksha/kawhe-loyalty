@@ -57,7 +57,7 @@ test('card workspace preserves archive restore and default card protections', fu
     $otherStore = Store::factory()->create(['name' => 'Private other merchant']);
     $otherStore->resolvedDefaultProgram();
     $response = $this->actingAs($owner)->get(route('merchant.programs.index'))->assertOk()
-        ->assertSee('Tea card')->assertSee('Archived coffee')->assertSee('0 of 1 stamps')->assertDontSee('Private other merchant');
+        ->assertSee('Tea card')->assertSee('Archived coffee')->assertSee('Stamps to earn')->assertDontSee('Private other merchant');
     $dom = merchantDesignDom($response->getContent());
     expect($dom->query('//form[@action="'.route('merchant.stores.programs.destroy', [$store, $active]).'"]')->length)->toBe(1);
     expect($dom->query('//form[@action="'.route('merchant.stores.programs.destroy', [$store, $default]).'"]')->length)->toBe(0);

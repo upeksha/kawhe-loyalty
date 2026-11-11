@@ -75,6 +75,26 @@ test('css variable block includes input tokens', function () {
         ->toContain('--program-input-text:');
 });
 
+test('owner-selected midtone backgrounds always get readable card text', function (string $background) {
+    $theme = ProgramBranding::fromColors('#3D7659', $background);
+    $hex = fn (string $value) => array_map('hexdec', str_split(substr($value, 1), 2));
+    $luminance = function (string $value) use ($hex): float {
+        [$red, $green, $blue] = $hex($value);
+        $linear = fn (int $channel) => $channel / 255 <= 0.03928
+            ? $channel / 255 / 12.92
+            : (($channel / 255 + 0.055) / 1.055) ** 2.4;
+
+        return 0.2126 * $linear($red) + 0.7152 * $linear($green) + 0.0722 * $linear($blue);
+    };
+    $a = $luminance($background);
+    $b = $luminance($theme->textOnBg);
+    $ratio = (max($a, $b) + 0.05) / (min($a, $b) + 0.05);
+
+    expect($ratio)->toBeGreaterThanOrEqual(4.5)
+        ->and($theme->mutedOnBg)->toBe($theme->textOnBg)
+        ->and($theme->cardMutedOnBg)->toBe($theme->textOnBg);
+})->with(['#777777', '#808080', '#999999', '#FAEDD7', '#263E30']);
+
 test('card title prefers program name', function () {
     $program = new \App\Models\LoyaltyProgram([
         'name' => 'Coffee Rewards',

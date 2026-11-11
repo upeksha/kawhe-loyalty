@@ -1,6 +1,7 @@
 @props([
     'step' => 1,
-    'totalSteps' => 5,
+    'totalSteps' => 6,
+    'store' => null,
     'title' => '',
     'subtitle' => '',
     'backUrl' => null,
@@ -8,29 +9,31 @@
 
 @php
     $stepLabels = [
-        1 => 'Reward setup',
-        2 => 'Card design',
-        3 => 'Customer form',
-        4 => 'Card ready',
-        5 => 'Get started',
+        1 => 'Confirm your email',
+        2 => 'Add café details',
+        3 => 'Create your card',
+        4 => 'Download your join poster',
+        5 => 'Install Kawhe Merchant',
+        6 => 'Complete a test stamp',
     ];
     $visibleStepLabels = array_slice($stepLabels, 0, $totalSteps, true);
+    $launch = app(\App\Support\MerchantLaunchChecklist::class)->forUser(auth()->user(), $store);
 @endphp
 
-<div class="min-h-[calc(100vh-5rem)] bg-gradient-to-b from-stone-100 to-stone-50/80 -mx-4 sm:-mx-6 -mb-6 px-4 sm:px-6 py-8 sm:py-10">
+<div class="min-h-[calc(100vh-5rem)] -mx-4 sm:-mx-6 -mb-6 px-4 sm:px-6 py-8 sm:py-10">
     <div class="max-w-5xl mx-auto">
-        {{-- Step progress bar --}}
-        <nav class="mb-6 lg:mb-8" aria-label="Onboarding steps">
+        {{-- One progress bar for the whole café launch. --}}
+        <nav class="mb-6 lg:mb-8" aria-label="Café launch steps">
             <div class="rounded-2xl px-5 py-5 sm:px-6 sm:py-6 overflow-visible">
                 <ol class="flex items-center w-full list-none p-0 m-0 gap-0">
                     @foreach ($visibleStepLabels as $i => $label)
                         @php
-                            $isCompleted = $i < $step;
+                            $isCompleted = $launch['steps'][$i - 1]['done'] ?? false;
                             $isCurrent = $i === $step;
                         @endphp
-                        <li class="flex-shrink-0 flex items-center justify-center opacity-100">
-                            <span class="inline-flex w-10 h-10 shrink-0 rounded-full items-center justify-center text-sm font-semibold opacity-100
-                                {{ $isCompleted ? 'bg-emerald-600 text-white' : ($isCurrent ? 'bg-brand-600 text-white ring-4 ring-brand-100' : 'bg-stone-200 text-stone-500') }}">
+                        <li class="flex-shrink-0 flex items-center justify-center opacity-100" @if($isCurrent) aria-current="step" @endif>
+                            <span class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-semibold opacity-100 sm:h-10 sm:w-10
+                                {{ $isCompleted ? 'bg-brand-700 text-white' : ($isCurrent ? 'bg-brand-600 text-white ring-4 ring-brand-100' : 'bg-stone-200 text-stone-500') }}">
                                 @if ($isCompleted)
                                     <svg class="w-5 h-5 opacity-100" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
                                 @else
@@ -40,12 +43,17 @@
                         </li>
                         @if ($i < $totalSteps)
                             <li class="flex-1 flex items-center min-w-[16px] px-2 sm:px-3 opacity-100" aria-hidden="true">
-                                <span class="block w-full h-1 rounded-full opacity-100 {{ $isCompleted ? 'bg-emerald-600' : 'bg-stone-200' }}"></span>
+                                <span class="block w-full h-1 rounded-full opacity-100 {{ $isCompleted ? 'bg-brand-700' : 'bg-stone-200' }}"></span>
                             </li>
                         @endif
                     @endforeach
                 </ol>
-                <p class="mt-4 text-center text-sm font-medium text-stone-600">
+                <ol class="mt-3 hidden grid-cols-6 gap-2 text-center text-xs font-medium leading-4 text-stone-600 sm:grid" aria-hidden="true">
+                    @foreach($visibleStepLabels as $i => $label)
+                        <li class="{{ $i === $step ? 'font-semibold text-brand-800' : '' }}">{{ $label }}</li>
+                    @endforeach
+                </ol>
+                <p class="mt-4 text-center text-sm font-medium text-stone-600 sm:mt-3">
                     Step {{ $step }} of {{ $totalSteps }} · <span class="text-stone-800">{{ $stepLabels[$step] ?? '' }}</span>
                 </p>
             </div>

@@ -2,11 +2,11 @@
     $inputClass = 'block w-full min-h-11 rounded-xl border border-stone-300 bg-white px-4 py-2.5 text-base text-stone-900 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500';
     $defaultTarget = old('reward_target', $store?->reward_target ?? 9);
     $defaultReward = old('reward_title', $store?->reward_title ?? 'Free regular coffee');
-    $expandStore = !filled(old('name', $store?->name ?? '')) || $errors->has('name') || $errors->has('address');
+    $expandStore = !filled(old('name', $store?->name ?? '')) || !filled(old('address', $store?->address ?? '')) || $errors->has('name') || $errors->has('address');
 @endphp
 <x-onboarding-layout>
     <x-slot name="header">Set up your reward</x-slot>
-    <x-onboarding-step-layout :step="1" :totalSteps="4" title="Set up your reward" subtitle="Choose what customers earn and how many stamps they need. Your café decides what earns a stamp.">
+    <x-onboarding-step-layout :step="2" :store="$store" title="Set up your reward" subtitle="Add your café details and choose what customers earn. Your café decides what earns a stamp.">
         <form method="POST" action="{{ route('merchant.onboarding.wizard.store-basics.store') }}" id="store-basics-form"
             x-data="{
                 storeName: {{ json_encode(old('name', $store?->name ?? '')) }},

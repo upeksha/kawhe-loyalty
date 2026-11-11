@@ -10,6 +10,8 @@ class CoffeeCardSample
     public static function available(): bool
     {
         return in_array([config('app.env'), parse_url(config('app.url'), PHP_URL_HOST)], [
+            ['local', '127.0.0.1'],
+            ['local', 'localhost'],
             ['testing', 'testing.kawhe.shop'],
             ['production', 'app.kawhe.shop'],
         ], true);

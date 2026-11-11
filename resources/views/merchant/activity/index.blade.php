@@ -1,10 +1,16 @@
 <x-merchant-design-layout title="Activity" subtitle="A clear record of stamps earned and rewards redeemed.">
     <section aria-label="Activity log" class="rounded-2xl border border-stone-200 bg-white p-6">
+        <div class="mb-5 flex flex-wrap items-center justify-between gap-3">
+            <p class="text-sm text-stone-600">See stamps and redemptions across your stores.</p>
+            @if($events->isNotEmpty())
+                <x-ui.button href="{{ route('merchant.activity.export') }}" variant="secondary">Download this month’s activity CSV</x-ui.button>
+            @endif
+        </div>
         @if($events->isEmpty())
             <div class="space-y-3 py-4">
                 <h2 class="text-xl font-semibold">No activity yet</h2>
                 <p class="text-base text-stone-600">Stamps and redeemed rewards across your stores will appear here.</p>
-                <x-ui.button href="{{ route('merchant.dashboard') }}" variant="secondary">Back to overview</x-ui.button>
+                <x-ui.button href="{{ $firstStore ? route('merchant.stores.qr', $firstStore) : route('merchant.stores.index') }}">Open join poster</x-ui.button>
             </div>
         @else
             <div class="overflow-x-auto" tabindex="0" role="region" aria-label="Stamp and reward history">

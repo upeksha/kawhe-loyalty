@@ -45,7 +45,7 @@
         * { margin: 0; padding: 0; }
         body { font-family: 'DejaVu Sans', sans-serif; background: {{ $bg }}; color: {{ $textColor }}; }
         .poster { padding: 16mm 18mm; text-align: center; }
-        .logo-panel { background: #ffffff; border-radius: 4mm; width: 82mm; margin: 0 auto 7mm; padding: 6mm 0; line-height: 1; }
+        .logo-panel { width: 82mm; margin: 0 auto 7mm; padding: 6mm 0; line-height: 1; }
         .logo { width: {{ $logoWidth }}mm; height: {{ $logoHeight }}mm; }
         .store-name { font-size: 13pt; font-weight: bold; line-height: 1.4; margin-bottom: 5mm; word-wrap: break-word; }
         .eyebrow { font-size: 10pt; letter-spacing: 2px; margin-bottom: 3mm; }

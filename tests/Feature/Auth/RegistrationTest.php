@@ -19,6 +19,11 @@ class RegistrationTest extends TestCase
         $response = $this->get('/register');
 
         $response->assertStatus(200);
+        $response->assertSee('Create my free café account');
+        $response->assertSee('No credit card required. Takes about two minutes.');
+        $response->assertSee('Use at least 8 characters.');
+        $response->assertSee('Show password');
+        $response->assertDontSee('name="address"', false);
     }
 
     public function test_new_users_can_register(): void
@@ -42,11 +47,62 @@ class RegistrationTest extends TestCase
         $store = Store::where('user_id', $user->id)->first();
         $this->assertNotNull($store);
         $this->assertSame('Test Cafe', $store->name);
+        $this->assertNull($store->address);
         $this->assertSame(\App\Http\Controllers\MerchantOnboardingWizardController::STEP_STORE_BASICS, $store->onboarding_step);
         $this->assertNotNull($store->default_loyalty_program_id);
 
         Mail::assertNotQueued(MerchantWelcomeEmail::class);
         $this->assertNull($user->merchant_welcome_queued_at);
+    }
+
+    public function test_address_is_collected_during_store_setup_instead_of_registration(): void
+    {
+        Mail::fake();
+
+        $this->post('/register', [
+            'name' => 'Test Owner',
+            'email' => 'owner@example.com',
+            'store_name' => 'Test Café',
+            'address' => 'Ignored at registration',
+            'password' => 'password123',
+            'password_confirmation' => 'password123',
+        ])->assertRedirect(route('verification.notice'));
+
+        $store = User::where('email', 'owner@example.com')->sole()->stores()->sole();
+        $this->assertNull($store->address);
+
+        $store->user->forceFill(['email_verified_at' => now()])->save();
+        $this->actingAs($store->user)
+            ->post(route('merchant.onboarding.wizard.store-basics.store'), [
+                'name' => 'Test Café',
+                'address' => '28 Roland Hill, Auckland',
+                'reward_target' => 7,
+                'reward_title' => 'Free coffee',
+            ])->assertRedirect(route('merchant.onboarding.wizard.card-design'));
+
+        $this->assertSame('28 Roland Hill, Auckland', $store->fresh()->address);
+    }
+
+    public function test_failed_registration_preserves_non_secret_fields_for_retry(): void
+    {
+        $response = $this->from('/register')->post('/register', [
+            'name' => 'Test Owner',
+            'email' => 'owner@example.com',
+            'store_name' => 'Test Café',
+            'password' => 'password123',
+            'password_confirmation' => 'different-password',
+        ]);
+
+        $response->assertRedirect('/register')
+            ->assertSessionHasErrors('password')
+            ->assertSessionHasInput('name', 'Test Owner')
+            ->assertSessionHasInput('email', 'owner@example.com')
+            ->assertSessionHasInput('store_name', 'Test Café');
+
+        $this->get('/register')->assertOk()
+            ->assertSee('value="Test Owner"', false)
+            ->assertSee('value="owner@example.com"', false)
+            ->assertSee('value="Test Café"', false);
     }
 
     public function test_welcome_is_queued_only_after_email_confirmation_and_only_once(): void

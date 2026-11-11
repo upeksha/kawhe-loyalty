@@ -272,12 +272,19 @@ class MerchantOnboardingWizardController extends Controller
         if (! $store) {
             return redirect()->route('merchant.onboarding.wizard.index');
         }
+        if (! in_array($store->onboarding_step, [Store::ONBOARDING_STEP_CARD_READY, Store::ONBOARDING_STEP_CONTINUE_TRIAL], true)) {
+            return redirect()->route('merchant.onboarding.wizard.index');
+        }
+        if (! $store->launch_poster_downloaded_at) {
+            return redirect()->route('merchant.onboarding.wizard.card-ready')
+                ->withErrors(['poster' => 'Download your join poster before continuing.']);
+        }
         $store->update([
             'onboarding_step' => null,
             'onboarding_completed_at' => now(),
         ]);
 
-        return redirect()->route('merchant.stores.qr', $store)
-            ->with('success', 'You\'re all set. Share your QR code or join link with customers to start collecting signups.');
+        return redirect()->route('merchant.onboarding.launch.show', $store)
+            ->with('success', 'Your poster is ready. Install Kawhe Merchant to continue.');
     }
 }

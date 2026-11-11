@@ -3,52 +3,33 @@
 
     <x-onboarding-step-layout
         :step="4"
-        :totalSteps="4"
-        title="Your loyalty card is ready"
-        subtitle="Check your card, try the signup link, then finish setup."
+        :store="$store"
+        title="Download your join poster"
+        subtitle="Preview the A4 poster your customers will scan, then download it for your counter."
         :backUrl="route('merchant.onboarding.wizard.customer-form')"
     >
+        @if($errors->has('poster'))
+            <x-ui.alert variant="danger" class="mb-6">{{ $errors->first('poster') }}</x-ui.alert>
+        @endif
         <div class="grid items-start gap-6 lg:grid-cols-2">
             <section class="min-w-0 rounded-2xl border border-stone-200 bg-white p-5 sm:p-6" aria-labelledby="ready-preview-title">
                 <div class="mb-5 flex flex-wrap items-center justify-between gap-3">
-                    <h2 id="ready-preview-title" class="text-lg font-semibold">Your customer card</h2>
-                    <a href="{{ route('merchant.onboarding.wizard.card-design') }}" class="inline-flex min-h-11 items-center text-sm font-semibold text-brand-700 underline">Edit design</a>
+                    <h2 id="ready-preview-title" class="text-lg font-semibold">Your join poster preview</h2>
+                    <a href="{{ route('merchant.stores.qr.pdf', ['store' => $store, 'preview' => 1]) }}" target="_blank" rel="noopener" class="inline-flex min-h-11 items-center text-sm font-semibold text-brand-700 underline">Open full size ↗</a>
                 </div>
-                @if($program && \App\Support\CoffeeCardSample::programEnabled($program))
-                    @php
-                        [$background, $ink] = \App\Support\CardDesign::colors($program);
-                        $target = max(1, (int) $program->reward_target);
-                        $artwork = app(\App\Services\Wallet\Artwork\CardStyleArtwork::class)->render($target, 0, false, 'web', \App\Support\CardDesign::options($program));
-                    @endphp
-                    <div class="mx-auto max-w-sm overflow-hidden rounded-2xl" style="background-color: {{ $background }}; color: {{ $ink }}">
-                        <div class="space-y-2 p-5">
-                            @if($program->logo_url)<img src="{{ $program->logo_url }}" alt="{{ $store->name }} logo" class="max-h-14 max-w-36 object-contain">@endif
-                            <p class="break-words text-lg font-semibold">{{ $store->name }}</p>
-                            <p class="text-sm">0 / {{ $target }} stamps · 0 rewards</p>
-                        </div>
-                        <img src="data:image/png;base64,{{ base64_encode($artwork) }}" width="720" height="470" alt="Saved card design with empty stamps" class="block h-auto w-full">
-                        <div class="space-y-3 p-5">
-                            <p class="text-xs font-semibold uppercase tracking-wide">Your reward</p>
-                            <p class="break-words text-lg font-semibold">{{ $program->reward_title }}</p>
-                            <div class="rounded-xl bg-white p-4 text-center text-stone-600">
-                                <img src="{{ asset('images/loyalty-card-demo-qr.svg') }}" width="100" height="100" alt="Non-scannable sample card QR" class="mx-auto h-24 w-24">
-                                <p class="mt-2 text-xs">Sample card · not for scanning</p>
-                            </div>
-                        </div>
-                    </div>
-                @elseif($program)
-                    <div class="flex justify-center"><x-loyalty-design-preview :store="$store" :program="$program" /></div>
-                @endif
-                <p class="mt-4 text-sm text-stone-500">Preview only—no customer account is created. Apple and Google Wallet use the same design in their own layouts.</p>
+                <div id="join-poster-preview" class="relative mx-auto w-full overflow-hidden rounded-lg border border-stone-200 shadow-sm" style="aspect-ratio: 794 / 1123">
+                    <iframe src="{{ route('merchant.stores.qr.pdf', ['store' => $store, 'preview' => 1]) }}" title="A4 join poster preview for {{ $store->name }}" class="pointer-events-none absolute left-0 top-0 border-0" style="width: 794px; height: 1123px; transform-origin: top left"></iframe>
+                </div>
+                <p class="mt-4 text-sm text-stone-500">This preview uses the same poster design and join QR code as the PDF.</p>
             </section>
 
             <div class="min-w-0 space-y-6">
                 <section class="rounded-2xl border border-stone-200 bg-white p-5 sm:p-6" aria-labelledby="share-title">
-                    <h2 id="share-title" class="text-lg font-semibold">Invite your first customer</h2>
-                    <p class="mt-2 text-sm text-stone-600">Customers scan this QR code to join and get their own card.</p>
-                    <div class="mx-auto my-5 flex w-fit max-w-full justify-center rounded-xl border border-stone-200 bg-white p-4 [&_svg]:h-auto [&_svg]:max-w-full">
-                        {!! SimpleSoftwareIO\QrCode\Facades\QrCode::size(184)->margin(1)->generate($joinUrl) !!}
-                    </div>
+                    <h2 id="share-title" class="text-lg font-semibold">Download and share</h2>
+                    <p class="mt-2 text-sm text-stone-600">Print the PDF for your counter. Customers scan its QR code to join and get their own card.</p>
+                    @if($store->launch_poster_downloaded_at)
+                        <p class="mt-3 text-sm font-semibold text-brand-700">✓ Poster downloaded. You can continue.</p>
+                    @endif
                     <label for="join-link" class="mb-2 block text-sm font-medium">Customer signup link</label>
                     <div class="flex min-w-0 gap-2">
                         <input type="text" id="join-link" value="{{ $joinUrl }}" readonly class="min-w-0 flex-1 rounded-xl border border-stone-300 bg-stone-50 px-3 py-3 text-sm">
@@ -56,14 +37,14 @@
                     </div>
                     <div class="mt-4 grid gap-3 sm:grid-cols-2">
                         <x-ui.button href="{{ $joinUrl }}" target="_blank" rel="noopener" variant="secondary" class="min-h-11 w-full sm:col-span-2">Open customer signup</x-ui.button>
-                        <a href="{{ route('merchant.stores.qr.pdf', $store) }}" class="inline-flex min-h-11 items-center justify-center rounded-xl border border-stone-300 px-3 py-3 text-center text-sm font-semibold text-brand-700">Download poster (PDF)</a>
+                        <a href="{{ route('merchant.stores.qr.pdf', $store) }}" id="onboarding-poster-download" class="inline-flex min-h-11 items-center justify-center rounded-xl border border-stone-300 px-3 py-3 text-center text-sm font-semibold text-brand-700">Download poster (PDF)</a>
                         <a href="{{ route('merchant.stores.qr.image', $store) }}" class="inline-flex min-h-11 items-center justify-center rounded-xl border border-stone-300 px-3 py-3 text-center text-sm font-semibold text-brand-700">Download QR (SVG)</a>
                     </div>
                 </section>
                 <section class="rounded-2xl bg-brand-50 p-5 sm:p-6">
                     <h2 class="font-semibold text-brand-900">Try it before sharing</h2>
                     <p class="mt-2 text-sm leading-relaxed text-brand-900">Scan the join QR on your phone, sign up and save your card to Wallet. Then use the merchant scanner to test a stamp.</p>
-                    <p class="mt-3 text-sm text-brand-900">Happy with your card? Finish setup below. You can change your design later.</p>
+                    <p class="mt-3 text-sm text-brand-900">Once your poster is downloaded, continue to the merchant app. You can change the design later.</p>
                 </section>
             </div>
         </div>
@@ -78,13 +59,41 @@
                 </form>
                 <form method="POST" action="{{ route('merchant.onboarding.wizard.card-ready.advance') }}" class="w-full sm:w-auto">
                     @csrf
-                    <x-ui.button type="submit" variant="primary" size="lg" class="w-full sm:w-auto rounded-xl min-w-[160px]">Finish setup</x-ui.button>
+                    <x-ui.button type="submit" variant="primary" size="lg" class="w-full sm:w-auto rounded-xl min-w-[160px]">Continue to app install</x-ui.button>
                 </form>
             </div>
         </x-slot>
     </x-onboarding-step-layout>
 
     <script>
+        const posterPreview = document.getElementById('join-poster-preview');
+        if (posterPreview && 'ResizeObserver' in window) {
+            const posterFrame = posterPreview.querySelector('iframe');
+            const resizePoster = () => {
+                posterFrame.style.transform = `scale(${posterPreview.clientWidth / 794})`;
+            };
+            new ResizeObserver(resizePoster).observe(posterPreview);
+            resizePoster();
+        }
+
+        document.getElementById('onboarding-poster-download')?.addEventListener('click', async function (event) {
+            event.preventDefault();
+            try {
+                const response = await fetch(this.href, { credentials: 'same-origin' });
+                if (!response.ok) throw new Error('Poster download failed');
+                const blob = await response.blob();
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = 'join-poster.pdf';
+                document.body.appendChild(link);
+                link.click();
+                link.remove();
+                setTimeout(() => { URL.revokeObjectURL(link.href); window.location.reload(); }, 500);
+            } catch (error) {
+                window.location.href = this.href;
+            }
+        });
+
         function showCopyToast(message, isError = false) {
             const existing = document.getElementById('copy-toast');
             if (existing) {

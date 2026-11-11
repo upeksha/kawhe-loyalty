@@ -37,7 +37,6 @@ class RegisteredUserController extends Controller
             'name' => ['required', 'string', 'max:255', new PlainSignupName],
             'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:'.User::class],
             'store_name' => ['required', 'string', 'max:255', new PlainSignupName],
-            'address' => ['nullable', 'string', 'max:255'],
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
         ]);
 
@@ -52,7 +51,7 @@ class RegisteredUserController extends Controller
 
             $store = $user->stores()->create([
                 'name' => $request->string('store_name')->toString(),
-                'address' => $request->filled('address') ? $request->string('address')->toString() : null,
+                'address' => null,
                 'reward_target' => 9,
                 'reward_title' => 'Free coffee',
                 'card_design' => \App\Support\CoffeeCardSample::available() ? 'simple' : 'classic',

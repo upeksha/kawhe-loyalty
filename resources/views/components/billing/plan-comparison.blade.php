@@ -12,6 +12,7 @@
         ['label' => 'Stores', 'key' => 'stores', 'suffix' => ''],
         ['label' => 'Loyalty cards', 'key' => 'programs_per_store', 'suffix' => ' per store'],
         ['label' => 'Customers', 'key' => 'customers_per_program', 'suffix' => ' per card'],
+        ['label' => 'Staff', 'key' => 'staff_per_store', 'suffix' => ' per store'],
     ];
 
     $planOrder = ['free', 'pro', 'business'];

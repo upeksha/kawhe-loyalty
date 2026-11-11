@@ -10,6 +10,10 @@
     <p class="mt-3 text-sm customer-muted">No password. No customer app required.</p>
 </header>
 
+<a href="{{ route('join.existing', ['slug' => $program->slug, 't' => $token]) }}" class="customer-btn customer-btn-outline mb-5">
+    I already joined · Recover an existing card
+</a>
+
 @if($showSavedCard ?? false)
     <template x-if="lastToken">
         <div class="mb-5 rounded-xl border border-stone-200 bg-white p-4">
@@ -26,7 +30,7 @@
     <div class="customer-field">
         <label for="email" class="customer-card-label mb-1.5 block text-sm font-medium">Email address</label>
         <input type="email" id="email" name="email" value="{{ old('email') }}" class="customer-input" placeholder="you@example.com" autocomplete="email" inputmode="email" autocapitalize="none" spellcheck="false" maxlength="255" aria-describedby="email-help" required>
-        <p id="email-help" class="mt-2 text-xs customer-muted">Use an email you can open. It helps you recover your card and confirm rewards.</p>
+        <p id="email-help" class="mt-2 text-xs customer-muted">Use an email you can open so you can recover your card. @if($program->require_verification_for_redemption)You can collect stamps straight away; confirm your email before your first reward redemption.@endif</p>
         <x-input-error :messages="$errors->get('email')" class="mt-1.5 text-sm" />
     </div>
 
@@ -39,10 +43,6 @@
         @endif
     </div>
 </form>
-
-<div class="mt-5 text-center">
-    <a href="{{ route('join.existing', ['slug' => $program->slug, 't' => $token]) }}" class="inline-flex min-h-11 items-center text-sm font-semibold text-brand-700 underline">Recover an existing card</a>
-</div>
 
     @push('scripts')
         <script>

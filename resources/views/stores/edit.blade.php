@@ -78,7 +78,9 @@
                             </dl>
                         </div>
                     @else
-                        <x-ui.empty-state class="mt-5" heading="No loyalty card found" description="Create a loyalty card before sharing a join QR." />
+                        <x-ui.empty-state class="mt-5" heading="No loyalty card found" description="Create a loyalty card before sharing a join QR.">
+                            <x-ui.button href="{{ $store->trashed() ? route('merchant.stores.index') : route('merchant.stores.programs.create', $store) }}">{{ $store->trashed() ? 'View stores' : 'Create a loyalty card' }}</x-ui.button>
+                        </x-ui.empty-state>
                     @endif
                 </section>
 

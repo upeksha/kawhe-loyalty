@@ -83,17 +83,14 @@ final class ProgramBranding
         $bgRgb = self::hexToRgb($background);
         $simpleLum = $bgRgb ? self::simpleLuminance($bgRgb) : 0.0;
 
-        if ($bgRgb) {
-            $textOnBg = $simpleLum < 0.5 ? '#ffffff' : '#111827';
-            $mutedOnBg = $simpleLum < 0.5 ? 'rgba(255,255,255,0.85)' : 'rgba(17,24,39,0.75)';
-        } else {
-            $textOnBg = '#ffffff';
-            $mutedOnBg = 'rgba(255,255,255,0.85)';
-        }
-
-        $cardMutedOnBg = $bgRgb
-            ? ($simpleLum < 0.5 ? 'rgba(255,255,255,0.65)' : 'rgba(17,24,39,0.6)')
-            : 'rgba(255,255,255,0.65)';
+        // Choose the higher WCAG contrast ratio, including mid-tone owner colours.
+        $lightContrast = self::contrastRatio($background, '#FFFFFF');
+        $darkContrast = self::contrastRatio($background, '#111827');
+        $textOnBg = $darkContrast >= 4.5 && $darkContrast >= $lightContrast
+            ? '#111827'
+            : ($lightContrast >= 4.5 ? '#FFFFFF' : '#000000');
+        $mutedOnBg = $textOnBg;
+        $cardMutedOnBg = $textOnBg;
 
         if ($bgRgb) {
             [$r, $g, $b] = $bgRgb;

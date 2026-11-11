@@ -18,6 +18,8 @@
                         <x-ui.button href="{{ route('merchant.stores.programs.create', $firstStore) }}" variant="primary">
                             Add Loyalty Card
                         </x-ui.button>
+                    @else
+                        <x-ui.button href="{{ route('merchant.onboarding.wizard.store-basics') }}" variant="primary">Set up your first café</x-ui.button>
                     @endif
                 @else
                     <x-ui.button href="{{ route('billing.index') }}" variant="primary">

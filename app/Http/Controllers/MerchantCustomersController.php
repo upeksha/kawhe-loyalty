@@ -28,6 +28,7 @@ class MerchantCustomersController extends Controller
         $stores = Auth::user()->stores()->orderBy('name')->get(['id', 'name']);
         $storeId = $request->input('store_id');
         $searchTerm = $request->input('q');
+        $nearReward = $request->boolean('near_reward');
 
         if ($storeId && ! $stores->pluck('id')->contains($storeId)) {
             abort(404, 'Store not found or you do not have access to it.');
@@ -43,6 +44,7 @@ class MerchantCustomersController extends Controller
             'stores' => $stores,
             'activeStoreId' => $storeId,
             'q' => $searchTerm,
+            'nearReward' => $nearReward,
             'accounts' => $accounts,
             'canExportCustomers' => $usageService->canExportCustomers(Auth::user()),
         ]);
@@ -389,6 +391,11 @@ class MerchantCustomersController extends Controller
 
         $query = LoyaltyAccount::query()
             ->whereIn('store_id', $storeIds);
+
+        if ($request->boolean('near_reward')) {
+            $query->where('stamp_count', '>', 0)
+                ->whereRaw('stamp_count + 1 = COALESCE((SELECT reward_target FROM loyalty_programs WHERE id = loyalty_accounts.loyalty_program_id), (SELECT reward_target FROM stores WHERE id = loyalty_accounts.store_id))');
+        }
 
         $storeId = $request->input('store_id');
         if ($storeId) {

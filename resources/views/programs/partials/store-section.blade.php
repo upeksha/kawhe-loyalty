@@ -31,14 +31,13 @@
     </div>
 
     @if($activePrograms->isEmpty() && $archivedPrograms->isEmpty())
-        <x-ui.card class="dashboard-panel p-6">
-            <p class="text-sm text-stone-600">
-                No loyalty cards for this store yet.
-                @if($canCreateProgram && ! $store->trashed())
-                    <a href="{{ route('merchant.stores.programs.create', $store) }}" class="font-medium text-brand-600 hover:text-brand-700">Create the first card</a>.
-                @endif
-            </p>
-        </x-ui.card>
+        <x-ui.empty-state heading="No loyalty cards for this store yet" description="Create a card to choose a reward and get a join QR for customers.">
+            @if($canCreateProgram && ! $store->trashed())
+                <x-ui.button href="{{ route('merchant.stores.programs.create', $store) }}">Create the first card</x-ui.button>
+            @else
+                <x-ui.button href="{{ $store->trashed() ? route('merchant.stores.index') : route('billing.index') }}">{{ $store->trashed() ? 'View stores' : 'View plans' }}</x-ui.button>
+            @endif
+        </x-ui.empty-state>
     @else
         @if($activePrograms->isNotEmpty())
             <div>
@@ -49,31 +48,43 @@
 
                 <div class="space-y-6">
                     @foreach($activePrograms as $program)
-                        <div class="grid items-start gap-6 lg:grid-cols-[240px_minmax(0,1fr)] lg:gap-8">
-                            <x-loyalty-design-preview :store="$store" :program="$program" />
-                            <x-ui.card class="dashboard-panel min-w-0 space-y-4 p-6">
-                                <div class="flex flex-wrap items-center gap-3">
-                                    <h4 class="break-words text-xl font-semibold">{{ $program->name }}</h4>
-                                    @if($program->is_default)<x-ui.badge variant="success">Default</x-ui.badge>@endif
-                                    <x-ui.badge :variant="$store->trashed() ? 'warning' : 'success'">{{ $store->trashed() ? 'Store paused' : 'Active card' }}</x-ui.badge>
+                        <x-ui.card class="dashboard-panel max-w-5xl overflow-hidden !p-0">
+                            <div class="grid md:grid-cols-[260px_minmax(0,1fr)]">
+                                <div class="flex items-center justify-center border-b border-stone-100 bg-stone-50 p-5 md:border-b-0 md:border-r">
+                                    <x-loyalty-design-preview :store="$store" :program="$program" />
                                 </div>
-                                <dl class="space-y-4 text-base">
-                                    <div class="grid gap-1 sm:grid-cols-2"><dt class="text-stone-600">Reward</dt><dd class="break-words font-semibold">{{ $program->reward_title }}</dd></div>
-                                    <div class="grid gap-1 sm:grid-cols-2"><dt class="text-stone-600">Target</dt><dd class="font-semibold">{{ $program->reward_target }} stamps</dd></div>
-                                    <div class="grid gap-1 sm:grid-cols-2"><dt class="text-stone-600">Customer cards joined</dt><dd class="font-semibold">{{ number_format($program->loyalty_accounts_count) }}</dd></div>
-                                </dl>
-                                <div class="grid max-w-[400px] gap-4">
-                                    <x-ui.button href="{{ route('merchant.stores.programs.edit', [$store, $program]) }}" class="dashboard-button">Edit card appearance</x-ui.button>
-                                    <x-ui.button href="{{ route('merchant.stores.programs.qr', [$store, $program]) }}" variant="secondary" class="dashboard-button">Share join QR</x-ui.button>
-                                    @if(! $program->is_default)
-                                        <form method="POST" action="{{ route('merchant.stores.programs.destroy', [$store, $program]) }}" onsubmit="return confirm('Archive this card? New joins and scanning will pause. Customer history will remain preserved.');">
-                                            @csrf @method('DELETE')
-                                            <x-ui.button type="submit" variant="danger" class="dashboard-button w-full">Archive</x-ui.button>
-                                        </form>
+                                <div class="flex min-w-0 flex-col gap-4 p-5 sm:p-6">
+                                    <div class="flex flex-wrap items-center gap-2">
+                                        <h4 class="min-w-0 break-words text-xl font-semibold text-stone-900">{{ $program->name }}</h4>
+                                        @if($program->is_default)<x-ui.badge variant="success">Default</x-ui.badge>@endif
+                                        <x-ui.badge :variant="$store->trashed() ? 'warning' : 'success'">{{ $store->trashed() ? 'Store paused' : 'Active card' }}</x-ui.badge>
+                                    </div>
+                                    @if(trim($program->reward_title) !== trim($program->name))
+                                        <p class="text-sm text-stone-600">Reward: <span class="font-semibold text-stone-900">{{ $program->reward_title }}</span></p>
                                     @endif
+                                    <dl class="grid grid-cols-2 gap-x-6 gap-y-4 border-y border-stone-100 py-4">
+                                        <div class="min-w-0">
+                                            <dt class="text-xs font-medium text-stone-500">Stamps to earn</dt>
+                                            <dd class="mt-1 text-sm font-semibold text-stone-900">{{ $program->reward_target }}</dd>
+                                        </div>
+                                        <div class="min-w-0">
+                                            <dt class="text-xs font-medium text-stone-500">Customers joined</dt>
+                                            <dd class="mt-1 text-sm font-semibold text-stone-900">{{ number_format($program->loyalty_accounts_count) }}</dd>
+                                        </div>
+                                    </dl>
+                                    <div class="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+                                        <x-ui.button href="{{ route('merchant.stores.programs.edit', [$store, $program]) }}" class="dashboard-button">Edit card appearance</x-ui.button>
+                                        <x-ui.button href="{{ route('merchant.stores.programs.qr', [$store, $program]) }}" variant="secondary" class="dashboard-button">Share join QR</x-ui.button>
+                                        @if(! $program->is_default)
+                                            <form method="POST" action="{{ route('merchant.stores.programs.destroy', [$store, $program]) }}" onsubmit="return confirm('Archive this card? New joins and scanning will pause. Customer history will remain preserved.');">
+                                                @csrf @method('DELETE')
+                                                <x-ui.button type="submit" variant="danger" class="dashboard-button w-full">Archive</x-ui.button>
+                                            </form>
+                                        @endif
+                                    </div>
                                 </div>
-                            </x-ui.card>
-                        </div>
+                            </div>
+                        </x-ui.card>
                     @endforeach
                 </div>
             </div>

@@ -17,6 +17,9 @@ it('keeps merchant configured signup fields and program scoped form actions', fu
     $params = ['slug' => $program->slug, 't' => $program->join_token];
     $response = $this->get(route('join.show', $params))->assertOk()
         ->assertSee('Create my card')->assertSee('name="email"', false)
+        ->assertSee('I already joined · Recover an existing card')
+        ->assertSee(e(route('join.existing', $params)), false)
+        ->assertSee('confirm your email before your first reward redemption')
         ->assertSee('name="first_name"', false)->assertSee('name="phone"', false)
         ->assertSee('name="birthday"', false)->assertDontSee('name="last_name"', false)
         ->assertSee(e(route('join.store', $params)), false);
@@ -43,6 +46,9 @@ it('keeps real stamp and reward codes, signed wallet URLs and partial reward sta
         ->assertSee(e(URL::signedRoute('wallet.google.save', ['public_token' => $account->public_token])), false)
         ->assertSee('rewardBalance: 2', false)->assertSee('rewardRedeemed: false', false)
         ->assertSee('Show this code to staff to collect stamps or redeem rewards.')->assertSee('Save to Wallet')->assertSee('Refresh card')
+        ->assertSee('Add to Apple Wallet')->assertSee('Add to Google Wallet')->assertSee('Use in browser')
+        ->assertSee('Last updated just now')->assertSee('Google Wallet updates can sometimes take a few seconds')
+        ->assertSee('id="card-qr"', false)->assertSee('Reduce motion')
         ->assertSee('Recent activity')->assertSee('Add to Home Screen')
         ->assertSee('--program-bg: #254B3A', false)
         ->assertDontSee('See reward-ready state')->assertDontSee('Demo card')

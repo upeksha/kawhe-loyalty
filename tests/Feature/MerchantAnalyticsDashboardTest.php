@@ -8,6 +8,7 @@ use App\Models\PointsTransaction;
 use App\Models\StampEvent;
 use App\Models\Store;
 use App\Models\User;
+use App\Services\Analytics\MerchantDashboardActions;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -95,5 +96,57 @@ class MerchantAnalyticsDashboardTest extends TestCase
         $response->assertSee('Rewards earned');
         $response->assertSee('Rewards redeemed');
         $response->assertSee('Mar');
+    }
+
+    public function test_dashboard_actions_follow_owned_customer_progress_and_plan_usage(): void
+    {
+        $owner = User::factory()->create();
+        $store = Store::factory()->for($owner)->create(['reward_target' => 9]);
+        $otherStore = Store::factory()->create(['reward_target' => 9]);
+
+        $this->actingAs($owner)->get(route('merchant.dashboard'))->assertOk()
+            ->assertSee('Display your join poster to get your first customer.')
+            ->assertSee('Invite a staff member.');
+
+        LoyaltyAccount::factory()->create([
+            'store_id' => $store->id,
+            'stamp_count' => 8,
+            'created_at' => now()->subDays(10),
+        ]);
+        LoyaltyAccount::factory()->create([
+            'store_id' => $otherStore->id,
+            'stamp_count' => 8,
+        ]);
+
+        $this->actingAs($owner)->get(route('merchant.dashboard'))->assertOk()
+            ->assertSee('1 customer is one stamp away.')
+            ->assertSee('No activity this week—share your join link.')
+            ->assertSee('Download this month’s customer activity.')
+            ->assertDontSee('2 customers are one stamp away.')
+            ->assertDontSee('Display your join poster to get your first customer.');
+
+        $this->actingAs($owner)->get(route('merchant.customers.index', ['near_reward' => 1]))
+            ->assertOk()->assertSee('Showing customer cards one stamp away from a reward.')
+            ->assertSee('1 customer card matching your filters');
+    }
+
+    public function test_free_plan_capacity_prompt_uses_actual_limit_and_is_hidden_for_pro(): void
+    {
+        $owner = User::factory()->create();
+        Store::factory()->for($owner)->create();
+        $actions = app(MerchantDashboardActions::class);
+        $free = $actions->forOwner($owner, [
+            'primary_program_customers_count' => 78,
+            'customers_per_program_limit' => 100,
+            'is_subscribed' => false,
+        ]);
+        $pro = $actions->forOwner($owner, [
+            'primary_program_customers_count' => 78,
+            'customers_per_program_limit' => null,
+            'is_subscribed' => true,
+        ]);
+
+        $this->assertContains('You are using 78 of 100 Free-plan customer places.', array_column($free, 'title'));
+        $this->assertNotContains('You are using 78 of 100 Free-plan customer places.', array_column($pro, 'title'));
     }
 }

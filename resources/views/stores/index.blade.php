@@ -1,4 +1,5 @@
 <x-merchant-design-layout title="Stores" subtitle="Manage your locations and their loyalty cards.">
+    @if($stores->isNotEmpty() || ($archivedStores ?? collect())->isNotEmpty())
     <x-slot:actions>
         @if($usageStats['can_create_store'] ?? false)
             <x-ui.button href="{{ route('merchant.stores.create') }}">Add store</x-ui.button>
@@ -6,20 +7,16 @@
             <x-ui.button href="{{ route('billing.index') }}" variant="secondary">View plans</x-ui.button>
         @endif
     </x-slot:actions>
+    @endif
     <div class="space-y-6">
         @if($stores->isEmpty() && ($archivedStores ?? collect())->isEmpty())
             <x-ui.empty-state
                 heading="No active stores"
                 description="Use the setup wizard for your first store. Come back here later to manage stores and add extra locations."
             >
-                <div class="flex flex-wrap justify-center gap-2">
                     <x-ui.button href="{{ route('merchant.onboarding.wizard.store-basics') }}" variant="primary">
-                        Open Setup Wizard
+                        Set up your first café
                     </x-ui.button>
-                    <x-ui.button href="{{ route('merchant.dashboard') }}" variant="secondary">
-                        Back to Dashboard
-                    </x-ui.button>
-                </div>
             </x-ui.empty-state>
         @else
             @if($stores->isNotEmpty())

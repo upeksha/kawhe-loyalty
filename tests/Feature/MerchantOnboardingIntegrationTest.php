@@ -52,7 +52,12 @@ test('merchant can complete onboarding and create first store', function () {
     expect($store->name)->toBe('My First Café');
 
     $response = $this->post(route('merchant.onboarding.wizard.complete'));
-    $response->assertRedirect(route('merchant.stores.qr', $store));
+    $response->assertRedirect(route('merchant.onboarding.wizard.card-ready'));
+    expect($store->fresh()->onboarding_completed_at)->toBeNull();
+
+    $this->get(route('merchant.stores.qr.pdf', $store))->assertOk();
+    $response = $this->post(route('merchant.onboarding.wizard.complete'));
+    $response->assertRedirect(route('merchant.onboarding.launch.show', $store));
 
     expect($store->fresh()->onboarding_completed_at)->not->toBeNull();
 });

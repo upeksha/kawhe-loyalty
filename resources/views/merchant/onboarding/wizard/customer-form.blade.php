@@ -8,7 +8,7 @@
 
     <x-onboarding-step-layout
         :step="3"
-        :totalSteps="4"
+        :store="$store"
         title="Choose what customer details to collect"
         subtitle="Keep sign-up quick and low-friction. Most merchants get better conversion when the first join is fast and the data request feels reasonable."
         :backUrl="route('merchant.onboarding.wizard.card-design')"

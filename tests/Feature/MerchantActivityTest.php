@@ -78,3 +78,21 @@ test('staff cannot access merchant activity or support history', function () {
     $this->actingAs($staff)->get(route('merchant.activity.index'))->assertForbidden();
     $this->get(route('merchant.support.index'))->assertForbidden();
 });
+
+test('monthly activity CSV includes only this owners current month totals without customer details', function () {
+    $owner = User::factory()->create();
+    $store = Store::factory()->for($owner)->create(['name' => 'Owner Cafe']);
+    $otherStore = Store::factory()->create(['name' => 'Private Cafe']);
+    LoyaltyAccount::factory()->create([
+        'store_id' => $store->id,
+        'customer_id' => Customer::factory()->create(['name' => 'Hidden Customer'])->id,
+    ]);
+    createActivityEvent($store, $owner, 'Owner Customer', 'stamp', 2);
+    createActivityEvent($otherStore, $otherStore->user, 'Other Customer', 'stamp', 5);
+
+    $response = $this->actingAs($owner)->get(route('merchant.activity.export'));
+    $response->assertOk()->assertDownload('kawhe-activity-'.now()->format('Y-m').'.csv');
+    $csv = $response->streamedContent();
+    expect($csv)->toContain('Owner Cafe')->toContain(',2,2,0');
+    expect($csv)->not->toContain('Private Cafe')->not->toContain('Hidden Customer');
+});

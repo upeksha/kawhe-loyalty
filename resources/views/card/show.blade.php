@@ -44,7 +44,7 @@
                                     Show this QR code when you visit to collect stamps.
                                 </p>
                             </div>
-                            <button type="button" @click="showWelcome = false" class="flex-shrink-0 text-sm opacity-70 hover:opacity-100" aria-label="Dismiss">
+                            <button type="button" @click="showWelcome = false" class="flex-shrink-0 min-w-11 min-h-11 text-sm opacity-70 hover:opacity-100" aria-label="Dismiss">
                                 ✕
                             </button>
                         </div>
@@ -108,6 +108,7 @@
                         <!-- Progress Section -->
                         <div class="mb-6">
                             <p id="stamp-count" class="card-text text-[26px] font-semibold">{{ $account->stamp_count }} of {{ $account->reward_target }} stamps</p>
+                            <p class="card-muted mt-1 text-sm" role="status" aria-live="polite" x-text="lastUpdatedLabel">Checking recent activity…</p>
                             <p x-show="rewardBalance <= 0" x-cloak id="reward-title" class="card-muted mt-2 mb-5 text-xs">
                                 {{ max(0, $account->reward_target - $account->stamp_count) }} more until {{ strtolower($account->reward_title) }}
                             </p>
@@ -137,7 +138,7 @@
                             @endunless
                         </div>
 
-                        <div class="customer-card-code flex flex-col items-center">
+                        <div id="card-qr" class="customer-card-code flex flex-col items-center scroll-mt-6">
                             <p class="card-text mb-3 text-center text-xs">Show this code to staff to collect stamps or redeem rewards.</p>
                             <div class="customer-qr-panel rounded-xl bg-white p-4">
                                 <div id="stamp-qr-container" class="customer-qr">
@@ -154,7 +155,11 @@
                 </div>
 
                 <div class="customer-actions mb-6">
-                    <button type="button" @click="showWalletNudge = true" class="customer-btn customer-btn-primary">Save to Wallet</button>
+                    <a x-show="isIOS" x-cloak href="{{ URL::signedRoute('wallet.apple.download', ['public_token' => $account->public_token]) }}" onclick="downloadAppleWalletPass(this.href); return false;" @click="walletAdded()" class="customer-btn customer-btn-primary">Add to Apple Wallet</a>
+                    <a x-show="isAndroid" x-cloak href="{{ URL::signedRoute('wallet.google.save', ['public_token' => $account->public_token]) }}" @click="walletAdded()" class="customer-btn customer-btn-primary">Add to Google Wallet</a>
+                    <button x-show="!isIOS && !isAndroid" type="button" @click="showWalletNudge = true" class="customer-btn customer-btn-primary">Save to Wallet</button>
+                    <p x-show="isAndroid" x-cloak class="customer-muted text-sm leading-6">Google Wallet updates can sometimes take a few seconds after a stamp or redemption.</p>
+                    <a href="#card-qr" @click="dismissWalletNudge()" class="customer-btn customer-btn-secondary">Use in browser</a>
                     <div x-data="cardInstall" data-card-install x-show="visible || message" x-cloak>
                         <button type="button" x-show="visible" x-cloak @click="install()" :disabled="installing"
                             :aria-expanded="showHelp.toString()" aria-controls="card-install-help"
@@ -246,7 +251,7 @@
                     <!-- Close button -->
                     <button
                         @click="dismissWalletNudge()"
-                        class="wallet-sheet-close absolute top-4 right-4 z-10 w-9 h-9 flex items-center justify-center rounded-full transition hover:opacity-80"
+                        class="wallet-sheet-close absolute top-4 right-4 z-10 min-w-12 min-h-12 flex items-center justify-center rounded-full transition hover:opacity-80"
                         aria-label="Close"
                     >
                         <svg class="w-5 h-5 card-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -285,6 +290,7 @@
                                 >
                                     <img src="{{ asset('wallet-badges/add-to-google-wallet.svg') }}" alt="Add to Google Wallet" class="h-14 w-auto">
                                 </a>
+                                <p class="customer-muted mt-2 text-center text-sm">New stamps and rewards may take a few seconds to appear in Google Wallet.</p>
                             </div>
 
                             <!-- Neither iOS nor Android — show both options -->
@@ -314,7 +320,7 @@
                             @click="dismissWalletNudge()"
                             class="mt-5 mb-2 w-full text-center text-sm text-brand-700 underline py-3"
                         >
-                            I'll keep using the browser link
+                            Use in browser
                         </button>
                     </div>
                 </div>
@@ -354,6 +360,7 @@
                     emailVerified: {{ $account->verified_at ? 'true' : 'false' }},
                     refreshing: false,
                     refreshMessage: '',
+                    lastUpdatedLabel: 'Checking recent activity…',
                     verifying: false,
                     verifyMessage: '',
                     cardForgotten: false,
@@ -494,6 +501,7 @@
                             this.renderTransactionHistory(data.transactions);
                         } catch (error) {
                             console.error('Error loading transaction history:', error);
+                            this.lastUpdatedLabel = 'Update time unavailable';
                             const container = document.getElementById('transaction-history');
                             if (container) {
                                 container.innerHTML = '<p class="text-sm text-gray-500 text-center">Unable to load transaction history</p>';
@@ -504,6 +512,16 @@
                     renderTransactionHistory(transactions) {
                         const container = document.getElementById('transaction-history');
                         if (!container) return;
+
+                        const latest = transactions?.[0];
+                        const updatedAt = latest?.timestamp ? new Date(latest.timestamp) : null;
+                        if (updatedAt && !Number.isNaN(updatedAt.getTime())) {
+                            this.lastUpdatedLabel = Date.now() - updatedAt.getTime() < 60_000
+                                ? 'Last updated just now'
+                                : `Last updated ${updatedAt.toLocaleString(undefined, { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })}`;
+                        } else {
+                            this.lastUpdatedLabel = 'Ready for your first stamp';
+                        }
                         
                         if (!transactions || transactions.length === 0) {
                             container.innerHTML = '<p class="text-sm text-center card-muted">No recent activity</p>';

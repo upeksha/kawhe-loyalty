@@ -6,6 +6,7 @@ use App\Mail\StoreStaffInvitationMail;
 use App\Models\Store;
 use App\Models\StoreStaff;
 use App\Models\StoreStaffInvitation;
+use App\Services\Staff\StaffSeatService;
 use App\Services\Support\SupportAuditService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -21,8 +22,13 @@ class StoreStaffController extends Controller
         $ids = $stores->modelKeys();
         $members = StoreStaff::with('user')->whereIn('store_id', $ids)->get()->groupBy('store_id');
         $invitations = StoreStaffInvitation::whereIn('store_id', $ids)->get()->groupBy('store_id');
+        $seats = app(StaffSeatService::class);
+        $staffCapacity = $stores->mapWithKeys(fn (Store $store) => [$store->id => [
+            'limit' => $seats->limit($store),
+            'occupied' => $seats->occupiedCount($store),
+        ]]);
 
-        return view('staff.index', compact('stores', 'members', 'invitations'));
+        return view('staff.index', compact('stores', 'members', 'invitations', 'staffCapacity'));
     }
 
     public function invite(Request $request, Store $store)
@@ -31,13 +37,20 @@ class StoreStaffController extends Controller
         $request->validate(['email' => ['required', 'email', 'max:255']]);
         $email = Str::lower(trim($request->input('email')));
         $permissions = $this->permissions($request);
-        if ($email === Str::lower($request->user()->email) || StoreStaff::where('store_id', $store->id)->whereHas('user', fn ($q) => $q->whereRaw('LOWER(email) = ?', [$email]))->exists()) {
-            throw ValidationException::withMessages(['email' => 'This person already has access. Update their permissions below.']);
-        }
         $token = Str::random(64);
-        $invitation = StoreStaffInvitation::updateOrCreate(['store_id' => $store->id, 'email' => $email], $permissions + [
-            'invited_by' => $request->user()->id, 'token_hash' => hash('sha256', $token), 'expires_at' => now()->addDays(7),
-        ]);
+        $invitation = DB::transaction(function () use ($request, $store, $email, $permissions, $token) {
+            Store::whereKey($store->id)->lockForUpdate()->firstOrFail();
+            if ($email === Str::lower($request->user()->email) || StoreStaff::where('store_id', $store->id)->whereHas('user', fn ($q) => $q->whereRaw('LOWER(email) = ?', [$email]))->exists()) {
+                throw ValidationException::withMessages(['email' => 'This person already has access. Update their permissions below.']);
+            }
+            if (! app(StaffSeatService::class)->canInvite($store, $email)) {
+                throw ValidationException::withMessages(['email' => 'The Free plan includes two staff members per café, including pending invitations. Cancel an invitation, remove a staff member, or upgrade to Pro.']);
+            }
+
+            return StoreStaffInvitation::updateOrCreate(['store_id' => $store->id, 'email' => $email], $permissions + [
+                'invited_by' => $request->user()->id, 'token_hash' => hash('sha256', $token), 'expires_at' => now()->addDays(7),
+            ]);
+        });
         try {
             $url = rtrim(config('app.url'), '/').route('staff.invitation', ['token' => $token], false);
             Mail::to($email)->queue(new StoreStaffInvitationMail($url, $store->name));

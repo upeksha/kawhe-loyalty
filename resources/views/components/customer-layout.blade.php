@@ -24,6 +24,7 @@
         <link rel="manifest" href="{{ $resolvedManifestHref }}">
         <x-favicon />
         <title>{{ $resolvedDocumentTitle }}</title>
+        <script>try { if (localStorage.getItem('kawhe_reduced_motion') === 'true') document.documentElement.classList.add('kawhe-reduce-motion'); } catch (_) {}</script>
         <link rel="preconnect" href="https://fonts.bunny.net">
         <link href="https://fonts.bunny.net/css?family=figtree:400,500,600,700&display=swap" rel="stylesheet" />
         @if(config('broadcasting.default') === 'reverb' && config('broadcasting.connections.reverb.key'))
@@ -74,8 +75,26 @@
                 @if($helpProgram && $helpProgram->join_token)
                     <a href="{{ route('join.existing', ['slug' => $helpProgram->slug, 't' => $helpProgram->join_token]) }}" class="customer-help-link">Recover my card</a>
                 @endif
+                <button type="button" id="customer-motion-toggle" class="customer-help-link" aria-pressed="false">Reduce motion</button>
             </nav>
         </footer>
+
+        <script>
+            (() => {
+                const toggle = document.getElementById('customer-motion-toggle');
+                const sync = () => {
+                    const reduced = document.documentElement.classList.contains('kawhe-reduce-motion');
+                    toggle.setAttribute('aria-pressed', String(reduced));
+                    toggle.textContent = reduced ? 'Use motion' : 'Reduce motion';
+                };
+                toggle.addEventListener('click', () => {
+                    const reduced = document.documentElement.classList.toggle('kawhe-reduce-motion');
+                    try { localStorage.setItem('kawhe_reduced_motion', String(reduced)); } catch (_) {}
+                    sync();
+                });
+                sync();
+            })();
+        </script>
 
         @stack('overlays')
         @stack('scripts')

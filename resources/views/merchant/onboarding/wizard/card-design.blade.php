@@ -7,8 +7,8 @@
     <x-slot name="header">Card design</x-slot>
 
     <x-onboarding-step-layout
-        :step="2"
-        :totalSteps="4"
+        :step="3"
+        :store="$store"
         title="Design your loyalty card"
         subtitle="Choose a style, add your branding and preview your card before moving on."
         :backUrl="route('merchant.onboarding.wizard.store-basics')"

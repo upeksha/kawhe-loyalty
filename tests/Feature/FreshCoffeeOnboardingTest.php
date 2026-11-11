@@ -35,10 +35,10 @@ test('fresh coffee cafe completes verified onboarding and issues a customer card
     }
     $this->post(route('merchant.onboarding.wizard.card-design.store'), $design)->assertSessionHasNoErrors()->assertRedirect(route('merchant.onboarding.wizard.customer-form'));
     $this->post(route('merchant.onboarding.wizard.customer-form.store'), ['first_name_enabled' => '1'])->assertRedirect(route('merchant.onboarding.wizard.card-ready'));
-    $this->get(route('merchant.onboarding.wizard.card-ready'))->assertOk()->assertSee('Your loyalty card is ready')
-        ->assertSee('Saved card design with empty stamps')->assertSee('0 / 6 stamps')
+    $this->get(route('merchant.onboarding.wizard.card-ready'))->assertOk()->assertSee('Download your join poster')
+        ->assertSee('Your join poster preview')->assertSee('A4 join poster preview')
         ->assertSee('Open customer signup')->assertSee('Download poster (PDF)')
-        ->assertSee('Download QR (SVG)')->assertDontSee('<iframe', false);
+        ->assertSee('Download QR (SVG)')->assertSee('<iframe', false);
     $store = $owner->stores()->sole();
     $program = $store->resolvedDefaultProgram();
     expect($program->card_design)->toBe($style);
@@ -51,7 +51,8 @@ test('fresh coffee cafe completes verified onboarding and issues a customer card
         expect($program->stamp_icon_path)->not->toBeNull();
     }
     expect($program->pass_hero_image_path)->toBeNull();
-    $this->post(route('merchant.onboarding.wizard.complete'))->assertRedirect(route('merchant.stores.qr', $store));
+    $this->get(route('merchant.stores.qr.pdf', $store))->assertOk()->assertHeader('Content-Type', 'application/pdf');
+    $this->post(route('merchant.onboarding.wizard.complete'))->assertRedirect(route('merchant.onboarding.launch.show', $store));
     expect($store->fresh()->onboarding_completed_at)->not->toBeNull();
     $this->post('/logout');
     $this->get($program->join_url)->assertRedirect();
