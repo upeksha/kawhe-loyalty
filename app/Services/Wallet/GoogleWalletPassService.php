@@ -940,10 +940,21 @@ class GoogleWalletPassService
         $genericObject->setClassId($classId);
         $genericObject->setState('ACTIVE');
         $genericObject->setCardTitle($this->makeLocalizedString($store->name));
-        $genericObject->setHeader($this->makeLocalizedString(\App\Support\CoffeeCardSample::enabled($account) ? \App\Support\CoffeeCardSample::shortReward($program->reward_title) : $customerName));
-        $genericObject->setSubheader($this->makeLocalizedString(\App\Support\CoffeeCardSample::enabled($account)
-            ? $account->stamp_count.'/'.$account->reward_target.' stamps · '.$account->reward_balance.' rewards'
-            : $statusText));
+        if (\App\Support\CoffeeCardSample::enabled($account)) {
+            $progress = $account->stamp_count.' / '.$account->reward_target.' stamps';
+            $reward = \App\Support\CoffeeCardSample::shortReward($program->reward_title);
+            $ready = (int) $account->reward_balance;
+            $heading = match (true) {
+                $ready > 1 => $ready.' rewards ready',
+                $ready === 1 => $reward.' ready',
+                default => $progress,
+            };
+            $genericObject->setHeader($this->makeLocalizedString($heading));
+            $genericObject->setSubheader($this->makeLocalizedString($ready > 0 ? $progress : 'Reward: '.$reward));
+        } else {
+            $genericObject->setHeader($this->makeLocalizedString($customerName));
+            $genericObject->setSubheader($this->makeLocalizedString($statusText));
+        }
         $genericObject->setHexBackgroundColor($backgroundColor);
         $genericObject->setBarcode($barcode);
         $genericObject->setTextModulesData($textModules);

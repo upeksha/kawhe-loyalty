@@ -83,6 +83,10 @@ class CoffeeCardSample
         $program = $account->resolvedProgram();
         if ($program->card_design !== 'illustrated_coffee') {
             $options = CardDesign::options($program);
+            if ($platform !== 'web') {
+                // Give updated Wallet artwork a fresh URL for devices and image caches.
+                $options['wallet_artwork_revision'] = 2;
+            }
             $hash = substr(hash('sha256', serialize($options)), 0, 24);
             // Account-scoped cache also covers old/replaced photos at deletion.
             $ownerId = $account->store->user_id;

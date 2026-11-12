@@ -26,11 +26,16 @@ class CardStyleArtwork
                 $ink = $this->color($im, '#ffffff');
                 $this->cover($im, $photo, $w, $h);
                 imagedestroy($photo);
-                imagefilledrectangle($im, 0, 0, $w, $h, imagecolorallocatealpha($im, 0, 0, 0, 44));
+                if ($platform === 'web') {
+                    imagefilledrectangle($im, 0, 0, $w, $h, imagecolorallocatealpha($im, 0, 0, 0, 44));
+                } else {
+                    $this->shadePhotoForStamps($im, $w, $h);
+                }
             }
         }
         if ($options['style'] === 'illustrated') {
-            $line = imagecolorallocatealpha($im, ...[...$this->rgb($options['ink']), 108]);
+            $patternAlpha = $platform === 'web' ? 108 : 113;
+            $line = imagecolorallocatealpha($im, ...[...$this->rgb($options['ink']), $patternAlpha]);
             imagesetthickness($im, 2);
             if ($options['pattern'] === 'waves') {
                 for ($y = -$h; $y < $h * 2; $y += 42) {
@@ -75,7 +80,8 @@ class CardStyleArtwork
         } else {
             $rows = $target <= 5 ? 1 : 2;
             $cols = (int) ceil($target / $rows);
-            $size = min($w * .16, $h * .29, $w * .86 / ($cols * 1.2));
+            $heightLimit = $platform === 'google' ? .18 : .29;
+            $size = min($w * .16, $h * $heightLimit, $w * .86 / ($cols * 1.2));
             $gap = $size * .25;
             $top = ($h - ($rows * $size + ($rows - 1) * $gap)) / 2;
             for ($i = 0; $i < $target; $i++) {
@@ -139,6 +145,17 @@ class CardStyleArtwork
             foreach ([.34, .51] as $v) {
                 imageline($im, (int) ($left + $s * $v), (int) ($top + $s * .08), (int) ($left + $s * ($v - .04)), (int) ($top + $s * .27), $bg);
             }
+        }
+    }
+
+    private function shadePhotoForStamps($image, int $width, int $height): void
+    {
+        // Keep the photo visible at the edges and increase contrast across the stamp rows.
+        for ($y = 0; $y < $height; $y++) {
+            $distance = abs(($y + .5) / $height - .5);
+            $fade = max(0, min(1, ($distance - .32) / .18));
+            $shade = imagecolorallocatealpha($image, 0, 0, 0, (int) (48 + 49 * $fade));
+            imageline($image, 0, $y, $width - 1, $y, $shade);
         }
     }
 

@@ -54,6 +54,14 @@
         get statusText() {
             return this.previewMode === 'ready' ? 'Reward ready' : `${this.exampleStamps}/${this.rewardTarget} stamps`;
         },
+        get stampProgress() {
+            return `${this.previewMode === 'ready' ? 0 : this.exampleStamps} / ${this.rewardTarget}`;
+        },
+        get shortReward() {
+            const title = this.rewardTitle.trim().replace(/\s+/g, ' ') || 'Your reward';
+            const letters = Array.from(title);
+            return letters.length > 24 ? letters.slice(0, 23).join('') + '…' : title;
+        },
         get contrastText() {
             const hex = (this.bgColor || '#2B1E18').replace('#', '');
             if (hex.length !== 6) return '#ffffff';
@@ -162,17 +170,35 @@
 
     <section id="coffee-preview-panel" role="tabpanel" :aria-labelledby="platform + '-preview-tab'" x-show="cardDesign !== 'classic'" x-cloak class="rounded-2xl border border-stone-200 bg-stone-50 p-4">
         <div class="mx-auto max-w-[20rem] overflow-hidden rounded-2xl shadow-lg" :style="{backgroundColor: bgColor, color: contrastText}">
-            <div class="flex items-center justify-between gap-3 p-4">
-                <div class="min-w-0"><img x-show="appleLogo" :src="appleLogo" alt="Your café logo" class="mb-2 max-h-10 max-w-32 object-contain"><p class="break-words text-sm font-semibold" x-text="storeName"></p></div>
-                <div class="shrink-0 text-right"><p class="text-xs">STAMPS</p><p class="text-xl" x-text="`${previewMode === 'ready' ? 0 : exampleStamps} / ${rewardTarget}`"></p></div>
+            <div x-show="platform === 'apple'" class="flex items-center justify-between gap-3 p-4">
+                <div class="flex min-w-0 items-center gap-2">
+                    <img x-show="appleLogo" :src="appleLogo" alt="" class="max-h-9 max-w-[5rem] shrink-0 object-contain">
+                    <p class="truncate text-sm font-semibold" x-text="storeName"></p>
+                </div>
+                <div class="shrink-0 text-right">
+                    <p class="text-[10px]">STAMPS</p>
+                    <p class="text-lg" x-text="stampProgress"></p>
+                </div>
+            </div>
+            <div x-show="platform === 'google'" class="bg-white px-4 pt-4 text-center text-stone-900">
+                <img x-show="googleLogo" :src="googleLogo" alt="" class="mx-auto mb-2 h-10 w-10 rounded-full border border-stone-200 object-contain p-1">
+                <p class="truncate text-sm" x-text="storeName"></p>
+                <p class="mt-1 break-words text-2xl font-semibold" x-text="previewMode === 'ready' ? shortReward + ' ready' : stampProgress + ' stamps'"></p>
+                <p class="mt-1 break-words text-sm" x-text="previewMode === 'ready' ? stampProgress + ' stamps' : 'Reward: ' + shortReward"></p>
+            </div>
+            <div x-show="platform === 'google'" class="bg-white p-4">
+                <img src="{{ asset('images/qr-preview-sample.png') }}" alt="Sample QR code, not for scanning" class="mx-auto h-28 w-28 rounded bg-white p-2">
             </div>
             <div class="relative flex items-center justify-center overflow-hidden" :style="{aspectRatio: platform === 'apple' ? '1125 / 432' : '1032 / 812'}">
                 <img x-show="artworkUrl && !artworkError" :src="artworkUrl" alt="Card artwork preview with sample stamp progress" class="h-full w-full object-contain">
                 <p x-show="artworkBusy" class="absolute inset-x-0 bottom-0 bg-black/70 p-2 text-center text-xs text-white" role="status">Updating preview…</p>
                 <div x-show="artworkError" class="p-4 text-center text-sm" role="status"><p x-text="artworkError"></p><button type="button" @click="loadArtwork()" class="mt-2 underline">Retry preview</button></div>
             </div>
-            <div class="flex justify-between gap-4 px-4 py-3"><div class="min-w-0"><p class="text-xs">REWARD</p><p class="break-words text-lg" x-text="Array.from(rewardTitle).length > 24 ? Array.from(rewardTitle).slice(0,23).join('') + '…' : rewardTitle"></p></div><div><p class="text-xs">AVAILABLE</p><p class="text-xl" x-text="previewMode === 'ready' ? 1 : 0"></p></div></div>
-            <div class="p-5"><img src="{{ asset('images/qr-preview-sample.png') }}" alt="Sample QR code, not for scanning" class="mx-auto h-28 w-28 rounded bg-white p-2"></div>
+            <div x-show="platform === 'apple'" class="flex justify-between gap-4 px-4 py-3">
+                <div class="min-w-0"><p class="text-[10px]">REWARD</p><p class="break-words text-lg" x-text="shortReward"></p></div>
+                <div class="shrink-0 text-right"><p class="text-[10px]">REWARDS READY</p><p class="text-lg" x-text="previewMode === 'ready' ? 1 : 0"></p></div>
+            </div>
+            <div x-show="platform === 'apple'" class="p-4"><img src="{{ asset('images/qr-preview-sample.png') }}" alt="Sample QR code, not for scanning" class="mx-auto h-28 w-28 rounded bg-white p-2"></div>
         </div>
         <p class="mt-3 break-words text-xs text-stone-600">Full reward: <span x-text="rewardTitle"></span></p>
     </section>

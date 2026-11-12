@@ -160,7 +160,7 @@ class AppleWalletPassService
             ]];
             $passDefinition['storeCard']['backFields'][] = ['key' => 'full_reward', 'label' => 'Reward details', 'value' => $program->reward_title];
             $passDefinition['storeCard']['auxiliaryFields'] = [[
-                'key' => 'coffee_balance', 'label' => 'AVAILABLE',
+                'key' => 'coffee_balance', 'label' => 'REWARDS READY',
                 'value' => (int) $account->reward_balance,
                 'changeMessage' => 'Rewards available: %@',
             ]];
