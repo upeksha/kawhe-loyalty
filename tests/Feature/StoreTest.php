@@ -104,14 +104,13 @@ test('user cannot view another users store qr', function () {
     $response->assertForbidden();
 });
 
-test('owner can view their store qr', function () {
+test('owner store qr bookmark opens its default card poster', function () {
     $owner = User::factory()->create();
     $store = Store::factory()->create(['user_id' => $owner->id]);
 
     $response = $this->actingAs($owner)->get(route('merchant.stores.qr', $store));
 
-    $response->assertOk();
-    $response->assertViewHas('joinUrl');
+    $response->assertRedirect($store->merchantPosterUrl());
 });
 
 test('owner can download their store qr as svg', function () {

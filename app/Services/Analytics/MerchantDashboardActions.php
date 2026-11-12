@@ -23,7 +23,7 @@ class MerchantDashboardActions
                 'title' => 'Display your join poster to get your first customer.',
                 'detail' => 'Put the QR poster where customers can see it at the counter.',
                 'label' => 'Open join poster',
-                'url' => route('merchant.stores.qr', $firstStore),
+                'url' => $firstStore->merchantPosterUrl(),
             ];
         }
 
@@ -58,7 +58,7 @@ class MerchantDashboardActions
                     'title' => 'No activity this week—share your join link.',
                     'detail' => 'Your join link and printable poster are ready to share.',
                     'label' => 'Get join link',
-                    'url' => route('merchant.stores.qr', $firstStore),
+                    'url' => $firstStore->merchantPosterUrl(),
                 ];
             }
         }

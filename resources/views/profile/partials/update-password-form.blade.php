@@ -1,15 +1,7 @@
 <section>
-    <header>
-        <h2 class="text-lg font-medium text-stone-900">
-            {{ __('Change password') }}
-        </h2>
+    <p class="text-sm text-stone-600">{{ __('Use a long, unique password to keep your account secure.') }}</p>
 
-        <p class="mt-1 text-sm text-stone-600">
-            {{ __('Ensure your account is using a long, random password to stay secure.') }}
-        </p>
-    </header>
-
-    <form method="post" action="{{ route('password.update') }}" class="mt-6 space-y-6">
+    <form method="post" action="{{ route('password.update') }}" class="mt-4 space-y-4">
         @csrf
         @method('put')
 
@@ -32,7 +24,7 @@
         </div>
 
         <div class="space-y-3">
-            <x-ui.button type="submit" variant="primary" class="w-full">
+            <x-ui.button type="submit" variant="primary" class="min-h-11 px-5">
                 {{ __('Save password') }}
             </x-ui.button>
 

@@ -15,7 +15,7 @@ class WalletSelfServeMaturityTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_store_qr_page_shows_wallet_health_panel(): void
+    public function test_store_settings_shows_wallet_health_panel(): void
     {
         $merchant = User::factory()->create();
         $store = Store::factory()->for($merchant)->create();
@@ -44,11 +44,11 @@ class WalletSelfServeMaturityTest extends TestCase
             'message' => 'Wallet sync completed.',
         ]);
 
-        $response = $this->actingAs($merchant)->get(route('merchant.stores.qr', $store));
+        $response = $this->actingAs($merchant)->get(route('merchant.stores.edit', $store));
 
         $response->assertOk();
-        $response->assertSee('Wallet Health');
-        $response->assertSee('Apple registrations');
-        $response->assertSee('Recent wallet sync attempts');
+        $response->assertSee('Wallet help');
+        $response->assertSee('Apple Wallet registrations');
+        $response->assertSee('Recent Wallet updates');
     }
 }

@@ -10,7 +10,6 @@
             <div class="space-y-3 py-4">
                 <h2 class="text-xl font-semibold">No activity yet</h2>
                 <p class="text-base text-stone-600">Stamps and redeemed rewards across your stores will appear here.</p>
-                <x-ui.button href="{{ $firstStore ? route('merchant.stores.qr', $firstStore) : route('merchant.stores.index') }}">Open join poster</x-ui.button>
             </div>
         @else
             <div class="overflow-x-auto" tabindex="0" role="region" aria-label="Stamp and reward history">

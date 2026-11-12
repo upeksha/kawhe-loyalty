@@ -37,7 +37,7 @@ class OnboardingController extends Controller
 
         $store = Auth::user()->stores()->create($validated);
 
-        return redirect()->route('merchant.stores.qr', $store)
+        return redirect()->to($store->merchantPosterUrl())
             ->with('success', 'Welcome! Your first store has been created. Here\'s your QR code to share with customers.');
     }
 }

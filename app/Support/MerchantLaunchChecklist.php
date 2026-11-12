@@ -52,7 +52,7 @@ class MerchantLaunchChecklist
             'details' => route('merchant.onboarding.wizard.store-basics'),
             'card' => $this->cardSetupUrl($store),
             'poster' => $store?->onboarding_completed_at
-                ? route('merchant.stores.qr', $store).'#download-poster'
+                ? $store->merchantPosterUrl().'#download-poster'
                 : route('merchant.onboarding.wizard.card-ready').'#share-title',
             'app' => $store?->onboarding_completed_at
                 ? route('merchant.onboarding.launch.show', $store).'#merchant-app'

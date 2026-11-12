@@ -39,7 +39,6 @@
                                 <div class="mt-4 flex flex-wrap items-center gap-3">
                                     <a href="{{ route('merchant.stores.edit', $store) }}" class="text-brand-600 hover:text-brand-700 font-medium text-sm">Store settings</a>
                                     <a href="{{ route('merchant.programs.index') }}#store-{{ $store->id }}" class="text-brand-600 hover:text-brand-700 font-medium text-sm">Loyalty Cards</a>
-                                    <a href="{{ route('merchant.stores.qr', $store) }}" class="text-sm font-semibold text-brand-700">QR &amp; poster</a>
                                 </div>
                             </x-ui.card>
                         @endforeach
@@ -73,7 +72,6 @@
                                             <div class="flex flex-wrap justify-end gap-3">
                                                 <a href="{{ route('merchant.stores.edit', $store) }}" class="text-brand-600 hover:text-brand-700 font-medium text-sm">Store settings</a>
                                                 <a href="{{ route('merchant.programs.index') }}#store-{{ $store->id }}" class="text-brand-600 hover:text-brand-700 font-medium text-sm">Loyalty Cards</a>
-                                    <a href="{{ route('merchant.stores.qr', $store) }}" class="text-sm font-semibold text-brand-700">QR &amp; poster</a>
                                             </div>
                                         </x-ui.table-cell>
                                     </tr>

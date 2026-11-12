@@ -153,6 +153,15 @@ class Store extends Model
         return route('join.index', ['slug' => $this->slug, 't' => $this->join_token]);
     }
 
+    public function merchantPosterUrl(): string
+    {
+        $program = $this->resolvedDefaultProgram();
+
+        return $program && ! $program->trashed()
+            ? route('merchant.stores.programs.qr', [$this, $program])
+            : route('merchant.stores.programs.index', $this);
+    }
+
     /**
      * Default registration form config for customer join (MVP).
      */

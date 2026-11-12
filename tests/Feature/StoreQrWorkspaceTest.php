@@ -3,25 +3,25 @@
 use App\Models\Store;
 use App\Models\User;
 
-// Keep the sharing tools pointed at the same store when the workspace changes.
-test('store sharing workspace preserves join destination and download and recovery actions', function () {
+test('legacy store poster opens the default card while each card keeps its own sharing page', function () {
     $owner = User::factory()->create();
     $store = Store::factory()->for($owner)->create();
-    $response = $this->actingAs($owner)->get(route('merchant.stores.qr', $store))->assertOk();
-    $document = new DOMDocument;
-    $previous = libxml_use_internal_errors(true);
-    $document->loadHTML($response->getContent());
-    libxml_clear_errors();
-    libxml_use_internal_errors($previous);
-    $dom = new DOMXPath($document);
+    $default = $store->resolvedDefaultProgram();
+    $other = $store->loyaltyPrograms()->create([
+        'name' => 'Pastry card',
+        'reward_target' => 5,
+        'reward_title' => 'Free pastry',
+    ]);
 
-    expect($dom->query('//input[@id="join-link"]')->item(0)->getAttribute('value'))->toBe($store->join_url);
-    expect($dom->query('//a[@href="'.$store->join_url.'"]')->length)->toBe(1);
-    expect($dom->query('//a[@href="'.route('merchant.stores.qr.pdf', ['store' => $store, 'preview' => 1]).'"]')->length)->toBe(1);
-    expect($dom->query('//form[@method="GET" and @action="'.route('merchant.stores.qr.image', $store).'"]')->length)->toBe(1);
-    expect($dom->query('//details//form[@method="POST" and @action="'.route('merchant.stores.refresh-wallets', $store).'"]/input[@name="_token"]')->length)->toBe(1);
-    expect($dom->query('//details[@open]')->length)->toBe(0);
-    $response->assertSee(route('merchant.stores.qr.pdf', $store), false);
+    $this->actingAs($owner)->get(route('merchant.stores.qr', $store))
+        ->assertRedirect(route('merchant.stores.programs.qr', [$store, $default]));
+    $this->get(route('merchant.stores.index'))->assertOk()
+        ->assertDontSee(route('merchant.stores.qr', $store), false);
+    $this->get(route('merchant.stores.programs.qr', [$store, $default]))->assertOk()
+        ->assertSee($default->join_url, false)
+        ->assertSee('Download A4 poster');
+    $this->get(route('merchant.stores.programs.qr', [$store, $other]))->assertOk()
+        ->assertSee($other->join_url, false);
 });
 
 test('store poster and QR downloads still return downloadable assets', function () {

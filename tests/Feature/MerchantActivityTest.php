@@ -48,7 +48,9 @@ test('activity is scoped to owned active stores even when foreign store paramete
 test('activity has a useful empty state', function () {
     $owner = User::factory()->create();
     Store::factory()->for($owner)->create();
-    $this->actingAs($owner)->get(route('merchant.activity.index'))->assertOk()->assertSee('No activity yet');
+    $this->actingAs($owner)->get(route('merchant.activity.index'))->assertOk()
+        ->assertSee('No activity yet')
+        ->assertDontSee('Open join poster');
 });
 
 test('activity paginates in stable newest first order without exposing request metadata', function () {

@@ -15,7 +15,7 @@
         </x-ui.card>
 
         <div class="min-w-0 space-y-5">
-            <x-ui.card class="p-5 sm:p-6">
+            <x-ui.card id="download-poster" class="scroll-mt-24 p-5 sm:p-6">
                 <h2 class="text-lg font-semibold text-stone-900">Print for your counter</h2>
                 <p class="mt-2 text-sm leading-relaxed text-stone-500">Download a ready-to-print poster with your loyalty card branding and join QR.</p>
                 <div class="mt-5 flex flex-wrap gap-2">

@@ -95,10 +95,10 @@ test('only the café owner can confirm merchant app installation', function () {
     expect($store->fresh()->launch_merchant_app_installed_at)->toBeNull();
 
     $this->actingAs($owner)->post(route('merchant.onboarding.launch.app-installed', $store))
-        ->assertRedirect(route('merchant.stores.qr', $store));
+        ->assertRedirect($store->merchantPosterUrl());
     expect($store->fresh()->launch_merchant_app_installed_at)->toBeNull();
     $this->get(route('merchant.onboarding.launch.show', $store))
-        ->assertRedirect(route('merchant.stores.qr', $store).'#download-poster');
+        ->assertRedirect($store->merchantPosterUrl().'#download-poster');
 
     $store->forceFill(['launch_poster_downloaded_at' => now()])->save();
 
@@ -178,7 +178,7 @@ test('only the dashboard shows launch progress for an unfinished café', functio
     $second = Store::factory()->for($owner)->create(['onboarding_completed_at' => now()]);
     $first->forceFill(['launch_poster_downloaded_at' => now()])->save();
 
-    $this->actingAs($owner)->get(route('merchant.stores.qr', $second))->assertOk()
+    $this->actingAs($owner)->get($second->merchantPosterUrl())->assertOk()
         ->assertSee($second->name)
         ->assertDontSee('3 of 6 complete');
 

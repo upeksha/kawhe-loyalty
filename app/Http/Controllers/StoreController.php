@@ -259,10 +259,7 @@ class StoreController extends Controller
             ]);
         }
 
-        $joinUrl = $store->join_url; // short URL /j/{code} when join_short_code is set
-        $walletHealth = $this->walletHealth($store);
-
-        return view('stores.qr', compact('store', 'joinUrl', 'walletHealth'));
+        return redirect()->to($store->merchantPosterUrl());
     }
 
     private function walletHealth(Store $store): array

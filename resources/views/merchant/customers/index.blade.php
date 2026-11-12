@@ -35,7 +35,7 @@
                             Clear Filters
                         </x-ui.button>
                 @else
-                        <x-ui.button href="{{ route('merchant.stores.index') }}" variant="primary" size="sm">
+                        <x-ui.button href="{{ $stores->first()?->merchantPosterUrl() ?? route('merchant.stores.index') }}" variant="primary" size="sm">
                             Open join poster
                         </x-ui.button>
                 @endif

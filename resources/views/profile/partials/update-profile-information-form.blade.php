@@ -13,7 +13,7 @@
         @csrf
     </form>
 
-    <form method="post" action="{{ route('profile.update') }}" class="space-y-6">
+    <form id="profile-update" method="post" action="{{ route('profile.update') }}" class="space-y-6">
         @csrf
         @method('patch')
 
@@ -49,20 +49,14 @@
             @endif
         </div>
 
-        <div class="space-y-3">
-            <x-ui.button type="submit" variant="primary" class="w-full">
-                {{ __('Save profile') }}
-            </x-ui.button>
-
-            @if (session('status') === 'profile-updated')
-                <p
-                    x-data="{ show: true }"
-                    x-show="show"
-                    x-transition
-                    x-init="setTimeout(() => show = false, 2000)"
-                    class="text-sm text-stone-600"
-                >{{ __('Saved.') }}</p>
-            @endif
-        </div>
+        @if (session('status') === 'profile-updated')
+            <p
+                x-data="{ show: true }"
+                x-show="show"
+                x-transition
+                x-init="setTimeout(() => show = false, 2000)"
+                class="text-sm text-stone-600"
+            >{{ __('Saved.') }}</p>
+        @endif
     </form>
 </section>

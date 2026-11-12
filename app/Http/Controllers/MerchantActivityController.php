@@ -11,7 +11,6 @@ class MerchantActivityController extends Controller
 {
     public function index(Request $request): View
     {
-        $firstStore = $request->user()->stores()->orderBy('id')->first();
         $events = StampEvent::query()
             ->with(['loyaltyAccount.customer', 'store', 'user'])
             ->whereIn('store_id', $request->user()->stores()->select('id'))
@@ -20,7 +19,7 @@ class MerchantActivityController extends Controller
             ->orderByDesc('id')
             ->paginate(25);
 
-        return view('merchant.activity.index', compact('events', 'firstStore'));
+        return view('merchant.activity.index', compact('events'));
     }
 
     public function export(Request $request)

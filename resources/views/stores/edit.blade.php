@@ -2,7 +2,6 @@
 
     <x-slot:actions>
         <x-ui.button href="{{ route('merchant.stores.index') }}" variant="ghost">← Back to stores</x-ui.button>
-        @if(!$store->trashed())<x-ui.button href="{{ route('merchant.stores.qr', $store) }}" variant="secondary">QR & poster</x-ui.button>@endif
     </x-slot:actions>
     <div class="min-w-0 space-y-6">
         <div class="flex flex-wrap items-center gap-3 text-sm text-stone-500">
@@ -99,6 +98,19 @@
                         <div><dt class="text-stone-500">Apple Wallet registrations</dt><dd class="mt-1 font-semibold text-stone-900">{{ number_format($walletHealth['active_apple_registrations']) }}</dd></div>
                     </dl>
                     <p class="text-xs text-stone-500">Customers can use their browser card without adding it to Apple Wallet.</p>
+                    @if($walletHealth['recent_wallet_syncs']->isNotEmpty())
+                        <details class="rounded-xl border border-stone-200 bg-stone-50 p-4">
+                            <summary class="cursor-pointer text-sm font-semibold text-stone-800">Recent Wallet updates</summary>
+                            <ul class="mt-3 space-y-2 text-xs text-stone-600">
+                                @foreach($walletHealth['recent_wallet_syncs'] as $sync)
+                                    <li class="flex items-start justify-between gap-3">
+                                        <span>{{ $sync->message }}</span>
+                                        <span class="whitespace-nowrap font-medium {{ $sync->status === 'success' ? 'text-emerald-700' : 'text-amber-700' }}">{{ ucfirst($sync->status) }}</span>
+                                    </li>
+                                @endforeach
+                            </ul>
+                        </details>
+                    @endif
                     @if(!$store->trashed())
                         <form method="POST" action="{{ route('merchant.stores.refresh-wallets', $store) }}">
                             @csrf

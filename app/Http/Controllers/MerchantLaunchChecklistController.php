@@ -17,7 +17,7 @@ class MerchantLaunchChecklistController extends Controller
             return redirect()->route('merchant.onboarding.wizard.index');
         }
         if (! $store->launch_poster_downloaded_at) {
-            return redirect()->to(route('merchant.stores.qr', $store).'#download-poster');
+            return redirect()->to($store->merchantPosterUrl().'#download-poster');
         }
 
         return view('merchant.onboarding.launch', [
@@ -34,7 +34,7 @@ class MerchantLaunchChecklistController extends Controller
             return redirect()->route('merchant.onboarding.wizard.index');
         }
         if (! $store->launch_poster_downloaded_at) {
-            return redirect()->route('merchant.stores.qr', $store)
+            return redirect()->to($store->merchantPosterUrl())
                 ->withErrors(['poster' => 'Download your join poster before confirming the app installation.']);
         }
 
