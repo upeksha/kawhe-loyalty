@@ -47,14 +47,17 @@ class UpdateWalletPassJob implements ShouldBeUnique, ShouldQueue
 
     public function uniqueId(): string
     {
-        return (string) $this->loyaltyAccountId;
+        return ! isset($this->stampUndoEventId)
+            ? (string) $this->loyaltyAccountId
+            : $this->loyaltyAccountId.':stamp-undo:'.$this->stampUndoEventId;
     }
 
     /**
      * Create a new job instance.
      */
     public function __construct(
-        public readonly int $loyaltyAccountId
+        public readonly int $loyaltyAccountId,
+        public readonly ?int $stampUndoEventId = null,
     ) {}
 
     /**

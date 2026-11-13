@@ -80,9 +80,9 @@ class UndoStampService
                 ],
             ]);
 
-            DB::afterCommit(function () use ($account) {
+            DB::afterCommit(function () use ($account, $event) {
                 try {
-                    UpdateWalletPassJob::dispatch($account->id)->onQueue('default');
+                    UpdateWalletPassJob::dispatch($account->id, $event->id)->onQueue('default');
                 } catch (\Exception $exception) {
                     report($exception);
                 }
