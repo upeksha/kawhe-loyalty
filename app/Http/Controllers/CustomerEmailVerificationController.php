@@ -222,6 +222,6 @@ class CustomerEmailVerificationController extends Controller
 
         // Redirect to the specific card with success message
         return redirect()->route('card.show', ['public_token' => $account->public_token])
-            ->with('message', '✅ Email verified successfully for '.$account->store->name.'! You can now redeem rewards.');
+            ->with('message', 'Email verified. You can now redeem rewards at '.$account->store->name.'.');
     }
 }

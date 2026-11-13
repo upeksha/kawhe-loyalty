@@ -14,17 +14,16 @@
         <p class="customer-page-description">{{ $account->store->name }}</p>
         <p x-show="rewardBalance > 0" x-cloak class="customer-page-description" x-text="`${rewardBalance} ${rewardBalance === 1 ? 'reward' : 'rewards'} available`"></p>
     </header>
-                <!-- Success Message (e.g., from email verification) -->
-                @if(session('message'))
-                    <div class="bg-green-500 text-white rounded-lg p-4 mb-4 shadow-lg">
-                        <div class="flex items-center gap-2">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                            </svg>
-                            <p class="font-semibold">{{ session('message') }}</p>
-                        </div>
-                    </div>
-                @endif
+    @if(session('message'))
+        <div role="status" class="customer-card mb-4 flex items-start gap-3 px-4 py-3">
+            <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#edf4ef] text-[#254b3a]" aria-hidden="true">
+                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                </svg>
+            </span>
+            <p class="min-w-0 break-words pt-1 text-sm font-medium leading-5">{{ session('message') }}</p>
+        </div>
+    @endif
 
                 @if(session('registered'))
                     <div
