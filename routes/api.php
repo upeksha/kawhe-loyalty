@@ -21,6 +21,9 @@ Route::prefix('v1')->group(function () {
             Route::post('/stamp', [ScannerController::class, 'store'])
                 ->middleware('rate.limit.stamps')
                 ->name('api.stamp.store');
+            Route::post('/stamp/undo', [ScannerController::class, 'undoStamp'])
+                ->middleware('rate.limit.stamps')
+                ->name('api.stamp.undo');
             Route::post('/redeem/info', [ScannerController::class, 'getRedeemInfo'])->name('api.redeem.info');
             Route::post('/redeem', [ScannerController::class, 'redeem'])
                 ->middleware('rate.limit.stamps')

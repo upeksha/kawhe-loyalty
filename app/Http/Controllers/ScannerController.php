@@ -7,6 +7,7 @@ use App\Models\LoyaltyAccount;
 use App\Models\PointsTransaction;
 use App\Models\StampEvent;
 use App\Services\Loyalty\StampLoyaltyService;
+use App\Services\Loyalty\UndoStampService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -18,6 +19,22 @@ class ScannerController extends Controller
     private const CARD_NOT_ACTIVE_CODE = 'CARD_NOT_ACTIVE';
 
     private const CARD_NOT_ACTIVE_MESSAGE = 'This loyalty card is no longer active. Ask the customer to rejoin or contact the store.';
+
+    public function undoStamp(Request $request, UndoStampService $service)
+    {
+        $data = $request->validate([
+            'stamp_event_id' => 'required|integer|min:1',
+            'store_id' => 'required|integer|min:1',
+        ]);
+
+        return response()->json($service->undo(
+            $request->user(),
+            (int) $data['store_id'],
+            (int) $data['stamp_event_id'],
+            $request->userAgent(),
+            $request->ip(),
+        ));
+    }
 
     public function index()
     {
@@ -32,7 +49,7 @@ class ScannerController extends Controller
             'token' => 'required|string',
             'store_id' => 'nullable|exists:stores,id', // Made optional for backwards compatibility
             'count' => 'nullable|integer|min:1|max:100',
-            'idempotency_key' => 'nullable|string|max:255', // Optional idempotency key from client
+            'idempotency_key' => ['nullable', 'string', 'max:255', 'not_regex:/^stamp-undo:/i'], // Optional idempotency key from client
             'override_cooldown' => 'nullable|boolean', // Allow override of cooldown
         ]);
 
@@ -231,6 +248,10 @@ class ScannerController extends Controller
                 'rewardTarget' => $result->rewardTarget,
                 'rewardAvailable' => $result->rewardBalance > 0,
                 'rewardEarned' => $result->rewardEarned,
+                'undo' => $result->stampEventId && $result->lastStampedAt ? [
+                    'stamp_event_id' => $result->stampEventId,
+                    'expires_at' => $result->lastStampedAt->copy()->addSeconds(UndoStampService::WINDOW_SECONDS)->toIso8601String(),
+                ] : null,
                 'stampsRemaining' => max(0, $result->rewardTarget - $result->stampCount),
                 'cooldown_seconds' => config('loyalty.stamp_client_cooldown_seconds', 5), // For scanner/Flutter: countdown before next scan
                 'receipt' => [
@@ -505,7 +526,7 @@ class ScannerController extends Controller
             'token' => 'required|string',
             'store_id' => 'required|exists:stores,id',
             'quantity' => 'nullable|integer|min:1', // Number of rewards to redeem (default 1)
-            'idempotency_key' => 'nullable|string|max:255', // Optional idempotency key from client
+            'idempotency_key' => ['nullable', 'string', 'max:255', 'not_regex:/^stamp-undo:/i'], // Optional idempotency key from client
         ]);
 
         $token = $request->token;

@@ -14,7 +14,7 @@ class MerchantActivityController extends Controller
         $events = StampEvent::query()
             ->with(['loyaltyAccount.customer', 'store', 'user'])
             ->whereIn('store_id', $request->user()->stores()->select('id'))
-            ->whereIn('type', ['stamp', 'redeem'])
+            ->whereIn('type', ['stamp', 'redeem', 'stamp_undo'])
             ->latest()
             ->orderByDesc('id')
             ->paginate(25);

@@ -15,7 +15,8 @@ class StampResultDTO
         public readonly int $rewardTarget,
         public readonly ?Carbon $lastStampedAt,
         public readonly bool $rewardEarned,
-        public readonly bool $isDuplicate = false
+        public readonly bool $isDuplicate = false,
+        public readonly ?int $stampEventId = null
     ) {
     }
 

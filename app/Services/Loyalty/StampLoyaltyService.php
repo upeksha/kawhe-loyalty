@@ -87,6 +87,8 @@ class StampLoyaltyService
             $stampCountBefore = $account->stamp_count;
             $rewardBalanceBefore = $account->reward_balance ?? 0;
             $versionBefore = $account->version ?? 0;
+            $previousStampAt = $account->last_stamped_at?->toDateTimeString();
+            $previousRewardAt = $account->reward_available_at?->toDateTimeString();
 
             // Increment stamp count
             $account->stamp_count += $count;
@@ -150,6 +152,8 @@ class StampLoyaltyService
                         'reward_balance_before' => $rewardBalanceBefore,
                         'reward_balance_after' => $account->reward_balance ?? 0,
                         'newly_earned_rewards' => $newlyEarned,
+                        'last_stamped_at_before' => $previousStampAt,
+                        'reward_available_at_before' => $previousRewardAt,
                         'version_before' => $versionBefore,
                         'version_after' => $account->version,
                     ],
@@ -218,7 +222,8 @@ class StampLoyaltyService
                 rewardTarget: $rewardTarget,
                 lastStampedAt: $account->last_stamped_at,
                 rewardEarned: $rewardEarned,
-                isDuplicate: false
+                isDuplicate: false,
+                stampEventId: $stampEvent->id
             );
         }, 5);
     }

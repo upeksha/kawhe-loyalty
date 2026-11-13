@@ -25,7 +25,11 @@
                                     {{ $event->loyaltyAccount?->customer?->name ?: ($event->loyaltyAccount?->customer?->email ?? 'Customer unavailable') }}
                                     <p class="mt-1 text-sm text-stone-600">{{ $event->store?->name ?? 'Store unavailable' }}</p>
                                 </td>
-                                <td class="py-3 pr-4">{{ number_format($event->count) }} {{ $event->type === 'stamp' ? Str::plural('stamp', $event->count).' added' : Str::plural('reward', $event->count).' redeemed' }}</td>
+                                <td class="py-3 pr-4">{{ number_format($event->count) }} {{ match ($event->type) {
+                                        'stamp' => Str::plural('stamp', $event->count).' added',
+                                        'stamp_undo' => Str::plural('stamp', $event->count).' undone',
+                                        default => Str::plural('reward', $event->count).' redeemed',
+                                    } }}</td>
                                 <td class="py-3 pr-4">{{ $event->user?->name ?? 'Staff member unavailable' }}</td>
                                 <td class="py-3"><time datetime="{{ $event->created_at->toIso8601String() }}">{{ $event->created_at->format('M d, Y g:i A') }}</time></td>
                             </tr>

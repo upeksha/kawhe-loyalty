@@ -150,6 +150,7 @@ class CardController extends Controller
         // Keep the first card render lightweight; this endpoint is for recent activity only.
         $transactions = PointsTransaction::where('loyalty_account_id', $account->id)
             ->orderBy('created_at', 'desc')
+            ->orderByDesc('id')
             ->limit(10)
             ->get()
             ->map(function ($transaction) {
@@ -157,9 +158,11 @@ class CardController extends Controller
                     'id' => $transaction->id,
                     'type' => $transaction->type,
                     'points' => $transaction->points,
-                    'description' => $transaction->type === 'earn'
-                        ? (abs($transaction->points) === 1 ? 'Stamp added' : abs($transaction->points).' stamps added')
-                        : 'Reward redeemed',
+                    'description' => match ($transaction->type) {
+                        'earn' => abs($transaction->points) === 1 ? 'Stamp added' : abs($transaction->points).' stamps added',
+                        'stamp_undo' => abs($transaction->points) === 1 ? 'Stamp undone' : abs($transaction->points).' stamps undone',
+                        default => 'Reward redeemed',
+                    },
                     'timestamp' => $transaction->created_at->toIso8601String(),
                     'formatted_date' => $transaction->created_at->format('M d, Y g:i A'),
                 ];
