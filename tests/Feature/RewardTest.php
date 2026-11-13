@@ -274,14 +274,20 @@ test('one card QR supports staff stamp and verified redemption with safe retries
     $scan = ['store_id' => $store->id, 'token' => 'LA:'.$card->public_token];
     $this->postJson($prefix.'/scanner/preview', $scan)->assertOk()->assertJsonPath('can_stamp', true);
     $this->postJson($prefix.'/stamp', ['store_id' => $store->id, 'token' => $card->public_token, 'count' => 3, 'idempotency_key' => 'single-qr-stamp'])->assertOk();
-    $preview = $this->postJson($prefix.'/scanner/preview', $scan)->assertOk()->assertJsonPath('has_rewards', true)->assertJsonPath('can_redeem', true);
+    $preview = $this->postJson($prefix.'/scanner/preview', $scan)->assertOk()->assertJsonPath('has_rewards', true)->assertJsonPath('can_redeem', true)
+        ->assertJsonPath('verification_required', true)
+        ->assertJsonPath('last_activity_type', 'stamp')
+        ->assertJsonPath('last_activity_at', $card->fresh()->last_stamped_at->toIso8601String())
+        ->assertJsonPath('recent_stamp', true);
     $redeem = ['store_id' => $store->id, 'token' => $preview->json('redeem_token'), 'idempotency_key' => 'single-qr-redeem'];
     $this->postJson($prefix.'/redeem', $redeem)->assertStatus(422)->assertJsonPath('status', 'verification_required');
     $card->update(['verified_at' => now()]);
     $this->postJson($prefix.'/redeem', $redeem)->assertOk();
     $this->postJson($prefix.'/redeem', $redeem)->assertOk()->assertJsonPath('status', 'duplicate');
     expect($card->fresh()->reward_balance)->toBe(0);
-    $this->postJson($prefix.'/scanner/preview', $scan)->assertOk()->assertJsonPath('has_rewards', false);
+    $this->postJson($prefix.'/scanner/preview', $scan)->assertOk()->assertJsonPath('has_rewards', false)
+        ->assertJsonPath('verification_required', false)
+        ->assertJsonPath('last_activity_type', 'redeem');
     $this->actingAs(User::factory()->create())->postJson($prefix.'/scanner/preview', $scan)->assertForbidden();
 })->with(['web' => '', 'mobile API' => '/api/v1']);
 
@@ -304,7 +310,7 @@ test('turning off programme verification allows an existing unverified card to r
 
     $this->postJson('/api/v1/redeem', $redeem)->assertStatus(422)->assertJsonPath('status', 'verification_required');
     $program->update(['require_verification_for_redemption' => false]);
-    $this->postJson('/api/v1/scanner/preview', $scan)->assertOk()->assertJsonPath('requires_verification', false);
+    $this->postJson('/api/v1/scanner/preview', $scan)->assertOk()->assertJsonPath('requires_verification', false)->assertJsonPath('verification_required', false);
     $this->postJson('/api/v1/redeem/info', $redeem)->assertOk()->assertJsonPath('verification_required', false);
     $this->postJson('/api/v1/redeem', $redeem)->assertOk()->assertJsonPath('success', true);
     expect($card->fresh()->reward_balance)->toBe(0);

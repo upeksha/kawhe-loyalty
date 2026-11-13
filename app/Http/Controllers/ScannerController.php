@@ -388,6 +388,11 @@ class ScannerController extends Controller
             }
         }
 
+        $lastStamp = $account->last_stamped_at;
+        $lastRedemption = $account->reward_redeemed_at;
+        $lastActivityWasRedemption = $lastRedemption && (! $lastStamp || $lastRedemption->greaterThanOrEqualTo($lastStamp));
+        $requiresVerification = $account->requires_verification_for_redemption;
+
         return response()->json([
             'success' => true,
             'can_stamp' => Auth::user()->canOperateStore($store, 'stamp'),
@@ -402,7 +407,12 @@ class ScannerController extends Controller
             'store_id' => $store->id,
             'program_id' => $program?->id,
             'program_name' => $program?->name ?? $account->reward_title,
-            'requires_verification' => (bool) $account->requires_verification_for_redemption,
+            'requires_verification' => (bool) $requiresVerification,
+            'verification_required' => $requiresVerification && $account->customer?->email !== null && $account->verified_at === null,
+            'last_activity_at' => ($lastActivityWasRedemption ? $lastRedemption : $lastStamp)?->toIso8601String(),
+            'last_activity_type' => $lastActivityWasRedemption ? 'redeem' : ($lastStamp ? 'stamp' : null),
+            'recent_stamp' => $lastStamp !== null
+                && $lastStamp->diffInSeconds(now()) < max(5, config('loyalty.stamp_cooldown_seconds', 0)),
             'is_redeem_qr' => $isRedeemQR,
             'token' => $request->token, // Return original token for processing
             'redeem_token' => $account->redeem_token, // Include redeem token if available (for stamp QR -> redeem flow)
