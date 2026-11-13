@@ -412,7 +412,7 @@ class ScannerController extends Controller
             'last_activity_at' => ($lastActivityWasRedemption ? $lastRedemption : $lastStamp)?->toIso8601String(),
             'last_activity_type' => $lastActivityWasRedemption ? 'redeem' : ($lastStamp ? 'stamp' : null),
             'recent_stamp' => $lastStamp !== null
-                && $lastStamp->diffInSeconds(now()) < max(5, config('loyalty.stamp_cooldown_seconds', 0)),
+                && $lastStamp->diffInSeconds(now()) < max(30, config('loyalty.stamp_cooldown_seconds', 0)),
             'is_redeem_qr' => $isRedeemQR,
             'token' => $request->token, // Return original token for processing
             'redeem_token' => $account->redeem_token, // Include redeem token if available (for stamp QR -> redeem flow)

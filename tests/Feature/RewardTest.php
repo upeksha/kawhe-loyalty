@@ -285,9 +285,13 @@ test('one card QR supports staff stamp and verified redemption with safe retries
     $this->postJson($prefix.'/redeem', $redeem)->assertOk();
     $this->postJson($prefix.'/redeem', $redeem)->assertOk()->assertJsonPath('status', 'duplicate');
     expect($card->fresh()->reward_balance)->toBe(0);
+    $this->travel(10)->seconds();
     $this->postJson($prefix.'/scanner/preview', $scan)->assertOk()->assertJsonPath('has_rewards', false)
         ->assertJsonPath('verification_required', false)
-        ->assertJsonPath('last_activity_type', 'redeem');
+        ->assertJsonPath('last_activity_type', 'redeem')
+        ->assertJsonPath('recent_stamp', true);
+    $this->travel(21)->seconds();
+    $this->postJson($prefix.'/scanner/preview', $scan)->assertOk()->assertJsonPath('recent_stamp', false);
     $this->actingAs(User::factory()->create())->postJson($prefix.'/scanner/preview', $scan)->assertForbidden();
 })->with(['web' => '', 'mobile API' => '/api/v1']);
 
