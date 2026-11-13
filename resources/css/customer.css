@@ -477,9 +477,26 @@
 .customer-redesign .wallet-benefit-pill { background: #f0f7f3; }
 .customer-redesign .customer-welcome-banner { background: #f0f7f3; color: #254b3a; border: 1px solid #d8e5dd; box-shadow: none; }
 .customer-redesign .customer-footer { padding-top: 24px; padding-bottom: max(24px, env(safe-area-inset-bottom, 0px)); }
-.customer-footer-links { display: flex; flex-wrap: wrap; gap: 6px; }
-.customer-help-link { display: flex; flex: 1 1 auto; align-items: center; justify-content: center; min-height: 48px; padding: 8px; border-radius: 8px; background: #fff; color: #254b3a; font-size: 14px; font-weight: 600; }
-.customer-help-link:hover { background: #f0f7f3; }
+.customer-footer-links {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    column-gap: 12px;
+}
+.customer-help-link {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    padding-inline: 4px;
+    background: transparent;
+    color: #57534e;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 400;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+.customer-help-link:hover { color: #254b3a; }
 @media (prefers-reduced-motion: reduce) { .customer-redesign * { scroll-behavior: auto; animation: none; transition: none; } }
 html.kawhe-reduce-motion .customer-redesign *,
 html.kawhe-reduce-motion .customer-redesign *::before,
@@ -494,8 +511,7 @@ html.kawhe-reduce-motion .customer-redesign *::after {
 .customer-signup-theme .customer-btn-primary { background: var(--signup-button); color: var(--signup-text); border: 1px solid var(--signup-link); }
 .customer-signup-theme .customer-btn-secondary,
 .customer-signup-theme .customer-btn-outline,
-.customer-signup-theme .customer-btn-status,
-.customer-signup-theme .customer-help-link { color: var(--signup-link); background: #fff; }
+.customer-signup-theme .customer-btn-status { color: var(--signup-link); background: #fff; }
 .customer-signup-theme .text-brand-700 { color: var(--signup-link); }
 .customer-signup-theme .card-btn:hover,
 .customer-signup-theme .customer-btn:hover { filter: none; text-decoration: underline; }
