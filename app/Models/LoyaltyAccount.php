@@ -171,7 +171,9 @@ class LoyaltyAccount extends Model
 
     public function getRequiresVerificationForRedemptionAttribute(): bool
     {
-        return $this->signup_requires_verification || (bool) ($this->resolvedProgram()?->require_verification_for_redemption ?? $this->store?->require_verification_for_redemption ?? true);
+        return (bool) ($this->resolvedProgram()?->require_verification_for_redemption
+            ?? $this->store?->require_verification_for_redemption
+            ?? true);
     }
 
     /**

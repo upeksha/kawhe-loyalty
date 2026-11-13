@@ -285,6 +285,32 @@ test('one card QR supports staff stamp and verified redemption with safe retries
     $this->actingAs(User::factory()->create())->postJson($prefix.'/scanner/preview', $scan)->assertForbidden();
 })->with(['web' => '', 'mobile API' => '/api/v1']);
 
+test('turning off programme verification allows an existing unverified card to redeem', function () {
+    Illuminate\Support\Facades\Queue::fake();
+    $owner = User::factory()->create();
+    $store = Store::factory()->for($owner)->create(['require_verification_for_redemption' => true]);
+    $program = $store->resolvedDefaultProgram();
+    $card = LoyaltyAccount::factory()->create([
+        'store_id' => $store->id,
+        'loyalty_program_id' => $program->id,
+        'reward_balance' => 1,
+        'redeem_token' => 'VerificationTest',
+        'signup_requires_verification' => true,
+        'verified_at' => null,
+    ]);
+    $this->actingAs($owner);
+    $scan = ['store_id' => $store->id, 'token' => 'LA:'.$card->public_token];
+    $redeem = ['store_id' => $store->id, 'token' => $card->redeem_token, 'idempotency_key' => 'optional-verification-redeem'];
+
+    $this->postJson('/api/v1/redeem', $redeem)->assertStatus(422)->assertJsonPath('status', 'verification_required');
+    $program->update(['require_verification_for_redemption' => false]);
+    $this->postJson('/api/v1/scanner/preview', $scan)->assertOk()->assertJsonPath('requires_verification', false);
+    $this->postJson('/api/v1/redeem/info', $redeem)->assertOk()->assertJsonPath('verification_required', false);
+    $this->postJson('/api/v1/redeem', $redeem)->assertOk()->assertJsonPath('success', true);
+    expect($card->fresh()->reward_balance)->toBe(0);
+    expect($card->fresh()->verified_at)->toBeNull();
+});
+
 test('browser refresh snapshot exposes card revision and card scoped verification', function () {
     $account = LoyaltyAccount::factory()->create(['version' => 7, 'verified_at' => null]);
     $this->getJson('/api/card/'.$account->public_token)->assertOk()->assertJsonPath('version', 7)->assertJsonPath('verified', false);

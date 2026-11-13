@@ -79,6 +79,7 @@ test('archived programs and stores cannot be recovered', function () {
 });
 
 test('repeat signup cannot overwrite the customer or reveal an existing card', function () {
+    $this->program->update(['require_verification_for_redemption' => false]);
     $original = $this->customer->fresh()->getAttributes();
     $this->post($this->joinUrl, ['email' => $this->customer->email, 'name' => 'Attacker'])
         ->assertOk()->assertViewIs('join.recovery-sent')->assertDontSee($this->account->public_token);

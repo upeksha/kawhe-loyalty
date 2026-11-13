@@ -14,9 +14,8 @@ test('new store signup isolates identity and collects stamps but must verify bef
     $old = LoyaltyAccount::factory()->create(['stamp_count' => 2, 'reward_balance' => 1, 'verified_at' => now()]);
     $old->customer->forceFill(['email' => 'same@example.invalid', 'phone' => '0123456789', 'birthday' => '1990-01-01', 'email_verified_at' => now()])->save();
     $owner = User::factory()->create();
-    $store = Store::factory()->for($owner)->create(['reward_target' => 3, 'require_verification_for_redemption' => false]);
+    $store = Store::factory()->for($owner)->create(['reward_target' => 3, 'require_verification_for_redemption' => true]);
     $program = $store->resolvedDefaultProgram();
-    $program->update(['require_verification_for_redemption' => false]);
     $join = route('join.store', ['slug' => $program->slug, 't' => $program->join_token]);
     $this->post($join, ['email' => 'same@example.invalid', 'name' => 'New supplied name'])->assertRedirect();
     $card = LoyaltyAccount::where('loyalty_program_id', $program->id)->sole();
