@@ -89,7 +89,7 @@ class CardStyleArtwork
                 $col = $i % $cols;
                 $items = min($cols, $target - $row * $cols);
                 $left = ($w - ($items * $size + ($items - 1) * $gap)) / 2;
-                $this->stamp($im, $left + $col * ($size + $gap) + $size / 2, $top + $row * ($size + $gap) + $size / 2, $size, $i < $count, $bg, $ink, $options['icon'], $custom);
+                $this->stamp($im, $left + $col * ($size + $gap) + $size / 2, $top + $row * ($size + $gap) + $size / 2, $size, $i < $count, $bg, $ink, $options['icon'], $custom, $platform !== 'web');
             }
         }
         if ($custom) {
@@ -103,11 +103,21 @@ class CardStyleArtwork
         return $png;
     }
 
-    private function stamp($im, float $x, float $y, float $size, bool $filled, int $bg, int $ink, string $icon, $custom): void
+    private function stamp($im, float $x, float $y, float $size, bool $filled, int $bg, int $ink, string $icon, $custom, bool $walletOutline = false): void
     {
         imagesetthickness($im, max(2, (int) ($size * .02)));
         if (! $filled) {
-            imageellipse($im, (int) $x, (int) $y, (int) $size, (int) $size, $ink);
+            if ($walletOutline) {
+                // Concentric strokes keep the centre transparent over photo and illustrated artwork.
+                imagesetthickness($im, 1);
+                $width = max(4, (int) round($size * .043));
+                $diameter = (int) $size + $width - 1;
+                for ($stroke = 0; $stroke < $width; $stroke++, $diameter -= 2) {
+                    imageellipse($im, (int) $x, (int) $y, $diameter, $diameter, $ink);
+                }
+            } else {
+                imageellipse($im, (int) $x, (int) $y, (int) $size, (int) $size, $ink);
+            }
 
             return;
         }
