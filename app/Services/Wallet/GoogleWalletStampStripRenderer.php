@@ -3,6 +3,7 @@
 namespace App\Services\Wallet;
 
 use App\Models\LoyaltyAccount;
+use App\Support\CardDesign;
 use App\Support\StoreAssets;
 use Illuminate\Support\Facades\Log;
 
@@ -27,6 +28,7 @@ class GoogleWalletStampStripRenderer
                 'account_id' => $account->id,
                 'store_id' => $account->store_id,
             ]);
+
             return null;
         }
 
@@ -38,7 +40,8 @@ class GoogleWalletStampStripRenderer
             ?? '#1F2937';
 
         $accent = $this->normalizeHexColor($program->brand_color) ?? '#FFFFFF';
-        $foreground = $this->bestContrastTextColor($background);
+        $stampColor = CardDesign::customTextColor($program);
+        $foreground = $stampColor ?? $this->bestContrastTextColor($background);
 
         $stateHash = substr(sha1(implode('|', [
             self::RENDER_VERSION,
@@ -47,6 +50,7 @@ class GoogleWalletStampStripRenderer
             $background,
             $accent,
             $foreground,
+            ...($stampColor ? ['custom-stamps'] : []),
             (string) ($program->updated_at?->timestamp ?? $store->updated_at?->timestamp ?? 0),
         ])), 0, 16);
 
@@ -60,12 +64,13 @@ class GoogleWalletStampStripRenderer
             $heroBinary = StoreAssets::get($program->pass_hero_image_path);
         }
 
-        $pngBinary = $this->renderPng($target, $stamps, $background, $accent, $foreground, $heroBinary);
+        $pngBinary = $this->renderPng($target, $stamps, $background, $accent, $foreground, $heroBinary, $stampColor !== null);
         if (! $pngBinary) {
             return null;
         }
 
         StoreAssets::put($relativePath, $pngBinary);
+
         return $relativePath;
     }
 
@@ -75,9 +80,9 @@ class GoogleWalletStampStripRenderer
         string $backgroundHex,
         string $accentHex,
         string $foregroundHex,
-        ?string $heroBinary = null
-    ): ?string
-    {
+        ?string $heroBinary = null,
+        bool $customStampColor = false,
+    ): ?string {
         $width = 1032;
         $height = 230;
         $paddingX = 52;
@@ -117,7 +122,7 @@ class GoogleWalletStampStripRenderer
         }
 
         // Slight dark overlay for consistent circle contrast.
-        $overlay = imagecolorallocatealpha($image, $bgR, $bgG, $bgB, 82);
+        $overlay = imagecolorallocatealpha($image, $bgR, $bgG, $bgB, $customStampColor ? 12 : 82);
         imagefilledrectangle($image, 0, 0, $width, $height, $overlay);
 
         $columns = min(max($target, 1), 10);
@@ -174,7 +179,7 @@ class GoogleWalletStampStripRenderer
 
         $hex = trim($hex);
         if (! str_starts_with($hex, '#')) {
-            $hex = '#' . $hex;
+            $hex = '#'.$hex;
         }
 
         if (! preg_match('/^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/', $hex)) {
@@ -200,6 +205,7 @@ class GoogleWalletStampStripRenderer
     {
         [$r, $g, $b] = $this->hexToRgb($backgroundHex);
         $luminance = (0.299 * $r) + (0.587 * $g) + (0.114 * $b);
+
         return $luminance > 146 ? '#111111' : '#FFFFFF';
     }
 

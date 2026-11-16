@@ -94,6 +94,15 @@
                         @endunless
                         .loyalty-card, .loyalty-card .card-text, .loyalty-card .card-muted,
                         .loyalty-card #reward-balance-display { color: {{ $customTextColor }} !important; opacity: 1; }
+                        .loyalty-card .stamp-circle { border: 2px solid {{ $customTextColor }}; }
+                        .loyalty-card .stamp-circle--empty { background: transparent; color: {{ $customTextColor }}; }
+                        .loyalty-card .stamp-circle--filled,
+                        .loyalty-card .photo-web-stamp.is-filled {
+                            background: {{ $customTextColor }};
+                            color: {{ $webPhoto ? '#263e30' : \App\Support\CardDesign::colors($account->resolvedProgram())[0] }};
+                        }
+                        .loyalty-card .photo-web-stamps progress { accent-color: {{ $customTextColor }}; }
+                        .loyalty-card .photo-web-stamp-icon img { background: #fff; border-radius: 50%; padding: 2px; }
                     </style>
                 @endif
                 <!-- Main Loyalty Card -->

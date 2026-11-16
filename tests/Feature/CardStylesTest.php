@@ -240,7 +240,6 @@ test('production Google Wallet artwork tracks stamps reward and redemption for e
     expect($urls[3])->toBe($urls[0]);
 })->with(['simple', 'illustrated', 'photo']);
 
-
 test('photo web card forces readable ink over artwork regardless of saved background', function () {
     [$owner, $store, $program] = cardStyleOwner();
     $path = \App\Support\StoreAssets::storeUploaded(UploadedFile::fake()->image('bright.png', 600, 400), 'card-designs');
@@ -255,3 +254,53 @@ test('photo web card forces readable ink over artwork regardless of saved backgr
     $program->update(['card_design' => 'simple']);
     $this->get('/c/'.$account->public_token)->assertOk()->assertDontSee('color: #fff !important', false);
 });
+
+test('custom text colour appears on empty outlines and filled stamps in preview and issued artwork', function (string $style, string $platform) {
+    [$owner, $store, $program] = cardStyleOwner();
+    $design = [
+        'card_design' => $style, 'background_color' => '#25315A', 'card_text_color' => '#F5CB8A',
+        'reward_target' => 5,
+    ];
+
+    if ($style === 'photo') {
+        $program->update(['card_photo_path' => \App\Support\StoreAssets::storeUploaded(
+            UploadedFile::fake()->image('cafe.png', 600, 400), 'card-designs',
+        )]);
+    }
+
+    $preview = $this->actingAs($owner)->post(route('merchant.card-design.preview'), [
+        ...$design, 'program_id' => $program->id, 'platform' => $platform, 'ready' => 0,
+    ])->assertOk()->assertHeader('Content-Type', 'image/png')->getContent();
+
+    $program->update($design);
+    $account = LoyaltyAccount::factory()->create([
+        'store_id' => $store->id, 'loyalty_program_id' => $program->id, 'stamp_count' => 4,
+    ]);
+    $path = CoffeeCardSample::artwork($account, $platform);
+    $issued = \App\Support\StoreAssets::get($path);
+    expect($issued)->toBe($preview);
+
+    $image = imagecreatefromstring($issued);
+    $x = imagesx($image);
+    $y = imagesy($image);
+    $background = imagecolorat($image, 0, 0);
+    $ink = hexdec('F5CB8A');
+    $colored = [0, 0];
+    for ($row = (int) ($y * .31); $row < (int) ($y * .69); $row++) {
+        foreach ([[(int) ($x * .13), (int) ($x * .23)], [(int) ($x * .77), (int) ($x * .87)]] as $index => [$left, $right]) {
+            for ($col = $left; $col < $right; $col++) {
+                if (imagecolorat($image, $col, $row) === $ink) {
+                    $colored[$index]++;
+                }
+            }
+        }
+    }
+    imagedestroy($image);
+
+    expect($background)->not->toBe($ink);
+    expect($colored[0])->toBeGreaterThan($colored[1]);
+    expect($colored[1])->toBeGreaterThan(0);
+
+    $program->update(['card_text_color' => null]);
+    expect(CoffeeCardSample::artwork($account->fresh(), $platform))->not->toBe($path);
+})->with(['simple', 'illustrated', 'photo'])->with(['web', 'apple', 'google']);

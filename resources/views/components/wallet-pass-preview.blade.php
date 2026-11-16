@@ -26,7 +26,7 @@
 
 <div
     class="space-y-3"
-    @card-text-colour.window="customTextColour = $event.detail"
+    @card-text-colour.window="customTextColour = $event.detail; scheduleArtwork()"
     x-data="{
         platform: 'apple',
         cardDesign: @js($preview['card_design']),
@@ -56,6 +56,9 @@
         },
         get statusText() {
             return this.previewMode === 'ready' ? 'Reward ready' : `${this.exampleStamps}/${this.rewardTarget} stamps`;
+        },
+        get stampColour() {
+            return this.customTextColour || this.automaticPreviewText;
         },
         get stampProgress() {
             return `${this.previewMode === 'ready' ? 0 : this.exampleStamps} / ${this.rewardTarget}`;
@@ -115,6 +118,7 @@
             data.set('ready', this.previewMode === 'ready' ? '1' : '0');
             data.set('reward_target', String(this.rewardTarget));
             data.set('background_color', this.bgColor);
+            data.set('card_text_color', this.customTextColour || '');
             for (const name of ['logo','pass_logo','pass_hero_image']) data.delete(name);
             const version = ++this.artworkRequest;
             this.artworkBusy = true;
@@ -229,7 +233,7 @@
                 <img :src="appleHero || '{{ $fallbackHeroUrl }}'" alt="Apple Wallet hero preview" class="absolute inset-0 h-full w-full object-cover">
                 <div class="absolute inset-x-0 bottom-4 flex flex-wrap gap-2 px-4">
                     <template x-for="stamp in Array.from({ length: Math.min(rewardTarget, 8) }, (_, index) => index + 1)" :key="`apple-stamp-${stamp}`">
-                        <span class="h-6 w-6 rounded-full border-2" :style="previewMode === 'ready' || stamp <= exampleStamps ? `background:${automaticPreviewText}; border-color:${automaticPreviewText}` : `background:transparent; border-color:${automaticPreviewText}`"></span>
+                        <span class="h-6 w-6 rounded-full border-2" :style="previewMode === 'ready' || stamp <= exampleStamps ? `background:${stampColour}; border-color:${stampColour}` : `background:transparent; border-color:${stampColour}`"></span>
                     </template>
                 </div>
             </div>
@@ -270,7 +274,9 @@
                 <img :src="googleHero || '{{ $fallbackHeroUrl }}'" alt="Google Wallet hero preview" class="absolute inset-0 h-full w-full object-cover">
                 <div class="absolute inset-x-0 bottom-3 flex flex-wrap justify-center gap-2 px-4">
                     <template x-for="stamp in Array.from({ length: Math.min(rewardTarget, 8) }, (_, index) => index + 1)" :key="`google-stamp-${stamp}`">
-                        <span class="h-7 w-7 rounded-full border-2 border-white" :style="previewMode === 'ready' || stamp <= exampleStamps ? `background:${brandColor}` : 'background:rgba(255,255,255,.2)'"></span>
+                        <span class="h-7 w-7 rounded-full border-2 border-white" :style="customTextColour
+                            ? { borderColor: stampColour, backgroundColor: (previewMode === 'ready' || stamp <= exampleStamps) ? stampColour : 'transparent' }
+                            : { backgroundColor: (previewMode === 'ready' || stamp <= exampleStamps) ? brandColor : 'rgba(255,255,255,.2)' }"></span>
                     </template>
                 </div>
             </div>

@@ -81,7 +81,7 @@ class CoffeeCardSample
         $state = $account->reward_balance > 0 && $count === 0 ? 'ready' : (string) $count;
 
         $program = $account->resolvedProgram();
-        if ($program->card_design !== 'illustrated_coffee') {
+        if ($program->card_design !== 'illustrated_coffee' || CardDesign::customTextColor($program)) {
             $options = CardDesign::options($program);
             if ($platform !== 'web') {
                 // Give updated Wallet artwork a fresh URL for devices and image caches.

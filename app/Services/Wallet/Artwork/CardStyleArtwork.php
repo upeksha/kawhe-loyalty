@@ -16,20 +16,21 @@ class CardStyleArtwork
         $im = imagecreatetruecolor($w, $h);
         imageantialias($im, true);
         $bg = $this->color($im, $options['background']);
-        $ink = $this->color($im, $options['ink']);
+        $hasCustomStampColor = isset($options['stamp_color']);
+        $ink = $this->color($im, $options['stamp_color'] ?? $options['ink']);
         imagefill($im, 0, 0, $bg);
         if ($options['style'] === 'photo' && $options['photo']) {
             $photo = imagecreatefromstring($options['photo']);
             if ($photo) {
                 // Photo artwork stays readable independently of the surrounding card colour.
                 $bg = $this->color($im, '#182820');
-                $ink = $this->color($im, '#ffffff');
+                $ink = $this->color($im, $options['stamp_color'] ?? '#ffffff');
                 $this->cover($im, $photo, $w, $h);
                 imagedestroy($photo);
                 if ($platform === 'web') {
-                    imagefilledrectangle($im, 0, 0, $w, $h, imagecolorallocatealpha($im, 0, 0, 0, 44));
+                    imagefilledrectangle($im, 0, 0, $w, $h, imagecolorallocatealpha($im, 0, 0, 0, $hasCustomStampColor ? 43 : 44));
                 } else {
-                    $this->shadePhotoForStamps($im, $w, $h);
+                    $this->shadePhotoForStamps($im, $w, $h, $hasCustomStampColor ? 43 : 48);
                 }
             }
         }
@@ -62,13 +63,13 @@ class CardStyleArtwork
         $custom = $options['icon'] === 'custom' && $options['custom_icon'] ? imagecreatefromstring($options['custom_icon']) : null;
         if ($ready && $count === 0) {
             $size = min($h * .63, $w * .3);
-            $this->stamp($im, $w / 2, $h / 2, $size, true, $bg, $ink, $options['icon'], $custom);
+            $this->stamp($im, $w / 2, $h / 2, $size, true, $bg, $ink, $options['icon'], $custom, customStampColor: $hasCustomStampColor);
             for ($i = 0; $i < 8; $i++) {
                 $a = $i * M_PI / 4;
                 imageline($im, (int) ($w / 2 + cos($a) * $size * .68), (int) ($h / 2 + sin($a) * $size * .68), (int) ($w / 2 + cos($a) * $size * .8), (int) ($h / 2 + sin($a) * $size * .8), $ink);
             }
         } elseif ($target > 20) {
-            $this->stamp($im, $w / 2, $h * .34, min($h * .4, $w * .24), true, $bg, $ink, $options['icon'], $custom);
+            $this->stamp($im, $w / 2, $h * .34, min($h * .4, $w * .24), true, $bg, $ink, $options['icon'], $custom, customStampColor: $hasCustomStampColor);
             $x = (int) ($w * .12);
             $y = (int) ($h * .73);
             $bw = (int) ($w * .76);
@@ -89,7 +90,7 @@ class CardStyleArtwork
                 $col = $i % $cols;
                 $items = min($cols, $target - $row * $cols);
                 $left = ($w - ($items * $size + ($items - 1) * $gap)) / 2;
-                $this->stamp($im, $left + $col * ($size + $gap) + $size / 2, $top + $row * ($size + $gap) + $size / 2, $size, $i < $count, $bg, $ink, $options['icon'], $custom, $platform !== 'web');
+                $this->stamp($im, $left + $col * ($size + $gap) + $size / 2, $top + $row * ($size + $gap) + $size / 2, $size, $i < $count, $bg, $ink, $options['icon'], $custom, $platform !== 'web', $hasCustomStampColor);
             }
         }
         if ($custom) {
@@ -103,7 +104,7 @@ class CardStyleArtwork
         return $png;
     }
 
-    private function stamp($im, float $x, float $y, float $size, bool $filled, int $bg, int $ink, string $icon, $custom, bool $walletOutline = false): void
+    private function stamp($im, float $x, float $y, float $size, bool $filled, int $bg, int $ink, string $icon, $custom, bool $walletOutline = false, bool $customStampColor = false): void
     {
         imagesetthickness($im, max(2, (int) ($size * .02)));
         if (! $filled) {
@@ -121,9 +122,14 @@ class CardStyleArtwork
 
             return;
         }
-        imagefilledellipse($im, (int) $x, (int) $y, (int) $size, (int) $size, $custom ? imagecolorallocate($im, 255, 255, 255) : $ink);
+        $stampSurface = $custom && ! $customStampColor ? imagecolorallocate($im, 255, 255, 255) : $ink;
+        imagefilledellipse($im, (int) $x, (int) $y, (int) $size, (int) $size, $stampSurface);
         $s = $size * .54;
         if ($custom) {
+            if ($customStampColor) {
+                $inset = (int) ($size * .8);
+                imagefilledellipse($im, (int) $x, (int) $y, $inset, $inset, imagecolorallocate($im, 255, 255, 255));
+            }
             $ratio = min($s / imagesx($custom), $s / imagesy($custom));
             $cw = (int) (imagesx($custom) * $ratio);
             $ch = (int) (imagesy($custom) * $ratio);
@@ -158,13 +164,13 @@ class CardStyleArtwork
         }
     }
 
-    private function shadePhotoForStamps($image, int $width, int $height): void
+    private function shadePhotoForStamps($image, int $width, int $height, int $centreAlpha): void
     {
         // Keep the photo visible at the edges and increase contrast across the stamp rows.
         for ($y = 0; $y < $height; $y++) {
             $distance = abs(($y + .5) / $height - .5);
             $fade = max(0, min(1, ($distance - .32) / .18));
-            $shade = imagecolorallocatealpha($image, 0, 0, 0, (int) (48 + 49 * $fade));
+            $shade = imagecolorallocatealpha($image, 0, 0, 0, (int) ($centreAlpha + (97 - $centreAlpha) * $fade));
             imageline($image, 0, $y, $width - 1, $y, $shade);
         }
     }
@@ -179,13 +185,13 @@ class CardStyleArtwork
 
     private function rgb(string $hex): array
     {
-        $n = hexdec(ltrim($hex,'#'));
+        $n = hexdec(ltrim($hex, '#'));
 
         return [($n >> 16) & 255, ($n >> 8) & 255, $n & 255];
     }
 
-    private function color($im,string $hex): int
+    private function color($im, string $hex): int
     {
-        return imagecolorallocate($im,...$this->rgb($hex));
+        return imagecolorallocate($im, ...$this->rgb($hex));
     }
 }

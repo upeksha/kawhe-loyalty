@@ -1,16 +1,17 @@
 @props(['account'])
 @php
     $theme = \App\Support\ProgramBranding::resolveFromAccount($account);
+    $customTextColor = \App\Support\CardDesign::customTextColor($account->resolvedProgram());
     $target = max(1, $account->reward_target);
 @endphp
-<aside aria-label="Customer card preview" class="w-full max-w-[320px] space-y-4 rounded-2xl p-6" style="background-color: {{ $theme->bg }}; color: {{ \App\Support\CardDesign::customTextColor($account->resolvedProgram()) ?? $theme->textOnBg }}">
+<aside aria-label="Customer card preview" class="w-full max-w-[320px] space-y-4 rounded-2xl p-6" style="background-color: {{ $theme->bg }}; color: {{ $customTextColor ?? $theme->textOnBg }}">
     <p class="text-sm font-semibold">{{ $account->store->name }}</p>
     <p class="text-xl font-semibold">{{ $account->reward_title }}</p>
     <p class="text-[26px] font-semibold">{{ $account->stamp_count }} of {{ $target }} stamps</p>
     <p class="text-xs">{{ $account->reward_balance }} reward{{ $account->reward_balance === 1 ? '' : 's' }} available · {{ max(0, $target - $account->stamp_count) }} more stamps to your next reward</p>
     <div class="flex flex-wrap gap-2" aria-hidden="true">
         @for($i = 0; $i < min($target, 20); $i++)
-            <span class="h-8 w-8 rounded-full" style="background-color: {{ $theme->brand }}; opacity: {{ $i < $account->stamp_count ? '1' : '.25' }}"></span>
+            <span class="h-8 w-8 rounded-full" style="@if($customTextColor) border: 2px solid {{ $customTextColor }}; background-color: {{ $i < $account->stamp_count ? $customTextColor : 'transparent' }}; @else background-color: {{ $theme->brand }}; opacity: {{ $i < $account->stamp_count ? '1' : '.25' }}; @endif"></span>
         @endfor
         @if($target > 20)<span class="text-xs">+{{ $target - 20 }}</span>@endif
     </div>

@@ -105,7 +105,10 @@ class CardDesign
     {
         [$bg, $ink] = self::colors($model);
 
+        $stampColor = self::customTextColor($model);
+
         return [
+            ...($stampColor ? ['stamp_color' => $stampColor] : []),
             'style' => self::style($model), 'background' => $bg, 'ink' => $ink,
             'pattern' => $model?->card_pattern ?: 'mountains',
             'icon' => self::style($model) === 'simple' ? 'coffee' : ($model?->stamp_icon ?: 'coffee'),
