@@ -33,6 +33,22 @@ test('send endpoint sends email and sets token in database', function () {
     expect($account->email_verification_sent_at)->not->toBeNull();
 });
 
+test('other customer joins do not consume the verification email limit', function () {
+    Mail::fake();
+
+    $store = Store::factory()->create();
+    $program = $store->resolvedDefaultProgram();
+    $joinUrl = route('join.store', ['slug' => $program->slug, 't' => $program->join_token]);
+    foreach (range(1, 3) as $number) {
+        $this->post($joinUrl, ['email' => "join{$number}@example.com"])->assertRedirect();
+    }
+
+    $account = LoyaltyAccount::factory()->create(['store_id' => $store->id]);
+    $sendUrl = route('customer.email.verification.send', ['public_token' => $account->public_token]);
+    $this->post($sendUrl)->assertSessionHas('message');
+    Mail::assertQueued(VerifyCustomerEmail::class);
+});
+
 test('verify endpoint sets verified_at and clears token', function () {
     $store = Store::factory()->create();
     $customer = Customer::factory()->create(['email' => 'test@example.com']);

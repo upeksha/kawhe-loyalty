@@ -96,10 +96,10 @@ Route::get('/wallet/google/{public_token}/save', [App\Http\Controllers\WalletCon
     ->name('wallet.google.save')
     ->middleware('signed');
 
-Route::post('/c/{public_token}/verify/send', [App\Http\Controllers\VerificationController::class, 'send'])->name('card.verification.send')->middleware('throttle:3,10');
+Route::post('/c/{public_token}/verify/send', [App\Http\Controllers\VerificationController::class, 'send'])->name('card.verification.send')->middleware('throttle:3,10,customer-card-verification');
 Route::match(['GET', 'POST'], '/c/{public_token}/verify/{id}/{hash}', [App\Http\Controllers\VerificationController::class, 'verify'])->name('card.verification.verify')->middleware('signed');
 
-Route::post('/c/{public_token}/verify-email/send', [App\Http\Controllers\CustomerEmailVerificationController::class, 'send'])->name('customer.email.verification.send')->middleware('throttle:3,10');
+Route::post('/c/{public_token}/verify-email/send', [App\Http\Controllers\CustomerEmailVerificationController::class, 'send'])->name('customer.email.verification.send')->middleware('throttle:3,10,customer-card-verification');
 Route::match(['GET', 'POST'], '/verify-email/{token}', [App\Http\Controllers\CustomerEmailVerificationController::class, 'verify'])->name('customer.email.verification.verify');
 
 // Merchant onboarding routes (no EnsureMerchantHasStore middleware)
