@@ -42,13 +42,38 @@ final class ProgramBranding
     public static function signupColors(string $background): array
     {
         $background = self::normalizeBackground($background);
-        $text = self::contrastRatio($background, '#000000') > self::contrastRatio($background, '#FFFFFF') ? '#000000' : '#FFFFFF';
-        $link = $background;
-        for ($step = 1; self::contrastRatio($link, '#FAFAF9') < 4.5 && $step <= 20; $step++) {
-            $link = self::mix($background, '#000000', $step / 20);
+
+        return ['button' => $background, 'text' => self::buttonText($background), 'link' => self::linkColorAgainst($background, '#FAFAF9')];
+    }
+
+    /** @return array{background: string, button: string, buttonText: string, link: string} */
+    public static function emailColors(?string $accent, ?string $background): array
+    {
+        $background = self::normalizeHex($background, '#2D5D47');
+        $button = self::normalizeHex($accent, $background);
+        $surface = self::mix($background, '#FFFFFF', 0.92);
+
+        return [
+            'background' => $surface,
+            'button' => $button,
+            'buttonText' => self::buttonText($button),
+            'link' => self::linkColorAgainst($button, $surface),
+        ];
+    }
+
+    private static function buttonText(string $color): string
+    {
+        return self::contrastRatio($color, '#000000') > self::contrastRatio($color, '#FFFFFF') ? '#000000' : '#FFFFFF';
+    }
+
+    private static function linkColorAgainst(string $color, string $surface): string
+    {
+        $link = $color;
+        for ($step = 1; self::contrastRatio($link, $surface) < 4.5 && $step <= 20; $step++) {
+            $link = self::mix($color, '#000000', $step / 20);
         }
 
-        return ['button' => $background, 'text' => $text, 'link' => $link];
+        return $link;
     }
 
     public static function resolveFromAccount(LoyaltyAccount $account): ProgramTheme

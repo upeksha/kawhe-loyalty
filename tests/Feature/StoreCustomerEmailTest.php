@@ -76,3 +76,21 @@ test('all customer mail paths use the issuing cafe brand and only its confirmed 
     expect($otherRecovery->envelope()->replyTo)->toBe([])
         ->and($otherRecovery->render())->toContain('Another Café')->not->toContain('<img', 'The Corner Café');
 });
+
+test('customer mail takes the store default card colours with a readable button', function () {
+    $store = Store::factory()->create();
+    $card = $store->resolvedDefaultProgram();
+    $card->forceFill(['card_design' => 'simple', 'background_color' => '#DBB253'])->save();
+
+    $preview = route('merchant.stores.customer-email.preview', $store);
+    $this->actingAs($store->user)->get($preview)->assertOk()
+        ->assertSee('bgcolor="#DBB253"', false)
+        ->assertSee('padding:14px 24px;color:#000000', false);
+
+    $card->forceFill(['background_color' => '#25285A'])->save();
+    $recovery = new CustomerCardRecovery('https://testing.kawhe.shop/recover/test', $store->name, false, $store->fresh());
+
+    expect($recovery->render())
+        ->toContain('bgcolor="#25285A"', 'padding:14px 24px;color:#FFFFFF')
+        ->not->toContain('bgcolor="#DBB253"');
+});

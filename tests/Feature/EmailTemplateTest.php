@@ -31,11 +31,11 @@ test('all transactional emails render the shared layout and preserve their actio
     ];
     foreach ($messages as $message) {
         $html = (string) $message->render();
-        expect($html)->toContain('background-color:#2d5d47', 'role="presentation"', 'https://testing.kawhe.shop/', "If the button doesn't work");
+        expect($html)->toContain('mso-padding-alt:14px 24px', 'role="presentation"', 'https://testing.kawhe.shop/', "If the button doesn't work");
         expect($html)->not->toContain('<Cafe>');
         expect(substr_count($html, '<!doctype html>'))->toBe(1);
     }
-    expect($messages[4]->render())->toContain('LOYALTY');
+    expect($messages[4]->render())->toContain('LOYALTY', 'background-color:#2d5d47');
     expect($messages[3]->render())->toContain('Powered by Kawhe', 'Corner &lt;Cafe&gt;');
     expect($messages[2]->render())->toContain('24 hours');
     expect($messages[0]->render())->toContain('20 minutes');
