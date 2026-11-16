@@ -52,6 +52,10 @@
                     </form>
                 </section>
 
+                @unless($store->trashed())
+                    @include('stores.customer-email-settings')
+                @endunless
+
                 <section class="rounded-2xl border border-stone-200 bg-white p-5 shadow-sm sm:p-6" aria-labelledby="loyalty-cards-title">
                     <div class="flex flex-col gap-4 border-b border-stone-100 pb-4 sm:flex-row sm:items-start sm:justify-between">
                         <div>

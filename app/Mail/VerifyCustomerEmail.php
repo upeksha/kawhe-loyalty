@@ -2,6 +2,8 @@
 
 namespace App\Mail;
 
+use App\Models\Store;
+use App\Support\CustomerEmailBrand;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
@@ -12,6 +14,8 @@ use Illuminate\Queue\SerializesModels;
 class VerifyCustomerEmail extends Mailable implements ShouldQueue
 {
     use Queueable, SerializesModels;
+
+    public ?Store $store = null;
 
     /**
      * The number of times the job may be attempted.
@@ -32,8 +36,10 @@ class VerifyCustomerEmail extends Mailable implements ShouldQueue
      */
     public function __construct(
         public string $token,
-        public string $publicToken
+        public string $publicToken,
+        ?Store $store = null,
     ) {
+        $this->store = $store;
         $this->onQueue('emails');
     }
 
@@ -43,7 +49,9 @@ class VerifyCustomerEmail extends Mailable implements ShouldQueue
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Verify your Kawhe Loyalty email',
+            from: CustomerEmailBrand::from($this->store),
+            replyTo: CustomerEmailBrand::replyTo($this->store),
+            subject: $this->store ? 'Verify your email for '.$this->store->name : 'Verify your Kawhe Loyalty email',
         );
     }
 
@@ -54,7 +62,7 @@ class VerifyCustomerEmail extends Mailable implements ShouldQueue
     {
         // Use APP_URL to ensure correct domain in production
         $baseUrl = config('app.url');
-        $verificationUrl = $baseUrl . '/verify-email/' . $this->token . '?card=' . $this->publicToken;
+        $verificationUrl = $baseUrl.'/verify-email/'.$this->token.'?card='.$this->publicToken;
 
         return new Content(
             view: 'emails.verify-customer-email',
@@ -76,15 +84,12 @@ class VerifyCustomerEmail extends Mailable implements ShouldQueue
 
     /**
      * Handle a job failure.
-     *
-     * @param  \Throwable  $exception
-     * @return void
      */
     public function failed(\Throwable $exception): void
     {
         // Log the failure with context
         \Log::error('Verification email job failed', [
-            'token' => substr($this->token, 0, 10) . '...',
+            'token' => substr($this->token, 0, 10).'...',
             'public_token' => $this->publicToken,
             'error' => $exception->getMessage(),
             'attempts' => $this->attempts ?? 0,
@@ -92,7 +97,7 @@ class VerifyCustomerEmail extends Mailable implements ShouldQueue
 
         // Check for SendGrid-specific errors
         $errorMessage = $exception->getMessage();
-        if (str_contains($errorMessage, 'Maximum credits exceeded') || 
+        if (str_contains($errorMessage, 'Maximum credits exceeded') ||
             str_contains($errorMessage, 'Authentication failed') ||
             str_contains($errorMessage, 'Failed to authenticate')) {
             \Log::warning('SendGrid service issue detected - consider checking account status', [

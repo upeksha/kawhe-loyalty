@@ -94,7 +94,7 @@ class CustomerEmailVerificationController extends Controller
             'email_verification_sent_at' => now(),
         ]);
 
-        $mailable = new VerifyCustomerEmail($rawToken, $public_token);
+        $mailable = new VerifyCustomerEmail($rawToken, $public_token, $account->store);
 
         try {
             Mail::to($customer->email)->queue($mailable);

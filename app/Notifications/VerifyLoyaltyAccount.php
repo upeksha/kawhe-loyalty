@@ -2,6 +2,7 @@
 
 namespace App\Notifications;
 
+use App\Support\CustomerEmailBrand;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -60,12 +61,25 @@ class VerifyLoyaltyAccount extends Notification implements ShouldQueue
             'hash' => sha1($this->email),
         ]);
 
-        return (new MailMessage)
-            ->view('emails.notification')
-            ->subject('Verify your Kawhe Loyalty Card')
-            ->line('Click the button below to verify your email address and protect your loyalty card.')
-            ->action('Verify Email', $url)
-            ->line('Verification allows you to recover your card by email and redeem rewards.');
+        $store = $notifiable->store;
+        $message = (new MailMessage)
+            ->view('emails.verify-customer-email', [
+                'store' => $store,
+                'verificationUrl' => $url,
+                'linkLifetime' => 'one hour',
+            ])
+            ->subject('Verify your email for '.$store->name)
+            ->action('Verify email address', $url);
+
+        if ($from = CustomerEmailBrand::from($store)) {
+            $message->from($from->address, $from->name);
+        }
+
+        foreach (CustomerEmailBrand::replyTo($store) as $replyTo) {
+            $message->replyTo($replyTo->address, $replyTo->name);
+        }
+
+        return $message;
     }
 
     /**

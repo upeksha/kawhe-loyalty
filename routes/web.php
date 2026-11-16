@@ -75,6 +75,13 @@ Route::get('/join/{slug}/existing', [JoinController::class, 'existing'])->name('
 Route::post('/join/{slug}/existing', [JoinController::class, 'lookup'])->name('join.lookup')->middleware('throttle:10,1');
 
 Route::get('/c/{public_token}', [CardController::class, 'show'])->name('card.show');
+
+Route::get('/customer-email/reply-to/confirmed', fn () => view('stores.confirm-customer-reply-to'))
+    ->name('store.customer-email.confirmed');
+Route::get('/customer-email/reply-to/{store}/{token}', [App\Http\Controllers\StoreCustomerEmailController::class, 'showConfirmation'])
+    ->middleware(['signed:relative', 'throttle:20,1,customer-email-confirm'])->name('store.customer-email.confirm');
+Route::post('/customer-email/reply-to/{store}/{token}', [App\Http\Controllers\StoreCustomerEmailController::class, 'confirm'])
+    ->middleware(['signed:relative', 'throttle:20,1,customer-email-confirm']);
 Route::get('/c/{public_token}/manifest.webmanifest', [CardController::class, 'manifest'])->name('card.manifest');
 Route::get('/api/card/{public_token}', [CardController::class, 'api'])->name('card.api');
 Route::get('/api/card/{public_token}/transactions', [CardController::class, 'transactions'])->name('card.transactions');
@@ -140,6 +147,10 @@ Route::middleware(['auth', 'verified', App\Http\Middleware\OwnerAccount::class, 
     Route::post('/stores', [StoreController::class, 'store'])->name('stores.store');
     Route::get('/stores/{store}/edit', [StoreController::class, 'edit'])->withTrashed()->name('stores.edit');
     Route::put('/stores/{store}', [StoreController::class, 'update'])->withTrashed()->name('stores.update');
+    Route::put('/stores/{store}/customer-emails', [App\Http\Controllers\StoreCustomerEmailController::class, 'update'])
+        ->middleware('throttle:5,1,customer-email-settings')->name('stores.customer-email.update');
+    Route::get('/stores/{store}/customer-emails/preview', [App\Http\Controllers\StoreCustomerEmailController::class, 'preview'])
+        ->name('stores.customer-email.preview');
     Route::delete('/stores/{store}', [StoreController::class, 'destroy'])->withTrashed()->name('stores.destroy');
     Route::post('/stores/{store}/restore', [StoreController::class, 'restore'])->withTrashed()->name('stores.restore');
     Route::get('/stores/{store}/qr', [StoreController::class, 'qr'])->withTrashed()->name('stores.qr');

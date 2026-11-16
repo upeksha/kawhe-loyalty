@@ -17,6 +17,13 @@ class Store extends Model
     /** @use HasFactory<\Database\Factories\StoreFactory> */
     use HasFactory, SoftDeletes;
 
+    protected $hidden = [
+        'customer_welcome_note',
+        'customer_reply_to',
+        'pending_customer_reply_to',
+        'customer_reply_to_token_hash',
+    ];
+
     /**
      * Get a query builder for stores accessible by the given user.
      * Super admins can access all stores, regular users only their own.

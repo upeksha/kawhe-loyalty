@@ -4,6 +4,7 @@ namespace App\Mail;
 
 use App\Models\Customer;
 use App\Models\LoyaltyAccount;
+use App\Support\CustomerEmailBrand;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
@@ -46,7 +47,9 @@ class CustomerWelcomeEmail extends Mailable implements ShouldQueue
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Welcome to ' . $this->loyaltyAccount->store->name . ' - Verify your email',
+            from: CustomerEmailBrand::from($this->loyaltyAccount->store),
+            replyTo: CustomerEmailBrand::replyTo($this->loyaltyAccount->store),
+            subject: 'Welcome to '.$this->loyaltyAccount->store->name.' — your loyalty card is ready',
         );
     }
 
@@ -57,16 +60,15 @@ class CustomerWelcomeEmail extends Mailable implements ShouldQueue
     {
         // Use APP_URL to ensure correct domain in production
         $baseUrl = config('app.url');
-        $cardUrl = $baseUrl . '/c/' . $this->loyaltyAccount->public_token;
-        $verificationUrl = $baseUrl . '/verify-email/' . $this->verificationToken . '?card=' . $this->loyaltyAccount->public_token;
+        $verificationUrl = $baseUrl.'/verify-email/'.$this->verificationToken.'?card='.$this->loyaltyAccount->public_token;
 
         return new Content(
             view: 'emails.customer-welcome',
             with: [
-                'customer' => $this->customer,
+                'customerName' => $this->customer->name ?? 'there',
                 'store' => $this->loyaltyAccount->store,
-                'cardUrl' => $cardUrl,
                 'verificationUrl' => $verificationUrl,
+                'requiresVerification' => $this->loyaltyAccount->requires_verification_for_redemption,
             ],
         );
     }
@@ -83,9 +85,6 @@ class CustomerWelcomeEmail extends Mailable implements ShouldQueue
 
     /**
      * Handle a job failure.
-     *
-     * @param  \Throwable  $exception
-     * @return void
      */
     public function failed(\Throwable $exception): void
     {
@@ -100,7 +99,7 @@ class CustomerWelcomeEmail extends Mailable implements ShouldQueue
 
         // Check for SendGrid-specific errors
         $errorMessage = $exception->getMessage();
-        if (str_contains($errorMessage, 'Maximum credits exceeded') || 
+        if (str_contains($errorMessage, 'Maximum credits exceeded') ||
             str_contains($errorMessage, 'Authentication failed') ||
             str_contains($errorMessage, 'Failed to authenticate')) {
             \Log::warning('SendGrid service issue detected - consider checking account status', [
