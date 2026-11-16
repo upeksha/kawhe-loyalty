@@ -7,6 +7,13 @@ use Illuminate\Mail\Mailables\Address;
 
 class CustomerEmailBrand
 {
+    public static function logoUrl(?Store $store): ?string
+    {
+        $card = $store?->defaultLoyaltyProgram ?? $store?->defaultProgram;
+
+        return $card?->logo_url ?? $store?->logo_url;
+    }
+
     /** @return array{background: string, button: string, buttonText: string, link: string} */
     public static function colors(?Store $store): array
     {

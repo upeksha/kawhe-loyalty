@@ -17,7 +17,7 @@
             <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;">
                 <tr><td style="padding:0 0 24px;font-size:22px;font-weight:bold;color:{{ $colors['link'] }};">
                     @if($emailStoreName)
-                        @if($logo = $store?->logo_url)
+                        @if($logo = \App\Support\CustomerEmailBrand::logoUrl($store))
                             <img src="{{ $logo }}" alt="" width="64" style="display:block;width:64px;height:auto;margin:0 0 10px;">
                         @endif
                         {{ $emailStoreName }}

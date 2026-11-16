@@ -94,3 +94,24 @@ test('customer mail takes the store default card colours with a readable button'
         ->toContain('bgcolor="#25285A"', 'padding:14px 24px;color:#FFFFFF')
         ->not->toContain('bgcolor="#DBB253"');
 });
+
+test('customer mail prefers the default card customer logo and falls back to the store logo', function () {
+    $store = Store::factory()->create(['logo_path' => 'logos/original-store.png']);
+    $card = $store->resolvedDefaultProgram();
+    $card->forceFill([
+        'logo_path' => 'logos/current-card.png',
+        'pass_logo_path' => 'pass-logos/wallet.png',
+    ])->save();
+
+    $preview = route('merchant.stores.customer-email.preview', $store);
+    $this->actingAs($store->user)->get($preview)->assertOk()
+        ->assertSee('logos/current-card.png')
+        ->assertDontSee('logos/original-store.png')
+        ->assertDontSee('pass-logos/wallet.png');
+
+    $recovery = new CustomerCardRecovery('https://testing.kawhe.shop/recover/test', $store->name, false, $store->fresh());
+    expect($recovery->render())->toContain('logos/current-card.png')->not->toContain('logos/original-store.png');
+
+    $card->forceFill(['logo_path' => null])->save();
+    $this->get($preview)->assertOk()->assertSee('logos/original-store.png');
+});
