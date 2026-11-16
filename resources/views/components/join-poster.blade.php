@@ -1,6 +1,5 @@
 @php
     $candidateBg = $program?->brand_color ?? $program?->background_color ?? $store->brand_color ?? $store->background_color ?? '#7B3F1E';
-    $brand = $program?->brand_color ?? $store->brand_color ?? '#7B3F1E';
 
     $hex = ltrim($candidateBg, '#');
     if (strlen($hex) === 6) {
@@ -14,10 +13,18 @@
     }
 
     $textColor = '#ffffff';
-    $mutedColor = '#ffffff';
     if (\App\Support\CoffeeCardSample::programEnabled($program)) {
         [$bg, $textColor] = \App\Support\CardDesign::colors($program);
-        $mutedColor = $textColor;
+    }
+
+    $posterTheme = \App\Support\ProgramBranding::fromColors($bg, $bg);
+    if (\App\Support\ProgramBranding::contrastRatio($posterTheme->bg, $textColor) < 4.5) {
+        $textColor = $posterTheme->textOnBg;
+    }
+
+    $customTextColor = \App\Support\CardDesign::customTextColor($program ?? $store);
+    if ($customTextColor && \App\Support\ProgramBranding::contrastRatio($posterTheme->bg, $customTextColor) >= 4.5) {
+        $textColor = $customTextColor;
     }
 @endphp
 @php

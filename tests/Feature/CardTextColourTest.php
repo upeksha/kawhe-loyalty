@@ -51,3 +51,30 @@ test('photo card overrides are also checked against the image overlay', function
     $store->card_text_color = '#FFF4CF';
     expect(CardDesign::customTextColor($store))->toBe('#FFF4CF');
 });
+
+test('both poster previews use the card text colour when it contrasts with the actual poster background', function () {
+    config(['app.env' => 'testing', 'app.url' => 'https://testing.kawhe.shop']);
+    $store = Store::factory()->create();
+    $program = $store->resolvedDefaultProgram();
+    $program->forceFill(['card_design' => 'simple', 'background_color' => '#25315A', 'card_text_color' => '#FFF4CF'])->save();
+    $routes = [
+        'merchant.stores.qr.pdf' => [$store, 'preview' => 1],
+        'merchant.stores.programs.qr.pdf' => [$store, $program, 'preview' => 1],
+    ];
+
+    $this->actingAs($store->user);
+    foreach ($routes as $route => $parameters) {
+        $this->get(route($route, $parameters))->assertOk()
+            ->assertSee('background: #25315A; color: #FFF4CF;', false)
+            ->assertSee('alt="QR Code"', false)
+            ->assertSee('background: #ffffff;', false);
+    }
+
+    $program->forceFill([
+        'card_design' => 'classic', 'background_color' => '#25315A', 'brand_color' => '#BFA87A', 'card_text_color' => '#FFF4CF',
+    ])->save();
+    expect(CardDesign::customTextColor($program))->toBe('#FFF4CF');
+    $this->get(route('merchant.stores.programs.qr.pdf', [$store, $program, 'preview' => 1]))
+        ->assertOk()->assertSee('background: #BFA87A; color: #111827;', false)
+        ->assertDontSee('#FFF4CF');
+});
