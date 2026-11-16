@@ -42,9 +42,7 @@ test('fresh coffee cafe completes verified onboarding and issues a customer card
     $store = $owner->stores()->sole();
     $program = $store->resolvedDefaultProgram();
     expect($program->card_design)->toBe($style);
-    expect($program->stamp_icon)->toBe(match ($style) {
-        'simple' => 'coffee', 'photo' => 'custom', default => 'star'
-    });
+    expect($program->stamp_icon)->toBe($style === 'photo' ? 'custom' : 'star');
     expect($program->card_pattern)->toBe('botanical');
     if ($style === 'photo') {
         expect($program->card_photo_path)->not->toBeNull();

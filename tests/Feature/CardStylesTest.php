@@ -130,7 +130,7 @@ test('all three styles save and render without changing customer balances', func
     expect($program->card_design)->toBe($style);
     expect($program->background_color)->toBe('#FAEDD7');
     expect(CardDesign::colors($program)[0])->toBe('#FAEDD7');
-    expect($program->stamp_icon)->toBe($style === 'simple' ? 'coffee' : 'heart');
+    expect($program->stamp_icon)->toBe('heart');
     expect($account->fresh()->stamp_count)->toBe(2);
     expect($account->fresh()->reward_balance)->toBe(1);
     expect($store->fresh()->card_design)->toBe($style);
@@ -169,6 +169,23 @@ test('onboarding saves a photo and custom stamp without requiring a wallet banne
     expect(CardDesign::colors($store->fresh()->resolvedDefaultProgram())[0])->toBe('#263E30');
 });
 
+test('a Simple card accepts and reuses a validated custom stamp upload', function () {
+    [$owner, $store, $program] = cardStyleOwner();
+    $this->actingAs($owner);
+    $url = route('merchant.stores.programs.update', [$store, $program]);
+    $data = ['name' => 'Simple card', 'reward_target' => $program->reward_target, 'reward_title' => 'Coffee', 'card_design' => 'simple', 'stamp_icon' => 'custom'];
+
+    $this->put($url, $data)->assertSessionHasErrors('stamp_icon_upload');
+    $this->put($url, $data + ['stamp_icon_upload' => UploadedFile::fake()->image('icon.png', 100, 100)])->assertSessionHasNoErrors();
+    $program->refresh();
+    $path = $program->stamp_icon_path;
+    expect($path)->not->toBeNull();
+    expect(CardDesign::options($program)['custom_icon'])->toBe(\App\Support\StoreAssets::get($path));
+
+    $this->put($url, $data)->assertSessionHasNoErrors();
+    expect($program->fresh()->stamp_icon_path)->toBe($path);
+});
+
 test('preview works during onboarding is tenant scoped and stores no uploaded files', function () {
     [$owner,$store,$program] = cardStyleOwner();
     $store->update(['onboarding_step' => 'card_design', 'onboarding_completed_at' => null]);
@@ -179,19 +196,26 @@ test('preview works during onboarding is tenant scoped and stores no uploaded fi
     $this->actingAs(User::factory()->create())->post(route('merchant.card-design.preview'), $data)->assertNotFound();
 });
 
-test('artwork caches vary by design and simple always uses coffee', function () {
+test('artwork caches and output vary by icon and card design', function () {
     [$owner,$store,$program] = cardStyleOwner();
     $a = LoyaltyAccount::factory()->create(['store_id' => $store->id, 'loyalty_program_id' => $program->id, 'stamp_count' => 2]);
     $program->update(['card_design' => 'simple', 'stamp_icon' => 'star']);
     $a->refresh();
-    $simple = CoffeeCardSample::artwork($a, 'apple');
+    $starArtwork = [];
+    foreach (['web', 'apple', 'google'] as $platform) {
+        $starArtwork[$platform] = CoffeeCardSample::artwork($a, $platform);
+    }
     $program->update(['stamp_icon' => 'heart']);
     $a->refresh();
-    expect(CoffeeCardSample::artwork($a, 'apple'))->toBe($simple);
+    foreach ($starArtwork as $platform => $star) {
+        $heart = CoffeeCardSample::artwork($a, $platform);
+        expect($heart)->not->toBe($star);
+        expect(\App\Support\StoreAssets::get($heart))->not->toBe(\App\Support\StoreAssets::get($star));
+    }
     $program->update(['card_design' => 'illustrated']);
     $a->refresh();
     $illustrated = CoffeeCardSample::artwork($a, 'apple');
-    expect($illustrated)->not->toBe($simple);
+    expect($illustrated)->not->toBe($starArtwork['apple']);
     $program->update(['card_pattern' => 'waves']);
     $a->refresh();
     expect(CoffeeCardSample::artwork($a, 'apple'))->not->toBe($illustrated);

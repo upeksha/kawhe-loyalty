@@ -10,7 +10,7 @@
             <h2 id="common-questions" class="text-xl font-semibold">Common questions</h2>
             <dl class="mt-5 space-y-6 text-sm">
                 @if(\App\Support\CoffeeCardSample::available())
-                <div><dt class="font-semibold text-stone-900">Which card style should I choose?</dt><dd class="mt-2 text-stone-600">Simple uses one background colour and a fixed coffee-cup stamp. Illustrated adds a pattern you choose. Photo uses your uploaded image with an automatic readability overlay. Illustrated and Photo let you choose a stamp icon or upload your own.</dd></div>
+                <div><dt class="font-semibold text-stone-900">Which card style should I choose?</dt><dd class="mt-2 text-stone-600">Simple uses one background colour. Illustrated adds a pattern you choose. Photo uses your uploaded image with an automatic readability overlay. You can choose or upload a stamp icon for any of these styles.</dd></div>
                 <div><dt class="font-semibold text-stone-900">Will my card look the same everywhere?</dt><dd class="mt-2 text-stone-600">Your browser card and Wallet cards share the selected style and progress. Apple and Google Wallet control their own layout and image cropping. Previews show sample progress; check a saved card before sharing. QR posters use your card’s logo, colours, reward and join link.</dd></div>
                 @endif
                 <div><dt class="font-semibold text-stone-900">How do customers join?</dt><dd class="mt-2 text-stone-600">Open Loyalty cards and choose Share join QR. Customers scan the QR code and fill in the join form. They don’t need to download an app.</dd></div>

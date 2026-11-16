@@ -8,12 +8,12 @@
             @if($model?->card_design === 'classic')
                 <option value="classic">Classic — uploaded Wallet banner</option>
             @endif
-            <option value="simple">Simple — one colour, coffee stamps</option>
+            <option value="simple">Simple — one colour and stamp icons</option>
             <option value="illustrated">Illustrated — patterns and artwork</option>
             <option value="photo">Photo — your café or coffee image</option>
         </select>
     </div>
-    <p x-show="cardDesign === 'simple'" class="text-sm text-stone-600">Choose one background colour below. Stamps are circles with our fixed coffee-cup icon.</p>
+    <p x-show="cardDesign === 'simple'" class="text-sm text-stone-600">Choose a background colour and the icon customers collect.</p>
     <div x-show="cardDesign === 'illustrated'" x-cloak>
         <label for="card_pattern" class="block text-sm font-semibold">Choose artwork</label>
         <select id="card_pattern" name="card_pattern" class="mt-2 w-full rounded-lg border-stone-300">
@@ -40,14 +40,14 @@
         <p id="card-photo-formats" class="mt-3 text-sm text-stone-600">PNG, JPG or WebP, up to 2 MB and 3000 × 3000 pixels. We centre-crop the photo and add a dark overlay for readable stamps. Keep important details near the centre.</p>
         <x-input-error :messages="$errors->get('card_photo')" class="mt-2" />
     </div>
-    <div x-show="cardDesign !== 'simple'" x-cloak x-data="{ stampIcon: @js(old('stamp_icon', $model?->stamp_icon ?? 'coffee')) }">
+    <div x-data="{ stampIcon: @js(old('stamp_icon', $model?->stamp_icon ?? 'coffee')) }">
         <label for="stamp_icon" class="block text-sm font-semibold">Stamp icon</label>
-        <select id="stamp_icon" name="stamp_icon" x-model="stampIcon" :disabled="cardDesign === 'simple'" class="mt-2 w-full rounded-lg border-stone-300">
+        <select id="stamp_icon" name="stamp_icon" x-model="stampIcon" class="mt-2 w-full rounded-lg border-stone-300">
             <option value="coffee">Coffee cup</option><option value="bean">Coffee bean</option><option value="star">Star</option><option value="heart">Heart</option><option value="custom">Upload my own icon</option>
         </select>
         <div x-show="stampIcon === 'custom'" class="mt-3">
             <label for="stamp_icon_upload" class="block text-sm font-semibold">Your stamp icon</label>
-            <input id="stamp_icon_upload" name="stamp_icon_upload" type="file" accept="image/png,image/jpeg,image/webp" class="mt-2 block w-full text-sm" :disabled="cardDesign === 'simple' || stampIcon !== 'custom'" :required="cardDesign !== 'simple' && stampIcon === 'custom' && {{ $model?->stamp_icon_path ? 'false' : 'true' }}">
+            <input id="stamp_icon_upload" name="stamp_icon_upload" type="file" accept="image/png,image/jpeg,image/webp" class="mt-2 block w-full text-sm" :disabled="stampIcon !== 'custom'" :required="stampIcon === 'custom' && {{ $model?->stamp_icon_path ? 'false' : 'true' }}">
             @if($model?->stamp_icon_path)<img src="{{ \App\Support\StoreAssets::url($model->stamp_icon_path) }}" alt="Saved stamp icon" class="mt-2 h-16 w-16 rounded-full bg-white object-contain p-2">@endif
             <p class="mt-2 text-xs text-stone-500">Use a clear, dark icon with a transparent or white background. PNG, JPG or WebP, up to 2 MB and 3000 × 3000 pixels. It sits inside each collected stamp.</p>
         </div>

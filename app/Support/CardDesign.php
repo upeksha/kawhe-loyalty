@@ -32,7 +32,7 @@ class CardDesign
     public static function rules(Request $request, $model = null): array
     {
         $style = $request->input('card_design', $model?->card_design ?? 'simple');
-        $icon = $style === 'simple' ? 'coffee' : $request->input('stamp_icon', $model?->stamp_icon ?? 'coffee');
+        $icon = $request->input('stamp_icon', $model?->stamp_icon ?? 'coffee');
 
         $background = $style === 'illustrated_coffee'
             ? '#263e30'
@@ -61,10 +61,6 @@ class CardDesign
             }
             unset($validated[$input]);
         }
-        if (($validated['card_design'] ?? null) === 'simple') {
-            $validated['stamp_icon'] = 'coffee';
-        }
-
         return $validated;
     }
 
@@ -106,14 +102,17 @@ class CardDesign
         [$bg, $ink] = self::colors($model);
 
         $stampColor = self::customTextColor($model);
+        $icon = $model?->stamp_icon ?: 'coffee';
+        $style = self::style($model);
 
         return [
             ...($stampColor ? ['stamp_color' => $stampColor] : []),
-            'style' => self::style($model), 'background' => $bg, 'ink' => $ink,
+            'style' => $style, 'background' => $bg, 'ink' => $ink,
             'pattern' => $model?->card_pattern ?: 'mountains',
-            'icon' => self::style($model) === 'simple' ? 'coffee' : ($model?->stamp_icon ?: 'coffee'),
+            'icon' => $icon,
             'photo' => $contents && $model?->card_photo_path ? StoreAssets::get($model->card_photo_path) : null,
-            'custom_icon' => $contents && self::style($model) !== 'simple' && $model?->stamp_icon_path ? StoreAssets::get($model->stamp_icon_path) : null,
+            'custom_icon' => $contents && ($style !== 'simple' || $icon === 'custom') && $model?->stamp_icon_path
+                ? StoreAssets::get($model->stamp_icon_path) : null,
         ];
     }
 }
