@@ -365,6 +365,7 @@ class LoyaltyProgramController extends Controller
             'stamp_icon' => $program->stamp_icon,
             'stamp_icon_path' => $program->stamp_icon_path,
             'card_photo_path' => $program->card_photo_path,
+            'card_text_color' => $program->card_text_color,
 
             'reward_target' => $program->reward_target,
             'reward_title' => $program->reward_title,

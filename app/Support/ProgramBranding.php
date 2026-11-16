@@ -342,7 +342,7 @@ final class ProgramBranding
         );
     }
 
-    private static function contrastRatio(string $a, string $b): float
+    public static function contrastRatio(string $a, string $b): float
     {
         $l1 = self::luminance($a);
         $l2 = self::luminance($b);

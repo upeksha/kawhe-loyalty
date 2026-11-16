@@ -154,6 +154,7 @@
                                             <x-onboarding-helper-note>Background of the join page and card.</x-onboarding-helper-note>
                                             <x-input-error :messages="$errors->get('background_color')" class="mt-2" />
                                         </div>
+                                        <x-card-text-colour />
                                         <div x-show="hasBlockedContrast" x-cloak class="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900">
                                             <p class="font-semibold">Colors need more contrast</p>
                                             <p class="mt-1 leading-relaxed">

@@ -9,6 +9,7 @@
         'reward_target' => 8,
         'brand_color' => '#D6A24A',
         'background_color' => '#2B1E18',
+        'card_text_color' => null,
         'apple_logo_url' => null,
         'apple_hero_url' => null,
         'google_logo_url' => null,
@@ -25,6 +26,7 @@
 
 <div
     class="space-y-3"
+    @card-text-colour.window="customTextColour = $event.detail"
     x-data="{
         platform: 'apple',
         cardDesign: @js($preview['card_design']),
@@ -40,6 +42,7 @@
         rewardTarget: {{ max(1, (int) $preview['reward_target']) }},
         brandColor: @js($preview['brand_color']),
         bgColor: @js($preview['background_color']),
+        customTextColour: @js($preview['card_text_color']),
         appleLogo: @js($preview['apple_logo_url']),
         appleHero: @js($preview['apple_hero_url']),
         googleLogo: @js($preview['google_logo_url']),
@@ -63,6 +66,9 @@
             return letters.length > 24 ? letters.slice(0, 23).join('') + '…' : title;
         },
         get contrastText() {
+            return this.platform === 'apple' && this.customTextColour ? this.customTextColour : this.automaticPreviewText;
+        },
+        get automaticPreviewText() {
             const hex = (this.bgColor || '#2B1E18').replace('#', '');
             if (hex.length !== 6) return '#ffffff';
             const value = parseInt(hex, 16);
@@ -100,7 +106,7 @@
         },
         async loadArtwork() {
             if (!['simple','illustrated','photo'].includes(this.cardDesign)) return;
-            const form = document.getElementById('card-design-form') || document.getElementById('loyalty-card-form');
+            const form = document.getElementById('card-design-form') || document.getElementById('loyalty-card-form') || document.getElementById('store-create-form');
             if (!form) return;
             if (Array.from(form.querySelectorAll('input[type=file]')).some(input => !input.disabled && input.files.length && !input.validity.valid)) return;
             const data = new FormData(form);
@@ -129,7 +135,12 @@
         },
         initPreview() {
             this.bindField('card_design', 'cardDesign');
-            const form = document.getElementById('card-design-form') || document.getElementById('loyalty-card-form');
+            this.$nextTick(() => {
+                const picker = document.getElementById('card-text-colour');
+                const field = document.getElementById('card-text-colour-value');
+                if (picker && field) this.customTextColour = picker.validity.valid ? field.value : '';
+            });
+            const form = document.getElementById('card-design-form') || document.getElementById('loyalty-card-form') || document.getElementById('store-create-form');
             form?.addEventListener('input', () => this.scheduleArtwork());
             form?.addEventListener('change', () => this.scheduleArtwork());
             this.$watch('platform', () => this.scheduleArtwork());
@@ -167,6 +178,8 @@
             <button type="button" @click="previewMode = 'ready'" class="rounded-md px-2.5 py-1 text-[11px] font-medium" :class="previewMode === 'ready' ? 'bg-white text-stone-900 shadow-sm' : 'text-stone-500'">Reward ready</button>
         </div>
     </div>
+
+    <p x-show="platform === 'google' && customTextColour" x-cloak class="text-xs text-stone-600">Google Wallet chooses its own text colour.</p>
 
     <section id="coffee-preview-panel" role="tabpanel" :aria-labelledby="platform + '-preview-tab'" x-show="cardDesign !== 'classic'" x-cloak class="rounded-2xl border border-stone-200 bg-stone-50 p-4">
         <div class="mx-auto max-w-[20rem] overflow-hidden rounded-2xl shadow-lg" :style="{backgroundColor: bgColor, color: contrastText}">
@@ -216,7 +229,7 @@
                 <img :src="appleHero || '{{ $fallbackHeroUrl }}'" alt="Apple Wallet hero preview" class="absolute inset-0 h-full w-full object-cover">
                 <div class="absolute inset-x-0 bottom-4 flex flex-wrap gap-2 px-4">
                     <template x-for="stamp in Array.from({ length: Math.min(rewardTarget, 8) }, (_, index) => index + 1)" :key="`apple-stamp-${stamp}`">
-                        <span class="h-6 w-6 rounded-full border-2" :style="previewMode === 'ready' || stamp <= exampleStamps ? `background:${contrastText}; border-color:${contrastText}` : `background:transparent; border-color:${contrastText}`"></span>
+                        <span class="h-6 w-6 rounded-full border-2" :style="previewMode === 'ready' || stamp <= exampleStamps ? `background:${automaticPreviewText}; border-color:${automaticPreviewText}` : `background:transparent; border-color:${automaticPreviewText}`"></span>
                     </template>
                 </div>
             </div>

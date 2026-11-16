@@ -3,7 +3,7 @@
     $theme = \App\Support\ProgramBranding::resolveFromAccount($account);
     $target = max(1, $account->reward_target);
 @endphp
-<aside aria-label="Customer card preview" class="w-full max-w-[320px] space-y-4 rounded-2xl p-6" style="background-color: {{ $theme->bg }}; color: {{ $theme->textOnBg }}">
+<aside aria-label="Customer card preview" class="w-full max-w-[320px] space-y-4 rounded-2xl p-6" style="background-color: {{ $theme->bg }}; color: {{ \App\Support\CardDesign::customTextColor($account->resolvedProgram()) ?? $theme->textOnBg }}">
     <p class="text-sm font-semibold">{{ $account->store->name }}</p>
     <p class="text-xl font-semibold">{{ $account->reward_title }}</p>
     <p class="text-[26px] font-semibold">{{ $account->stamp_count }} of {{ $target }} stamps</p>

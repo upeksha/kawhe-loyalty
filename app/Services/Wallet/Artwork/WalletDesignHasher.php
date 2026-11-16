@@ -24,6 +24,10 @@ class WalletDesignHasher
             'hero_source_hash' => $heroSourceHash,
         ];
 
+        if ($textColor = \App\Support\CardDesign::customTextColor($program)) {
+            $payload['card_text_color'] = $textColor;
+        }
+
         return hash('sha256', json_encode($payload, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES));
     }
 }

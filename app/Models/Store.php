@@ -66,7 +66,7 @@ class Store extends Model
 
     protected $fillable = [
         'card_design',
-        'card_pattern', 'stamp_icon', 'stamp_icon_path', 'card_photo_path',
+        'card_text_color', 'card_pattern', 'stamp_icon', 'stamp_icon_path', 'card_photo_path',
         'name',
         'default_loyalty_program_id',
         'slug',
@@ -267,6 +267,7 @@ class Store extends Model
                 'stamp_icon' => $store->stamp_icon ?? 'coffee',
                 'stamp_icon_path' => $store->stamp_icon_path,
                 'card_photo_path' => $store->card_photo_path,
+                'card_text_color' => $store->card_text_color,
 
                 'brand_color' => $store->brand_color,
                 'background_color' => $store->background_color,
@@ -310,6 +311,7 @@ class Store extends Model
             'stamp_icon' => $this->stamp_icon ?? 'coffee',
             'stamp_icon_path' => $this->stamp_icon_path,
             'card_photo_path' => $this->card_photo_path,
+            'card_text_color' => $this->card_text_color,
 
             'brand_color' => $this->brand_color,
             'background_color' => $this->background_color,

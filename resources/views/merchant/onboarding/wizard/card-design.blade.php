@@ -106,6 +106,7 @@
                                 <x-card-colour-presets />
                     <x-input-error :messages="$errors->get('background_color')" class="mt-2" />
                             </div>
+                                        <x-card-text-colour :model="$store" />
                             <div x-show="hasBlockedContrast" x-cloak>
                                 <x-ui.alert variant="danger">
                                     <p class="font-semibold">Choose more distinct colours</p>

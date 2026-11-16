@@ -138,7 +138,8 @@ class AppleWalletPassService
 
         // Add colors from store branding (with fallbacks)
         $backgroundColor = $program->background_color ?? '#1F2937';
-        $foregroundColor = $this->bestContrastTextColor($backgroundColor);
+        $customTextColor = \App\Support\CardDesign::customTextColor($program);
+        $foregroundColor = $customTextColor ?? $this->bestContrastTextColor($backgroundColor);
 
         $passDefinition['backgroundColor'] = $this->hexToRgb($backgroundColor);
         $passDefinition['foregroundColor'] = $this->hexToRgb($foregroundColor);
@@ -147,7 +148,7 @@ class AppleWalletPassService
         $coffeeSample = \App\Support\CoffeeCardSample::enabled($account);
         if ($coffeeSample) {
             $passDefinition['backgroundColor'] = $this->hexToRgb(\App\Support\CardDesign::colors($program)[0]);
-            $passDefinition['foregroundColor'] = $this->hexToRgb(\App\Support\CardDesign::colors($program)[1]);
+            $passDefinition['foregroundColor'] = $this->hexToRgb($customTextColor ?? \App\Support\CardDesign::colors($program)[1]);
             $passDefinition['labelColor'] = $passDefinition['foregroundColor'];
             $passDefinition['storeCard']['primaryFields'] = [];
             $passDefinition['storeCard']['headerFields'] = [[

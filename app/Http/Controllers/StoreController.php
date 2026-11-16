@@ -94,6 +94,7 @@ class StoreController extends Controller
         $program = $store->loyaltyPrograms()->create([
             'name' => $validated['reward_title'],
             'card_design' => $validated['card_design'],
+            'card_text_color' => $validated['card_text_color'] ?? null,
             ...array_intersect_key($validated, array_flip(\App\Support\CardDesign::FIELDS)),
             'slug' => $store->slug,
             'reward_target' => $validated['reward_target'],

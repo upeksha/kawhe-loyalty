@@ -1,4 +1,5 @@
 @php($webPhoto = $account->resolvedProgram()->card_design === 'photo')
+@php($customTextColor = \App\Support\CardDesign::customTextColor($account->resolvedProgram()))
 @php($coffeeSample = \App\Support\CoffeeCardSample::enabled($account))
 <x-customer-layout
     :account="$account"
@@ -84,6 +85,15 @@
                         .loyalty-card { background-color: #263e30 !important; color: #fff !important; }
                         .loyalty-card .card-text, .loyalty-card .card-muted,
                         .loyalty-card #reward-balance-display { color: #fff !important; opacity: 1; }
+                    </style>
+                @endif
+                @if($customTextColor)
+                    <style>
+                        @unless($coffeeSample || $webPhoto)
+                            .loyalty-card { background: {{ \App\Support\CardDesign::colors($account->resolvedProgram())[0] }} !important; }
+                        @endunless
+                        .loyalty-card, .loyalty-card .card-text, .loyalty-card .card-muted,
+                        .loyalty-card #reward-balance-display { color: {{ $customTextColor }} !important; opacity: 1; }
                     </style>
                 @endif
                 <!-- Main Loyalty Card -->

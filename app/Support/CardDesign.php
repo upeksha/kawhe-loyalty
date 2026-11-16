@@ -8,6 +8,9 @@ use Illuminate\Validation\Rule;
 
 class CardDesign
 {
+    // Lightest possible photo background beneath the browser card’s 66% black overlay.
+    public const PHOTO_TEXT_BACKGROUND = '#575757';
+
     public const FIELDS = ['card_pattern', 'stamp_icon', 'stamp_icon_path', 'card_photo_path'];
 
     public static function style($model): string
@@ -31,7 +34,18 @@ class CardDesign
         $style = $request->input('card_design', $model?->card_design ?? 'simple');
         $icon = $style === 'simple' ? 'coffee' : $request->input('stamp_icon', $model?->stamp_icon ?? 'coffee');
 
+        $background = $style === 'illustrated_coffee'
+            ? '#263e30'
+            : ($request->input('background_color') ?: $model?->background_color ?: '#1F2937');
+
         return [
+            'card_text_color' => ['bail', 'nullable', 'regex:/^#[0-9A-Fa-f]{6}$/', function ($attribute, $value, $fail) use ($background, $style) {
+                if (! self::hasReadableText($value, $background, $style === 'photo')) {
+                    $fail($style === 'photo'
+                        ? 'Choose a text colour with enough contrast on both the card colour and photo overlay, or use automatic.'
+                        : 'Choose a text colour with at least 4.5:1 contrast against the card colour, or use automatic.');
+                }
+            }],
             'card_pattern' => ['sometimes', 'required', Rule::in(['mountains', 'waves', 'botanical'])],
             'stamp_icon' => ['sometimes', 'required', Rule::in(['coffee', 'bean', 'star', 'heart', 'custom'])],
             'card_photo' => ['bail', Rule::requiredIf($style === 'photo' && blank($model?->card_photo_path)), 'nullable', 'image', 'mimes:png,jpg,jpeg,webp', 'max:2048', 'dimensions:max_width=3000,max_height=3000', new ValidWalletImage('hero')],
@@ -52,6 +66,28 @@ class CardDesign
         }
 
         return $validated;
+    }
+
+    public static function customTextColor($model): ?string
+    {
+        $color = $model?->card_text_color;
+        $background = self::colors($model)[0];
+
+        return is_string($color) && self::hasReadableText($color, $background, $model?->card_design === 'photo')
+            ? strtoupper($color)
+            : null;
+    }
+
+    private static function hasReadableText(string $color, mixed $background, bool $photo): bool
+    {
+        if (! is_string($background) || preg_match('/^#[0-9A-Fa-f]{6}$/', $background) !== 1
+            || preg_match('/^#[0-9A-Fa-f]{6}$/', $color) !== 1) {
+            return false;
+        }
+
+        return ProgramBranding::contrastRatio($background, $color) >= 4.5
+            && (! $photo || (ProgramBranding::contrastRatio(self::PHOTO_TEXT_BACKGROUND, $color) >= 4.5
+                && ProgramBranding::contrastRatio('#000000', $color) >= 4.5));
     }
 
     public static function colors($model): array
