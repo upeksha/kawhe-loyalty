@@ -40,6 +40,7 @@ class VerifyEmailController extends Controller
         // Also repairs a missed dispatch after a successful verification. The
         // unique outbox event prevents repeat link visits from sending twice.
         app(\App\Services\MerchantSignupAlerts::class)->record($user, 'verified');
+        app(\App\Services\MerchantAcquisition::class)->track($user, 'email_verified');
 
         if ($request->user()?->is($user)) {
             $request->user()->refresh();

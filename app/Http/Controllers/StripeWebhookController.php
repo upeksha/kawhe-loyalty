@@ -39,6 +39,17 @@ class StripeWebhookController extends WebhookController
         return $this->syncCurrentSubscription($payload);
     }
 
+    protected function handleInvoicePaymentSucceeded(array $payload)
+    {
+        $invoice = $payload['data']['object'] ?? [];
+        if (config('ads_pilot.enabled') && is_string($invoice['customer'] ?? null)
+            && $user = $this->getUserByStripeId($invoice['customer'])) {
+            app(\App\Services\MerchantAcquisition::class)->recordInvoice($user, $invoice);
+        }
+
+        return $this->successMethod();
+    }
+
     private function syncCurrentSubscription(array $payload)
     {
         if ($user = $this->getUserByStripeId($payload['data']['object']['customer'])) {

@@ -35,6 +35,7 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
+        $exceptions->dontFlash(['ads_click_reference', 'ads_measurement_consent']);
         $exceptions->render(function (\Illuminate\Routing\Exceptions\InvalidSignatureException $exception, \Illuminate\Http\Request $request) {
             if (! $request->routeIs('verification.verify') || $request->expectsJson()) {
                 return null;

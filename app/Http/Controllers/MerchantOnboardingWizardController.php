@@ -112,6 +112,7 @@ class MerchantOnboardingWizardController extends Controller
                 'onboarding_step' => Store::ONBOARDING_STEP_CARD_DESIGN,
             ]));
             $existing->syncDefaultProgramFromStore();
+            app(\App\Services\MerchantAcquisition::class)->track($request->user(), 'cafe_profile_created');
             $program = $existing->resolvedDefaultProgram();
             if ($program?->pass_logo_path && ($program?->pass_hero_image_path || \App\Support\CoffeeCardSample::programEnabled($program))) {
                 $this->walletArtworkService->syncForProgram($program);
@@ -131,6 +132,7 @@ class MerchantOnboardingWizardController extends Controller
         ]));
         $store->ensureDefaultProgramExists();
         $store->syncDefaultProgramFromStore();
+        app(\App\Services\MerchantAcquisition::class)->track($request->user(), 'cafe_profile_created');
 
         return redirect()->route('merchant.onboarding.wizard.card-design')
             ->with('success', 'Store created. Now add your branding.');
@@ -239,6 +241,7 @@ class MerchantOnboardingWizardController extends Controller
             'onboarding_step' => Store::ONBOARDING_STEP_CARD_READY,
         ]);
         $store->syncDefaultProgramFromStore();
+        app(\App\Services\MerchantAcquisition::class)->track($request->user(), 'programme_published');
 
         return redirect()->route('merchant.onboarding.wizard.card-ready')
             ->with('success', 'Form configured. Share your join link with customers.');

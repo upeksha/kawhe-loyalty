@@ -15,3 +15,4 @@ Schedule::command('accounts:cleanup-files')->everyMinute()->withoutOverlapping(3
 Schedule::command('queue:prune-failed --hours=168')->dailyAt('02:10');
 Schedule::command('queue:prune-batches --hours=168')->dailyAt('02:20');
 Schedule::command('admin:dispatch-signup-alerts')->everyMinute()->withoutOverlapping();
+Schedule::command('kawhe:ads-pilot --purge')->daily()->when(fn () => config('ads_pilot.enabled'));

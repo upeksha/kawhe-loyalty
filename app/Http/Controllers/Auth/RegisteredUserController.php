@@ -6,10 +6,12 @@ use App\Http\Controllers\Controller;
 use App\Http\Controllers\MerchantOnboardingWizardController;
 use App\Models\User;
 use App\Rules\PlainSignupName;
+use App\Services\MerchantAcquisition;
 use App\Services\MerchantSignupProtection;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -21,9 +23,19 @@ class RegisteredUserController extends Controller
     /**
      * Display the registration view.
      */
-    public function create(): View
+    public function create(Request $request, MerchantAcquisition $acquisition): View
     {
+        if ($acquisition->isPilot($request->session()->get('signup_attribution'))) {
+            $acquisition->signupSession($request);
+        }
         return view('auth.register');
+    }
+
+    public function started(Request $request, MerchantAcquisition $acquisition): Response
+    {
+        $acquisition->signupStarted($request);
+
+        return response()->noContent();
     }
 
     /**
@@ -31,8 +43,10 @@ class RegisteredUserController extends Controller
      *
      * @throws \Illuminate\Validation\ValidationException
      */
-    public function store(Request $request): RedirectResponse
+    public function store(Request $request, MerchantAcquisition $acquisition): RedirectResponse
     {
+        $acquisition->signupStarted($request);
+
         $request->validate([
             'name' => ['required', 'string', 'max:255', new PlainSignupName],
             'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:'.User::class],
@@ -66,6 +80,7 @@ class RegisteredUserController extends Controller
 
             return $user;
         });
+        $acquisition->track($user, 'signup_completed', $request);
 
         $verificationQueued = true;
         try {
@@ -76,7 +91,7 @@ class RegisteredUserController extends Controller
         }
 
         Auth::login($user);
-        $request->session()->forget('signup_attribution');
+        $request->session()->forget(['signup_attribution', 'ads_pilot_signup_start']);
         // Only a committed new merchant account can emit the conversion.
         $request->session()->flash('merchant_signup_completed', true);
 

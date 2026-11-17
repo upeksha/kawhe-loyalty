@@ -78,6 +78,41 @@
         @endif
         <x-input-error :messages="$errors->get('signup_verification')" class="mt-1.5 text-sm" />
 
+        @if(app(\App\Services\MerchantAcquisition::class)->isPilot(session('signup_attribution')))
+            <div id="ads-measurement-choice" hidden class="text-xs leading-5 text-stone-600">
+                <input type="hidden" name="ads_click_reference" disabled>
+                <label class="flex items-start gap-2">
+                    <input type="checkbox" name="ads_measurement_consent" value="1" class="mt-0.5 rounded border-stone-300">
+                    <span>Allow Kawhe to tell OpenAI Ads if you complete registration and verify your email. Your name and email aren’t shared. This is optional.</span>
+                </label>
+                <a href="https://kawhe.shop/privacy-policy" class="underline underline-offset-2">Privacy policy</a>
+            </div>
+            <script>
+                (() => {
+                    const form = document.getElementById('register-form');
+                    const panel = document.getElementById('ads-measurement-choice');
+                    const reference = new URLSearchParams(window.location.hash.slice(1)).get('oppref');
+                    if (reference && reference.length <= 2048 && !/[\u0000-\u0020\u007f]/.test(reference)) {
+                        panel.hidden = false;
+                        const checkbox = form.elements.namedItem('ads_measurement_consent');
+                        const field = form.elements.namedItem('ads_click_reference');
+                        checkbox.addEventListener('change', () => {
+                            field.disabled = !checkbox.checked;
+                            field.value = checkbox.checked ? reference : '';
+                        });
+                    }
+                    form.addEventListener('input', async () => {
+                        try {
+                            await fetch(@js(route('register.started')), {
+                                method: 'POST', credentials: 'same-origin', keepalive: true,
+                                headers: {'X-CSRF-TOKEN': form.elements.namedItem('_token').value},
+                            });
+                        } catch (_) { /* Account submission still records the attempt. */ }
+                    }, {once: true});
+                })();
+            </script>
+        @endif
+
         <x-ui.button type="submit" variant="primary" class="w-full" data-loading-text="Creating account...">
             Create my free café account
         </x-ui.button>
