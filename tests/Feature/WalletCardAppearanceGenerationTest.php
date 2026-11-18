@@ -346,3 +346,39 @@ test('customized Wallet cards complete real stamping and redemption requests wit
         ->and($account->resolvedProgram()->stamp_color)->toBe('#FFD166')
         ->and($account->resolvedProgram()->reward_icon)->toBe('custom');
 })->with(['simple', 'illustrated', 'photo']);
+
+
+test('Google class creation recovers a concurrent insert without hiding other API errors', function (int $code) {
+    $account = walletAppearanceAccount('simple');
+    [$service] = walletAppearanceGoogleService();
+    $api = (new ReflectionProperty($service, 'service'))->getValue($service);
+    $resource = Mockery::mock('Google\\Service\\Walletobjects\\Resource\\Genericclass');
+    $resource->shouldReceive('get')->once()->ordered()->andThrow(new Google\Service\Exception('Missing', 404));
+    $resource->shouldReceive('insert')->once()->ordered()->andThrow(new Google\Service\Exception('Concurrent insert or API error', $code));
+    $api->genericclass = $resource;
+    if ($code !== 409) {
+        expect(fn () => $service->createOrUpdateGenericClass($account->resolvedProgram()))->toThrow(Google\Service\Exception::class);
+        return;
+    }
+    $existing = new Google_Service_Walletobjects_GenericClass(['id' => 'test-existing-class']);
+    $resource->shouldReceive('get')->once()->ordered()->andReturn($existing);
+    expect($service->createOrUpdateGenericClass($account->resolvedProgram()))->toBe($existing);
+})->with([409, 403]);
+
+test('Google object creation recovers a concurrent insert using the latest artwork and balance', function (int $code) {
+    $account = walletAppearanceAccount('simple');
+    [$service] = walletAppearanceGoogleService();
+    $api = (new ReflectionProperty($service, 'service'))->getValue($service);
+    $resource = Mockery::mock('Google\\Service\\Walletobjects\\Resource\\Genericobject');
+    $resource->shouldReceive('get')->once()->ordered()->andThrow(new Google\Service\Exception('Missing', 404));
+    $resource->shouldReceive('insert')->once()->ordered()->andThrow(new Google\Service\Exception('Concurrent insert or API error', $code));
+    $api->genericobject = $resource;
+    if ($code !== 409) {
+        expect(fn () => $service->createOrUpdateGenericObject($account))->toThrow(Google\Service\Exception::class);
+        return;
+    }
+    $resource->shouldReceive('update')->once()->ordered()->andReturnUsing(fn ($id, $body) => $body);
+    $result = $service->createOrUpdateGenericObject($account);
+    expect($result->getBarcode()->getValue())->toBe('LA:'.$account->public_token)
+        ->and($result->getHeroImage()->getSourceUri()->getUri())->toEndWith(CoffeeCardSample::artwork($account, 'google'));
+})->with([409, 403]);

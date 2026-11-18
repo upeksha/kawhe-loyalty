@@ -856,7 +856,18 @@ class GoogleWalletPassService
         $newClass = new \Google_Service_Walletobjects_GenericClass;
         $newClass->setId($resourceId);
 
-        $result = $this->service->genericclass->insert($newClass);
+        try {
+            $result = $this->service->genericclass->insert($newClass);
+        } catch (\Google\Service\Exception $e) {
+            if ($e->getCode() !== 409) {
+                throw $e;
+            }
+            // A refresh worker may create the class after our initial lookup.
+            $result = $this->service->genericclass->get($resourceId);
+            $this->lastSyncDetails['class'] = ['status' => 'unchanged'];
+
+            return $result;
+        }
         $this->lastSyncDetails['class'] = ['status' => 'created'];
 
         return $result;
@@ -983,7 +994,18 @@ class GoogleWalletPassService
             }
         }
 
-        $result = $this->service->genericobject->insert($genericObject);
+        try {
+            $result = $this->service->genericobject->insert($genericObject);
+        } catch (\Google\Service\Exception $e) {
+            if ($e->getCode() !== 409) {
+                throw $e;
+            }
+            // Keep the latest balance/artwork when another request created it first.
+            $result = $this->service->genericobject->update($objectId, $genericObject);
+            $this->lastSyncDetails['object'] = ['status' => 'updated'];
+
+            return $result;
+        }
         $this->lastSyncDetails['object'] = ['status' => 'created'];
 
         return $result;
