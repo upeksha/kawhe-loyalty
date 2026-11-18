@@ -17,6 +17,16 @@
             })();
         </script>
     @endif
+    <x-slot:merchantPreview>
+        <div class="space-y-5 text-center">
+            <h2 class="text-2xl font-bold">Confirm your email</h2>
+            <div class="mx-auto grid size-24 place-items-center rounded-3xl bg-brand-50">
+                <svg class="size-10" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="5.5" width="19" height="13" rx="2"/><path d="m3.5 7 8.5 6 8.5-6"/></svg>
+            </div>
+            <p class="text-sm">Open the link in the email to return to Kawhe.</p>
+        </div>
+    </x-slot:merchantPreview>
+    <h1 class="kawhe-setup-title mb-2 text-2xl font-bold tracking-tight sm:text-3xl">Check your inbox</h1>
     <script>try { sessionStorage.removeItem('kawhe_merchant_signup_draft'); } catch (_) {}</script>
     <div id="verification-instructions" class="mb-4 scroll-mt-24 text-sm text-gray-600">
         {{ __('Verify your email before using your merchant dashboard, stores, or scanner. Open the verification email, or request a new link below. Check your spam folder too.') }}
@@ -33,13 +43,16 @@
         <p class="mb-4 text-sm text-red-600">Your account was created, but we could not queue the verification email. Please use the resend button to try again.</p>
     @endif
 
-    <p class="mb-4 text-sm text-gray-600">Verification email: {{ auth()->user()->email }}</p>
+    <div class="mb-4 rounded-xl border border-brand-100 bg-brand-50 p-4 text-sm">
+        <p class="font-semibold">Email address</p>
+        <p class="mt-1 break-words text-stone-600">{{ auth()->user()->email }}</p>
+    </div>
     <div class="mb-4 flex gap-4 text-sm">
         <a class="underline" href="{{ route('profile.edit') }}">Change email or manage account</a>
         @unless(auth()->user()->is_staff_account)<a class="underline" href="{{ route('billing.index') }}">Manage billing</a>@endunless
     </div>
 
-    <div class="mt-4 flex items-center justify-between">
+    <div class="mt-4 flex flex-wrap items-center gap-4 border-t border-stone-200 pt-4">
         <form method="POST" action="{{ route('verification.send') }}">
             @csrf
 

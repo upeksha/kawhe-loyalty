@@ -15,7 +15,7 @@ use Illuminate\Support\Facades\DB;
 
 class AccountDataDeletion
 {
-    public const IMAGE_FIELDS = ['logo_path', 'pass_logo_path', 'pass_hero_image_path', 'card_photo_path', 'stamp_icon_path'];
+    public const IMAGE_FIELDS = ['logo_path', 'pass_logo_path', 'pass_hero_image_path', 'card_photo_path', 'stamp_icon_path', 'reward_icon_path'];
 
     public const UPLOAD_DIRECTORIES = ['logos', 'pass-logos', 'pass-heroes', 'card-designs'];
 

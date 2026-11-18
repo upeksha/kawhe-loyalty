@@ -1,4 +1,4 @@
-@props(['model' => null])
+@props(['model' => null, 'compact' => false])
 
 @php
     $savedTextColour = old('card_text_color', $model?->card_text_color);
@@ -6,20 +6,22 @@
 @endphp
 
 <div
-    class="rounded-xl border border-stone-200 bg-stone-50 p-4"
+    @class(['rounded-xl border border-stone-200 bg-stone-50 p-4' => !$compact, 'kawhe-editor-section kawhe-editor-text-colour' => $compact])
     x-data="{
         customTextColour: @js($savedTextColour),
+        get textBackground() {
+            return this.cardDesign === 'illustrated_coffee' ? '#263E30' : this.bgColor;
+        },
         get automaticTextColour() {
-            if (this.cardDesign === 'photo') return '#FFFFFF';
-            const light = this.contrastRatio(this.bgColor, '#FFFFFF');
-            const dark = this.contrastRatio(this.bgColor, '#111827');
+            const light = this.contrastRatio(this.textBackground, '#FFFFFF');
+            const dark = this.contrastRatio(this.textBackground, '#111827');
             return dark >= 4.5 && dark >= light ? '#111827' : (light >= 4.5 ? '#FFFFFF' : '#000000');
         },
         get selectedTextColour() {
             return /^#[0-9A-Fa-f]{6}$/.test(this.customTextColour) ? this.customTextColour.toUpperCase() : this.automaticTextColour;
         },
         get textColourReadable() {
-            return !this.customTextColour || (/^#[0-9A-Fa-f]{6}$/.test(this.customTextColour) && this.contrastRatio(this.bgColor, this.selectedTextColour) >= 4.5
+            return !this.customTextColour || (/^#[0-9A-Fa-f]{6}$/.test(this.customTextColour) && this.contrastRatio(this.textBackground, this.selectedTextColour) >= 4.5
                 && (this.cardDesign !== 'photo' || (this.contrastRatio(@js(\App\Support\CardDesign::PHOTO_TEXT_BACKGROUND), this.selectedTextColour) >= 4.5
                     && this.contrastRatio('#000000', this.selectedTextColour) >= 4.5)));
         },
@@ -29,21 +31,34 @@
         $dispatch('card-text-colour', textColourReadable ? customTextColour : '');
     "
 >
+    <input type="hidden" name="card_text_color" id="card-text-colour-value" :value="customTextColour" value="{{ $savedTextColour }}">
     <div class="flex flex-wrap items-center justify-between gap-3">
-        <label for="card-text-colour" class="text-sm font-medium text-stone-700">Card text colour</label>
-        <button type="button" x-show="customTextColour" x-cloak @click="customTextColour = ''" class="min-h-10 text-sm font-semibold text-brand-700 underline">Use automatic</button>
-    </div>
-    <div class="mt-2 flex items-center gap-3">
-        <input type="hidden" name="card_text_color" id="card-text-colour-value" :value="customTextColour" value="{{ $savedTextColour }}">
-        <input id="card-text-colour" x-ref="textColourPicker" type="color" :value="selectedTextColour" @input="customTextColour = $event.target.value.toUpperCase()" @change="customTextColour = $event.target.value.toUpperCase()" aria-describedby="card-text-colour-help" :aria-invalid="!textColourReadable" class="color-swatch-input h-11 w-11 shrink-0 cursor-pointer rounded-full border-2 border-stone-300 bg-transparent p-0">
-        <span class="font-mono text-sm text-stone-700" x-text="selectedTextColour"></span>
-        <span x-show="textColourReadable" x-cloak class="rounded-lg px-2.5 py-1 text-sm font-semibold" :style="{ color: selectedTextColour, backgroundColor: cardDesign === 'photo' ? '#575757' : bgColor }">Sample text</span>
+        <div class="flex min-w-0 items-center gap-2">
+            <span class="size-6 shrink-0 rounded-full border border-stone-300" :style="{ backgroundColor: selectedTextColour }" aria-hidden="true"></span>
+            <div>
+                <label for="card-text-colour" class="block text-sm font-semibold text-stone-800">Card text colour</label>
+                <p class="mt-0.5 text-xs text-stone-600">
+                    <span x-text="customTextColour ? 'Custom' : 'Automatic'">Automatic</span> · <span x-text="selectedTextColour"></span>
+                </p>
+            </div>
+        </div>
+        <div class="flex flex-wrap items-center gap-3">
+            <button type="button" x-show="customTextColour" x-cloak @click="customTextColour = ''" class="min-h-10 text-sm font-semibold text-brand-700 underline underline-offset-4">Use automatic</button>
+            <div class="relative inline-flex min-h-10 items-center rounded-lg border border-stone-300 bg-white px-3 text-sm font-semibold text-brand-800 focus-within:ring-2 focus-within:ring-brand-600">
+                <span aria-hidden="true">Choose colour</span>
+                <input id="card-text-colour" x-ref="textColourPicker" type="color" :value="selectedTextColour"
+                    @input="customTextColour = $event.target.value.toUpperCase()" @change="customTextColour = $event.target.value.toUpperCase()"
+                    aria-label="Choose card text colour" aria-describedby="card-text-colour-help" :aria-invalid="!textColourReadable"
+                    class="absolute inset-0 h-full w-full cursor-pointer opacity-0">
+            </div>
+        </div>
     </div>
     <p id="card-text-colour-help" class="mt-2 text-sm text-stone-600" aria-live="polite">
-        <span x-show="!customTextColour && cardDesign !== 'photo'">Set automatically for readability. Select the colour to use your own.</span>
-        <span x-show="!customTextColour && cardDesign === 'photo'" x-cloak>White is selected automatically over the photo. You can choose a colour that stays readable over the photo and the card background.</span>
+        <span x-show="!customTextColour && cardDesign !== 'photo'">Custom text colours must pass the contrast check.</span>
+        <span x-show="!customTextColour && cardDesign === 'photo'" x-cloak>A custom colour must stay readable against both your card colour and the photo overlay.</span>
         <span x-show="customTextColour && textColourReadable" x-cloak>Using your custom colour.</span>
         <span x-show="!textColourReadable" x-cloak class="font-medium text-red-700">This colour is hard to read. Choose a different colour or use automatic.</span>
     </p>
     <x-input-error :messages="$errors->get('card_text_color')" class="mt-2" />
+    <x-stamp-colour :model="$model" />
 </div>

@@ -732,10 +732,10 @@ class GoogleWalletPassService
         $existingProgramName = $existing->getProgramName();
         $existingColor = $existing->getHexBackgroundColor();
         $textModules = $existing->getTextModulesData() ?? [];
-        $existingProgramTextHeader = $textModules[0]?->getHeader();
-        $existingProgramTextBody = $textModules[0]?->getBody();
-        $existingRuleHeader = $textModules[1]?->getHeader();
-        $existingRuleBody = $textModules[1]?->getBody();
+        $existingProgramTextHeader = ($textModules[0] ?? null)?->getHeader();
+        $existingProgramTextBody = ($textModules[0] ?? null)?->getBody();
+        $existingRuleHeader = ($textModules[1] ?? null)?->getHeader();
+        $existingRuleBody = ($textModules[1] ?? null)?->getBody();
 
         $existingLogoUri = $this->extractImageUri($existing->getProgramLogo());
         $existingHeroUri = null;

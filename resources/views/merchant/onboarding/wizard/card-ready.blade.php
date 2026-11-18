@@ -6,23 +6,23 @@
         :store="$store"
         title="Download your join poster"
         subtitle="Preview the A4 poster your customers will scan, then download it for your counter."
-        :backUrl="route('merchant.onboarding.wizard.customer-form')"
     >
         @if($errors->has('poster'))
             <x-ui.alert variant="danger" class="mb-6">{{ $errors->first('poster') }}</x-ui.alert>
         @endif
-        <div class="grid items-start gap-6 lg:grid-cols-2">
-            <section class="min-w-0 rounded-2xl border border-stone-200 bg-white p-5 sm:p-6" aria-labelledby="ready-preview-title">
-                <div class="mb-5 flex flex-wrap items-center justify-between gap-3">
-                    <h2 id="ready-preview-title" class="text-lg font-semibold">Your join poster preview</h2>
+        <x-slot:preview>
+            <section class="mx-auto max-w-sm space-y-4" aria-labelledby="ready-preview-title">
+                <div class="flex flex-col items-center gap-2">
+                    <h2 id="ready-preview-title" class="text-2xl font-bold">Your join poster preview</h2>
                     <a href="{{ route('merchant.stores.qr.pdf', ['store' => $store, 'preview' => 1]) }}" target="_blank" rel="noopener" class="inline-flex min-h-11 items-center text-sm font-semibold text-brand-700 underline">Open full size ↗</a>
                 </div>
-                <div id="join-poster-preview" class="relative mx-auto w-full overflow-hidden rounded-lg border border-stone-200 shadow-sm" style="aspect-ratio: 794 / 1123">
+                <div id="join-poster-preview" class="relative mx-auto w-full max-w-[18rem] overflow-hidden rounded-lg border border-stone-200 shadow-sm" style="aspect-ratio: 794 / 1123">
                     <iframe src="{{ route('merchant.stores.qr.pdf', ['store' => $store, 'preview' => 1]) }}" title="A4 join poster preview for {{ $store->name }}" class="pointer-events-none absolute left-0 top-0 border-0" style="width: 794px; height: 1123px; transform-origin: top left"></iframe>
                 </div>
                 <p class="mt-4 text-sm text-stone-500">This preview uses the same poster design and join QR code as the PDF.</p>
             </section>
 
+        </x-slot:preview>
             <div class="min-w-0 space-y-6">
                 <section class="rounded-2xl border border-stone-200 bg-white p-5 sm:p-6" aria-labelledby="share-title">
                     <h2 id="share-title" class="text-lg font-semibold">Download and share</h2>
@@ -47,7 +47,6 @@
                     <p class="mt-3 text-sm text-brand-900">Once your poster is downloaded, continue to the merchant app. You can change the design later.</p>
                 </section>
             </div>
-        </div>
 
         <x-slot name="actions">
             <div class="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-3">

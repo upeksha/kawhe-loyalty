@@ -26,7 +26,10 @@ class WalletDesignHasher
 
         if ($textColor = \App\Support\CardDesign::customTextColor($program)) {
             $payload['card_text_color'] = $textColor;
-            $payload['stamp_color'] = $textColor;
+        }
+
+        if (\App\Support\CoffeeCardSample::programEnabled($program)) {
+            $payload['card_artwork_renderer_version'] = CardStyleArtwork::RENDERER_VERSION;
         }
 
         return hash('sha256', json_encode($payload, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES));

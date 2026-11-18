@@ -20,10 +20,13 @@
         @if($showPresets)
             <div class="rounded-xl border border-stone-200 bg-stone-50/80 p-5">
                 <p class="text-sm font-semibold text-stone-800">Quick presets</p>
-                <div class="mt-3 flex flex-wrap gap-2">
-                    <button type="button" @click="applyPreset('fastest')" class="inline-flex items-center rounded-xl border border-stone-300 bg-white px-3 py-2 text-sm font-medium text-stone-700 hover:bg-stone-50 transition-colors">Fastest signup</button>
-                    <button type="button" @click="applyPreset('balanced')" class="inline-flex items-center rounded-xl border border-stone-300 bg-white px-3 py-2 text-sm font-medium text-stone-700 hover:bg-stone-50 transition-colors">Balanced</button>
-                    <button type="button" @click="applyPreset('marketing')" class="inline-flex items-center rounded-xl border border-stone-300 bg-white px-3 py-2 text-sm font-medium text-stone-700 hover:bg-stone-50 transition-colors">Marketing-friendly</button>
+                <div class="mt-3 flex flex-wrap gap-2" role="group" aria-label="Quick presets">
+                    @foreach(['fastest' => 'Fastest signup', 'balanced' => 'Balanced', 'marketing' => 'Marketing-friendly'] as $preset => $label)
+                        <button type="button" @click="applyPreset('{{ $preset }}')" :aria-pressed="activePreset === '{{ $preset }}'"
+                            class="inline-flex items-center rounded-xl border border-stone-300 bg-white px-3 py-2 text-sm font-medium text-stone-700 transition-colors hover:bg-stone-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-700 aria-pressed:border-brand-800 aria-pressed:bg-brand-800 aria-pressed:text-white aria-pressed:hover:bg-brand-800">
+                            {{ $label }}
+                        </button>
+                    @endforeach
                 </div>
                 <p class="mt-2 text-xs text-stone-500">These presets only change the form switches below. You can still fine-tune every field before saving.</p>
             </div>

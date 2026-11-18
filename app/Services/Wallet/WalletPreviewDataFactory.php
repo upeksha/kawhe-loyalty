@@ -11,7 +11,7 @@ class WalletPreviewDataFactory
     {
         $program->loadMissing('store');
 
-        return ['card_design' => $program->card_design ?? 'classic', 'card_text_color' => $program->card_text_color] + $this->make(
+        return ['card_design' => $program->card_design ?? 'classic', 'card_text_color' => $program->card_text_color, 'stamp_color' => $program->stamp_color] + $this->make(
             $program->store,
             $program->name,
             $program->reward_title,
@@ -32,7 +32,7 @@ class WalletPreviewDataFactory
             return $this->forProgram($program);
         }
 
-        return $this->make(
+        return ['card_text_color' => $store->card_text_color, 'stamp_color' => $store->stamp_color] + $this->make(
             $store,
             $store->reward_title,
             $store->reward_title,

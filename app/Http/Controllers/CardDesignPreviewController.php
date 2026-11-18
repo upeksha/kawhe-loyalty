@@ -30,11 +30,11 @@ class CardDesignPreviewController extends Controller
         ]);
         $preview = new LoyaltyProgram;
         if ($model) {
-            $preview->forceFill($model->only([...CardDesign::FIELDS, 'background_color']));
+            $preview->forceFill($model->only([...CardDesign::FIELDS, 'background_color', 'card_text_color']));
         }
-        $preview->forceFill(collect($data)->except(['card_photo', 'stamp_icon_upload', 'platform', 'ready'])->all());
+        $preview->forceFill(collect($data)->except(['card_photo', 'stamp_icon_upload', 'reward_icon_upload', 'platform', 'ready'])->all());
         $options = CardDesign::options($preview);
-        foreach (['card_photo' => 'photo', 'stamp_icon_upload' => 'custom_icon'] as $field => $key) {
+        foreach (['card_photo' => 'photo', 'stamp_icon_upload' => 'custom_icon', 'reward_icon_upload' => 'custom_reward_icon'] as $field => $key) {
             if ($request->hasFile($field)) {
                 $options[$key] = file_get_contents($request->file($field)->getRealPath());
             }

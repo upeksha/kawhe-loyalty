@@ -40,7 +40,7 @@ class GoogleWalletStampStripRenderer
             ?? '#1F2937';
 
         $accent = $this->normalizeHexColor($program->brand_color) ?? '#FFFFFF';
-        $stampColor = CardDesign::customTextColor($program);
+        $stampColor = CardDesign::customStampColor($program) ?? CardDesign::customTextColor($program);
         $foreground = $stampColor ?? $this->bestContrastTextColor($background);
 
         $stateHash = substr(sha1(implode('|', [

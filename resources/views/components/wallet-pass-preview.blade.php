@@ -1,4 +1,4 @@
-@props(['previewData' => []])
+@props(['previewData' => [], 'onboarding' => false, 'sourceWalletLogo' => null])
 
 @php
     $defaults = [
@@ -10,6 +10,7 @@
         'brand_color' => '#D6A24A',
         'background_color' => '#2B1E18',
         'card_text_color' => null,
+        'stamp_color' => null,
         'apple_logo_url' => null,
         'apple_hero_url' => null,
         'google_logo_url' => null,
@@ -22,10 +23,12 @@
     $preview = array_merge($defaults, $previewData);
     $fallbackHeroUrl = asset('images/wallet-preview-pattern.jpg');
     $fallbackLogoUrl = asset('images/kawhe-icon-white.png');
+    $selectedWalletClass = $onboarding ? 'bg-brand-800 text-white' : 'bg-[#2b1e18] text-white';
 @endphp
 
 <div
     class="space-y-3"
+    @card-stamp-colour.window="customStampColour = $event.detail; scheduleArtwork()"
     @card-text-colour.window="customTextColour = $event.detail; scheduleArtwork()"
     x-data="{
         platform: 'apple',
@@ -43,7 +46,9 @@
         brandColor: @js($preview['brand_color']),
         bgColor: @js($preview['background_color']),
         customTextColour: @js($preview['card_text_color']),
+        customStampColour: @js($preview['stamp_color']),
         appleLogo: @js($preview['apple_logo_url']),
+        onboardingAppleLogo: @js($sourceWalletLogo ?? $preview['apple_logo_url']),
         appleHero: @js($preview['apple_hero_url']),
         googleLogo: @js($preview['google_logo_url']),
         googleHero: @js($preview['google_hero_url']),
@@ -57,19 +62,11 @@
         get statusText() {
             return this.previewMode === 'ready' ? 'Reward ready' : `${this.exampleStamps}/${this.rewardTarget} stamps`;
         },
-        get stampColour() {
-            return this.customTextColour || this.automaticPreviewText;
-        },
-        get stampProgress() {
-            return `${this.previewMode === 'ready' ? 0 : this.exampleStamps} / ${this.rewardTarget}`;
-        },
-        get shortReward() {
-            const title = this.rewardTitle.trim().replace(/\s+/g, ' ') || 'Your reward';
-            const letters = Array.from(title);
-            return letters.length > 24 ? letters.slice(0, 23).join('') + '…' : title;
-        },
         get contrastText() {
             return this.platform === 'apple' && this.customTextColour ? this.customTextColour : this.automaticPreviewText;
+        },
+        get stampColour() {
+            return this.customStampColour || this.customTextColour || (this.cardDesign === 'photo' ? '#ffffff' : this.automaticPreviewText);
         },
         get automaticPreviewText() {
             const hex = (this.bgColor || '#2B1E18').replace('#', '');
@@ -80,7 +77,10 @@
             const b = value & 255;
             const linear = channel => { const v = channel / 255; return v <= 0.04045 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
             const luminance = 0.2126 * linear(r) + 0.7152 * linear(g) + 0.0722 * linear(b);
-            return luminance > 0.179 ? '#000000' : '#ffffff';
+            const whiteContrast = 1.05 / (luminance + 0.05);
+            const darkLuminance = 0.2126 * linear(17) + 0.7152 * linear(24) + 0.0722 * linear(39);
+            const darkContrast = (Math.max(luminance, darkLuminance) + 0.05) / (Math.min(luminance, darkLuminance) + 0.05);
+            return darkContrast >= 4.5 && darkContrast >= whiteContrast ? '#111827' : (whiteContrast >= 4.5 ? '#ffffff' : '#000000');
         },
         bindField(id, property, parser = value => value) {
             const field = document.getElementById(id);
@@ -111,7 +111,7 @@
             if (!['simple','illustrated','photo'].includes(this.cardDesign)) return;
             const form = document.getElementById('card-design-form') || document.getElementById('loyalty-card-form') || document.getElementById('store-create-form');
             if (!form) return;
-            if (Array.from(form.querySelectorAll('input[type=file]')).some(input => !input.disabled && input.files.length && !input.validity.valid)) return;
+            if (Array.from(form.querySelectorAll('input[type=file]')).some(input => !input.disabled && ['card_photo', 'stamp_icon_upload', 'reward_icon_upload'].includes(input.name) && !input.validity.valid)) return;
             const data = new FormData(form);
             data.delete('_method');
             data.set('platform', this.platform);
@@ -119,6 +119,7 @@
             data.set('reward_target', String(this.rewardTarget));
             data.set('background_color', this.bgColor);
             data.set('card_text_color', this.customTextColour || '');
+            data.set('stamp_color', this.customStampColour || '');
             for (const name of ['logo','pass_logo','pass_hero_image']) data.delete(name);
             const version = ++this.artworkRequest;
             this.artworkBusy = true;
@@ -143,6 +144,9 @@
                 const picker = document.getElementById('card-text-colour');
                 const field = document.getElementById('card-text-colour-value');
                 if (picker && field) this.customTextColour = picker.validity.valid ? field.value : '';
+                const stampPicker = document.getElementById('stamp-colour');
+                const stampField = document.getElementById('stamp-colour-value');
+                if (stampPicker && stampField) this.customStampColour = stampPicker.validity.valid ? stampField.value : '';
             });
             const form = document.getElementById('card-design-form') || document.getElementById('loyalty-card-form') || document.getElementById('store-create-form');
             form?.addEventListener('input', () => this.scheduleArtwork());
@@ -156,7 +160,7 @@
             this.bindField('reward_target', 'rewardTarget', value => Math.max(1, Number(value) || 1));
             this.bindField('brand_color', 'brandColor');
             this.bindField('background_color', 'bgColor');
-            this.bindFile('pass_logo', ['appleLogo', 'googleLogo']);
+            this.bindFile('pass_logo', ['appleLogo', 'googleLogo', 'onboardingAppleLogo']);
             this.bindFile('pass_hero_image', ['appleHero', 'googleHero']);
             window.addEventListener('pagehide', () => {
                 [...new Set(Object.values(this.temporaryUrls))].forEach(url => URL.revokeObjectURL(url));
@@ -165,60 +169,100 @@
     }"
     x-init="initPreview()"
 >
-    <div class="flex items-start justify-between gap-3">
-        <div>
-            <p class="text-xs font-semibold uppercase tracking-wider text-stone-500">Wallet previews</p>
-            <p class="mt-1 text-sm text-stone-600">Review each platform before saving.</p>
-        </div>
-        <div class="inline-flex rounded-xl border border-stone-200 bg-white p-1 shadow-sm" role="tablist" aria-label="Wallet platform preview">
-            <button type="button" role="tab" id="apple-preview-tab" :aria-selected="platform === 'apple'" :aria-controls="cardDesign !== 'classic' ? 'coffee-preview-panel' : 'apple-preview-panel'" @click="platform = 'apple'" @keydown.right.prevent="platform = 'google'; $nextTick(() => $refs.googleTab.focus())" x-ref="appleTab" class="rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors" :class="platform === 'apple' ? 'bg-[#2b1e18] text-white' : 'text-stone-600 hover:bg-stone-50'">Apple Wallet</button>
-            <button type="button" role="tab" id="google-preview-tab" :aria-selected="platform === 'google'" :aria-controls="cardDesign !== 'classic' ? 'coffee-preview-panel' : 'google-preview-panel'" @click="platform = 'google'" @keydown.left.prevent="platform = 'apple'; $nextTick(() => $refs.appleTab.focus())" x-ref="googleTab" class="rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors" :class="platform === 'google' ? 'bg-[#2b1e18] text-white' : 'text-stone-600 hover:bg-stone-50'">Google Wallet</button>
+    <div @class(['flex items-start gap-3', 'justify-center' => $onboarding, 'justify-between' => !$onboarding])>
+        @unless($onboarding)
+            <div>
+                <p class="text-xs font-semibold uppercase tracking-wider text-stone-500">Wallet previews</p>
+                <p class="mt-1 text-sm text-stone-600">Review each platform before saving.</p>
+            </div>
+        @endunless
+        <div @class(['inline-flex rounded-2xl border border-stone-200 bg-white p-1', 'kawhe-editor-wallet-tabs' => $onboarding, 'shadow-sm' => !$onboarding]) role="tablist" aria-label="Wallet platform preview">
+            <button type="button" role="tab" id="apple-preview-tab" :aria-selected="platform === 'apple'" :aria-controls="cardDesign !== 'classic' ? 'coffee-preview-panel' : 'apple-preview-panel'" @click="platform = 'apple'" @keydown.right.prevent="platform = 'google'; $nextTick(() => $refs.googleTab.focus())" x-ref="appleTab" class="rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors" :class="platform === 'apple' ? @js($selectedWalletClass) : 'text-stone-600 hover:bg-stone-50'">Apple Wallet</button>
+            <button type="button" role="tab" id="google-preview-tab" :aria-selected="platform === 'google'" :aria-controls="cardDesign !== 'classic' ? 'coffee-preview-panel' : 'google-preview-panel'" @click="platform = 'google'" @keydown.left.prevent="platform = 'apple'; $nextTick(() => $refs.appleTab.focus())" x-ref="googleTab" class="rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors" :class="platform === 'google' ? @js($selectedWalletClass) : 'text-stone-600 hover:bg-stone-50'">Google Wallet</button>
         </div>
     </div>
 
-    <div class="flex justify-end">
-        <div class="inline-flex gap-1 rounded-lg bg-stone-100 p-1">
-            <button type="button" @click="previewMode = 'collecting'" class="rounded-md px-2.5 py-1 text-[11px] font-medium" :class="previewMode === 'collecting' ? 'bg-white text-stone-900 shadow-sm' : 'text-stone-500'">Collecting</button>
-            <button type="button" @click="previewMode = 'ready'" class="rounded-md px-2.5 py-1 text-[11px] font-medium" :class="previewMode === 'ready' ? 'bg-white text-stone-900 shadow-sm' : 'text-stone-500'">Reward ready</button>
+    <div @class(['flex', 'justify-end' => !$onboarding, 'mx-auto max-w-[16.875rem] justify-end' => $onboarding])>
+        <div @class(['inline-flex gap-1 rounded-xl bg-stone-100 p-1', 'kawhe-editor-reward-tabs' => $onboarding]) role="group" aria-label="Sample reward status">
+            <button type="button" @click="previewMode = 'collecting'" :aria-pressed="previewMode === 'collecting'" class="rounded-md px-2.5 py-1 text-[11px] font-medium" :class="previewMode === 'collecting' ? 'bg-white text-stone-900 shadow-sm' : 'text-stone-500'">Collecting</button>
+            <button type="button" @click="previewMode = 'ready'" :aria-pressed="previewMode === 'ready'" class="rounded-md px-2.5 py-1 text-[11px] font-medium" :class="previewMode === 'ready' ? 'bg-white text-stone-900 shadow-sm' : 'text-stone-500'">Reward ready</button>
         </div>
     </div>
 
     <p x-show="platform === 'google' && customTextColour" x-cloak class="text-xs text-stone-600">Google Wallet chooses its own text colour.</p>
 
+    @if($onboarding)
+        <section id="coffee-preview-panel" role="tabpanel" :aria-labelledby="platform + '-preview-tab'" x-show="cardDesign !== 'classic'" x-cloak>
+            <x-onboarding-phone>
+                <div class="overflow-hidden rounded-xl text-left" :style="{backgroundColor: bgColor, color: contrastText}">
+                    <div x-show="platform === 'apple'" class="flex min-h-[53px] items-center justify-between gap-2 px-3 py-2">
+                        <span class="flex shrink-0 items-center"
+                            :class="onboardingAppleLogo ? 'h-10 w-16' : 'size-9 justify-center rounded-full bg-[#f4f0e5]'">
+                            <img x-show="onboardingAppleLogo" :src="onboardingAppleLogo || @js($fallbackLogoUrl)" alt="Café Wallet logo"
+                                class="size-full object-contain object-left">
+                            <span x-show="!onboardingAppleLogo" aria-hidden="true"><x-application-logo class="size-6" /></span>
+                        </span>
+                        <p class="min-w-0 truncate text-right text-sm font-semibold" x-text="storeName"></p>
+                        <div class="shrink-0 text-right">
+                            <p class="text-[10px] font-semibold">STAMPS</p>
+                            <p class="text-base tabular-nums" x-text="`${previewMode === 'ready' ? 0 : exampleStamps} / ${rewardTarget}`"></p>
+                        </div>
+                    </div>
+                    <div x-show="platform === 'google'" class="space-y-2 rounded-b-2xl bg-white px-3 py-4 text-center text-stone-900">
+                        <span class="mx-auto grid size-10 place-items-center overflow-hidden rounded-full bg-stone-900">
+                            <img :src="googleLogo || @js($fallbackLogoUrl)" alt="Café Wallet logo" class="max-h-8 max-w-9 object-contain">
+                        </span>
+                        <p class="break-words text-sm" x-text="storeName"></p>
+                        <p class="break-words text-xl font-bold" x-text="rewardTitle"></p>
+                        <p class="text-xs" x-text="`${previewMode === 'ready' ? 0 : exampleStamps}/${rewardTarget} stamps · ${previewMode === 'ready' ? '1 reward' : '0 rewards'}`"></p>
+                        <div class="mx-auto w-fit max-w-full rounded bg-white px-2 py-2 text-center text-xs text-stone-900">
+                            <img src="{{ asset('images/onboarding/demo-qr.svg') }}" alt="Sample QR code, for preview only" class="mx-auto size-24">
+                            <p class="mt-1" x-text="'Manual code: ' + manualCode"></p>
+                        </div>
+                    </div>
+                    <div class="relative flex items-center justify-center overflow-hidden" :style="{aspectRatio: platform === 'apple' ? '1125 / 432' : '1032 / 812'}">
+                        <img x-show="artworkUrl && !artworkError" :src="artworkUrl" alt="Card artwork preview with sample stamp progress" class="h-full w-full object-contain">
+                        <p x-show="artworkBusy" class="absolute inset-x-0 bottom-0 bg-black/70 p-2 text-center text-xs text-white" role="status">Updating preview…</p>
+                        <div x-show="artworkError" class="p-4 text-center text-sm" role="status"><p x-text="artworkError"></p><button type="button" @click="loadArtwork()" class="mt-2 underline">Retry preview</button></div>
+                    </div>
+                    <div x-show="platform === 'apple'" class="space-y-8 px-3 pb-2.5 pt-2">
+                        <div class="flex justify-between gap-2">
+                            <div class="min-w-0">
+                                <p class="text-[10px] font-semibold">REWARD</p>
+                                <p class="break-words text-lg" x-text="rewardTitle"></p>
+                            </div>
+                            <div class="shrink-0">
+                                <p class="text-[10px] font-semibold">REWARDS READY</p>
+                                <p class="text-lg tabular-nums" x-text="previewMode === 'ready' ? 1 : 0"></p>
+                            </div>
+                        </div>
+                        <div class="mx-auto w-fit max-w-full rounded bg-white px-2 py-2 text-center text-xs text-stone-900">
+                            <img src="{{ asset('images/onboarding/demo-qr.svg') }}" alt="Sample QR code, for preview only" class="mx-auto size-24">
+                            <p class="mt-1" x-text="'Manual code: ' + manualCode"></p>
+                        </div>
+                    </div>
+                </div>
+            </x-onboarding-phone>
+        </section>
+    @else
     <section id="coffee-preview-panel" role="tabpanel" :aria-labelledby="platform + '-preview-tab'" x-show="cardDesign !== 'classic'" x-cloak class="rounded-2xl border border-stone-200 bg-stone-50 p-4">
         <div class="mx-auto max-w-[20rem] overflow-hidden rounded-2xl shadow-lg" :style="{backgroundColor: bgColor, color: contrastText}">
-            <div x-show="platform === 'apple'" class="flex items-center justify-between gap-3 p-4">
-                <div class="flex min-w-0 items-center gap-2">
-                    <img x-show="appleLogo" :src="appleLogo" alt="" class="max-h-9 max-w-[5rem] shrink-0 object-contain">
-                    <p class="truncate text-sm font-semibold" x-text="storeName"></p>
-                </div>
-                <div class="shrink-0 text-right">
-                    <p class="text-[10px]">STAMPS</p>
-                    <p class="text-lg" x-text="stampProgress"></p>
-                </div>
-            </div>
-            <div x-show="platform === 'google'" class="bg-white px-4 pt-4 text-center text-stone-900">
-                <img x-show="googleLogo" :src="googleLogo" alt="" class="mx-auto mb-2 h-10 w-10 rounded-full border border-stone-200 object-contain p-1">
-                <p class="truncate text-sm" x-text="storeName"></p>
-                <p class="mt-1 break-words text-2xl font-semibold" x-text="previewMode === 'ready' ? shortReward + ' ready' : stampProgress + ' stamps'"></p>
-                <p class="mt-1 break-words text-sm" x-text="previewMode === 'ready' ? stampProgress + ' stamps' : 'Reward: ' + shortReward"></p>
-            </div>
-            <div x-show="platform === 'google'" class="bg-white p-4">
-                <img src="{{ asset('images/qr-preview-sample.png') }}" alt="Sample QR code, not for scanning" class="mx-auto h-28 w-28 rounded bg-white p-2">
+            <div class="flex items-center justify-between gap-3 p-4">
+                <div class="min-w-0"><img x-show="appleLogo" :src="appleLogo" alt="Your café logo" class="mb-2 max-h-10 max-w-32 object-contain"><p class="break-words text-sm font-semibold" x-text="storeName"></p></div>
+                <div class="shrink-0 text-right"><p class="text-xs">STAMPS</p><p class="text-xl" x-text="`${previewMode === 'ready' ? 0 : exampleStamps} / ${rewardTarget}`"></p></div>
             </div>
             <div class="relative flex items-center justify-center overflow-hidden" :style="{aspectRatio: platform === 'apple' ? '1125 / 432' : '1032 / 812'}">
                 <img x-show="artworkUrl && !artworkError" :src="artworkUrl" alt="Card artwork preview with sample stamp progress" class="h-full w-full object-contain">
                 <p x-show="artworkBusy" class="absolute inset-x-0 bottom-0 bg-black/70 p-2 text-center text-xs text-white" role="status">Updating preview…</p>
                 <div x-show="artworkError" class="p-4 text-center text-sm" role="status"><p x-text="artworkError"></p><button type="button" @click="loadArtwork()" class="mt-2 underline">Retry preview</button></div>
             </div>
-            <div x-show="platform === 'apple'" class="flex justify-between gap-4 px-4 py-3">
-                <div class="min-w-0"><p class="text-[10px]">REWARD</p><p class="break-words text-lg" x-text="shortReward"></p></div>
-                <div class="shrink-0 text-right"><p class="text-[10px]">REWARDS READY</p><p class="text-lg" x-text="previewMode === 'ready' ? 1 : 0"></p></div>
-            </div>
-            <div x-show="platform === 'apple'" class="p-4"><img src="{{ asset('images/qr-preview-sample.png') }}" alt="Sample QR code, not for scanning" class="mx-auto h-28 w-28 rounded bg-white p-2"></div>
+            <div class="flex justify-between gap-4 px-4 py-3"><div class="min-w-0"><p class="text-xs">REWARD</p><p class="break-words text-lg" x-text="Array.from(rewardTitle).length > 24 ? Array.from(rewardTitle).slice(0,23).join('') + '…' : rewardTitle"></p></div><div><p class="text-xs">AVAILABLE</p><p class="text-xl" x-text="previewMode === 'ready' ? 1 : 0"></p></div></div>
+            <div class="p-5"><img src="{{ asset('images/qr-preview-sample.png') }}" alt="Sample QR code, not for scanning" class="mx-auto h-28 w-28 rounded bg-white p-2"></div>
         </div>
         <p class="mt-3 break-words text-xs text-stone-600">Full reward: <span x-text="rewardTitle"></span></p>
     </section>
+
+    @endif
 
     <section id="apple-preview-panel" role="tabpanel" aria-labelledby="apple-preview-tab" x-show="platform === 'apple' && cardDesign === 'classic'" class="rounded-2xl border border-stone-200 bg-[#f5f5f7] p-4 shadow-sm">
         <div class="mx-auto w-full max-w-[20rem] overflow-hidden rounded-[13px] shadow-[0_18px_40px_rgba(43,30,24,0.22)]" :style="{ backgroundColor: bgColor, color: contrastText }">
@@ -274,9 +318,7 @@
                 <img :src="googleHero || '{{ $fallbackHeroUrl }}'" alt="Google Wallet hero preview" class="absolute inset-0 h-full w-full object-cover">
                 <div class="absolute inset-x-0 bottom-3 flex flex-wrap justify-center gap-2 px-4">
                     <template x-for="stamp in Array.from({ length: Math.min(rewardTarget, 8) }, (_, index) => index + 1)" :key="`google-stamp-${stamp}`">
-                        <span class="h-7 w-7 rounded-full border-2 border-white" :style="customTextColour
-                            ? { borderColor: stampColour, backgroundColor: (previewMode === 'ready' || stamp <= exampleStamps) ? stampColour : 'transparent' }
-                            : { backgroundColor: (previewMode === 'ready' || stamp <= exampleStamps) ? brandColor : 'rgba(255,255,255,.2)' }"></span>
+                        <span class="h-7 w-7 rounded-full border-2 border-white" :style="previewMode === 'ready' || stamp <= exampleStamps ? `background:${brandColor}` : 'background:rgba(255,255,255,.2)'"></span>
                     </template>
                 </div>
             </div>
@@ -301,7 +343,9 @@
         </div>
     </section>
 
+    @unless($onboarding)
     <p class="text-xs leading-relaxed text-stone-500">
         Apple and Google control the final Wallet layout. This preview represents your branding and content, but spacing and typography may vary by device and operating-system version.
     </p>
+    @endunless
 </div>

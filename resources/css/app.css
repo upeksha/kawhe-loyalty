@@ -1,4 +1,5 @@
 @import './customer.css';
+@import './merchant-onboarding.css';
 
 @tailwind base;
 @tailwind components;

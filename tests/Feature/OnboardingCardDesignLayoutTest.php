@@ -12,7 +12,7 @@ test('card design keeps uploads and its guarded continue button within the form'
     @$dom->loadHTML($response->getContent());
     $xpath = new DOMXPath($dom);
     expect($xpath->query('//form[@id="card-design-form"]//button[@type="submit"]')->length)->toBe(1);
-    expect($xpath->query('//form[@id="card-design-form"]//input[@type="file" and @required]')->length)->toBe(3);
+    expect($xpath->query('//form[@id="card-design-form"]//input[@type="file" and starts-with(@*[name()=":required"], "true")]')->length)->toBe(3);
     expect($xpath->query('//input[@type="text" and @pattern]')->length)->toBe(2);
 });
 
@@ -22,7 +22,7 @@ test('saved card design images do not require replacement on revisiting onboardi
     $response = $this->actingAs($owner)->get(route('merchant.onboarding.wizard.card-design'))->assertOk();
     $dom = new DOMDocument;
     @$dom->loadHTML($response->getContent());
-    expect((new DOMXPath($dom))->query('//input[@type="file" and @required]')->length)->toBe(0);
+    expect((new DOMXPath($dom))->query('//input[@type="file" and starts-with(@*[name()=":required"], "true")]')->length)->toBe(0);
 });
 
 
@@ -35,5 +35,5 @@ test('production onboarding preserves classic cards and offers the new designs',
     $response->assertSee("cardDesign: 'classic'", false)->assertSee('value="simple"', false)->assertSee('value="illustrated"', false)->assertSee('value="photo"', false);
     $dom = new DOMDocument;
     @$dom->loadHTML($response->getContent());
-    expect((new DOMXPath($dom))->query('//input[@name="pass_hero_image" and @required]')->length)->toBe(1);
+    expect((new DOMXPath($dom))->query('//input[@name="pass_hero_image" and @*[name()=":required"]="true && (cardDesign === \'classic\')"]')->length)->toBe(1);
 });

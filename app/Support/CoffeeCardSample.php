@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use App\Models\LoyaltyAccount;
+use App\Services\Wallet\Artwork\CardStyleArtwork;
 
 /** Shared card-style rendering for explicitly selected loyalty programs. */
 class CoffeeCardSample
@@ -81,18 +82,16 @@ class CoffeeCardSample
         $state = $account->reward_balance > 0 && $count === 0 ? 'ready' : (string) $count;
 
         $program = $account->resolvedProgram();
-        if ($program->card_design !== 'illustrated_coffee' || CardDesign::customTextColor($program)) {
+        if ($program->card_design !== 'illustrated_coffee' || CardDesign::customTextColor($program) || CardDesign::customStampColor($program)
+            || ($program->stamp_shape && $program->stamp_shape !== 'circle')
+            || ($program->reward_icon && $program->reward_icon !== 'match')) {
             $options = CardDesign::options($program);
-            if ($platform !== 'web') {
-                // Give updated Wallet artwork a fresh URL for devices and image caches.
-                $options['wallet_artwork_revision'] = 3;
-            }
-            $hash = substr(hash('sha256', serialize($options)), 0, 24);
+            $hash = substr(hash('sha256', serialize([CardStyleArtwork::RENDERER_VERSION, $options])), 0, 24);
             // Account-scoped cache also covers old/replaced photos at deletion.
             $ownerId = $account->store->user_id;
             $path = "wallet/card-styles-v2/accounts/{$ownerId}/{$hash}/{$platform}-{$target}-{$state}.png";
             if (! StoreAssets::exists($path)) {
-                StoreAssets::put($path, app(\App\Services\Wallet\Artwork\CardStyleArtwork::class)->render($target, $count, $account->reward_balance > 0, $platform, $options));
+                StoreAssets::put($path, app(CardStyleArtwork::class)->render($target, $count, $account->reward_balance > 0, $platform, $options));
             }
 
             return $path;

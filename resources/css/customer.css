@@ -529,3 +529,6 @@ html.kawhe-reduce-motion .customer-redesign *::after {
 .customer-redesign .photo-web-stamp.is-filled { background:#fff; color:#263e30; }
 .photo-web-stamp.is-filled .photo-web-stamp-icon { visibility:visible; }
 .photo-web-stamps progress { width:100%; accent-color:#fff; }
+
+.customer-redesign .photo-web-stamps[data-shape="square"] .photo-web-stamp { border-radius:0; }
+.customer-redesign .photo-web-stamps[data-shape="rounded"] .photo-web-stamp { border-radius:20%; }

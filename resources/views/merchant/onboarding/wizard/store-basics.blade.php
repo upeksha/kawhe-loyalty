@@ -6,7 +6,14 @@
 @endphp
 <x-onboarding-layout>
     <x-slot name="header">Set up your reward</x-slot>
-    <x-onboarding-step-layout :step="2" :store="$store" title="Set up your reward" subtitle="Add your café details and choose what customers earn. Your café decides what earns a stamp.">
+    <x-onboarding-step-layout :step="2" :store="$store" title="Set up your café and reward" subtitle="Add your café details and choose what customers earn. Your café decides what earns a stamp.">
+        <x-slot:preview>
+            <div class="space-y-4 text-center">
+                <h2 class="text-2xl font-bold">Your loyalty card</h2>
+                <x-onboarding-sample-card :store-name="old('name', $store?->name ?? 'Your café')" :reward-title="$defaultReward" :target="max(1, (int) $defaultTarget)" follow-reward-form />
+                <p class="text-sm">Preview your reward as you set it up.</p>
+            </div>
+        </x-slot:preview>
         <form method="POST" action="{{ route('merchant.onboarding.wizard.store-basics.store') }}" id="store-basics-form"
             x-data="{
                 storeName: {{ json_encode(old('name', $store?->name ?? '')) }},
@@ -16,6 +23,7 @@
                 customTarget: {{ in_array((string) $defaultTarget, ['6', '8', '9', '10'], true) ? 'false' : 'true' }},
                 submitting: false
             }"
+            x-effect="$dispatch('onboarding-reward-preview', { store: String(storeName ?? '').trim() || 'Your café', reward: String(rewardTitle ?? '').trim() || 'Your reward', target: Math.max(1, Math.floor(Number(rewardTarget) || 1)) })"
             @submit="if (submitting) { $event.preventDefault(); } else { submitting = true; document.getElementById('reward-continue').disabled = true; document.getElementById('reward-continue').textContent = 'Saving…'; }"
             @pageshow.window="submitting = false; document.getElementById('reward-continue').disabled = false; document.getElementById('reward-continue').textContent = 'Save and continue → Card design';">
             @csrf

@@ -128,6 +128,7 @@ class CardController extends Controller
             'verified' => (bool) $account->verified_at,
             'coffee_artwork_url' => \App\Support\CoffeeCardSample::enabled($account)
                 ? \App\Support\StoreAssets::url(\App\Support\CoffeeCardSample::artwork($account, 'web')) : null,
+            'stamp_shape' => $account->resolvedProgram()->stamp_shape ?: 'circle',
             'stamp_count' => $account->stamp_count,
             'reward_target' => $account->reward_target,
             'reward_balance' => $rewardBalance,

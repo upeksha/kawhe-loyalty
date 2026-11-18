@@ -166,6 +166,7 @@ class AccountFileDeletion
             return $this->styleHashes[$key];
         }
         $options = CardDesign::options($model, contents: false);
+        unset($options['shape'], $options['reward_icon']);
         // The shared v1 cache only rendered coffee stamps on Simple cards.
         if (CardDesign::style($model) === 'simple') {
             $options['icon'] = 'coffee';

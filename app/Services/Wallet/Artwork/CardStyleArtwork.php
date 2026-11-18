@@ -5,6 +5,8 @@ namespace App\Services\Wallet\Artwork;
 /** Shared artwork for web and both Wallets. No customer identifiers are embedded. */
 class CardStyleArtwork
 {
+    public const RENDERER_VERSION = 'card-style-v4.1';
+
     public function render(int $target, int $count, bool $ready, string $platform, array $options): string
     {
         [$w, $h] = match ($platform) {
@@ -35,41 +37,32 @@ class CardStyleArtwork
             }
         }
         if ($options['style'] === 'illustrated') {
-            $patternAlpha = $platform === 'web' ? 108 : 113;
-            $line = imagecolorallocatealpha($im, ...[...$this->rgb($options['ink']), $patternAlpha]);
-            imagesetthickness($im, 2);
-            if ($options['pattern'] === 'waves') {
-                for ($y = -$h; $y < $h * 2; $y += 42) {
-                    imagearc($im, (int) ($w * .25), $y, (int) ($w * 1.6), (int) ($h * .7), 0, 180, $line);
-                }
-            } elseif ($options['pattern'] === 'botanical') {
-                for ($side = 0; $side < 2; $side++) {
-                    $x = $side ? $w - 50 : 50;
-                    imageline($im, $x, $h, $x, 0, $line);
-                    for ($y = 35; $y < $h; $y += 65) {
-                        imageellipse($im, $x - 16, $y, 32, 62, $line);
-                        imageellipse($im, $x + 16, $y + 24, 32, 62, $line);
-                    }
-                }
-            } else {
-                for ($o = 0; $o < 95; $o += 18) {
-                    $pts = [[0, .9], [.18, .65], [.3, .82], [.48, .55], [.7, .84], [.82, .68], [1, .9]];
-                    for ($i = 1; $i < count($pts); $i++) {
-                        imageline($im, (int) ($pts[$i - 1][0] * $w), (int) ($pts[$i - 1][1] * $h + $o), (int) ($pts[$i][0] * $w), (int) ($pts[$i][1] * $h + $o), $line);
-                    }
-                }
-            }
+            $patterns = ['mountains' => 'organic', 'waves' => 'floral', 'botanical' => 'waves'];
+            $name = $patterns[$options['pattern']] ?? 'organic';
+            $pattern = imagecreatefrompng(public_path('images/card-patterns/'.$name.'-mask.png'));
+            imagealphablending($pattern, false);
+            [$red, $green, $blue] = $this->rgb($options['ink']);
+            imagefilter($pattern, IMG_FILTER_COLORIZE, $red - 255, $green - 255, $blue - 255, 100);
+            $this->cover($im, $pattern, $w, $h);
+            imagedestroy($pattern);
         }
+        $shape = $options['shape'] ?? 'circle';
+        $rewardIcon = $options['reward_icon'] ?? 'match';
         $custom = $options['icon'] === 'custom' && $options['custom_icon'] ? imagecreatefromstring($options['custom_icon']) : null;
         if ($ready && $count === 0) {
             $size = min($h * .63, $w * .3);
-            $this->stamp($im, $w / 2, $h / 2, $size, true, $bg, $ink, $options['icon'], $custom, customStampColor: $hasCustomStampColor);
+            $rewardCustom = $rewardIcon === 'custom' && ! empty($options['custom_reward_icon'])
+                ? imagecreatefromstring($options['custom_reward_icon']) : null;
+            $this->stamp($im, $w / 2, $h / 2, $size, true, $bg, $ink, $rewardIcon === 'match' ? $options['icon'] : $rewardIcon, $rewardIcon === 'custom' ? $rewardCustom : ($rewardIcon === 'match' ? $custom : null), customStampColor: $hasCustomStampColor, shape: $shape);
+            if ($rewardCustom) {
+                imagedestroy($rewardCustom);
+            }
             for ($i = 0; $i < 8; $i++) {
                 $a = $i * M_PI / 4;
                 imageline($im, (int) ($w / 2 + cos($a) * $size * .68), (int) ($h / 2 + sin($a) * $size * .68), (int) ($w / 2 + cos($a) * $size * .8), (int) ($h / 2 + sin($a) * $size * .8), $ink);
             }
         } elseif ($target > 20) {
-            $this->stamp($im, $w / 2, $h * .34, min($h * .4, $w * .24), true, $bg, $ink, $options['icon'], $custom, customStampColor: $hasCustomStampColor);
+            $this->stamp($im, $w / 2, $h * .34, min($h * .4, $w * .24), true, $bg, $ink, $options['icon'], $custom, customStampColor: $hasCustomStampColor, shape: $shape);
             $x = (int) ($w * .12);
             $y = (int) ($h * .73);
             $bw = (int) ($w * .76);
@@ -90,7 +83,7 @@ class CardStyleArtwork
                 $col = $i % $cols;
                 $items = min($cols, $target - $row * $cols);
                 $left = ($w - ($items * $size + ($items - 1) * $gap)) / 2;
-                $this->stamp($im, $left + $col * ($size + $gap) + $size / 2, $top + $row * ($size + $gap) + $size / 2, $size, $i < $count, $bg, $ink, $options['icon'], $custom, $platform !== 'web', $hasCustomStampColor);
+                $this->stamp($im, $left + $col * ($size + $gap) + $size / 2, $top + $row * ($size + $gap) + $size / 2, $size, $i < $count, $bg, $ink, $options['icon'], $custom, walletOutline: $platform !== 'web', customStampColor: $hasCustomStampColor, shape: $shape);
             }
         }
         if ($custom) {
@@ -104,12 +97,18 @@ class CardStyleArtwork
         return $png;
     }
 
-    private function stamp($im, float $x, float $y, float $size, bool $filled, int $bg, int $ink, string $icon, $custom, bool $walletOutline = false, bool $customStampColor = false): void
+    private function stamp($im, float $x, float $y, float $size, bool $filled, int $bg, int $ink, string $icon, $custom, bool $walletOutline = false, bool $customStampColor = false, string $shape = 'circle'): void
     {
         imagesetthickness($im, max(2, (int) ($size * .02)));
         if (! $filled) {
-            if ($walletOutline) {
-                // Concentric strokes keep the centre transparent over photo and illustrated artwork.
+            if ($shape !== 'circle') {
+                $width = $walletOutline ? max(4, (int) round($size * .043)) : max(2, (int) ($size * .02));
+                imagesetthickness($im, 1);
+                for ($stroke = 0; $stroke < $width; $stroke++) {
+                    $this->outlineShape($im, $x, $y, $size + $width - 1 - 2 * $stroke, $ink, $shape);
+                }
+            } elseif ($walletOutline) {
+                // Concentric outlines leave the photo or artwork visible through the ring.
                 imagesetthickness($im, 1);
                 $width = max(4, (int) round($size * .043));
                 $diameter = (int) $size + $width - 1;
@@ -123,12 +122,12 @@ class CardStyleArtwork
             return;
         }
         $stampSurface = $custom && ! $customStampColor ? imagecolorallocate($im, 255, 255, 255) : $ink;
-        imagefilledellipse($im, (int) $x, (int) $y, (int) $size, (int) $size, $stampSurface);
+        $this->filledShape($im, $x, $y, $size, $stampSurface, $shape);
         $s = $size * .54;
         if ($custom) {
             if ($customStampColor) {
                 $inset = (int) ($size * .8);
-                imagefilledellipse($im, (int) $x, (int) $y, $inset, $inset, imagecolorallocate($im, 255, 255, 255));
+                $this->filledShape($im, $x, $y, $inset, imagecolorallocate($im, 255, 255, 255), $shape);
             }
             $ratio = min($s / imagesx($custom), $s / imagesy($custom));
             $cw = (int) (imagesx($custom) * $ratio);
@@ -147,6 +146,14 @@ class CardStyleArtwork
             imagefilledellipse($im, (int) ($x - $s * .22), (int) ($y - $s * .16), (int) ($s * .56), (int) ($s * .56), $bg);
             imagefilledellipse($im, (int) ($x + $s * .22), (int) ($y - $s * .16), (int) ($s * .56), (int) ($s * .56), $bg);
             imagefilledpolygon($im, [(int) ($x - $s * .48), (int) ($y - $s * .06), (int) ($x + $s * .48), (int) ($y - $s * .06), (int) $x, (int) ($y + $s * .48)], $bg);
+        } elseif ($icon === 'gift') {
+            $left = (int) ($x - $s * .4);
+            $right = (int) ($x + $s * .4);
+            imagefilledrectangle($im, $left, (int) ($y - $s * .12), $right, (int) ($y + $s * .4), $bg);
+            imagefilledrectangle($im, (int) ($x - $s * .46), (int) ($y - $s * .22), (int) ($x + $s * .46), (int) ($y - $s * .05), $bg);
+            imagefilledellipse($im, (int) ($x - $s * .16), (int) ($y - $s * .34), (int) ($s * .35), (int) ($s * .23), $bg);
+            imagefilledellipse($im, (int) ($x + $s * .16), (int) ($y - $s * .34), (int) ($s * .35), (int) ($s * .23), $bg);
+            imagefilledrectangle($im, (int) ($x - $s * .045), (int) ($y - $s * .22), (int) ($x + $s * .045), (int) ($y + $s * .4), $ink);
         } elseif ($icon === 'bean') {
             imagefilledellipse($im, (int) $x, (int) $y, (int) ($s * .7), (int) $s, $bg);
             imagesetthickness($im, max(2, (int) ($s * .08)));
@@ -161,6 +168,50 @@ class CardStyleArtwork
             foreach ([.34, .51] as $v) {
                 imageline($im, (int) ($left + $s * $v), (int) ($top + $s * .08), (int) ($left + $s * ($v - .04)), (int) ($top + $s * .27), $bg);
             }
+        }
+    }
+
+    private function filledShape($im, float $x, float $y, float $size, int $color, string $shape): void
+    {
+        if ($shape === 'circle') {
+            imagefilledellipse($im, (int) $x, (int) $y, (int) $size, (int) $size, $color);
+
+            return;
+        }
+        $left = (int) round($x - $size / 2);
+        $top = (int) round($y - $size / 2);
+        $right = (int) round($x + $size / 2);
+        $bottom = (int) round($y + $size / 2);
+        $radius = $shape === 'rounded' ? max(1, (int) round($size * .2)) : 0;
+        imagefilledrectangle($im, $left + $radius, $top, $right - $radius, $bottom, $color);
+        imagefilledrectangle($im, $left, $top + $radius, $right, $bottom - $radius, $color);
+        if ($radius) {
+            foreach ([[$left + $radius, $top + $radius], [$right - $radius, $top + $radius],
+                [$right - $radius, $bottom - $radius], [$left + $radius, $bottom - $radius]] as [$cx, $cy]) {
+                imagefilledellipse($im, $cx, $cy, $radius * 2, $radius * 2, $color);
+            }
+        }
+    }
+
+    private function outlineShape($im, float $x, float $y, float $size, int $color, string $shape): void
+    {
+        $left = (int) round($x - $size / 2);
+        $top = (int) round($y - $size / 2);
+        $right = (int) round($x + $size / 2);
+        $bottom = (int) round($y + $size / 2);
+        if ($shape === 'square') {
+            imagerectangle($im, $left, $top, $right, $bottom, $color);
+
+            return;
+        }
+        $radius = max(1, (int) round($size * .2));
+        imageline($im, $left + $radius, $top, $right - $radius, $top, $color);
+        imageline($im, $left + $radius, $bottom, $right - $radius, $bottom, $color);
+        imageline($im, $left, $top + $radius, $left, $bottom - $radius, $color);
+        imageline($im, $right, $top + $radius, $right, $bottom - $radius, $color);
+        foreach ([[$left + $radius, $top + $radius, 180, 270], [$right - $radius, $top + $radius, 270, 360],
+            [$right - $radius, $bottom - $radius, 0, 90], [$left + $radius, $bottom - $radius, 90, 180]] as [$cx, $cy, $start, $end]) {
+            imagearc($im, $cx, $cy, $radius * 2, $radius * 2, $start, $end, $color);
         }
     }
 

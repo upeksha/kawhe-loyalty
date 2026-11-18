@@ -1,6 +1,9 @@
 @props(['account'])
 @php($program = $account->resolvedProgram())
-<div id="stamp-circles-container" data-photo="true" class="photo-web-stamps" aria-label="Stamp progress">
+@php($rewardReady = $account->reward_balance > 0 && $account->stamp_count === 0)
+<img id="photo-reward-art" src="{{ \App\Support\StoreAssets::url(\App\Support\CoffeeCardSample::artwork($account, 'web')) }}"
+    alt="Reward ready" class="coffee-sample-art" @if(!$rewardReady) style="display:none" @endif>
+<div id="stamp-circles-container" data-photo="true" data-shape="{{ $program->stamp_shape ?: 'circle' }}" @if($rewardReady) style="display:none" @endif class="photo-web-stamps" aria-label="Stamp progress">
     @if($account->reward_target > 20)
         <progress id="photo-stamp-progress" max="{{ $account->reward_target }}" value="{{ $account->stamp_count }}" aria-label="Stamps collected"></progress>
     @else

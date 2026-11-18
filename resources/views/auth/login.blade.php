@@ -1,6 +1,7 @@
 <x-guest-layout>
-    <h1 class="text-xl font-bold text-stone-900 mb-1">Welcome back</h1>
-    <p class="text-sm text-stone-500 mb-6">Sign in to your account</p>
+    <x-slot:merchantPreview><x-merchant-account-preview /></x-slot:merchantPreview>
+    <h1 class="kawhe-setup-title mb-2 text-2xl font-bold tracking-tight sm:text-3xl">Sign in to Kawhe</h1>
+    <p class="mb-6 text-sm text-stone-600">Use the email and password for your merchant account.</p>
 
     <x-auth-session-status class="mb-4" :status="session('status')" />
 
@@ -37,15 +38,17 @@
             <label for="remember_me" class="text-sm text-stone-600">Remember me</label>
         </div>
 
-        <x-ui.button type="submit" variant="primary" class="w-full" data-loading-text="Signing in...">
-            Sign in
-        </x-ui.button>
+        @if(Route::has('register'))
+            <div class="rounded-xl border border-brand-100 bg-brand-50 p-4 text-sm">
+                <p class="font-semibold text-brand-900">New to Kawhe?</p>
+                <p class="mt-1 text-stone-600">Create your café account to set up your first loyalty card.</p>
+            </div>
+        @endif
+        <div class="flex flex-wrap items-center gap-3 border-t border-stone-200 pt-4">
+            <x-ui.button type="submit" variant="primary" data-loading-text="Signing in...">Sign in</x-ui.button>
+            @if(Route::has('register'))
+                <x-ui.button :href="route('register')" variant="secondary">Create an account</x-ui.button>
+            @endif
+        </div>
     </form>
-
-    @if (Route::has('register'))
-        <p class="mt-6 text-center text-sm text-stone-500">
-            Don't have an account?
-            <a href="{{ route('register') }}" class="text-brand-600 hover:text-brand-700 font-medium">Create one</a>
-        </p>
-    @endif
 </x-guest-layout>

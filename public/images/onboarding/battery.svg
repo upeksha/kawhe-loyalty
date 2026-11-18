@@ -1,0 +1,11 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="12.75" height="12.75" viewBox="0 0 12.75 12.75" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="Battery" clip-path="url(#clip0_0_54)">
+<path id="Vector" d="M2.125 3.1875H9.5625C10.1493 3.1875 10.625 3.6632 10.625 4.25V8.5C10.625 9.0868 10.1493 9.5625 9.5625 9.5625H2.125C1.5382 9.5625 1.0625 9.0868 1.0625 8.5V4.25C1.0625 3.6632 1.5382 3.1875 2.125 3.1875Z" stroke-width="0.95625" stroke-linecap="round" stroke-linejoin="round" stroke="#414150"/>
+<path id="Vector_2" d="M11.6875 5.3125V7.4375M2.65625 4.78125V7.96875M4.25 4.78125V7.96875M5.84375 4.78125V7.96875M7.4375 4.78125V7.96875" stroke-width="0.95625" stroke-linecap="round" stroke-linejoin="round" stroke="#414150"/>
+</g>
+<defs>
+<clipPath id="clip0_0_54">
+<rect width="12.75" height="12.75" fill="white"/>
+</clipPath>
+</defs>
+</svg>

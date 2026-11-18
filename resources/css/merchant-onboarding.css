@@ -1,0 +1,417 @@
+.kawhe-setup {
+    --setup-paper: #fcfbf7;
+    --setup-border: #dedcd3;
+    --setup-green: #254b3a;
+    background: var(--setup-paper);
+}
+
+.kawhe-setup-header,
+.kawhe-setup-main {
+    width: min(100% - 2rem, 68.75rem);
+    margin-inline: auto;
+}
+
+.kawhe-setup-header {
+    display: flex;
+    min-height: 4rem;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.kawhe-setup-wordmark {
+    display: inline-flex;
+    align-items: center;
+    gap: .55rem;
+    color: var(--setup-green);
+    font-size: 1.45rem;
+    font-weight: 700;
+}
+
+.kawhe-setup-header .kawhe-setup-header-logo {
+    width: 1.7rem;
+    height: 2.15rem;
+    object-fit: contain;
+}
+
+.kawhe-setup-grid {
+    display: grid;
+    gap: 1rem;
+    align-items: stretch;
+    padding-bottom: 1.25rem;
+}
+
+.kawhe-setup-panel,
+.kawhe-setup-preview {
+    min-width: 0;
+    border: 1px solid var(--setup-border);
+    border-radius: 1.25rem;
+}
+
+.kawhe-setup-panel {
+    display: flex;
+    flex-direction: column;
+    padding: clamp(1.125rem, 3.5vw, 2.625rem);
+    background: white;
+}
+
+.kawhe-setup-preview {
+    display: grid;
+    place-items: center;
+    padding: clamp(1.25rem, 3vw, 2.25rem);
+    background: linear-gradient(155deg, #e7ede5, #eee3d3);
+    color: var(--setup-green);
+}
+
+.kawhe-setup-preview h2,
+.kawhe-setup-title {
+    color: var(--setup-green);
+}
+
+.kawhe-setup-phone {
+    display: grid;
+    grid-template-rows: minmax(0, 1fr);
+    width: min(100%, 19.23125rem);
+    min-width: 0;
+    aspect-ratio: 307.7 / 571.2;
+    margin-inline: auto;
+    padding: .425rem;
+    border: 1px solid #e7e5e4;
+    border-radius: 2.3375rem;
+    background: linear-gradient(#f3efe7, #fff);
+    box-shadow: 0 .2125rem .371875rem #22233812, 0 .796875rem 1.59375rem #22233821;
+}
+
+.kawhe-setup-phone-screen {
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
+    min-height: 0;
+    border-radius: 1.859375rem;
+    background: linear-gradient(#dcebe2, #eef5ef 54%, #f6f7ef);
+    overflow: hidden;
+}
+
+.kawhe-setup-phone-status {
+    position: relative;
+    display: flex;
+    height: 2.9rem;
+    align-items: flex-start;
+    justify-content: space-between;
+    padding: .7rem .85rem 0;
+    color: #1c1917;
+    font-size: .585rem;
+    font-weight: 600;
+    line-height: .8rem;
+}
+
+.kawhe-setup-phone-earpiece {
+    position: absolute;
+    top: .6375rem;
+    left: 50%;
+    width: 3.4rem;
+    height: .31875rem;
+    transform: translateX(-50%);
+    border-radius: 1rem;
+    background: #254b3a66;
+}
+
+.kawhe-setup-phone-indicators {
+    display: flex;
+    align-items: center;
+    gap: .32rem;
+}
+
+.kawhe-setup-phone-content {
+    min-width: 0;
+    min-height: 0;
+    margin: 0 .575rem .575rem;
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
+    scrollbar-width: thin;
+}
+
+.kawhe-setup-sample {
+    border-radius: .85rem;
+    background: #263e30;
+    color: white;
+}
+
+.kawhe-setup-card-style input:focus-visible + span,
+.kawhe-setup-icon input:focus-visible + span {
+    outline: 2px solid #2d5d47;
+    outline-offset: 2px;
+}
+
+.kawhe-setup-card-style input:checked + span,
+.kawhe-setup-icon input:checked + span {
+    background: #f0f7f3;
+    border-color: #33614b;
+}
+
+@media (min-width: 900px) {
+    .kawhe-setup-grid {
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        gap: 1.25rem;
+    }
+
+    .kawhe-setup-panel {
+        grid-area: 1 / 2;
+        min-height: 45rem;
+    }
+
+    .kawhe-setup-preview {
+        grid-area: 1 / 1;
+    }
+
+    .kawhe-setup-preview--sticky {
+        align-items: start;
+    }
+
+    .kawhe-setup-preview--sticky > div {
+        position: sticky;
+        top: 1rem;
+    }
+}
+
+@media (max-width: 360px) {
+    .kawhe-setup-header,
+    .kawhe-setup-main {
+        width: calc(100% - 1rem);
+    }
+}
+
+.kawhe-card-editor {
+    --setup-paper: #fcfbf7;
+    --setup-border: #dcddd4;
+}
+
+.kawhe-card-editor .kawhe-setup-header {
+    min-height: 4.1875rem;
+}
+
+.kawhe-card-editor .kawhe-setup-panel,
+.kawhe-card-editor .kawhe-setup-preview {
+    border-radius: 1.1875rem;
+}
+
+.kawhe-card-editor .kawhe-setup-panel {
+    padding: 1.375rem clamp(1rem, 3.2vw, 2.625rem) 1rem;
+}
+
+.kawhe-card-editor .kawhe-setup-panel nav li {
+    justify-content: center;
+    min-height: 2.6875rem;
+    border-radius: .4375rem;
+    background: var(--setup-paper);
+}
+
+.kawhe-card-editor .kawhe-setup-panel nav li[aria-current] {
+    background: #f0f7f4;
+}
+
+.kawhe-card-editor .kawhe-setup-panel nav li:not([aria-current]) span {
+    background: var(--setup-border);
+}
+
+.kawhe-card-editor .kawhe-setup-panel nav li[data-complete]:not([aria-current]) span {
+    background: #87a698;
+}
+
+.kawhe-card-editor .kawhe-setup-title {
+    letter-spacing: normal;
+    line-height: 1.15;
+}
+
+.kawhe-card-editor .onboarding-step-content,
+.kawhe-card-design-form {
+    flex: 1;
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+}
+
+.kawhe-card-editor .kawhe-setup-preview {
+    padding: 1.5rem clamp(1rem, 2.7vw, 2.25rem);
+    background: linear-gradient(#e7ede5, #eee3d3);
+}
+
+.kawhe-editor-section {
+    padding: .625rem .9375rem .6875rem;
+    border: 1px solid var(--setup-border);
+    border-radius: .8125rem;
+    background: var(--setup-paper);
+}
+
+.kawhe-card-editor .kawhe-editor-style-options {
+    grid-template-columns: repeat(3, minmax(0, 8.75rem));
+    gap: .625rem;
+}
+
+.kawhe-editor-style-options .kawhe-setup-card-style > span {
+    min-height: 4.0625rem;
+    justify-content: center;
+    gap: .25rem;
+    border-color: var(--setup-border);
+    border-radius: .5625rem;
+    padding: .4375rem .75rem;
+    font-size: .75rem;
+}
+
+.kawhe-editor-style-options .kawhe-setup-card-style > span > :first-child {
+    height: 1.6875rem;
+}
+
+.kawhe-editor-style-options .kawhe-setup-card-style > span > img {
+    width: 100%;
+    object-fit: cover;
+    border-radius: .25rem;
+}
+
+.kawhe-editor-style-options .kawhe-setup-card-style > span > span {
+    background: #263e30;
+}
+
+.kawhe-editor-artwork-thumb {
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+    border-radius: .25rem;
+}
+
+.kawhe-editor-artwork-thumb img {
+    max-width: 100%;
+}
+
+.kawhe-editor-stamps .kawhe-setup-icon > span {
+    min-height: 3.625rem;
+    border-color: var(--setup-border);
+}
+
+.kawhe-card-editor .kawhe-setup-card-style input:checked + span,
+.kawhe-card-editor .kawhe-setup-icon input:checked + span {
+    border-color: #2d5d47;
+    box-shadow: inset 0 0 0 .5px #2d5d47;
+    color: var(--setup-green);
+}
+
+.kawhe-editor-swatches {
+    gap: .75rem;
+}
+
+.kawhe-editor-swatches button > span {
+    display: grid;
+    place-items: center;
+}
+
+.kawhe-editor-swatches button[aria-pressed="true"] {
+    color: var(--setup-green);
+    font-weight: 700;
+}
+
+.kawhe-editor-text-colour label + p {
+    margin-top: 0;
+}
+
+.kawhe-editor-text-colour [aria-hidden="true"].rounded-full {
+    width: 1.375rem;
+    height: 1.375rem;
+}
+
+.kawhe-editor-text-colour #card-text-colour-help {
+    margin-top: .375rem;
+    font-size: .75rem;
+}
+
+.kawhe-editor-text-colour .min-h-10 {
+    min-height: 2.25rem;
+}
+
+.kawhe-editor-upload {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: .5rem;
+    min-height: 2.6875rem;
+    padding: .5rem .75rem;
+    border: 1px solid var(--setup-border);
+    border-radius: .5625rem;
+    background: var(--setup-paper);
+    font-size: .875rem;
+    cursor: pointer;
+}
+
+.kawhe-editor-next {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: .5rem;
+    min-height: 2.25rem;
+    padding: .375rem .875rem .375rem 1rem;
+    border-radius: .5625rem;
+    background: var(--setup-green);
+    color: white;
+    font-size: .875rem;
+    font-weight: 500;
+}
+
+.kawhe-editor-next:disabled {
+    cursor: not-allowed;
+    opacity: .5;
+}
+
+.kawhe-editor-wallet-tabs button,
+.kawhe-editor-reward-tabs button {
+    min-height: 2rem;
+    padding-inline: .875rem;
+    font-size: .875rem;
+}
+
+.kawhe-editor-wallet-tabs {
+    width: min(100%, 16.875rem);
+    justify-content: space-between;
+}
+
+.kawhe-editor-wallet-tabs button {
+    flex: 1;
+    min-height: 2.3125rem;
+    padding-inline: .5rem;
+}
+
+@media (min-width: 900px) {
+    .kawhe-card-editor .kawhe-setup-grid {
+        grid-template-columns: minmax(0, 530fr) minmax(0, 548fr);
+    }
+
+    .kawhe-card-editor .kawhe-setup-panel {
+        min-height: 57rem;
+    }
+}
+
+.kawhe-stamp-appearance-options {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: .9375rem;
+}
+
+.kawhe-stamp-appearance-choice {
+    display: flex;
+    min-height: 3.0625rem;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: .1875rem;
+    padding: .25rem .125rem;
+    border: 1px solid #dcddd4;
+    border-radius: .5rem;
+    background: white;
+    font-size: .625rem;
+    font-weight: 500;
+    line-height: 1.25;
+    text-align: center;
+}
+
+@media (max-width: 480px) {
+    .kawhe-stamp-appearance-options {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}

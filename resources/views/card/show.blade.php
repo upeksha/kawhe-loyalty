@@ -1,5 +1,6 @@
 @php($webPhoto = $account->resolvedProgram()->card_design === 'photo')
 @php($customTextColor = \App\Support\CardDesign::customTextColor($account->resolvedProgram()))
+@php($customStampColor = \App\Support\CardDesign::customStampColor($account->resolvedProgram()) ?? $customTextColor)
 @php($coffeeSample = \App\Support\CoffeeCardSample::enabled($account))
 <x-customer-layout
     :account="$account"
@@ -94,14 +95,18 @@
                         @endunless
                         .loyalty-card, .loyalty-card .card-text, .loyalty-card .card-muted,
                         .loyalty-card #reward-balance-display { color: {{ $customTextColor }} !important; opacity: 1; }
-                        .loyalty-card .stamp-circle { border: 2px solid {{ $customTextColor }}; }
-                        .loyalty-card .stamp-circle--empty { background: transparent; color: {{ $customTextColor }}; }
+                    </style>
+                @endif
+                @if($customStampColor)
+                    <style>
+                        .loyalty-card .stamp-circle { border: 2px solid {{ $customStampColor }}; }
+                        .loyalty-card .stamp-circle--empty { background: transparent; color: {{ $customStampColor }}; }
                         .loyalty-card .stamp-circle--filled,
                         .loyalty-card .photo-web-stamp.is-filled {
-                            background: {{ $customTextColor }};
+                            background: {{ $customStampColor }};
                             color: {{ $webPhoto ? '#263e30' : \App\Support\CardDesign::colors($account->resolvedProgram())[0] }};
                         }
-                        .loyalty-card .photo-web-stamps progress { accent-color: {{ $customTextColor }}; }
+                        .loyalty-card .photo-web-stamps progress { accent-color: {{ $customStampColor }}; }
                         .loyalty-card .photo-web-stamp-icon img { background: #fff; border-radius: 50%; padding: 2px; }
                     </style>
                 @endif
@@ -610,6 +615,16 @@
                         // Update progress circles - ALWAYS update them, even after redemption
                         // Use the container ID to ensure we're updating the right element
                         const circlesContainer = document.getElementById('stamp-circles-container');
+                        const photoRewardArt = document.getElementById('photo-reward-art');
+                        if (circlesContainer?.dataset.photo === 'true' && ['circle', 'square', 'rounded'].includes(data.stamp_shape)) {
+                            circlesContainer.dataset.shape = data.stamp_shape;
+                        }
+                        if (photoRewardArt && circlesContainer) {
+                            const ready = rewardBalance > 0 && Number(data.stamp_count) === 0;
+                            if (data.coffee_artwork_url) photoRewardArt.src = data.coffee_artwork_url;
+                            photoRewardArt.style.display = ready ? 'block' : 'none';
+                            circlesContainer.style.display = ready ? 'none' : '';
+                        }
                         if (circlesContainer) {
                             const photoProgress = document.getElementById('photo-stamp-progress');
                             if (photoProgress) { photoProgress.max = data.reward_target; photoProgress.value = data.stamp_count; }

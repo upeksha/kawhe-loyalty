@@ -362,6 +362,10 @@ class LoyaltyProgramController extends Controller
         $store->forceFill([
             'card_design' => $program->card_design,
             'card_pattern' => $program->card_pattern,
+            'stamp_shape' => $program->stamp_shape,
+            'reward_icon' => $program->reward_icon,
+            'reward_icon_path' => $program->reward_icon_path,
+            'stamp_color' => $program->stamp_color,
             'stamp_icon' => $program->stamp_icon,
             'stamp_icon_path' => $program->stamp_icon_path,
             'card_photo_path' => $program->card_photo_path,

@@ -6,24 +6,42 @@
 <x-onboarding-layout>
     <x-slot name="header">Customer form</x-slot>
 
+    <div x-data="registrationFormConfigState(@js($initialConfig))">
     <x-onboarding-step-layout
         :step="3"
         :store="$store"
-        title="Choose what customer details to collect"
-        subtitle="Keep sign-up quick and low-friction. Most merchants get better conversion when the first join is fast and the data request feels reasonable."
-        :backUrl="route('merchant.onboarding.wizard.card-design')"
+        title="Choose what customers share"
+        subtitle="Keep joining quick. Email is always required."
     >
-        <form method="POST" action="{{ route('merchant.onboarding.wizard.customer-form.store') }}" id="customer-form-form"
-            x-data="registrationFormConfigState(@js($initialConfig))"
-        >
+        <x-slot:preview>
+            <div class="space-y-4 text-center">
+                <h2 class="text-2xl font-bold">Customer signup preview</h2>
+                <x-onboarding-phone>
+                    <div class="space-y-4 rounded-xl bg-white p-4 text-left text-stone-900">
+                        <p class="text-lg font-bold text-brand-900">Join {{ $store->name }}</p>
+                        <div>
+                            <p class="text-sm font-semibold">Email <span class="font-normal text-stone-600">(required)</span></p>
+                            <p class="mt-1 rounded-lg border border-stone-200 bg-stone-50 px-3 py-2 text-sm text-stone-500">you@example.com</p>
+                        </div>
+                        @foreach(\App\Support\RegistrationFormConfig::fieldDefinitions() as $key => $meta)
+                            <div x-show="config.{{ $key }}.enabled" x-cloak>
+                                <p class="text-sm font-semibold">{{ $meta['label'] }} <span class="font-normal text-stone-600" x-text="config.{{ $key }}.required ? '(required)' : '(optional)'"></span></p>
+                                <p class="mt-1 rounded-lg border border-stone-200 bg-stone-50 px-3 py-2 text-sm text-stone-500">{{ $meta['placeholder'] }}</p>
+                            </div>
+                        @endforeach
+                        <p class="rounded-lg bg-brand-800 px-3 py-2 text-center text-sm text-white">Get my loyalty card</p>
+                    </div>
+                </x-onboarding-phone>
+                <p class="text-sm">The preview updates as you select fields.</p>
+            </div>
+        </x-slot:preview>
+        <form method="POST" action="{{ route('merchant.onboarding.wizard.customer-form.store') }}" id="customer-form-form">
             @csrf
             <x-form-error-summary form-id="customer-form-form" />
             <x-registration-form-config-editor
                 :config="$initialConfig"
                 show-presets
                 show-cafe-tip
-                show-preview
-                show-friction-guide
             />
         </form>
 
@@ -39,4 +57,5 @@
             </div>
         </x-slot>
     </x-onboarding-step-layout>
+    </div>
 </x-onboarding-layout>

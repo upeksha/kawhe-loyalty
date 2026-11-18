@@ -19,7 +19,21 @@
 
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     </head>
-    <body class="font-sans antialiased bg-stone-50 text-stone-900">
+    @isset($merchantPreview)
+        <body class="kawhe-setup min-h-screen font-sans antialiased text-stone-900">
+            <header class="kawhe-setup-header">
+                <a href="/" aria-label="Kawhe" class="kawhe-setup-wordmark"><x-application-logo class="kawhe-setup-header-logo" /><span aria-hidden="true">kawhe</span></a>
+                <span class="text-sm font-medium text-stone-600">Merchant account</span>
+            </header>
+            <main class="kawhe-setup-main kawhe-setup-grid">
+                <section class="kawhe-setup-panel">{{ $slot }}</section>
+                <aside class="kawhe-setup-preview">
+                    <div class="w-full min-w-0">{{ $merchantPreview }}</div>
+                </aside>
+            </main>
+        </body>
+    @else
+        <body class="font-sans antialiased bg-stone-50 text-stone-900">
 
         <div class="min-h-screen flex flex-col items-center justify-center px-4 py-10 sm:py-16">
 
@@ -36,4 +50,5 @@
         </div>
 
     </body>
+    @endisset
 </html>

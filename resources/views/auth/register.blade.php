@@ -1,6 +1,7 @@
 <x-guest-layout>
-    <h1 class="text-xl font-bold text-stone-900 mb-1">Create your account</h1>
-    <p class="text-sm text-stone-500 mb-6">Set up your account and first loyalty card</p>
+    <x-slot:merchantPreview><x-merchant-account-preview /></x-slot:merchantPreview>
+    <h1 class="kawhe-setup-title mb-2 text-2xl font-bold tracking-tight sm:text-3xl">Create your free café account</h1>
+    <p class="mb-6 text-sm text-stone-600">No credit card required. Takes about two minutes.</p>
 
     <form method="POST" action="{{ route('register') }}" class="space-y-5" id="register-form">
         @csrf

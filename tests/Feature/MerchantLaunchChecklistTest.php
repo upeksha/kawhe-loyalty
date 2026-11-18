@@ -34,7 +34,8 @@ test('checklist follows saved café and card setup progress', function () {
     ])->assertRedirect(route('merchant.onboarding.wizard.card-design'));
 
     $this->get(route('merchant.onboarding.wizard.card-design'))->assertOk()
-        ->assertSee('Step 3 of 6')
+        ->assertSee('aria-current="step"', false)
+        ->assertSee('Design your loyalty card')
         ->assertDontSee('Your café launch checklist');
 
     $store->forceFill(['onboarding_step' => Store::ONBOARDING_STEP_CARD_READY])->save();
