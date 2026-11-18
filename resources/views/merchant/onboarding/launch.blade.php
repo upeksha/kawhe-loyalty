@@ -12,6 +12,15 @@
         :title="$launch['ready'] ? 'Your loyalty programme is live' : ($appInstalled ? 'Complete a test stamp' : 'Install Kawhe Merchant')"
         :subtitle="$launch['ready'] ? 'Display your QR poster and invite your first customer.' : ($appInstalled ? 'One quick scan checks that your card and the merchant app work together.' : $store->name . ' · Get the free app your team will use at the counter.')"
     >
+        @if($appInstalled && !$launch['ready'])
+            <x-slot:preview>
+                <div class="space-y-4 text-center">
+                    <h2 class="text-2xl font-bold">Your loyalty card</h2>
+                    <x-onboarding-saved-card :store="$store" />
+                    <p class="text-sm">Show the QR from your test customer’s card to Kawhe Merchant.</p>
+                </div>
+            </x-slot:preview>
+        @endif
         @if($launch['ready'])
             <div class="rounded-2xl bg-brand-50 p-6 text-brand-900">
                 <p class="text-lg font-semibold">All six launch steps are complete.</p>
