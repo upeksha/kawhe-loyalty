@@ -302,7 +302,14 @@ test('custom text colour appears on empty outlines and filled stamps in preview 
     ]);
     $path = CoffeeCardSample::artwork($account, $platform);
     $issued = \App\Support\StoreAssets::get($path);
-    expect($issued)->toBe($preview);
+    if ($style === 'illustrated' && $platform === 'web') {
+        $options = \App\Support\CardDesign::options($program);
+        expect($preview)->toBe(app(\App\Services\Wallet\Artwork\CardStyleArtwork::class)->render((int) $account->reward_target, 4, false, 'web', $options));
+        $options['transparent_illustration'] = true;
+        expect($issued)->toBe(app(\App\Services\Wallet\Artwork\CardStyleArtwork::class)->render((int) $account->reward_target, 4, false, 'web', $options));
+    } else {
+        expect($issued)->toBe($preview);
+    }
 
     $image = imagecreatefromstring($issued);
     $x = imagesx($image);

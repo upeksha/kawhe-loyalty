@@ -89,6 +89,9 @@ class CoffeeCardSample
             if ($platform === 'web' && $options['style'] === 'photo' && $state === 'ready') {
                 $options['transparent_photo'] = true;
             }
+            if ($platform === 'web' && $program->card_design === 'illustrated') {
+                $options['transparent_illustration'] = true;
+            }
             $hash = substr(hash('sha256', serialize([CardStyleArtwork::RENDERER_VERSION, $options])), 0, 24);
             // Account-scoped cache also covers old/replaced photos at deletion.
             $ownerId = $account->store->user_id;

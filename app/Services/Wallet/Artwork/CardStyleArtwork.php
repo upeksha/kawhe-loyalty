@@ -21,14 +21,17 @@ class CardStyleArtwork
         $hasCustomStampColor = isset($options['stamp_color']);
         $ink = $this->color($im, $options['stamp_color'] ?? $options['ink']);
         $photoOverlay = $platform === 'web' && $options['style'] === 'photo' && ! empty($options['transparent_photo']);
-        if ($photoOverlay) {
-            // The browser card already has the photo behind this reward/stamp overlay.
+        $illustrationOverlay = $platform === 'web' && $options['style'] === 'illustrated' && ! empty($options['transparent_illustration']);
+        if ($photoOverlay || $illustrationOverlay) {
+            // The browser card supplies its full background behind this foreground artwork.
             imagealphablending($im, false);
             imagesavealpha($im, true);
             imagefill($im, 0, 0, imagecolorallocatealpha($im, 0, 0, 0, 127));
             imagealphablending($im, true);
-            $bg = $this->color($im, '#182820');
-            $ink = $this->color($im, $options['stamp_color'] ?? '#ffffff');
+            if ($photoOverlay) {
+                $bg = $this->color($im, '#182820');
+                $ink = $this->color($im, $options['stamp_color'] ?? '#ffffff');
+            }
         } else {
             imagefill($im, 0, 0, $bg);
         }
@@ -47,7 +50,7 @@ class CardStyleArtwork
                 }
             }
         }
-        if ($options['style'] === 'illustrated') {
+        if ($options['style'] === 'illustrated' && ! $illustrationOverlay) {
             $patterns = ['mountains' => 'organic', 'waves' => 'floral', 'botanical' => 'waves'];
             $name = $patterns[$options['pattern']] ?? 'organic';
             $pattern = imagecreatefrompng(public_path('images/card-patterns/'.$name.'-mask.png'));

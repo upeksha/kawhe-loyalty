@@ -1,7 +1,12 @@
-@php($webPhoto = $account->resolvedProgram()->card_design === 'photo')
-@php($customTextColor = \App\Support\CardDesign::customTextColor($account->resolvedProgram()))
-@php($customStampColor = \App\Support\CardDesign::customStampColor($account->resolvedProgram()) ?? $customTextColor)
-@php($coffeeSample = \App\Support\CoffeeCardSample::enabled($account))
+@php
+    $webPhoto = $account->resolvedProgram()->card_design === 'photo';
+    $customTextColor = \App\Support\CardDesign::customTextColor($account->resolvedProgram());
+    $customStampColor = \App\Support\CardDesign::customStampColor($account->resolvedProgram()) ?? $customTextColor;
+    $coffeeSample = \App\Support\CoffeeCardSample::enabled($account);
+    $patternNames = ['mountains' => 'organic', 'waves' => 'floral', 'botanical' => 'waves'];
+    $patternName = $patternNames[$account->resolvedProgram()->card_pattern] ?? 'organic';
+    $patternUrl = asset('images/card-patterns/'.$patternName.'-mask.png');
+@endphp
 <x-customer-layout
     :account="$account"
     :document-title="$account->store->name . ' – My Card'"
@@ -75,6 +80,11 @@
                         .loyalty-card .card-text,.loyalty-card .card-muted{color:{{ \App\Support\CardDesign::colors($account->resolvedProgram())[1] }}!important}
                         @if($account->resolvedProgram()->card_design === 'photo' && $account->resolvedProgram()->card_photo_path)
                         .loyalty-card{background:linear-gradient(rgba(0,0,0,.66),rgba(0,0,0,.66)),url('{{ \App\Support\StoreAssets::url($account->resolvedProgram()->card_photo_path) }}') center/cover!important}
+                        @endif
+                        @if($account->resolvedProgram()->card_design === 'illustrated')
+                            .loyalty-card{position:relative}
+                            .loyalty-card::before{content:"";position:absolute;inset:0;pointer-events:none;opacity:.18;background-color:{{ \App\Support\CardDesign::colors($account->resolvedProgram())[1] }};-webkit-mask:url('{{ $patternUrl }}') center/cover no-repeat;mask:url('{{ $patternUrl }}') center/cover no-repeat}
+                            .loyalty-card>.relative{z-index:1}
                         @endif
                         @unless($webPhoto).loyalty-card #stamp-circles-container{display:none}@endunless
                         .loyalty-card .card-text,.loyalty-card .card-muted{overflow-wrap:anywhere;white-space:normal}
