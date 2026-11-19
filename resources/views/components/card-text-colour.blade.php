@@ -44,13 +44,16 @@
         </div>
         <div class="flex flex-wrap items-center gap-3">
             <button type="button" x-show="customTextColour" x-cloak @click="customTextColour = ''" class="min-h-10 text-sm font-semibold text-brand-700 underline underline-offset-4">Use automatic</button>
-            <div class="relative inline-flex min-h-10 items-center rounded-lg border border-stone-300 bg-white px-3 text-sm font-semibold text-brand-800 focus-within:ring-2 focus-within:ring-brand-600">
-                <span aria-hidden="true">Choose colour</span>
+            <label class="relative inline-flex min-h-11 min-w-11 cursor-pointer flex-col items-center gap-1 rounded-md px-1 py-1 text-xs text-brand-800 focus-within:ring-2 focus-within:ring-brand-600">
+                <span class="grid size-7 place-items-center rounded-full border border-stone-300 bg-white" aria-hidden="true">
+                    <img src="{{ asset('images/onboarding/colour-plus.svg') }}" alt="">
+                </span>
+                <span>Custom</span>
                 <input id="card-text-colour" x-ref="textColourPicker" type="color" :value="selectedTextColour"
                     @input="customTextColour = $event.target.value.toUpperCase()" @change="customTextColour = $event.target.value.toUpperCase()"
                     aria-label="Choose card text colour" aria-describedby="card-text-colour-help" :aria-invalid="!textColourReadable"
                     class="absolute inset-0 h-full w-full cursor-pointer opacity-0">
-            </div>
+            </label>
         </div>
     </div>
     <p id="card-text-colour-help" class="mt-2 text-sm text-stone-600" aria-live="polite">

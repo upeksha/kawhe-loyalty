@@ -1,9 +1,9 @@
 @props(['model' => null, 'compact' => false])
 
-<section @class(['kawhe-editor-section' => $compact, 'rounded-xl border border-stone-200 bg-stone-50 p-4' => !$compact])
+<div class="space-y-3"
     x-show="cardDesign !== 'classic'" x-cloak
     x-data="{ stampShape: @js(old('stamp_shape', $model?->stamp_shape ?: 'circle')), rewardIcon: @js(old('reward_icon', $model?->reward_icon ?: 'match')), rewardUploadName: '', rewardUploadPreview: @js($model?->reward_icon_path ? \App\Support\StoreAssets::url($model->reward_icon_path) : null) }">
-    <div class="kawhe-stamp-appearance-options">
+    <section @class(['kawhe-editor-section' => $compact, 'rounded-xl border border-stone-200 bg-stone-50 p-4' => !$compact])>
         <fieldset class="min-w-0">
             <legend class="mb-1.5 text-[15px] font-semibold">Stamp shape</legend>
             <div class="grid grid-cols-3 gap-[5px]">
@@ -19,6 +19,8 @@
             </div>
             <x-input-error :messages="$errors->get('stamp_shape')" class="mt-2" />
         </fieldset>
+    </section>
+    <section @class(['kawhe-editor-section' => $compact, 'rounded-xl border border-stone-200 bg-stone-50 p-4' => !$compact])>
         <fieldset class="min-w-0">
             <legend class="mb-1.5 text-[15px] font-semibold">Reward icon</legend>
             <div class="grid grid-cols-4 gap-[5px]">
@@ -34,14 +36,13 @@
             </div>
             <x-input-error :messages="$errors->get('reward_icon')" class="mt-2" />
         </fieldset>
-    </div>
     <div x-show="rewardIcon === 'custom'" x-cloak class="mt-3">
         <label for="reward_icon_upload" class="block text-sm font-semibold">Your reward icon</label>
         <div class="mt-2 flex min-w-0 items-center gap-2">
             <img x-show="rewardUploadPreview" :src="rewardUploadPreview" alt="Reward icon preview" class="size-10 shrink-0 rounded-lg border border-stone-200 bg-white object-contain p-1">
-            <label class="kawhe-editor-upload min-w-0 flex-1 focus-within:ring-2 focus-within:ring-brand-600">
-                <span class="min-w-0 truncate" x-text="rewardUploadName || (rewardUploadPreview ? 'Saved reward icon' : 'No icon selected')"></span>
-                <span class="shrink-0 text-[13px] font-semibold text-brand-800" x-text="rewardUploadPreview ? 'Replace icon' : 'Choose icon'" aria-hidden="true"></span>
+            <label class="flex min-w-0 flex-1 cursor-pointer flex-wrap items-center gap-3 rounded-lg border border-brand-200 bg-white p-3 focus-within:ring-2 focus-within:ring-brand-700">
+                <span class="inline-flex min-h-11 items-center rounded-lg bg-brand-700 px-4 py-3 text-sm font-semibold text-white" x-text="rewardUploadPreview ? 'Replace icon' : 'Choose icon'" aria-hidden="true"></span>
+                <span class="min-w-0 break-all text-sm text-stone-600" x-text="rewardUploadName || (rewardUploadPreview ? 'Saved reward icon' : 'No icon selected')" aria-live="polite"></span>
         <input type="file" id="reward_icon_upload" name="reward_icon_upload" aria-label="Upload reward icon" accept="image/png,image/jpeg,image/webp"
             :disabled="cardDesign === 'classic' || rewardIcon !== 'custom'"
             :required="cardDesign !== 'classic' && rewardIcon === 'custom' && {{ $model?->reward_icon_path ? 'false' : 'true' }}"
@@ -53,4 +54,5 @@
         <x-input-error :messages="$errors->get('reward_icon_upload')" class="mt-2" />
     </div>
     <p class="mt-2 text-xs text-stone-600">The reward icon appears when a reward is ready.</p>
-</section>
+    </section>
+</div>

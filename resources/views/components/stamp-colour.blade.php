@@ -36,13 +36,16 @@
         <div class="flex flex-wrap items-center gap-3">
             <button type="button" x-show="customStampColour" x-cloak @click="customStampColour = ''"
                 aria-label="Use automatic stamp colour" class="min-h-10 text-sm font-semibold text-brand-700 underline underline-offset-4">Use automatic</button>
-            <div class="relative inline-flex min-h-10 items-center rounded-lg border border-stone-300 bg-white px-3 text-sm font-semibold text-brand-800 focus-within:ring-2 focus-within:ring-brand-600">
-                <span aria-hidden="true">Choose colour</span>
+            <label class="relative inline-flex min-h-11 min-w-11 cursor-pointer flex-col items-center gap-1 rounded-md px-1 py-1 text-xs text-brand-800 focus-within:ring-2 focus-within:ring-brand-600">
+                <span class="grid size-7 place-items-center rounded-full border border-stone-300 bg-white" aria-hidden="true">
+                    <img src="{{ asset('images/onboarding/colour-plus.svg') }}" alt="">
+                </span>
+                <span>Custom</span>
                 <input id="stamp-colour" x-ref="stampColourPicker" type="color" :value="selectedStampColour" :disabled="cardDesign === 'classic'"
                     @input="customStampColour = $event.target.value.toUpperCase()" @change="customStampColour = $event.target.value.toUpperCase()"
                     aria-label="Choose stamp colour" aria-describedby="stamp-colour-help" :aria-invalid="!stampColourReadable"
                     class="absolute inset-0 h-full w-full cursor-pointer opacity-0">
-            </div>
+            </label>
         </div>
     </div>
     <p id="stamp-colour-help" x-show="!stampColourReadable" x-cloak aria-live="polite" class="mt-2 text-xs font-medium text-red-700">This colour is hard to see. Choose a different colour or use automatic.</p>

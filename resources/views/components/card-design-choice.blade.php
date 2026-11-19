@@ -128,7 +128,13 @@
         </select>
         <div x-show="stampIcon === 'custom'" class="mt-3">
             <label for="stamp_icon_upload" class="block text-sm font-semibold">Your stamp icon</label>
-            <input id="stamp_icon_upload" name="stamp_icon_upload" type="file" accept="image/png,image/jpeg,image/webp" class="mt-2 block w-full text-sm" :disabled="stampIcon !== 'custom'" :required="stampIcon === 'custom' && {{ $model?->stamp_icon_path ? 'false' : 'true' }}">
+            <div class="mt-2" x-data="{ stampUploadName: '' }">
+                <label class="flex cursor-pointer flex-wrap items-center gap-3 rounded-lg border border-brand-200 bg-white p-3 focus-within:ring-2 focus-within:ring-brand-700">
+                    <span class="inline-flex min-h-11 items-center rounded-lg bg-brand-700 px-4 py-3 text-sm font-semibold text-white">Choose icon</span>
+                    <span class="min-w-0 break-all text-sm text-stone-600" x-text="stampUploadName || @js($model?->stamp_icon_path ? 'Saved icon will be kept' : 'No icon selected')" aria-live="polite"></span>
+                    <input id="stamp_icon_upload" name="stamp_icon_upload" type="file" accept="image/png,image/jpeg,image/webp" aria-label="Upload stamp icon" class="sr-only" @change="stampUploadName = $event.target.files[0]?.name || ''" :disabled="stampIcon !== 'custom'" :required="stampIcon === 'custom' && {{ $model?->stamp_icon_path ? 'false' : 'true' }}">
+                </label>
+            </div>
             @if($model?->stamp_icon_path)<img src="{{ \App\Support\StoreAssets::url($model->stamp_icon_path) }}" alt="Saved stamp icon" class="mt-2 h-16 w-16 rounded-full bg-white object-contain p-2">@endif
             <p class="mt-2 text-xs text-stone-500">Use a clear, dark icon with a transparent or white background. PNG, JPG or WebP, up to 2 MB and 3000 × 3000 pixels. It sits inside each collected stamp.</p>
         </div>
