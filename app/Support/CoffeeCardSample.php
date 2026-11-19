@@ -86,7 +86,7 @@ class CoffeeCardSample
             || ($program->stamp_shape && $program->stamp_shape !== 'circle')
             || ($program->reward_icon && $program->reward_icon !== 'match')) {
             $options = CardDesign::options($program);
-            if ($platform === 'web' && $options['style'] === 'photo') {
+            if ($platform === 'web' && $options['style'] === 'photo' && $state === 'ready') {
                 $options['transparent_photo'] = true;
             }
             $hash = substr(hash('sha256', serialize([CardStyleArtwork::RENDERER_VERSION, $options])), 0, 24);

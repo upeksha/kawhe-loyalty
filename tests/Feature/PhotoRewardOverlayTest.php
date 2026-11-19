@@ -40,4 +40,8 @@ test('Photo browser reward artwork overlays the existing photo without embedding
     $this->get(route('card.show', $account->public_token))->assertOk()->assertSee('id="photo-reward-art"', false);
     $json = $this->getJson('/api/card/'.$account->public_token)->assertOk()->json();
     expect($json['coffee_artwork_url'])->toBe(StoreAssets::url($webPath));
+    $account->update(['stamp_count' => 4, 'reward_balance' => 0]);
+    $collectingPath = CoffeeCardSample::artwork($account, 'web');
+    expect($collectingPath)->toContain('/'.$originalHash.'/')
+        ->and(StoreAssets::get($collectingPath))->toBe(app(CardStyleArtwork::class)->render((int) $account->reward_target, 4, false, 'web', $options));
 })->with(['match', 'gift', 'star', 'custom']);
