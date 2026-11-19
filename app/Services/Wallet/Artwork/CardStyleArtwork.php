@@ -20,8 +20,19 @@ class CardStyleArtwork
         $bg = $this->color($im, $options['background']);
         $hasCustomStampColor = isset($options['stamp_color']);
         $ink = $this->color($im, $options['stamp_color'] ?? $options['ink']);
-        imagefill($im, 0, 0, $bg);
-        if ($options['style'] === 'photo' && $options['photo']) {
+        $photoOverlay = $platform === 'web' && $options['style'] === 'photo' && ! empty($options['transparent_photo']);
+        if ($photoOverlay) {
+            // The browser card already has the photo behind this reward/stamp overlay.
+            imagealphablending($im, false);
+            imagesavealpha($im, true);
+            imagefill($im, 0, 0, imagecolorallocatealpha($im, 0, 0, 0, 127));
+            imagealphablending($im, true);
+            $bg = $this->color($im, '#182820');
+            $ink = $this->color($im, $options['stamp_color'] ?? '#ffffff');
+        } else {
+            imagefill($im, 0, 0, $bg);
+        }
+        if ($options['style'] === 'photo' && $options['photo'] && ! $photoOverlay) {
             $photo = imagecreatefromstring($options['photo']);
             if ($photo) {
                 // Photo artwork stays readable independently of the surrounding card colour.
