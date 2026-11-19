@@ -12,15 +12,39 @@
         :title="$launch['ready'] ? 'Your loyalty programme is live' : ($appInstalled ? 'Complete a test stamp' : 'Install Kawhe Merchant')"
         :subtitle="$launch['ready'] ? 'Display your QR poster and invite your first customer.' : ($appInstalled ? 'One quick scan checks that your card and the merchant app work together.' : $store->name . ' · Get the free app your team will use at the counter.')"
     >
-        @if($appInstalled && !$launch['ready'])
-            <x-slot:preview>
+        <x-slot:preview>
+            @if($launch['ready'])
                 <div class="space-y-4 text-center">
-                    <h2 class="text-2xl font-bold">Your loyalty card</h2>
+                    <h2 class="text-2xl font-bold">Your join poster</h2>
+                    <div class="relative mx-auto w-full max-w-[18rem] overflow-hidden rounded-lg border border-stone-200 shadow-sm" style="aspect-ratio: 794 / 1123" x-data
+                        x-init="const container = $el; const pdf = $refs.poster; new ResizeObserver(() => pdf.style.transform = 'scale(' + container.clientWidth / 794 + ')').observe(container)">
+                        <iframe x-ref="poster" src="{{ route('merchant.stores.qr.pdf', ['store' => $store, 'preview' => 1]) }}" title="A4 join poster preview for {{ $store->name }}" class="pointer-events-none absolute left-0 top-0 border-0" style="width: 794px; height: 1123px; transform-origin: top left"></iframe>
+                    </div>
+                    <x-ui.button :href="route('merchant.stores.qr.pdf', ['store' => $store, 'preview' => 1])" variant="secondary" target="_blank" rel="noopener">Open full size ↗</x-ui.button>
+                </div>
+            @elseif(!$appInstalled)
+                <div class="space-y-4 text-center">
+                    <h2 class="text-2xl font-bold">For your team at the counter</h2>
+                    <x-onboarding-phone>
+                        <div class="space-y-5 rounded-xl bg-white p-4">
+                            <x-application-logo class="mx-auto h-9 w-auto" />
+                            <p class="font-semibold">{{ $store->name }}</p>
+                            <div class="mx-auto grid aspect-square w-full max-w-48 place-items-center rounded-xl bg-brand-900">
+                                <img src="{{ asset('images/onboarding/scan-guides.svg') }}" alt="" width="86" height="86">
+                            </div>
+                            <p class="text-sm font-semibold">Scan a customer card</p>
+                        </div>
+                    </x-onboarding-phone>
+                    <p class="text-sm">Customers can show their card from their browser or Wallet.</p>
+                </div>
+            @else
+                <div class="space-y-4 text-center">
+                    <h2 class="text-2xl font-bold">Use your computer and phone</h2>
                     <x-onboarding-saved-card :store="$store" />
                     <p class="text-sm">Show the QR from your test customer’s card to Kawhe Merchant.</p>
                 </div>
-            </x-slot:preview>
-        @endif
+            @endif
+        </x-slot:preview>
         @if($launch['ready'])
             <div class="rounded-2xl bg-brand-50 p-6 text-brand-900">
                 <p class="text-lg font-semibold">All six launch steps are complete.</p>
