@@ -20,7 +20,7 @@ test('illustrated browser cards put selected artwork behind the full card with t
         'stamp_count' => $ready ? 0 : 4, 'reward_balance' => $ready ? 1 : 0]);
     $names = ['mountains' => 'organic', 'waves' => 'floral', 'botanical' => 'waves'];
     $this->get(route('card.show', $account->public_token))->assertOk()
-        ->assertSee('.loyalty-card::before', false)->assertSee('inset:0;pointer-events:none', false)
+        ->assertSee('.customer-redesign .loyalty-card::before{content:""', false)->assertSee('inset:0;pointer-events:none', false)
         ->assertSee('images/card-patterns/'.$names[$pattern].'-mask.png', false)
         ->assertSee('id="coffee-sample-art"', false);
     $path = CoffeeCardSample::artwork($account, 'web');

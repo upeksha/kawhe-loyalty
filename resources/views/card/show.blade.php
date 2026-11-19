@@ -83,7 +83,7 @@
                         @endif
                         @if($account->resolvedProgram()->card_design === 'illustrated')
                             .loyalty-card{position:relative}
-                            .loyalty-card::before{content:"";position:absolute;inset:0;pointer-events:none;opacity:.18;background-color:{{ \App\Support\CardDesign::colors($account->resolvedProgram())[1] }};-webkit-mask:url('{{ $patternUrl }}') center/cover no-repeat;mask:url('{{ $patternUrl }}') center/cover no-repeat}
+                            .customer-redesign .loyalty-card::before{content:"";position:absolute;inset:0;pointer-events:none;opacity:.18;background:{{ \App\Support\CardDesign::colors($account->resolvedProgram())[1] }};-webkit-mask:url('{{ $patternUrl }}') center/cover no-repeat;mask:url('{{ $patternUrl }}') center/cover no-repeat}
                             .loyalty-card>.relative{z-index:1}
                         @endif
                         @unless($webPhoto).loyalty-card #stamp-circles-container{display:none}@endunless
