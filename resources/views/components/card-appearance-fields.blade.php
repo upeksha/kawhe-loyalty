@@ -42,7 +42,7 @@
                 <x-stamp-appearance :model="$model" compact />
                 <x-card-text-colour :model="$model" compact />
                 <fieldset>
-                    <legend class="sr-only">Card logos</legend>
+                    <legend class="sr-only">Card logos for Apple and Google Wallet</legend>
                     @php
                         $uploads = [
                             ['id' => 'logo', 'label' => 'Store logo', 'ref' => 'logoInput', 'preview' => 'logoPreview', 'path' => 'logo_path'],

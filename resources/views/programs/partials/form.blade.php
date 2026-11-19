@@ -219,6 +219,7 @@
             @if($isEdit && isset($walletHealth))
                 <details class="rounded-2xl border border-stone-200 bg-white p-5">
                     <summary class="cursor-pointer font-semibold text-stone-900">Wallet help</summary>
+                    <p class="mt-3 text-xs leading-relaxed text-stone-600">Apple and Google control the final Wallet layout. This preview represents your branding and content, but spacing and typography may vary by device.</p>
                     <div class="mt-4">
                     <div class="flex items-start justify-between gap-3">
                         <div>
