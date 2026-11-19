@@ -181,6 +181,7 @@
 }
 
 .kawhe-card-editor {
+    --setup-green: #254b3a;
     --setup-paper: #fcfbf7;
     --setup-border: #dcddd4;
 }
@@ -414,4 +415,16 @@
     .kawhe-stamp-appearance-options {
         grid-template-columns: minmax(0, 1fr);
     }
+}
+
+/* Keep the shared designer clear of the workspace's generic field wrappers. */
+.merchant-design .kawhe-card-editor form .kawhe-editor-section div:has(> label):has(> input:not([type=checkbox]):not([type=color])) {
+    border: 0;
+    border-radius: 0;
+    padding: 0;
+}
+.merchant-design .kawhe-card-editor #background_color_text {
+    border: 0;
+    border-radius: 0;
+    font-size: .75rem;
 }

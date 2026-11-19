@@ -7,11 +7,14 @@
 @endphp
 
 <div
-    class="space-y-6"
+    class="kawhe-card-editor space-y-6"
     x-data="{
             cardDesign: @js(\App\Support\CardDesign::formStyle($program)),
         brandColor: @js(old('brand_color', $program?->brand_color ?? $store->brand_color ?? '#0EA5E9')),
         bgColor: @js(old('background_color', $program?->background_color ?? $store->background_color ?? '#1F2937')),
+        logoPreview: @js($program?->logo_url ?? $store->logo_url),
+        passLogoPreview: @js($program?->pass_logo_url ?? $store->pass_logo_url),
+        passHeroPreview: @js($program?->pass_hero_image_url ?? $store->pass_hero_image_url),
         hexToRgb(hex) {
             const cleaned = (hex || '').replace('#', '');
             if (cleaned.length !== 6) return null;
@@ -86,10 +89,23 @@
         </div>
     @endif
 
-    <div class="grid items-start gap-8 xl:grid-cols-[minmax(0,760fr)_minmax(0,568fr)]">
-        <form id="loyalty-card-form" method="POST" action="{{ $action }}" enctype="multipart/form-data" class="min-w-0 space-y-6 rounded-2xl border border-stone-200 bg-white p-4 sm:p-6">
+    <div class="kawhe-setup-grid">
+        <form id="loyalty-card-form" method="POST" action="{{ $action }}" enctype="multipart/form-data" class="kawhe-setup-panel min-w-0 space-y-4"
+            x-init="
+            $refs.brandColor && $refs.brandColor.addEventListener('input', e => { brandColor = e.target.value; $refs.brandColorText && ($refs.brandColorText.value = e.target.value); });
+            $refs.brandColorText && $refs.brandColorText.addEventListener('input', e => { if (/^#[0-9A-Fa-f]{6}$/.test(e.target.value)) { brandColor = e.target.value; if ($refs.brandColor) { $refs.brandColor.value = e.target.value; $refs.brandColor.dispatchEvent(new Event('input', { bubbles: true })); } } });
+            $refs.bgColor && $refs.bgColor.addEventListener('input', e => { bgColor = e.target.value; $refs.bgColorText && ($refs.bgColorText.value = e.target.value); });
+            $refs.bgColorText && $refs.bgColorText.addEventListener('input', e => { if (/^#[0-9A-Fa-f]{6}$/.test(e.target.value)) { bgColor = e.target.value; if ($refs.bgColor) { $refs.bgColor.value = e.target.value; $refs.bgColor.dispatchEvent(new Event('input', { bubbles: true })); } } });
+            $refs.logoInput && $refs.logoInput.addEventListener('change', e => { const f = e.target.files[0]; if (f) logoPreview = URL.createObjectURL(f); });
+            $refs.passLogoInput && $refs.passLogoInput.addEventListener('change', e => { const f = e.target.files[0]; if (f) passLogoPreview = URL.createObjectURL(f); });
+            $refs.passHeroInput && $refs.passHeroInput.addEventListener('change', e => { const f = e.target.files[0]; if (f) passHeroPreview = URL.createObjectURL(f); });
+            ">
             @csrf
-            <x-card-design-choice :model="$program" />
+            <h2 class="kawhe-setup-title text-2xl font-bold">{{ $isEdit ? 'Edit card appearance' : 'Design your loyalty card' }}</h2>
+            <a href="#loyalty-card-preview" class="text-sm font-semibold text-brand-700 underline min-[900px]:hidden">See card preview ↓</a>
+            <div class="space-y-3.5">
+                <x-card-appearance-fields :model="$program" :brand-color="old('brand_color', $program?->brand_color ?? $store->brand_color)" :bg-color="old('background_color', $program?->background_color ?? $store->background_color)" />
+            </div>
             @if($method !== 'POST') @method($method) @endif
             <x-form-error-summary form-id="loyalty-card-form" />
 
@@ -127,81 +143,6 @@
                     <x-input-error :messages="$errors->get('reward_title')" class="mt-2" />
                 </div>
             </div>
-
-            <details class="rounded-xl border border-stone-200 p-4" open>
-                <summary class="cursor-pointer text-base font-semibold text-stone-900">Card design <span class="block mt-1 text-sm font-normal text-stone-500">Colours and branding</span></summary>
-                <div class="mt-5 space-y-5">
-
-            <div class="grid gap-4">
-                <div x-show="cardDesign === 'classic'">
-                    <label for="brand_color" class="block text-sm font-medium text-stone-700 mb-1.5">Accent colour</label>
-                    <input type="color" id="brand_color" name="brand_color" x-model="brandColor" value="{{ old('brand_color', $program?->brand_color ?? $store->brand_color ?? '#0EA5E9') }}" class="color-swatch-input h-11 w-11 rounded-full border-2 cursor-pointer flex-shrink-0 overflow-hidden p-0 bg-transparent appearance-none" x-bind:class="hasBlockedContrast ? 'border-red-300' : 'border-stone-300'">
-                    <x-input-error :messages="$errors->get('brand_color')" class="mt-2" />
-                </div>
-                <div>
-                    <label for="background_color" class="block text-sm font-medium text-stone-700 mb-1.5">Card colour</label>
-                    <input type="color" id="background_color" name="background_color" x-model="bgColor" value="{{ old('background_color', $program?->background_color ?? $store->background_color ?? '#1F2937') }}" class="color-swatch-input h-11 w-11 rounded-full border-2 cursor-pointer flex-shrink-0 overflow-hidden p-0 bg-transparent appearance-none" x-bind:class="hasBlockedContrast ? 'border-red-300' : 'border-stone-300'">
-                    <p class="mt-2 text-sm text-stone-500">Available for every style. With Photo, this colour surrounds your image; the photo keeps its colours and automatic readability overlay.</p>
-                    <x-card-colour-presets />
-                    <x-input-error :messages="$errors->get('background_color')" class="mt-2" />
-                </div>
-            </div>
-
-            <x-card-text-colour :model="$program" />
-
-            <div x-show="hasBlockedContrast" x-cloak class="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900">
-                <p class="font-semibold">Colors need more contrast</p>
-                <p class="mt-1 leading-relaxed">
-                    Your brand and background colors are too close together, so the join page and saved card can become unreadable. Use a darker background, a brighter accent, or increase the contrast between them before saving.
-                </p>
-            </div>
-
-            <div x-show="cardDesign === 'classic' && !hasBlockedContrast && (hasLowContrastPreview || hasVeryLightBackground)" x-cloak class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-                <p class="font-semibold">Preview warning</p>
-                <p class="mt-1 leading-relaxed">
-                    This combination will save, but it may still look washed out on the join page or wallet handoff. The safest fix is a darker background and a more distinct accent color.
-                </p>
-            </div>
-
-            <div class="border-t border-stone-100 pt-5">
-                <h2 class="text-lg font-semibold text-stone-900">Apple and Google Wallet</h2>
-                <p class="mt-1 text-sm text-stone-600">Keep your current logos or upload replacements. PNG, JPG or WebP, up to 2 MB each. Simple, Illustrated and Photo supply their own background artwork. Check the Wallet preview before saving.</p>
-            </div>
-
-            <div class="grid grid-cols-1 items-stretch gap-4">
-                @php
-                    $logoPreviewUrl = $isEdit ? $program?->logo_url : $store->logo_url;
-                    $passLogoPreviewUrl = $isEdit ? $program?->pass_logo_url : $store->pass_logo_url;
-                    $passHeroPreviewUrl = $isEdit ? $program?->pass_hero_image_url : $store->pass_hero_image_url;
-                    $assetPreviewLabel = $isEdit ? 'Current' : 'From store';
-                    $imageFields = [
-                        ['id' => 'logo', 'label' => 'Customer card logo', 'helper' => 'Your logo on the customer join page and web card.', 'previewUrl' => $logoPreviewUrl, 'imgClass' => 'h-20 w-20 object-contain'],
-                        ['id' => 'pass_logo', 'label' => 'Wallet logo', 'helper' => 'A clear logo with space around the edges. Used on saved Wallet cards and posters.', 'previewUrl' => $passLogoPreviewUrl, 'imgClass' => 'h-12 w-20 object-contain'],
-                        ['id' => 'pass_hero_image', 'label' => 'Wallet banner image', 'helper' => 'A wide image for saved Wallet cards. Recommended: at least 750 × 288 px; edges may be cropped.', 'previewUrl' => $passHeroPreviewUrl, 'imgClass' => 'h-20 w-full max-w-[8rem] object-cover'],
-                    ];
-                @endphp
-
-                @foreach($imageFields as $field)
-                    <div x-show="cardDesign === 'classic' || '{{ $field['id'] }}' !== 'pass_hero_image'">
-                    <x-ui.image-upload-field
-                        :id="$field['id']"
-                        :helper="$field['helper']"
-                        :label="$field['label']"
-                        :preview-url="$field['previewUrl']"
-                        :img-class="$field['imgClass']"
-                        :existing-label="$assetPreviewLabel"
-                    >
-                        <x-input-error :messages="$errors->get($field['id'])" class="mt-2" />
-                    </x-ui.image-upload-field>
-                    </div>
-                @endforeach
-            </div>
-            @if(!$isEdit && ($store->logo_path || $store->pass_logo_path || $store->pass_hero_image_path))
-                <p class="text-xs text-stone-500">Uses your store images by default. Upload only if this card needs different artwork.</p>
-            @endif
-
-                </div>
-            </details>
 
             <div class="border-t border-stone-100 pt-5">
                 <h2 class="text-lg font-semibold text-stone-900">Reward protection</h2>
@@ -257,7 +198,7 @@
             </details>
 
             <p class="text-sm text-stone-500">Changes take effect when you save. Existing customers keep their progress.</p>
-            <p x-show="hasBlockedContrast" x-cloak role="status" class="text-sm text-red-700">Open Card design and choose colours with more contrast to enable saving.</p>
+            <p x-show="hasBlockedContrast" x-cloak role="status" class="text-sm text-red-700">Choose colours with more contrast to enable saving.</p>
             <div class="flex flex-wrap gap-3">
                 <x-ui.button type="submit" variant="primary" :loading-text="$isEdit ? 'Saving…' : 'Creating card…'" x-bind:disabled="hasBlockedContrast" x-bind:aria-disabled="hasBlockedContrast ? 'true' : 'false'">{{ $isEdit ? 'Save loyalty card' : 'Create loyalty card' }}</x-ui.button>
                 <x-ui.button href="{{ route('merchant.stores.programs.index', $store) }}" variant="secondary">Back to cards</x-ui.button>
@@ -267,9 +208,13 @@
             </div>
         </form>
 
-        <div class="min-w-0 space-y-5 h-fit">
-            <h2 class="text-xl font-semibold text-stone-900">Card preview</h2>
-            <x-wallet-pass-preview :preview-data="$walletPreview ?? []" />
+        <aside class="kawhe-setup-preview kawhe-setup-preview--sticky min-w-0">
+          <div class="w-full min-w-0 space-y-5">
+            <section id="loyalty-card-preview" class="space-y-3 text-center scroll-mt-6">
+                <h2 class="text-[28px] font-bold leading-tight">Card preview</h2>
+                <x-wallet-pass-preview :preview-data="$walletPreview ?? []" :source-wallet-logo="$program?->pass_logo_url ?? $store->pass_logo_url" onboarding />
+                <p class="mx-auto max-w-[23rem] text-sm leading-tight">Sample Wallet pass. QR and manual code are for preview only.</p>
+            </section>
 
             @if($isEdit && isset($walletHealth))
                 <details class="rounded-2xl border border-stone-200 bg-white p-5">
@@ -344,16 +289,52 @@
                     </p>
                 </div>
             @endif
-        </div>
+          </div>
+        </aside>
     </div>
 </div>
+
+<dialog id="unsaved-card-dialog" aria-labelledby="unsaved-card-title" class="w-full max-w-md rounded-2xl border border-stone-200 bg-white p-6 text-stone-900 shadow-xl">
+    <h2 id="unsaved-card-title" class="text-xl font-semibold">Leave without saving?</h2>
+    <p class="mt-3 text-sm text-stone-600">Your card has unsaved changes. Keep editing to save them, or leave to discard them.</p>
+    <div class="mt-5 flex flex-wrap gap-3">
+        <x-ui.button id="keep-editing-card" variant="primary" autofocus>Keep editing</x-ui.button>
+        <x-ui.button id="leave-card-page" variant="secondary">Leave without saving</x-ui.button>
+    </div>
+</dialog>
 
 @push('scripts')
 <script>
     document.addEventListener('DOMContentLoaded', () => {
         const form = document.getElementById('loyalty-card-form');
         if (!form) return;
-        let changed = false;
+        const snapshot = () => JSON.stringify(Array.from(new FormData(form).entries())
+            .filter(([name]) => !['_token', '_method'].includes(name))
+            .map(([name, value]) => [name, value instanceof File ? (value.name ? [value.name, value.size, value.lastModified] : null) : value]));
+        const initialState = snapshot();
+        let submitted = false;
+        const hasChanges = () => !submitted && snapshot() !== initialState;
+        const leaveDialog = document.getElementById('unsaved-card-dialog');
+        let pendingDestination = null;
+        document.addEventListener('click', (event) => {
+            if (event.defaultPrevented || event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+            const link = event.target.closest('a[href]');
+            if (!link || link.hasAttribute('download') || (link.target && link.target !== '_self')) return;
+            const destination = new URL(link.href, window.location.href);
+            if (!['http:', 'https:'].includes(destination.protocol)) return;
+            if (destination.origin === location.origin && destination.pathname === location.pathname && destination.search === location.search) return;
+            if (!hasChanges()) return;
+            event.preventDefault();
+            pendingDestination = destination.href;
+            if (!leaveDialog.open) leaveDialog.showModal();
+        });
+        document.getElementById('keep-editing-card').addEventListener('click', () => leaveDialog.close());
+        leaveDialog.addEventListener('close', () => { pendingDestination = null; });
+        document.getElementById('leave-card-page').addEventListener('click', () => {
+            if (!pendingDestination) return;
+            submitted = true;
+            window.location.assign(pendingDestination);
+        });
         const reveal = (field) => {
             let section = field.closest('details');
             while (section) {
@@ -361,9 +342,7 @@
                 section = section.parentElement.closest('details');
             }
         };
-        form.addEventListener('input', () => { changed = true; });
         form.addEventListener('change', (event) => {
-            changed = true;
             const input = event.target;
             if (input.type !== 'file') return;
             const file = input.files?.[0];
@@ -374,13 +353,10 @@
                 input.reportValidity();
             }
         });
-        form.querySelector('#signup-fields')?.addEventListener('click', (event) => {
-            if (event.target.closest('button')) changed = true;
-        });
         form.addEventListener('invalid', (event) => reveal(event.target), true);
-        form.addEventListener('submit', () => { changed = false; });
+        form.addEventListener('submit', () => { submitted = true; });
         window.addEventListener('beforeunload', (event) => {
-            if (!changed) return;
+            if (!hasChanges()) return;
             event.preventDefault();
             event.returnValue = '';
         });
