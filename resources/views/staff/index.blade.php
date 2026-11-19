@@ -1,47 +1,75 @@
-<x-merchant-design-layout title="Your team" subtitle="Give each staff member access to the cafés and actions they need.">
-    @if(session('status'))<p role="status" class="rounded-lg bg-brand-50 p-4 text-brand-700">{{ session('status') }}</p>@endif
-    @if($errors->any())<div role="alert" class="rounded-lg bg-red-50 p-4 text-red-800">@foreach($errors->all() as $error)<p>{{ $error }}</p>@endforeach</div>@endif
+<x-merchant-design-layout title="Your team" subtitle="Manage your team and their access at each café.">
+<div class="team-page space-y-6">
+    @if(session('status'))<p role="status" class="rounded-xl bg-brand-50 p-4 text-sm text-brand-800">{{ session('status') }}</p>@endif
+    @if($errors->any())<div role="alert" class="rounded-xl bg-red-50 p-4 text-sm text-red-800">@foreach($errors->all() as $error)<p>{{ $error }}</p>@endforeach</div>@endif
+    @php
+        $staffLogins = $members->flatten(1)->unique('user_id')->count();
+        $pendingCount = $invitations->flatten(1)->filter(fn ($invitation) => $invitation->expires_at->isFuture())->count();
+    @endphp
+    @if($stores->isNotEmpty())
+        <div class="grid grid-cols-3 gap-3">
+            @foreach([['Stores', $stores->count()], ['Staff logins', $staffLogins], ['Pending invites', $pendingCount]] as [$label, $count])
+                <div class="rounded-xl border border-stone-200 bg-white p-4 sm:p-5"><p class="text-xs font-medium text-stone-500 sm:text-sm">{{ $label }}</p><p class="mt-2 text-2xl font-semibold text-brand-900">{{ $count }}</p></div>
+            @endforeach
+        </div>
+        <div class="flex items-start gap-3 rounded-xl bg-brand-50 p-4 text-sm text-brand-900">
+            <x-merchant-icon name="team" class="mt-0.5 size-5 shrink-0" />
+            <div><p class="font-semibold">Your owner account is ready to use</p><p class="mt-1 leading-relaxed">Your owner login works in the free Kawhe Merchant app for stamping and redeeming. Invite staff only when someone else needs their own login. The owner does not use a staff place.</p></div>
+        </div>
+        @if($stores->count() > 1)
+            <nav aria-label="Jump to a store team" class="flex flex-wrap gap-2">
+                @foreach($stores as $store)
+                    <a href="#team-store-{{ $store->id }}" class="team-action inline-flex items-center gap-2 rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm font-medium text-brand-900 hover:bg-brand-50"><x-merchant-icon name="stores" class="size-4" />{{ $store->name }}<span class="rounded-full bg-stone-100 px-2 py-0.5 text-xs text-stone-600">{{ $members->get($store->id, collect())->count() }}</span></a>
+                @endforeach
+            </nav>
+        @endif
+    @endif
     @forelse($stores as $store)
-        @php $capacity = $staffCapacity[$store->id]; @endphp
-        <section aria-labelledby="team-store-{{ $store->id }}" class="space-y-6">
-            <h2 id="team-store-{{ $store->id }}" class="text-xl font-semibold">{{ $store->name }}</h2>
-            <p class="text-sm text-stone-600">Your owner login works in the free Kawhe Merchant app for stamping and redeeming. Invite staff only when someone else needs their own login.</p>
-            <p class="text-sm text-stone-600">@if($capacity['limit'] === null)Pro includes unlimited staff for this café.@else{{ $capacity['occupied'] }} of {{ $capacity['limit'] }} staff places used on Free, including pending invitations. The owner does not use a staff place.@endif</p>
-            <x-ui.card class="dashboard-panel space-y-4 p-6">
-                <div class="hidden grid-cols-4 gap-4 text-sm font-semibold text-stone-600 md:grid" aria-hidden="true"><span>Member</span><span>Store</span><span>Permissions</span><span>Status</span></div>
-                <div class="grid gap-3 md:grid-cols-4">
-                    <p>{{ auth()->user()->name }} · owner</p><p>{{ $store->name }}</p><p>Full access, including stamps and rewards</p><p>Active</p>
+        @php
+            $capacity = $staffCapacity[$store->id];
+            $storeMembers = $members->get($store->id, collect());
+        @endphp
+        <section id="team-store-{{ $store->id }}" aria-labelledby="team-store-title-{{ $store->id }}" class="scroll-mt-6 overflow-hidden rounded-2xl border border-stone-200 bg-white">
+            <header class="flex flex-wrap items-center justify-between gap-4 border-b border-stone-100 bg-stone-50/60 px-5 py-5 sm:px-6">
+                <div class="flex min-w-0 items-center gap-3">
+                    <span class="grid size-11 shrink-0 place-items-center overflow-hidden rounded-xl border border-stone-200 bg-white text-brand-800">@if($store->logo_url)<img src="{{ $store->logo_url }}" alt="" class="h-full w-full object-contain p-1.5">@else<x-merchant-icon name="stores" class="size-5" />@endif</span>
+                    <div class="min-w-0"><h2 id="team-store-title-{{ $store->id }}" class="break-words text-lg font-semibold text-stone-900">{{ $store->name }}</h2><p class="mt-1 text-xs text-stone-500">{{ $store->address ?: 'Team access for this café' }}</p></div>
                 </div>
-                @forelse($members->get($store->id, collect()) as $member)
-                    <div x-data="{ editing: false }" class="border-t border-stone-100 pt-4">
-                    <div class="grid gap-3 md:grid-cols-4">
-                        <div class="min-w-0"><div class="flex items-center gap-2"><p class="break-words">{{ $member->user->name }} · staff</p><button type="button" @click="editing = !editing" :aria-expanded="editing" aria-controls="member-permissions-{{ $member->id }}" aria-label="Edit permissions for {{ $member->user->name }} at {{ $store->name }}" title="Edit permissions" class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-brand-700 hover:bg-brand-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-600"><svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m16 4 4 4M4 20l4-1L20 7a2.8 2.8 0 0 0-4-4L4 15l-1 6Z" /></svg></button></div><p class="mt-1 break-words text-sm text-stone-600">{{ $member->user->email }}</p></div>
-                        <p>{{ $store->name }}</p>
-                        <p>{{ $member->can_stamp ? 'Stamp cards' : '' }}{{ $member->can_stamp && $member->can_redeem ? ' & ' : '' }}{{ $member->can_redeem ? 'Redeem rewards' : '' }}{{ !$member->can_stamp && !$member->can_redeem ? 'No actions allowed' : '' }}</p>
-                        <p>Active</p>
+                <div class="flex flex-wrap gap-2 text-xs font-medium"><span class="rounded-full bg-brand-50 px-2.5 py-1 text-brand-800">{{ $storeMembers->count() }} staff</span><span class="rounded-full bg-stone-100 px-2.5 py-1 text-stone-600">{{ $capacity['limit'] === null ? 'Pro · unlimited staff' : 'Free · '.$capacity['occupied'].' / '.$capacity['limit'].' places' }}</span></div>
+            </header>
+            <div class="px-5 sm:px-6">
+                <div class="team-member-row hidden border-b border-stone-100 py-3 text-xs font-semibold uppercase tracking-wide text-stone-500 md:grid" aria-hidden="true"><span>Member</span><span>Permissions</span><span>Status</span><span class="sr-only">Actions</span></div>
+                <div class="team-member-row py-4">
+                    <div class="team-person flex min-w-0 items-center gap-3"><span class="grid size-9 shrink-0 place-items-center rounded-full bg-brand-100 text-sm font-semibold text-brand-800">{{ \Illuminate\Support\Str::upper(\Illuminate\Support\Str::substr(auth()->user()->name, 0, 1)) }}</span><div class="min-w-0"><div class="flex flex-wrap items-center gap-2"><p class="text-sm font-semibold text-stone-900">{{ auth()->user()->name }}</p><span class="rounded-full bg-stone-100 px-2 py-0.5 text-xs text-stone-600">Owner · you</span></div><p class="mt-1 break-all text-xs text-stone-500">{{ auth()->user()->email }}</p></div></div>
+                    <p class="text-xs leading-relaxed text-stone-600">Full access, including stamps and rewards</p>
+                    <span class="team-status w-fit rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700">Active</span><span></span>
+                </div>
+                @forelse($storeMembers as $member)
+                    <div x-data="{ editing: false }" class="border-t border-stone-100 py-4">
+                        <div class="team-member-row">
+                            <div class="team-person flex min-w-0 items-center gap-3"><span class="grid size-9 shrink-0 place-items-center rounded-full bg-stone-100 text-sm font-semibold text-stone-600">{{ \Illuminate\Support\Str::upper(\Illuminate\Support\Str::substr($member->user->name, 0, 1)) }}</span><div class="min-w-0"><p class="break-words text-sm font-semibold text-stone-900">{{ $member->user->name }}</p><p class="mt-1 break-all text-xs text-stone-500">{{ $member->user->email }}</p></div></div>
+                            <div class="flex flex-wrap gap-1.5 text-xs">@if($member->can_stamp)<span class="rounded-md bg-brand-50 px-2 py-1 text-brand-800">Stamp cards</span>@endif @if($member->can_redeem)<span class="rounded-md bg-stone-100 px-2 py-1 text-stone-700">Redeem rewards</span>@endif @if(!$member->can_stamp && !$member->can_redeem)<span class="text-stone-500">No actions allowed</span>@endif</div>
+                            <span class="team-status w-fit rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700">Active</span>
+                            <button type="button" @click="editing = !editing" :aria-expanded="editing" aria-controls="member-permissions-{{ $member->id }}" aria-label="Edit permissions for {{ $member->user->name }} at {{ $store->name }}" title="Edit permissions" class="team-action team-edit team-icon-action inline-flex items-center justify-center rounded-lg text-brand-800 hover:bg-brand-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-700"><x-merchant-icon name="edit" /></button>
+                        </div>
+                        <div id="member-permissions-{{ $member->id }}" x-show="editing" x-cloak class="mt-4 space-y-4 rounded-xl border border-stone-200 bg-stone-50 p-4">
+                            <p class="text-sm font-semibold">Permissions for {{ $member->user->name }}</p>
+                            <form method="POST" action="{{ route('merchant.staff.update', [$store, $member]) }}" class="space-y-4">
+                                @csrf @method('PATCH')
+                                <fieldset><legend class="mb-3 text-sm font-semibold">Permissions</legend><div class="flex flex-wrap gap-4 text-sm"><label class="flex items-center gap-2"><input type="checkbox" name="can_stamp" value="1" @checked($member->can_stamp)> Stamp cards</label><label class="flex items-center gap-2"><input type="checkbox" name="can_redeem" value="1" @checked($member->can_redeem)> Redeem rewards</label></div></fieldset>
+                                <div class="flex flex-wrap gap-2"><x-ui.button type="submit" variant="primary" size="sm" class="team-action">Save permissions</x-ui.button><button type="button" @click="editing = false" class="team-action inline-flex items-center rounded-lg px-3 py-2 text-sm text-stone-600 hover:bg-stone-100">Cancel</button></div>
+                            </form>
+                            <form method="POST" action="{{ route('merchant.staff.revoke', [$store, $member]) }}" onsubmit="return confirm('Remove this staff member’s access to this store? They will no longer be able to stamp or redeem here.');">@csrf @method('DELETE')<x-ui.button type="submit" variant="secondary" size="sm" class="team-action text-red-700">Remove access</x-ui.button></form>
+                        </div>
                     </div>
-                    <div id="member-permissions-{{ $member->id }}" x-show="editing" x-cloak class="mt-4 space-y-4 rounded-xl border border-stone-200 bg-stone-50 p-4">
-                        <p class="font-semibold">{{ $member->user->name }} · {{ $store->name }}</p><p class="break-words text-sm text-stone-600">{{ $member->user->email }}</p>
-                        <form method="POST" action="{{ route('merchant.staff.update', [$store, $member]) }}" class="space-y-4">
-                            @csrf @method('PATCH')
-                            <fieldset><legend class="mb-3 text-sm font-semibold">Permissions</legend><div class="flex flex-wrap gap-4 text-sm">
-                                <label class="flex items-center gap-2"><input type="checkbox" name="can_stamp" value="1" @checked($member->can_stamp)> Stamp cards</label>
-                                <label class="flex items-center gap-2"><input type="checkbox" name="can_redeem" value="1" @checked($member->can_redeem)> Redeem rewards</label>
-                            </div></fieldset>
-                            <x-ui.button type="submit" variant="secondary" class="w-full">Save permissions</x-ui.button>
-                        </form>
-                        <form method="POST" action="{{ route('merchant.staff.revoke', [$store, $member]) }}" onsubmit="return confirm('Remove this staff member’s access to this store? They will no longer be able to stamp or redeem here.');">@csrf @method('DELETE')<x-ui.button type="submit" variant="danger" class="w-full">Remove access</x-ui.button></form>
-                    </div>
-                    </div>
-                @empty<p class="text-sm text-stone-500">No staff have joined this store yet.</p>@endforelse
-                <p class="text-sm text-stone-600">Staff cannot manage your stores, billing, customer lists, or other staff.</p>
-            </x-ui.card>
+                @empty<p class="border-t border-dashed border-stone-200 py-4 text-sm text-stone-500">No staff have joined this store yet.</p>@endforelse
+                <div class="space-y-3 border-t border-stone-100 py-4"><p class="text-xs text-stone-500">@if($capacity['limit'] === null)Pro includes unlimited staff for this café.@else{{ $capacity['occupied'] }} of {{ $capacity['limit'] }} staff places used on Free, including pending invitations. The owner does not use a staff place.@endif</p>
             @if($capacity['limit'] !== null && $capacity['occupied'] >= $capacity['limit'])
                 <div class="max-w-[620px] rounded-xl border border-stone-200 bg-stone-50 p-4 text-sm text-stone-700">Both Free staff places are in use. Cancel a pending invitation, remove a staff member, or <a href="{{ route('billing.index') }}" class="font-semibold text-brand-700 underline underline-offset-2">upgrade to Pro</a> to invite more people.</div>
             @else
-            <details class="team-invite max-w-[620px]" @if($errors->any() && old('invitation_store_id') == $store->id) open @endif>
-                <summary class="flex max-w-[260px] min-h-12 cursor-pointer items-center justify-center rounded-lg bg-brand-600 px-4 py-3 text-sm font-semibold text-white">Invite staff</summary>
-                <form method="POST" action="{{ route('merchant.staff.invite', $store) }}" class="mt-6 space-y-6">
+            <details class="team-invite" @if($errors->any() && old('invitation_store_id') == $store->id) open @endif>
+                <summary class="team-invite-toggle inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg bg-brand-700 px-3 py-2 text-sm font-semibold text-white"><x-merchant-icon name="team" class="size-4" />Invite staff</summary>
+                <form method="POST" action="{{ route('merchant.staff.invite', $store) }}" class="mt-4 max-w-xl space-y-4 rounded-xl border border-stone-200 bg-stone-50 p-4 sm:p-5">
                     @csrf
                     <input type="hidden" name="invitation_store_id" value="{{ $store->id }}">
                     <h3 class="text-xl font-semibold">Invite a staff member</h3>
@@ -57,15 +85,17 @@
                         </div>
                     </fieldset>
                     <p class="text-sm text-stone-600">Invitations expire in seven days. Your team member gets their own login; they do not need to create a store.</p>
-                    <x-ui.button type="submit" class="w-full" data-loading-text="Sending invitation…">Send invitation</x-ui.button>
+                    <x-ui.button type="submit" class="team-action" data-loading-text="Sending invitation…">Send invitation</x-ui.button>
                 </form>
             </details>
             @endif
-            <section aria-labelledby="pending-invitations-{{ $store->id }}" class="rounded-2xl border border-stone-200 bg-white p-5 sm:p-6">
-                <div class="flex items-center gap-2"><h3 id="pending-invitations-{{ $store->id }}" class="text-base font-semibold text-stone-900">Pending invitations</h3><span class="rounded-full bg-stone-100 px-2 py-0.5 text-xs font-medium text-stone-600">{{ $invitations->get($store->id, collect())->count() }}</span></div>
+                </div>
+            </div>
+            <section aria-labelledby="pending-invitations-{{ $store->id }}" class="border-t border-stone-100 px-5 py-5 sm:px-6">
+                <div class="flex items-center gap-2"><h3 id="pending-invitations-{{ $store->id }}" class="text-base font-semibold text-stone-900">Invitations</h3><span class="rounded-full bg-stone-100 px-2 py-0.5 text-xs font-medium text-stone-600">{{ $invitations->get($store->id, collect())->count() }}</span></div>
                 <div class="mt-4 space-y-3">
                     @forelse($invitations->get($store->id, collect()) as $invitation)
-                        <article class="flex flex-col gap-4 rounded-xl border border-stone-200 bg-stone-50/50 p-4 sm:p-5 lg:flex-row lg:items-center lg:justify-between">
+                        <article class="flex flex-col gap-3 rounded-xl border border-stone-200 bg-stone-50/50 p-3 sm:flex-row sm:items-center sm:justify-between sm:p-4">
                             <div class="min-w-0">
                                 <div class="flex flex-wrap items-center gap-2">
                                     <h4 class="break-all text-base font-semibold text-stone-900">{{ $invitation->email }}</h4>
@@ -76,12 +106,12 @@
                                     @unless($invitation->expires_at->isPast())<div class="flex flex-wrap gap-1"><dt class="font-medium text-stone-700">Expires:</dt><dd>{{ $invitation->expires_at->diffForHumans() }}</dd></div>@endunless
                                 </dl>
                             </div>
-                            <div class="flex flex-wrap items-center gap-2 lg:shrink-0 lg:justify-end">
+                            <div class="flex shrink-0 flex-wrap items-center gap-2">
                                 <form method="POST" action="{{ route('merchant.staff.invite', $store) }}">@csrf
                                     <input type="hidden" name="email" value="{{ $invitation->email }}"><input type="hidden" name="can_stamp" value="{{ (int)$invitation->can_stamp }}"><input type="hidden" name="can_redeem" value="{{ (int)$invitation->can_redeem }}">
-                                    <x-ui.button type="submit" variant="secondary" size="sm" class="min-h-10 whitespace-nowrap" aria-label="Resend invitation to {{ $invitation->email }}">Resend</x-ui.button>
+                                    <x-ui.button type="submit" variant="secondary" size="sm" class="team-action whitespace-nowrap" aria-label="Resend invitation to {{ $invitation->email }}">Resend</x-ui.button>
                                 </form>
-                                <form method="POST" action="{{ route('merchant.staff.cancel', [$store, $invitation]) }}">@csrf @method('DELETE')<button type="submit" aria-label="Cancel invitation to {{ $invitation->email }}" class="inline-flex min-h-10 items-center justify-center rounded-xl border border-red-200 bg-white px-3 py-2 text-sm font-semibold text-red-700 transition-colors hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2">Cancel</button></form>
+                                <form method="POST" action="{{ route('merchant.staff.cancel', [$store, $invitation]) }}">@csrf @method('DELETE')<button type="submit" aria-label="Cancel invitation to {{ $invitation->email }}" class="team-action inline-flex items-center justify-center rounded-xl border border-red-200 bg-white px-3 py-2 text-sm font-semibold text-red-700 transition-colors hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2">Cancel</button></form>
                             </div>
                         </article>
                     @empty<p class="text-sm text-stone-500">No pending invitations. New invitations will appear here until accepted.</p>@endforelse
@@ -91,4 +121,6 @@
     @empty
         <x-ui.card class="dashboard-panel p-6"><p>No active stores are available. Create or restore a store to invite staff.</p><x-ui.button href="{{ route('merchant.stores.index') }}" variant="secondary" class="mt-4">View stores</x-ui.button></x-ui.card>
     @endforelse
+    @if($stores->isNotEmpty())<p class="text-xs text-stone-500">Staff cannot manage your stores, billing, customer lists, or other staff.</p>@endif
+</div>
 </x-merchant-design-layout>
