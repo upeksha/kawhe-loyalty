@@ -163,8 +163,9 @@
             @php
                 $registrationFormConfig = \App\Support\RegistrationFormConfig::normalize($formConfig);
             @endphp
-            <details id="signup-fields" class="rounded-xl border border-stone-200 p-4" @if(!$isEdit || $errors->any()) open @endif>
-                <summary class="cursor-pointer text-base font-semibold text-stone-900">Customer sign-up form <span class="block mt-1 text-sm font-normal text-stone-500">Email is always required. Extra details are your choice.</span></summary>
+            <section id="signup-fields" aria-labelledby="signup-fields-title" class="rounded-xl border border-stone-200 p-4">
+                <h2 id="signup-fields-title" class="text-base font-semibold text-stone-900">Customer sign-up form</h2>
+                <p class="mt-1 text-sm text-stone-500">Email is always required. Extra details are your choice.</p>
 
             <div
                 class="mt-5"
@@ -172,15 +173,18 @@
             >
                 @include('programs.partials.registration-form-state')
                 <p class="text-sm text-stone-600">Keep joining quick. “Optional” lets customers skip a field; “Required” means they must fill it in.</p>
-                <div class="my-4 flex flex-wrap gap-2">
-                    <button type="button" @click="applyPreset('fastest')" class="rounded-lg border border-stone-300 px-3 py-2 text-sm">Email only</button>
-                    <button type="button" @click="applyPreset('balanced')" class="rounded-lg border border-stone-300 px-3 py-2 text-sm">Café essentials</button>
-                    <button type="button" @click="applyPreset('marketing')" class="rounded-lg border border-stone-300 px-3 py-2 text-sm">More customer details</button>
+                <div class="my-4 flex flex-wrap gap-2" role="group" aria-label="Customer signup presets">
+                    @foreach(['fastest' => 'Email only', 'balanced' => 'Café essentials', 'marketing' => 'More customer details'] as $preset => $label)
+                        <button type="button" @click="applyPreset('{{ $preset }}')" :aria-pressed="activePreset === '{{ $preset }}'"
+                            class="inline-flex items-center rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm font-medium text-stone-700 transition-colors hover:bg-stone-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-700 aria-pressed:border-brand-800 aria-pressed:bg-brand-800 aria-pressed:text-white aria-pressed:hover:bg-brand-800">
+                            {{ $label }}
+                        </button>
+                    @endforeach
                 </div>
                 <p class="mb-4 text-xs text-stone-500">Café essentials adds optional first name and birthday. Presets update the choices below; nothing changes until you save.</p>
-                <div class="flex items-center justify-between border-b border-stone-100 py-3 text-sm"><span>Email</span><span class="font-medium">Always required</span></div>
+                <div class="mb-3 flex items-center justify-between border-b border-stone-100 py-3 text-sm"><span>Email</span><span class="font-medium">Always required</span></div>
                 @foreach(\App\Support\RegistrationFormConfig::fieldDefinitions() as $key => $meta)
-                    <div class="flex flex-wrap items-center justify-between gap-3 border-b border-stone-100 py-3">
+                    <div class="mb-3 flex flex-wrap items-center justify-between gap-3 border-b border-stone-100 py-3 last:mb-0">
                         <label for="signup-{{ $key }}" class="text-sm font-medium text-stone-700">{{ $meta['label'] }}</label>
                         <input type="hidden" name="{{ $key }}_enabled" x-bind:value="config.{{ $key }}.enabled ? '1' : '0'">
                         <input type="hidden" name="{{ $key }}_required" x-bind:value="config.{{ $key }}.enabled && config.{{ $key }}.required ? '1' : '0'">
@@ -195,7 +199,7 @@
                 @endforeach
             </div>
 
-            </details>
+            </section>
 
             <p class="text-sm text-stone-500">Changes take effect when you save. Existing customers keep their progress.</p>
             <p x-show="hasBlockedContrast" x-cloak role="status" class="text-sm text-red-700">Choose colours with more contrast to enable saving.</p>

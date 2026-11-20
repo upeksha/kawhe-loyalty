@@ -41,7 +41,7 @@ test('failed card save retains signup choices and unchecked verification', funct
     $config = json_decode(json_decode('"'.$matches[1].'"'), true);
     expect($config['phone'])->toBe(['enabled' => true, 'required' => true]);
     expect($config['first_name'])->toBe(['enabled' => false, 'required' => false]);
-    expect($xpath->query('//*[@id="signup-fields"]/@open')->length)->toBe(1);
+    expect($xpath->query('//section[@id="signup-fields"]')->length)->toBe(1);
     expect((bool) $program->fresh()->require_verification_for_redemption)->toBeTrue();
 });
 

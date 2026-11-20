@@ -1,4 +1,4 @@
-@props(['model' => null, 'compact' => false])
+@props(['model' => null, 'compact' => false, 'embedded' => false])
 
 @php
     $savedTextColour = old('card_text_color', $model?->card_text_color);
@@ -6,7 +6,7 @@
 @endphp
 
 <div
-    @class(['rounded-xl border border-stone-200 bg-stone-50 p-4' => !$compact, 'kawhe-editor-section kawhe-editor-text-colour' => $compact])
+    @class(['rounded-xl border border-stone-200 bg-stone-50 p-4' => !$compact && !$embedded, 'kawhe-editor-section' => $compact && !$embedded, 'kawhe-editor-text-colour' => $compact, 'mt-3 border-t border-stone-200 pt-3' => $embedded])
     x-data="{
         customTextColour: @js($savedTextColour),
         get textBackground() {

@@ -36,11 +36,11 @@
                             </p>
                         </x-ui.alert>
                     </div>
+                    <x-card-text-colour :model="$model" compact embedded />
                 </section>
 
                 <x-card-design-choice :model="$model" section="stamp" visual compact />
                 <x-stamp-appearance :model="$model" compact />
-                <x-card-text-colour :model="$model" compact />
                 <fieldset>
                     <legend class="sr-only">Card logos for Apple and Google Wallet</legend>
                     @php
@@ -56,7 +56,8 @@
                             <div class="min-w-0" @if($classicOnly) x-show="cardDesign === 'classic'" x-cloak @endif>
                                 <label for="{{ $upload['id'] }}" class="mb-1 block text-sm font-semibold">{{ $upload['label'] }}@if($requireLogos) (required)@endif</label>
                                 <label class="kawhe-editor-upload focus-within:ring-2 focus-within:ring-brand-600">
-                                    <span class="min-w-0 truncate" x-text="$refs.{{ $upload['ref'] }}?.files[0]?.name || ({{ $upload['preview'] }} ? @js($upload['label'].' added') : 'No image selected')"></span>
+                                    <img x-show="{{ $upload['preview'] }}" x-cloak :src="{{ $upload['preview'] }}" alt="{{ $upload['label'] }} preview" class="size-9 shrink-0 rounded-md border border-stone-200 bg-stone-100 object-contain p-1">
+                                    <span class="min-w-0 flex-1 truncate" x-text="$refs.{{ $upload['ref'] }}?.files[0]?.name || ({{ $upload['preview'] }} ? @js($upload['label'].' added') : 'No image selected')"></span>
                                     <span class="shrink-0 text-[13px] font-semibold text-brand-800" aria-hidden="true" x-text="{{ $upload['preview'] }} ? 'Replace' : 'Choose'"></span>
                                     <input type="file" id="{{ $upload['id'] }}" name="{{ $upload['id'] }}" x-ref="{{ $upload['ref'] }}"
                                         :required="{{ $requireLogos && blank($model?->{$upload['path']}) ? 'true' : 'false' }} && ({{ $classicOnly ? "cardDesign === 'classic'" : 'true' }})"
