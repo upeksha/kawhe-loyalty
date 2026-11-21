@@ -65,26 +65,34 @@
                         <x-ui.button href="{{ route('merchant.stores.programs.index', $store) }}" variant="secondary" size="sm">View all cards</x-ui.button>
                     </div>
 
-                    @if($defaultProgram)
-                        <div class="mt-5 rounded-2xl bg-stone-50 p-4 sm:p-5">
-                            <div class="flex flex-wrap items-center gap-2">
-                                <h3 class="break-words text-base font-semibold text-stone-900">{{ $defaultProgram->name }}</h3>
-                                <x-ui.badge variant="success">Default card</x-ui.badge>
-                                @if($defaultProgram->trashed())
-                                    <x-ui.badge variant="warning">Archived</x-ui.badge>
-                                @endif
+                    @forelse($loyaltyPrograms as $program)
+                        <article data-store-card="{{ $program->id }}" class="mt-4 rounded-2xl bg-stone-50 p-4 sm:p-5">
+                            <div class="flex items-start justify-between gap-3">
+                                <div class="flex min-w-0 flex-wrap items-center gap-2">
+                                    <h3 class="break-words text-base font-semibold text-stone-900">{{ $program->name }}</h3>
+                                    @if($program->is_default)
+                                        <x-ui.badge variant="success">Default card</x-ui.badge>
+                                    @endif
+                                </div>
+                                @unless($store->trashed())
+                                <a href="{{ route('merchant.stores.programs.edit', [$store, $program]) }}" aria-label="Edit {{ $program->name }}" title="Edit card" class="inline-flex size-9 shrink-0 items-center justify-center rounded-lg text-brand-800 transition-colors hover:bg-brand-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-700">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                        <path d="m16.5 3.5 4 4M4 20l4.5-1 12-12a2.83 2.83 0 0 0-4-4l-12 12L4 20Z" />
+                                    </svg>
+                                </a>
+                                @endunless
                             </div>
                             <dl class="mt-4 grid gap-4 border-t border-stone-200 pt-4 text-sm sm:grid-cols-3">
-                                <div class="min-w-0"><dt class="text-stone-500">Reward</dt><dd class="mt-1 break-words font-semibold text-stone-900">{{ $defaultProgram->reward_title }}</dd></div>
-                                <div><dt class="text-stone-500">Stamps needed</dt><dd class="mt-1 font-semibold text-stone-900">{{ $defaultProgram->reward_target }} stamps</dd></div>
-                                <div><dt class="text-stone-500">Customers</dt><dd class="mt-1 font-semibold text-stone-900">{{ number_format($defaultProgram->loyalty_accounts_count ?? 0) }}</dd></div>
+                                <div class="min-w-0"><dt class="text-stone-500">Reward</dt><dd class="mt-1 break-words font-semibold text-stone-900">{{ $program->reward_title }}</dd></div>
+                                <div><dt class="text-stone-500">Stamps needed</dt><dd class="mt-1 font-semibold text-stone-900">{{ $program->reward_target }} stamps</dd></div>
+                                <div><dt class="text-stone-500">Customers</dt><dd class="mt-1 font-semibold text-stone-900">{{ number_format($program->loyalty_accounts_count ?? 0) }}</dd></div>
                             </dl>
-                        </div>
-                    @else
-                        <x-ui.empty-state class="mt-5" heading="No loyalty card found" description="Create a loyalty card before sharing a join QR.">
+                        </article>
+                    @empty
+                        <x-ui.empty-state class="mt-5" heading="No active loyalty cards" description="Create a loyalty card before sharing a join QR.">
                             <x-ui.button href="{{ $store->trashed() ? route('merchant.stores.index') : route('merchant.stores.programs.create', $store) }}">{{ $store->trashed() ? 'View stores' : 'Create a loyalty card' }}</x-ui.button>
                         </x-ui.empty-state>
-                    @endif
+                    @endforelse
                 </section>
 
 

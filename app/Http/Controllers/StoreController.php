@@ -127,10 +127,10 @@ class StoreController extends Controller
     {
         $store = Store::queryForUser(Auth::user(), includeArchived: true)->whereKey($store->id)->firstOrFail();
         $walletHealth = $this->walletHealth($store);
-        $defaultProgram = $store->resolvedDefaultProgram();
-        $defaultProgram?->loadCount('loyaltyAccounts');
+        $loyaltyPrograms = $store->loyaltyPrograms()->withCount('loyaltyAccounts')
+            ->orderByDesc('is_default')->orderBy('name')->get();
 
-        return view('stores.edit', compact('store', 'walletHealth', 'defaultProgram'));
+        return view('stores.edit', compact('store', 'walletHealth', 'loyaltyPrograms'));
     }
 
     /**
