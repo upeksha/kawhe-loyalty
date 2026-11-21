@@ -25,8 +25,10 @@ test('onboarding wizard can create and advance a first store with safe defaults'
     $defaultProgram = $store->resolvedDefaultProgram();
 
     expect($store->brand_color)->toBe(Store::DEFAULT_BRAND_COLOR)
-        ->and($store->background_color)->toBe(Store::DEFAULT_BACKGROUND_COLOR)
+        ->and($store->background_color)->toBe('#263E30')
         ->and($store->registration_form_config['email']['enabled'])->toBeTrue()
+        ->and($store->registration_form_config['first_name'])->toBe(['enabled' => true, 'required' => false])
+        ->and($store->registration_form_config['birthday'])->toBe(['enabled' => true, 'required' => false])
         ->and($store->onboarding_step)->toBe(Store::ONBOARDING_STEP_CARD_DESIGN)
         ->and($defaultProgram)->not->toBeNull()
         ->and($defaultProgram->slug)->toBe($store->slug)
