@@ -1,6 +1,12 @@
 @php
     $brandColor = old('brand_color', $store->brand_color ?? '#0EA5E9');
-    $bgColor = old('background_color', $store->background_color ?? '#1F2937');
+    $defaultBgColor = $store->background_color ?? '#263E30';
+    if ($store->onboarding_step === \App\Models\Store::ONBOARDING_STEP_CARD_DESIGN
+        && !$store->logo_path && !$store->pass_logo_path
+        && strtoupper($defaultBgColor) === \App\Models\Store::DEFAULT_BACKGROUND_COLOR) {
+        $defaultBgColor = '#263E30';
+    }
+    $bgColor = old('background_color', $defaultBgColor);
 @endphp
 <x-onboarding-layout class="kawhe-card-editor">
     <x-slot name="header">Setup · Create your card</x-slot>

@@ -2,7 +2,7 @@
     $inputClass = 'block w-full min-h-11 rounded-xl border border-stone-300 bg-white px-4 py-2.5 text-base text-stone-900 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500';
     $defaultTarget = old('reward_target', $store?->reward_target ?? 9);
     $defaultReward = old('reward_title', $store?->reward_title ?? 'Free regular coffee');
-    $expandStore = !filled(old('name', $store?->name ?? '')) || !filled(old('address', $store?->address ?? '')) || $errors->has('name') || $errors->has('address');
+    $expandStore = $errors->has('name') || $errors->has('address');
 @endphp
 <x-onboarding-layout>
     <x-slot name="header">Set up your reward</x-slot>
@@ -34,7 +34,7 @@
                         <div class="min-w-0"><h2 class="text-sm text-stone-500">Your store</h2><p class="mt-1 break-words font-semibold" x-text="storeName.trim() || 'Add your store name'"></p></div>
                         <button type="button" @click="showStoreDetails = !showStoreDetails" :aria-expanded="showStoreDetails" aria-controls="onboarding-store-details" class="min-h-11 px-3 font-semibold text-brand-700" x-text="showStoreDetails ? 'Close' : 'Edit'">Edit</button>
                     </div>
-                    <div id="onboarding-store-details" x-show="showStoreDetails" class="mt-4 space-y-4 border-t border-stone-200 pt-4">
+                    <div id="onboarding-store-details" x-show="showStoreDetails" x-cloak class="mt-4 space-y-4 border-t border-stone-200 pt-4">
                         <div><label for="name" class="mb-2 block text-sm font-medium">Store name</label><input id="name" name="name" x-model="storeName" value="{{ old('name', $store?->name ?? '') }}" @invalid="showStoreDetails = true" maxlength="255" required class="{{ $inputClass }}"><x-input-error :messages="$errors->get('name')" class="mt-2" /></div>
                         <div><label for="address" class="mb-2 block text-sm font-medium">Address <span class="font-normal text-stone-500">(optional)</span></label><input id="address" name="address" value="{{ old('address', $store?->address ?? '') }}" maxlength="255" class="{{ $inputClass }}"><x-input-error :messages="$errors->get('address')" class="mt-2" /></div>
                     </div>

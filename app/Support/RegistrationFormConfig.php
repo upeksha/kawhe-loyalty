@@ -8,6 +8,16 @@ class RegistrationFormConfig
 {
     public const OPTIONAL_FIELDS = ['first_name', 'last_name', 'phone', 'birthday'];
 
+    public static function onboardingDefaults(): array
+    {
+        return self::normalize([
+            'first_name' => ['enabled' => true, 'required' => false],
+            'last_name' => ['enabled' => false, 'required' => false],
+            'phone' => ['enabled' => false, 'required' => false],
+            'birthday' => ['enabled' => true, 'required' => false],
+        ]);
+    }
+
     /**
      * @return array<string, array{label: string, placeholder: string}>
      */

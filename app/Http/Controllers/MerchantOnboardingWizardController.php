@@ -127,6 +127,8 @@ class MerchantOnboardingWizardController extends Controller
         }
 
         $store = Auth::user()->stores()->create(array_merge($validated, [
+            'background_color' => '#263E30',
+            'registration_form_config' => RegistrationFormConfig::onboardingDefaults(),
             'card_design' => \App\Support\CoffeeCardSample::available() ? 'simple' : 'classic',
             'onboarding_step' => Store::ONBOARDING_STEP_CARD_DESIGN,
         ]));
@@ -225,6 +227,14 @@ class MerchantOnboardingWizardController extends Controller
             return $this->index();
         }
         $config = $store->registration_form_config ?? [];
+        if ($store->onboarding_step === Store::ONBOARDING_STEP_CUSTOMER_FORM
+            && !$store->onboarding_completed_at
+            && in_array(RegistrationFormConfig::normalize($config), [
+                RegistrationFormConfig::normalize([]),
+                RegistrationFormConfig::normalize(Store::defaultRegistrationFormConfig()),
+            ], true)) {
+            $config = RegistrationFormConfig::onboardingDefaults();
+        }
 
         return view('merchant.onboarding.wizard.customer-form', compact('store', 'config'));
     }

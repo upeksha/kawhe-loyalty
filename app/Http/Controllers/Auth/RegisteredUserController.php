@@ -68,6 +68,8 @@ class RegisteredUserController extends Controller
                 'address' => null,
                 'reward_target' => 9,
                 'reward_title' => 'Free coffee',
+                'background_color' => '#263E30',
+                'registration_form_config' => \App\Support\RegistrationFormConfig::onboardingDefaults(),
                 'card_design' => \App\Support\CoffeeCardSample::available() ? 'simple' : 'classic',
                 'onboarding_step' => MerchantOnboardingWizardController::STEP_STORE_BASICS,
             ]);

@@ -73,12 +73,12 @@
                     <li class="rounded-xl bg-stone-50 p-4 text-sm leading-6 text-stone-700"><strong class="block text-base text-stone-900">2. On your phone</strong> Open Kawhe Merchant, scan that card and tap “Add 1 stamp”.</li>
                 </ol>
                 <p class="mt-4 text-sm leading-6 text-stone-600">The final step ticks when the stamp is saved. You can go to your dashboard now and finish this test later.</p>
-                <div class="mt-5 flex flex-wrap gap-3">
-                    <a href="{{ $joinUrl }}" target="_blank" rel="noopener noreferrer" class="inline-flex min-h-11 items-center rounded-xl border border-stone-300 px-4 text-sm font-semibold text-brand-700 hover:bg-brand-50">Open join page ↗</a>
-                    <form method="GET" action="{{ route('merchant.onboarding.launch.show', $store) }}">
-                        <button type="submit" class="min-h-11 rounded-xl border border-stone-300 px-4 text-sm font-semibold text-brand-700 hover:bg-brand-50">Check progress</button>
+                <div class="mt-5 grid grid-cols-3 gap-2">
+                    <a href="{{ $joinUrl }}" target="_blank" rel="noopener noreferrer" class="inline-flex min-h-11 min-w-0 items-center justify-center rounded-xl border border-stone-300 px-2 text-center text-xs font-semibold text-brand-700 hover:bg-brand-50">Open join page ↗</a>
+                    <form method="GET" action="{{ route('merchant.onboarding.launch.show', $store) }}" class="min-w-0">
+                        <button type="submit" class="h-full min-h-11 w-full rounded-xl border border-stone-300 px-2 text-xs font-semibold text-brand-700 hover:bg-brand-50">Check progress</button>
                     </form>
-                    <a href="{{ route('merchant.dashboard') }}" class="inline-flex min-h-11 items-center rounded-xl bg-brand-700 px-5 text-sm font-semibold text-white hover:bg-brand-800">Continue to dashboard</a>
+                    <a href="{{ route('merchant.dashboard') }}" class="inline-flex min-h-11 min-w-0 items-center justify-center rounded-xl bg-brand-700 px-2 text-center text-xs font-semibold text-white hover:bg-brand-800">Continue to dashboard</a>
                 </div>
             </section>
         @endif
