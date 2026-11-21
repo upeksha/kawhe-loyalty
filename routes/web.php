@@ -202,6 +202,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
 // Admin area routes (super admin only)
 Route::middleware(['auth', 'verified', App\Http\Middleware\SuperAdmin::class])->prefix('admin')->name('admin.')->group(function () {
     Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
+    Route::get('/stores', [AdminDashboardController::class, 'stores'])->name('stores.index');
+    Route::get('/stores/{store}', [AdminDashboardController::class, 'store'])->whereNumber('store')->name('stores.show');
+    Route::get('/transactions', [AdminDashboardController::class, 'transactions'])->name('transactions.index');
+    Route::get('/issues', [AdminDashboardController::class, 'issues'])->name('issues.index');
+    Route::get('/revenue', [AdminDashboardController::class, 'revenue'])->name('revenue.index');
     Route::get('/merchants', [\App\Http\Controllers\AdminMerchantsController::class, 'index'])->name('merchants.index');
     Route::get('/support', [SupportLogController::class, 'adminIndex'])->name('support.index');
 });

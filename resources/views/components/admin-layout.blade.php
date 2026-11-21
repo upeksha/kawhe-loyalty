@@ -1,4 +1,4 @@
-@props(['header' => null])
+@props(['header' => null, 'navigationFilters' => []])
 
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
@@ -18,7 +18,7 @@
         @stack('scripts')
     </head>
     <body
-        class="bg-stone-100 font-sans antialiased text-stone-900"
+        class="ops-admin bg-stone-100 font-sans antialiased text-stone-900"
         x-data="{ sidebarOpen: false }"
         @close-admin-sidebar.window="sidebarOpen = false"
         @keydown.escape.window="sidebarOpen = false"
@@ -49,7 +49,7 @@
                     </button>
                 </div>
 
-                <x-admin.sidebar />
+                <x-admin.sidebar :navigation-filters="$navigationFilters" />
             </aside>
 
             <div class="flex min-w-0 flex-1 flex-col">
@@ -60,7 +60,7 @@
                                 type="button"
                                 class="rounded-xl border border-stone-200 bg-white p-2 text-stone-600 hover:bg-stone-50 lg:hidden"
                                 @click="sidebarOpen = true"
-                                aria-label="Open menu"
+                                aria-label="Open menu" :aria-expanded="sidebarOpen"
                             >
                                 <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
@@ -74,10 +74,10 @@
 
                         <div class="flex shrink-0 items-center gap-3">
                             <a href="{{ route('admin.support.index') }}" class="hidden rounded-full border border-stone-200 bg-stone-50 px-4 py-2 text-sm font-medium text-stone-700 transition hover:border-brand-200 hover:text-brand-700 sm:inline-flex">
-                                Open support logs
+                                Support logs
                             </a>
                             <div class="hidden rounded-full bg-brand-50 px-4 py-2 text-sm font-medium text-brand-700 sm:block">
-                                {{ auth()->user()->email ?? '' }}
+                                Read only
                             </div>
                         </div>
                     </div>

@@ -3,187 +3,119 @@
 namespace App\Http\Controllers;
 
 use App\Models\LoyaltyAccount;
-use App\Models\Store;
-use App\Models\SupportAuditLog;
 use App\Models\StampEvent;
-use App\Models\User;
-use Carbon\Carbon;
-use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\DB;
+use App\Models\Store;
+use App\Models\StoreStaff;
+use App\Services\Admin\BillingReport;
+use App\Services\Admin\OperationsReport;
+use App\Services\Billing\UsageService;
+use Illuminate\Http\Request;
 
 class AdminDashboardController extends Controller
 {
-    public function index()
+    public function __construct(private OperationsReport $report) {}
+
+    private function page(string $view, array $data)
     {
-        $stats = [
-            'total_users' => User::count(),
-            'total_stores' => Store::count(),
-            'total_stamps_today' => StampEvent::whereDate('created_at', today())->count(),
-            'support_events_last_7_days' => SupportAuditLog::where('created_at', '>=', now()->subDays(7))->count(),
-        ];
-
-        $recent_stores = Store::with('user')->latest()->take(10)->get();
-        $recent_stamps = StampEvent::with(['loyaltyAccount.customer', 'store'])->latest()->take(20)->get();
-        $recent_support_events = SupportAuditLog::with(['actor', 'store', 'loyaltyAccount.customer'])
-            ->latest()
-            ->take(20)
-            ->get();
-        $activityTrend = $this->buildActivityTrend();
-        $storeTrend = $this->buildStoreTrend();
-
-        $merchant_issue_diagnostics = SupportAuditLog::query()
-            ->select('stores.id', 'stores.name', 'users.email')
-            ->selectRaw("SUM(CASE WHEN support_audit_logs.event_type = 'billing_issue' THEN 1 ELSE 0 END) as billing_issue_count")
-            ->selectRaw("SUM(CASE WHEN support_audit_logs.event_type = 'wallet_sync' AND support_audit_logs.status != 'success' THEN 1 ELSE 0 END) as wallet_issue_count")
-            ->join('stores', 'stores.id', '=', 'support_audit_logs.store_id')
-            ->join('users', 'users.id', '=', 'stores.user_id')
-            ->where('support_audit_logs.created_at', '>=', now()->subDays(14))
-            ->groupBy('stores.id', 'stores.name', 'users.email')
-            ->havingRaw("SUM(CASE WHEN support_audit_logs.event_type = 'billing_issue' THEN 1 ELSE 0 END) > 0
-                OR SUM(CASE WHEN support_audit_logs.event_type = 'wallet_sync' AND support_audit_logs.status != 'success' THEN 1 ELSE 0 END) > 0")
-            ->orderByDesc(DB::raw("SUM(CASE WHEN support_audit_logs.event_type = 'billing_issue' THEN 1 ELSE 0 END)
-                + SUM(CASE WHEN support_audit_logs.event_type = 'wallet_sync' AND support_audit_logs.status != 'success' THEN 1 ELSE 0 END)"))
-            ->limit(15)
-            ->get();
-
-        return view('admin.dashboard', compact(
-            'stats',
-            'recent_stores',
-            'recent_stamps',
-            'recent_support_events',
-            'merchant_issue_diagnostics',
-            'activityTrend',
-            'storeTrend'
-        ));
+        return response()->view('admin.operations.'.$view, $data + ['report' => $this->report, 'navigationFilters' => ['range' => $data['f']['range'], 'scope' => $data['f']['scope'], 'from' => $data['f']['from'], 'to' => $data['f']['to']]])
+            ->header('Cache-Control', 'no-store, private')->header('Referrer-Policy', 'same-origin');
     }
 
-    protected function buildActivityTrend(): array
+    public function index(Request $request)
     {
-        $start = now()->subDays(13)->startOfDay();
-        $days = $this->emptyTrendMap($start, 14);
+        $f = $this->report->filters($request);
+        $stats = $this->report->summary($f);
+        $recent = $this->report->events($f)->with(['store:id,name', 'user:id,name', 'loyaltyAccount.loyaltyProgram:id,name'])->latest()->orderByDesc('id')->limit(6)->get();
+        $issues = $this->report->issues($f)->latest()->limit(5)->get();
+        $queue = $this->report->queueSnapshot();
+        $plans = app(BillingReport::class)->plans($f);
 
-        $joinsByDay = LoyaltyAccount::query()
-            ->selectRaw('DATE(created_at) as day, COUNT(*) as total')
-            ->where('created_at', '>=', $start)
-            ->groupBy('day')
-            ->pluck('total', 'day');
-
-        $stampsByDay = StampEvent::query()
-            ->selectRaw('DATE(created_at) as day, COALESCE(SUM(count), 0) as total')
-            ->where('type', 'stamp')
-            ->where('created_at', '>=', $start)
-            ->groupBy('day')
-            ->pluck('total', 'day');
-
-        $redeemsByDay = StampEvent::query()
-            ->selectRaw('DATE(created_at) as day, COALESCE(SUM(count), 0) as total')
-            ->where('type', 'redeem')
-            ->where('created_at', '>=', $start)
-            ->groupBy('day')
-            ->pluck('total', 'day');
-
-        $points = $days->map(function (string $day) use ($joinsByDay, $stampsByDay, $redeemsByDay) {
-            return [
-                'day' => $day,
-                'label' => Carbon::parse($day)->format('d/m'),
-                'joins' => (int) ($joinsByDay[$day] ?? 0),
-                'stamps' => (int) ($stampsByDay[$day] ?? 0),
-                'redeems' => (int) ($redeemsByDay[$day] ?? 0),
-            ];
-        })->values();
-
-        return [
-            'points' => $points,
-            'joins_total' => $points->sum('joins'),
-            'stamps_total' => $points->sum('stamps'),
-            'redeems_total' => $points->sum('redeems'),
-            'joins_chart' => $this->buildChartSeries($points->pluck('joins')->all(), 780, 240),
-            'stamps_chart' => $this->buildChartSeries($points->pluck('stamps')->all(), 780, 240),
-            'redeems_chart' => $this->buildChartSeries($points->pluck('redeems')->all(), 780, 240),
-        ];
+        return $this->page('overview', compact('f', 'stats', 'recent', 'issues', 'queue', 'plans'));
     }
 
-    protected function buildStoreTrend(): array
+    public function revenue(Request $request, BillingReport $billing)
     {
-        $start = now()->subDays(13)->startOfDay();
-        $days = $this->emptyTrendMap($start, 14);
+        $f = $this->report->filters($request);
+        $plans = $billing->plans($f);
+        $revenue = $billing->revenue($f);
+        $owners = $billing->owners($f)->with('subscriptions')->orderBy('name')->orderBy('id')->paginate(20)->withQueryString();
+        $usage = app(UsageService::class);
+        $selectedStore = $f['store_id'] ? $this->report->stores($f)->find($f['store_id']) : null;
 
-        $storesByDay = Store::query()
-            ->selectRaw('DATE(created_at) as day, COUNT(*) as total')
-            ->where('created_at', '>=', $start)
-            ->groupBy('day')
-            ->pluck('total', 'day');
-
-        $issuesByDay = SupportAuditLog::query()
-            ->selectRaw('DATE(created_at) as day, COUNT(*) as total')
-            ->where('created_at', '>=', $start)
-            ->where(function ($query) {
-                $query->where('event_type', 'billing_issue')
-                    ->orWhere(function ($wallet) {
-                        $wallet->where('event_type', 'wallet_sync')
-                            ->where('status', '!=', 'success');
-                    });
-            })
-            ->groupBy('day')
-            ->pluck('total', 'day');
-
-        $points = $days->map(function (string $day) use ($storesByDay, $issuesByDay) {
-            return [
-                'day' => $day,
-                'label' => Carbon::parse($day)->format('d/m'),
-                'stores' => (int) ($storesByDay[$day] ?? 0),
-                'issues' => (int) ($issuesByDay[$day] ?? 0),
-            ];
-        })->values();
-
-        return [
-            'points' => $points,
-            'stores_total' => $points->sum('stores'),
-            'issues_total' => $points->sum('issues'),
-            'stores_chart' => $this->buildChartSeries($points->pluck('stores')->all(), 420, 240),
-            'issues_chart' => $this->buildChartSeries($points->pluck('issues')->all(), 420, 240),
-        ];
+        return $this->page('revenue', compact('f', 'plans', 'revenue', 'owners', 'usage', 'selectedStore'));
     }
 
-    protected function emptyTrendMap(Carbon $start, int $days): Collection
+    public function stores(Request $request, UsageService $usage)
     {
-        return collect(range(0, $days - 1))
-            ->map(fn (int $offset) => $start->copy()->addDays($offset)->toDateString());
-    }
-
-    protected function buildChartSeries(array $values, int $width, int $height): array
-    {
-        $count = count($values);
-
-        if ($count === 0) {
-            return [
-                'line' => '',
-                'area' => '',
-                'max' => 0,
-            ];
+        $f = $this->report->filters($request);
+        $query = $this->report->stores($f)->with('user.subscriptions')->withCount('loyaltyPrograms')
+            ->addSelect(['issued_count' => LoyaltyAccount::selectRaw('COUNT(*)')->whereColumn('store_id', 'stores.id'),
+                'last_activity' => StampEvent::selectRaw('MAX(created_at)')->whereColumn('store_id', 'stores.id')]);
+        if ($f['status'] !== 'all') {
+            $query->where($f['status'] === 'archived' ? fn ($q) => $q->whereNotNull('deleted_at') : fn ($q) => $q->whereNull('deleted_at'));
         }
-
-        $max = max(max($values), 1);
-        $stepX = $count > 1 ? $width / ($count - 1) : $width;
-        $baseline = $height;
-        $points = [];
-
-        foreach ($values as $index => $value) {
-            $x = round($index * $stepX, 2);
-            $y = round($height - (($value / $max) * ($height - 18)) - 9, 2);
-            $points[] = [$x, $y];
+        if ($f['q'] !== '') {
+            $query->where(fn ($q) => $q->where('name', 'like', '%'.$f['q'].'%')->orWhereHas('user', fn ($u) => $u->where('name', 'like', '%'.$f['q'].'%')->orWhere('email', 'like', '%'.$f['q'].'%')));
         }
+        $stores = $query->orderBy('name')->orderBy('id')->paginate(20)->withQueryString();
+        $this->report->decorateStores($stores->getCollection(), $f);
 
-        $line = collect($points)
-            ->map(fn (array $point, int $index) => ($index === 0 ? 'M' : 'L') . $point[0] . ' ' . $point[1])
-            ->implode(' ');
+        return $this->page('stores', compact('f', 'stores', 'usage'));
+    }
 
-        $area = $line . ' L ' . $points[$count - 1][0] . ' ' . $baseline . ' L 0 ' . $baseline . ' Z';
+    public function store(Request $request, int $store)
+    {
+        $f = $this->report->filters($request);
+        // A classified test store remains outside customer scope, even through a direct URL.
+        $store = $this->report->stores($f)->with(['user.subscriptions'])->findOrFail($store);
+        $programmes = $store->loyaltyPrograms()->withCount('loyaltyAccounts')->paginate(12)->withQueryString();
+        $scoped = $this->report->events($f)->where('store_id', $store->id);
+        $types = (clone $scoped)->selectRaw('type, SUM(count) as quantity')->groupBy('type')->pluck('quantity', 'type');
+        $accounts = LoyaltyAccount::where('store_id', $store->id);
+        $metrics = ['cards' => (clone $accounts)->count(), 'customers' => (clone $accounts)->distinct()->count('customer_id'),
+            'stamps' => (int) ($types['stamp'] ?? 0), 'undos' => (int) ($types['stamp_undo'] ?? 0), 'redeems' => (int) ($types['redeem'] ?? 0), 'rewards' => (int) (clone $accounts)->sum('reward_balance')];
+        $recent = $scoped->with(['store:id,name', 'user:id,name', 'loyaltyAccount.loyaltyProgram:id,name'])->latest()->orderByDesc('id')->limit(12)->get();
+        $issues = $this->report->issues($f)->where('store_id', $store->id)->latest()->limit(10)->get();
+        $staff = StoreStaff::with('user:id,name,email')->where('store_id', $store->id)->get();
+        $usage = app(UsageService::class);
 
-        return [
-            'line' => $line,
-            'area' => $area,
-            'max' => $max,
-        ];
+        return $this->page('store', compact('f', 'store', 'programmes', 'metrics', 'recent', 'issues', 'staff', 'usage'));
+    }
+
+    public function transactions(Request $request)
+    {
+        $f = $this->report->filters($request);
+        $query = $this->report->events($f)->with(['store:id,name', 'user:id,name', 'loyaltyAccount.loyaltyProgram:id,name']);
+        if ($f['type']) {
+            $query->where('type', $f['type']);
+        }
+        if ($f['store_id']) {
+            $query->where('store_id', $f['store_id']);
+        }
+        if ($f['q'] !== '') {
+            $query->where(fn ($q) => $q->whereHas('store', fn ($s) => $s->where('name', 'like', '%'.$f['q'].'%'))
+                ->orWhereHas('user', fn ($s) => $s->where('name', 'like', '%'.$f['q'].'%'))
+                ->orWhereHas('loyaltyAccount.loyaltyProgram', fn ($s) => $s->where('name', 'like', '%'.$f['q'].'%')));
+        }
+        $events = $query->latest()->orderByDesc('id')->paginate(30)->withQueryString();
+        $selectedStore = $f['store_id'] ? $this->report->stores($f)->find($f['store_id']) : null;
+
+        return $this->page('transactions', compact('f', 'events', 'selectedStore'));
+    }
+
+    public function issues(Request $request)
+    {
+        $f = $this->report->filters($request);
+        $query = $this->report->issues($f);
+        if ($f['store_id']) {
+            $query->where('store_id', $f['store_id']);
+        }
+        $issues = $query->latest()->orderByDesc('id')->paginate(20)->withQueryString();
+        $queue = $this->report->queueSnapshot();
+        $setup = $this->report->stores($f)->with('user:id,name,email,email_verified_at')->whereNull('deleted_at')
+            ->where(fn ($q) => $q->where(fn ($s) => $s->whereNotNull('onboarding_step')->whereNull('onboarding_completed_at'))->orWhereHas('user', fn ($u) => $u->whereNull('email_verified_at')))
+            ->latest()->limit(15)->get();
+
+        return $this->page('issues', compact('f', 'issues', 'queue', 'setup'));
     }
 }
