@@ -72,13 +72,13 @@
                                             <dd class="mt-1 text-sm font-semibold text-stone-900">{{ number_format($program->loyalty_accounts_count) }}</dd>
                                         </div>
                                     </dl>
-                                    <div class="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-                                        <x-ui.button href="{{ route('merchant.stores.programs.edit', [$store, $program]) }}" class="dashboard-button">Edit card appearance</x-ui.button>
-                                        <x-ui.button href="{{ route('merchant.stores.programs.qr', [$store, $program]) }}" variant="secondary" class="dashboard-button">Share join QR</x-ui.button>
+                                    <div class="flex flex-wrap items-center gap-2" role="group" aria-label="Actions for {{ $program->name }}">
+                                        <a href="{{ route('merchant.stores.programs.edit', [$store, $program]) }}" aria-label="Edit card appearance for {{ $program->name }}" title="Edit card appearance" class="kawhe-card-action inline-flex items-center justify-center rounded-lg border border-stone-200 bg-white text-brand-800 transition-colors hover:bg-brand-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-700"><x-merchant-icon name="edit" /></a>
+                                        <a href="{{ route('merchant.stores.programs.qr', [$store, $program]) }}" aria-label="Share join QR for {{ $program->name }}" title="Share join QR" class="kawhe-card-action inline-flex items-center justify-center rounded-lg border border-stone-200 bg-white text-brand-800 transition-colors hover:bg-brand-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-700"><x-merchant-icon name="qr" /></a>
                                         @if(! $program->is_default)
                                             <form method="POST" action="{{ route('merchant.stores.programs.destroy', [$store, $program]) }}" onsubmit="return confirm('Archive this card? New joins and scanning will pause. Customer history will remain preserved.');">
                                                 @csrf @method('DELETE')
-                                                <x-ui.button type="submit" variant="danger" class="dashboard-button w-full">Archive</x-ui.button>
+                                                <button type="submit" aria-label="Archive {{ $program->name }}" title="Archive card" class="kawhe-card-action inline-flex items-center justify-center rounded-lg border border-red-200 bg-white text-red-700 transition-colors hover:bg-red-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-600"><x-merchant-icon name="archive" /></button>
                                             </form>
                                         @endif
                                     </div>

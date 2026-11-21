@@ -12,6 +12,8 @@ $paths = [
  'support'=>'M4 14v-3a8 8 0 0 1 16 0v3 M4 11H2v7h4v-7z M20 11h2v7h-4v-7z M20 18a4 4 0 0 1-4 4h-4',
  'scan'=>'M3 8V3h5 M16 3h5v5 M21 16v5h-5 M8 21H3v-5 M3 12h18',
  'edit'=>'m16.5 3.5 4 4 M4 20l4.5-1 12-12a2.83 2.83 0 0 0-4-4l-12 12L4 20Z',
+ 'qr'=>'M3 3h6v6H3z M15 3h6v6h-6z M3 15h6v6H3z M15 15h2v2h-2z M19 15h2v6h-6v-2 M11 3v2 M11 9h2 M3 11h4 M9 11v2 M11 15v6',
+ 'archive'=>'M3 4h18v4H3z M5 8v12h14V8 M10 12h4',
  'logout'=>'M9 3H3v18h6 M9 12h12 M17 8l4 4-4 4',
 ];
 @endphp
